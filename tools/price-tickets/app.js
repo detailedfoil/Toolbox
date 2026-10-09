@@ -12,7 +12,7 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var listEl = $('list'), emptyEl = $('empty'), barEl = $('bar'), toolbarEl = $('toolbar'), countEl = $('count'), noteEl = $('note');
-  var dlSheet = $('dlSheet'), dlSeparate = $('dlSeparate'), dlChanged = $('dlChanged'), checkAll = $('checkAll');
+  var dlSheet = $('dlSheet'), dlChanged = $('dlChanged'), checkAll = $('checkAll');
 
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: keep going */ } }
@@ -502,7 +502,6 @@
     skippedNote(list);
     deliver(ok.map(function (r) { return { name: r.code + '-ticket.pdf', tickets: [ticketOf(r)] }; }), ok, btn);
   }
-  dlSeparate.addEventListener('click', function () { separate(rows, dlSeparate); });
   dlChanged.addEventListener('click', function () { separate(rows.filter(function (r) { return ready(r) && changed(r); }), dlChanged); });
 
   /* ---------- bar + toast ---------- */
@@ -515,7 +514,6 @@
     countEl.textContent = n + (n === 1 ? ' ticket' : ' tickets');
     var ok = rows.filter(ready);
     dlSheet.disabled = !ok.length;
-    dlSeparate.disabled = !ok.length;
     var ch = ok.filter(function (r) { return changed(r); });
     dlChanged.hidden = !ch.length;
     dlChanged.textContent = 'Changed prices only (' + ch.length + ')';
