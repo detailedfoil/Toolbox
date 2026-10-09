@@ -49,6 +49,10 @@
 
   function normCode(s) { return String(s || '').toUpperCase().replace(/O/g, '0').replace(/[^0-9A-Z]/g, ''); }
 
+  // Screwfix codes are always 5 characters: 3 digits + 2 letters, 4 digits + 1 letter, or 5 digits
+  var SKU_RE = /^(\d{3}[A-Z]{2}|\d{4}[A-Z]|\d{5})$/;
+  function isSku(c) { return SKU_RE.test(c); }
+
   function normPrice(s) {
     var t = String(s || '').replace(/[£\s]/g, '');
     if (!/^(\d{1,3}(,\d{3})+|\d+)(\.\d{0,2})?$/.test(t)) return null;
@@ -162,7 +166,8 @@
     v.code.addEventListener('keydown', function (e) { if (e.key === 'Enter') v.code.blur(); });
     v.code.addEventListener('change', function () {
       var c = normCode(v.code.value);
-      if (!c || c === r.code) { v.code.value = r.code; return; }
+      if (c && c !== r.code && !isSku(c)) toast(v.code.value.trim() + " isn't a Screwfix code. Codes are 5 characters, like 843PG");
+      if (!c || c === r.code || !isSku(c)) { v.code.value = r.code; return; }
       r.code = c; r.price = ''; r.product = ''; r.editedPrice = r.editedProduct = false; r.unsure = false;
       enqueue(r);
     });
@@ -254,14 +259,17 @@
   function parseCodes(text) {
     // a pasted product link counts as its code (the last part of the address)
     text = String(text || '').replace(/https?:\/\/\S*screwfix\.com\/p\/(?:[^\s\/?#]+\/)*([a-z0-9]+)\/?(?:[?#]\S*)?(?=\s|$)/gi, ' $1 ');
-    return (text.toUpperCase().match(/[A-Z0-9]+/g) || [])
-      .filter(function (raw) { return /\d/.test(raw); })      // every code has a digit, so plain words are ignored
-      .map(normCode)
-      .filter(function (c) { return c.length >= 3 && c.length <= 8; });
+    var codes = [], ignored = [];
+    (text.toUpperCase().match(/[A-Z0-9]+/g) || []).forEach(function (raw) {
+      if (!/\d/.test(raw)) return;                            // every code has a digit, so plain words are skipped quietly
+      var c = normCode(raw);
+      if (isSku(c)) codes.push(c); else ignored.push(raw);
+    });
+    return { codes: codes, ignored: ignored };
   }
 
   function addCodes(text) {
-    var codes = parseCodes(text), added = [], dupes = [];
+    var parsed = parseCodes(text), codes = parsed.codes, ignored = parsed.ignored, added = [], dupes = [];
     codes.forEach(function (c) {
       if (rows.some(function (r) { return r.code === c; }) || added.indexOf(c) >= 0) { dupes.push(c); return; }
       added.push(c);
@@ -273,8 +281,11 @@
     fitPreviews();
     persist();
     refreshBar();
-    if (!codes.length) toast('Type a product code, like 843PG');
-    else if (dupes.length) toast(dupes.join(', ') + (dupes.length === 1 ? ' is' : ' are') + ' already in the list');
+    var notes = [];
+    if (dupes.length) notes.push(dupes.join(', ') + (dupes.length === 1 ? ' is' : ' are') + ' already in the list');
+    if (ignored.length) notes.push('Ignored ' + ignored.join(', ') + ' (codes are 5 characters, like 843PG)');
+    if (!codes.length && !ignored.length) toast('Type a product code, like 843PG');
+    else if (notes.length) toast(notes.join('. '));
     if (added.length) {
       var first = views.get(rows[rows.length - added.length].id);
       if (first && added.length === 1) first.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
