@@ -18,7 +18,6 @@ input, textarea, button { font-family: inherit; }
 .btn:active { transform: scale(.97); }
 .btn:disabled { opacity: .45; pointer-events: none; }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-warn { background: transparent; border-color: var(--warn); color: var(--warn); }
 .btn-sm { min-height: 38px; padding: 0 12px; font-size: .88rem; border-radius: 11px; }
 .btn-quiet { background: transparent; color: var(--muted); }
 .btn svg { width: 18px; height: 18px; flex: none; }
@@ -41,7 +40,6 @@ input, textarea, button { font-family: inherit; }
 
 /* one ticket row */
 .pt-row { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 12px 14px 14px; margin-bottom: 12px; }
-.pt-row.is-changed { border-color: var(--warn); }
 .pt-row-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .pt-code { width: 7em; min-width: 0; padding: 6px 8px; margin-left: -8px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text); font-size: 1.2rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; outline: none; }
 .pt-code:focus { border-color: var(--accent); background: var(--field); }
@@ -92,8 +90,7 @@ input, textarea, button { font-family: inherit; }
 .tk-ref { position: absolute; left: 326px; top: 269px; width: 80px; height: 10px; line-height: 10px; font-size: 7px; white-space: nowrap; transform: rotate(-90deg); transform-origin: 0 0; }
 .tk .ph { opacity: .3; }
 
-.pt-row-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
-.pt-last { font-size: .8rem; color: var(--muted); min-width: 0; }
+.pt-row-foot { display: flex; align-items: center; justify-content: flex-end; margin-top: 12px; }
 
 /* bottom action bar */
 .pt-bar { position: sticky; bottom: 0; z-index: 5; margin: 16px -16px 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); background: var(--bg); background: color-mix(in srgb, var(--bg) 86%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid var(--border); display: grid; gap: 8px; }

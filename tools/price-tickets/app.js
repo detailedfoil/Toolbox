@@ -3,7 +3,7 @@
   'use strict';
 
   var E = window.TicketEngine, L = window.ScrewfixLookup;
-  var ROWS_KEY = 'pt-rows-v1', HIST_KEY = 'pt-history-v1';
+  var ROWS_KEY = 'pt-rows-v1';
   var TICKET_W = 340.15625;
   var LOOKUP_LIMIT = 2;
   var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -12,7 +12,7 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var listEl = $('list'), emptyEl = $('empty'), barEl = $('bar'), toolbarEl = $('toolbar'), countEl = $('count'), noteEl = $('note');
-  var dlSheet = $('dlSheet'), dlChanged = $('dlChanged'), checkAll = $('checkAll');
+  var dlSheet = $('dlSheet'), checkAll = $('checkAll');
 
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: keep going */ } }
@@ -29,7 +29,7 @@
       editedPrice: !!r.editedPrice, editedProduct: !!r.editedProduct, unsure: !!r.unsure, token: 0
     };
   });
-  var hist = load(HIST_KEY, {});
+  try { localStorage.removeItem('pt-history-v1'); } catch (e) { /* nothing stored */ }
   var views = new Map();
   var engine = null;
 
@@ -77,19 +77,8 @@
 
   function ready(r) { return !!engine && r.status !== 'looking' && !problem(r); }
 
-  function lastTicket(r) { return hist[r.code] || null; }
-  function changed(r) {
-    var h = lastTicket(r), p = normPrice(r.price);
-    return h && p && h.price !== p ? h : null;
-  }
-
   var dayFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short' });
   var timeFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' });
-  function niceDate(iso) {
-    if (!iso) return '';
-    var d = new Date(iso + 'T12:00:00Z');
-    return iso === E.ukDate().iso ? 'today' : dayFmt.format(d);
-  }
   function whenChecked(ts) {
     if (!ts) return '';
     var d = new Date(ts);
@@ -105,17 +94,13 @@
     if (s === 'partial' && !filled) return ['warn', 'Found it, but fill in the missing details'];
     var prob = problem(r);
     if (prob) return [r.price || r.product ? 'bad' : 'muted', prob];
-    var ch = changed(r);
-    if (ch) return ['warn', 'Price changed. Last ticket ' + ch.price + ' (' + niceDate(ch.date) + ')'];
     if (s === 'found' && r.unsure) return ['warn', 'Check this is the right product'];
     if (s === 'found' && (r.editedPrice || r.editedProduct)) return ['info', 'Edited by you'];
-    var h = lastTicket(r);
     if (s === 'found') {
       var when = whenChecked(r.checkedAt), today = E.ukDate(new Date(r.checkedAt)).iso === E.ukDate().iso;
-      if (h) return [today ? 'ok' : 'muted', 'Same as last ticket' + (today ? ', checked ' + when : '. Checked ' + when)];
       return today ? ['ok', 'Live price, checked ' + when] : ['muted', 'Checked ' + when + '. Tap ↻ for today’s price'];
     }
-    return ['muted', h ? 'Same as last ticket' : 'Typed in'];
+    return ['muted', 'Typed in'];
   }
 
   /* ---------- row views ---------- */
@@ -152,14 +137,14 @@
           '<div class="tk-ref"></div>' +
         '</div></div></div>' +
       '</div>' +
-      '<div class="pt-row-foot"><span class="pt-last"></span>' +
+      '<div class="pt-row-foot">' +
         '<button class="btn btn-sm dl" type="button">' + ICON.pdf + 'PDF</button></div>';
 
     var q = function (s) { return el.querySelector(s); };
     var v = {
       el: el, code: q('.pt-code'), chip: q('.pt-chip'), chipText: q('.pt-chip span'), sf: q('.sf'),
       refresh: q('.refresh'), remove: q('.remove'), price: q('.pt-price'), product: q('.pt-product'),
-      dl: q('.dl'), last: q('.pt-last'), tkPrice: q('.tk-price'), tkName: q('.tk-name'), tkCode: q('.tk-code'), tkRef: q('.tk-ref')
+      dl: q('.dl'), tkPrice: q('.tk-price'), tkName: q('.tk-name'), tkCode: q('.tk-code'), tkRef: q('.tk-ref')
     };
     views.set(r.id, v);
 
@@ -191,7 +176,7 @@
     v.remove.addEventListener('click', function () { removeRow(r); });
     v.dl.addEventListener('click', function () {
       if (!ready(r)) return;
-      deliver([{ name: r.code + '-ticket.pdf', tickets: [ticketOf(r)] }], [r], v.dl);
+      deliver([{ name: r.code + '-ticket.pdf', tickets: [ticketOf(r)] }], v.dl);
     });
     return el;
   }
@@ -217,9 +202,6 @@
     v.refresh.disabled = r.status === 'looking';
     v.refresh.classList.toggle('spin', r.status === 'looking');
     v.dl.disabled = !ready(r);
-    v.el.classList.toggle('is-changed', !!changed(r));
-    var h = lastTicket(r);
-    v.last.textContent = h ? 'Last ticket ' + h.price + ', ' + niceDate(h.date) : '';
     paintPreview(r, v);
   }
 
@@ -417,15 +399,7 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
   }
 
-  function record(list) {
-    var iso = E.ukDate().iso;
-    list.forEach(function (r) { hist[r.code] = { price: normPrice(r.price), date: iso }; });
-    store(HIST_KEY, hist);
-    list.forEach(paint);
-    refreshBar();
-  }
-
-  function fileSheet(files, done) {
+  function fileSheet(files) {
     var wrap = document.createElement('div');
     wrap.className = 'pt-sheet';
     var card = document.createElement('div');
@@ -448,30 +422,27 @@
     close.addEventListener('click', shut);
     wrap.addEventListener('click', function (e) { if (e.target === wrap) shut(); });
     document.body.appendChild(wrap);
-    if (done) done();
   }
 
   /* items: [{name, tickets}] -> share sheet on phones, downloads elsewhere */
-  function deliver(items, rowsDone, btn) {
+  function deliver(items, btn) {
     if (!engine || !items.length) return;
     var hits = items.map(function (it) { return pdfFor(it.tickets); });
     var finish = function () {
       var files = items.map(function (it, i) { return new File([hits[i].bytes], it.name, { type: 'application/pdf' }); });
-      var done = function () { record(rowsDone); };
       if (ios && navigator.canShare && navigator.share) {
         var can = false;
         try { can = navigator.canShare({ files: files }); } catch (e) { can = false; }
         if (can) {
-          navigator.share({ files: files }).then(done, function (e) {
+          navigator.share({ files: files }).catch(function (e) {
             if (e && e.name === 'AbortError') return;
-            fileSheet(files, done);
+            fileSheet(files);
           });
           return;
         }
       }
-      if (coarse && files.length > 1) { fileSheet(files, done); return; }
+      if (coarse && files.length > 1) { fileSheet(files); return; }
       files.forEach(function (f, i) { setTimeout(function () { saveFile(f); }, i * 400); });
-      done();
     };
     if (hits.every(function (h) { return h.bytes; })) { finish(); return; }
     if (btn) btn.classList.add('is-busy');
@@ -493,16 +464,8 @@
     var ok = rows.filter(ready);
     if (!ok.length) return;
     skippedNote(rows);
-    deliver([{ name: 'Price-tickets-' + E.ukDate().iso + '.pdf', tickets: ok.map(ticketOf) }], ok, dlSheet);
+    deliver([{ name: 'Price-tickets-' + E.ukDate().iso + '.pdf', tickets: ok.map(ticketOf) }], dlSheet);
   });
-
-  function separate(list, btn) {
-    var ok = list.filter(ready);
-    if (!ok.length) return;
-    skippedNote(list);
-    deliver(ok.map(function (r) { return { name: r.code + '-ticket.pdf', tickets: [ticketOf(r)] }; }), ok, btn);
-  }
-  dlChanged.addEventListener('click', function () { separate(rows.filter(function (r) { return ready(r) && changed(r); }), dlChanged); });
 
   /* ---------- bar + toast ---------- */
 
@@ -514,9 +477,6 @@
     countEl.textContent = n + (n === 1 ? ' ticket' : ' tickets');
     var ok = rows.filter(ready);
     dlSheet.disabled = !ok.length;
-    var ch = ok.filter(function (r) { return changed(r); });
-    dlChanged.hidden = !ch.length;
-    dlChanged.textContent = 'Changed prices only (' + ch.length + ')';
     checkAll.disabled = !n || rows.every(function (r) { return r.status === 'looking'; });
     var pages = Math.ceil(ok.length / 6);
     noteEl.textContent = (ok.length ? ok.length + (ok.length === 1 ? ' ticket' : ' tickets') + ' ready, ' + pages + ' A4 page' + (pages === 1 ? '' : 's') + '. ' : '') +
