@@ -2,7 +2,7 @@
    This is a light lock to keep casual visitors out, not real security. */
 (function () {
   "use strict";
-  var KEY = "toolbox.signedIn";
+  var KEY = "toolbox.signedIn.area20";
   var signedIn = false;
   try { signedIn = !!localStorage.getItem(KEY); } catch (e) {}
   if (signedIn) return;
