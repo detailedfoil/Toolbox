@@ -2,5 +2,5 @@
 // name: tile title | desc: one line | icon: emoji | url: page path | category: section heading
 const TOOLS = [
   { name: "Price Tickets", desc: "Screwfix 90 x 75 mm shelf tickets with live prices", icon: "🏷️", url: "tools/price-tickets.html", category: "Screwfix" },
-  { name: "NPS", desc: "Upload the dated workbook for the calculator, leaderboard and store breakdown", icon: "📊", url: "tools/nps.html", category: "Screwfix" }
+  { name: "NPS", desc: "Promoters needed to hit your target, plus an area overview", icon: "📊", url: "tools/nps.html", category: "Screwfix" }
 ];
