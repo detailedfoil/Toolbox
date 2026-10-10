@@ -1,0 +1,145 @@
+{
+ "date": "09.10.2026",
+ "fileName": "09.10.2026.xlsx",
+ "stores": [
+  {
+   "name": "Hoddesdon (UB4)",
+   "p": 130,
+   "pa": 7,
+   "d": 1
+  },
+  {
+   "name": "Flitwick (JM5)",
+   "p": 153,
+   "pa": 7,
+   "d": 3
+  },
+  {
+   "name": "Berkhamsted (CB3)",
+   "p": 134,
+   "pa": 6,
+   "d": 3
+  },
+  {
+   "name": "Hertford (IC6)",
+   "p": 138,
+   "pa": 7,
+   "d": 3
+  },
+  {
+   "name": "Houghton Regis (DB4)",
+   "p": 130,
+   "pa": 7,
+   "d": 3
+  },
+  {
+   "name": "Epping - Thornwood (RB9)",
+   "p": 138,
+   "pa": 8,
+   "d": 3
+  },
+  {
+   "name": "Chesham (SB9)",
+   "p": 154,
+   "pa": 6,
+   "d": 6
+  },
+  {
+   "name": "Biggleswade (ED1)",
+   "p": 142,
+   "pa": 11,
+   "d": 3
+  },
+  {
+   "name": "Saffron Walden (JR8)",
+   "p": 172,
+   "pa": 8,
+   "d": 7
+  },
+  {
+   "name": "Luton - Bilton Way (LT2)",
+   "p": 102,
+   "pa": 10,
+   "d": 2
+  },
+  {
+   "name": "Leighton Buzzard (FA2)",
+   "p": 157,
+   "pa": 12,
+   "d": 5
+  },
+  {
+   "name": "Luton - Windmill (AL2)",
+   "p": 160,
+   "pa": 9,
+   "d": 7
+  },
+  {
+   "name": "Dunstable (LB1)",
+   "p": 123,
+   "pa": 9,
+   "d": 5
+  },
+  {
+   "name": "Letchworth (TT8)",
+   "p": 135,
+   "pa": 11,
+   "d": 5
+  },
+  {
+   "name": "Stevenage (ET3)",
+   "p": 125,
+   "pa": 14,
+   "d": 3
+  },
+  {
+   "name": "St Albans (OA7)",
+   "p": 145,
+   "pa": 20,
+   "d": 2
+  },
+  {
+   "name": "Amersham (XA6)",
+   "p": 154,
+   "pa": 12,
+   "d": 8
+  },
+  {
+   "name": "Royston (ED6)",
+   "p": 189,
+   "pa": 21,
+   "d": 8
+  },
+  {
+   "name": "Bishops Stortford (VA2)",
+   "p": 111,
+   "pa": 14,
+   "d": 4
+  },
+  {
+   "name": "Welwyn Garden City (IT6)",
+   "p": 120,
+   "pa": 19,
+   "d": 5
+  },
+  {
+   "name": "Hemel Hempstead (IT9)",
+   "p": 116,
+   "pa": 8,
+   "d": 11
+  },
+  {
+   "name": "Harlow (AT2)",
+   "p": 100,
+   "pa": 6,
+   "d": 10
+  }
+ ],
+ "area": {
+  "name": "Area Total",
+  "p": 3028,
+  "pa": 232,
+  "d": 107
+ },
+ "published": "2026-10-10T00:38:25.468Z"
+}

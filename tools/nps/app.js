@@ -36,7 +36,7 @@
   /* ---------- saving ---------- */
   function save() {
     try {
-      localStorage.setItem(KEY, JSON.stringify({ data: state.data, store: state.store, target: state.target, manual: state.manual, tab: state.tab }));
+      localStorage.setItem(KEY, JSON.stringify({ store: state.store, target: state.target, manual: state.manual, tab: state.tab }));
       localStorage.removeItem(OLD_KEY);
     } catch (e) { /* storage blocked: the page still works, it just won't remember */ }
   }
@@ -50,50 +50,130 @@
                 store: old.store === "Manual" ? "@manual" : old.store === "Area Total" ? "@area" : old.store };
         }
       }
-      if (s && s.data && s.data.stores) {
-        state.data = s.data;
+      if (s) {
         state.store = s.store || "";
         if (typeof s.target === "number" && s.target > 0 && s.target <= 100) state.target = s.target;
         if (s.manual) state.manual = s.manual;
-        if (s.tab === "overview") state.tab = "overview";
+        if (s.tab === "overview" || s.tab === "trends") state.tab = s.tab;
       }
     } catch (e) {}
   }
 
-  /* ---------- upload ---------- */
+  /* ---------- published data ---------- */
+  const REPO = "detailedfoil/Toolbox";
+  const DATA_PATH = "tools/nps/data/data.json";
+  const IMG_PATH = "tools/nps/data/trends.png";
+  const TOKEN_KEY = "toolbox.nps.token";
+  const bust = () => "?t=" + Date.now();
+
   function showError(msg) { const e = $("error"); e.textContent = msg || ""; e.hidden = !msg; }
 
-  $("file").addEventListener("change", (ev) => {
-    const f = ev.target.files && ev.target.files[0];
-    ev.target.value = "";
+  async function loadPublished() {
+    try {
+      const r = await fetch("nps/data/data.json" + bust(), { cache: "no-store" });
+      if (!r.ok) throw new Error(r.status);
+      useData(await r.json());
+    } catch (e) {
+      $("meta").textContent = "No NPS data has been published yet.";
+    }
+    setTrendsImage("nps/data/trends.png" + bust());
+  }
+
+  function useData(data) {
+    state.data = data;
+    if (state.store && state.store[0] !== "@" && !data.stores.some((s) => s.name === state.store)) state.store = "";
+    state.open.clear();
+    $("meta").textContent = (data.date ? "Data from " + data.date : "Latest data") + ", " + data.stores.length + " stores";
+    render();
+  }
+
+  function setTrendsImage(src) {
+    const img = $("trendsImg"), link = $("trendsLink"), hint = $("trendsHint");
+    img.onload = () => { link.hidden = false; hint.textContent = "Tap the chart to open it full size."; };
+    img.onerror = () => { link.hidden = true; hint.textContent = "No trends chart has been published yet."; };
+    img.src = src;
+    link.href = src;
+  }
+
+  /* ---------- updating (hidden, for whoever owns the data) ---------- */
+  const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; } };
+  function syncTokenUi() {
+    const has = !!getToken();
+    $("tokenBox").hidden = has;
+    $("tokenSaved").hidden = !has;
+  }
+  function status(msg, bad) { const el = $("adminStatus"); el.textContent = msg; el.classList.toggle("bad", !!bad); }
+
+  function needToken() {
+    const typed = $("token").value.trim();
+    if (typed) { try { localStorage.setItem(TOKEN_KEY, typed); } catch (e) {} $("token").value = ""; syncTokenUi(); }
+    if (!getToken()) { status("Paste your GitHub token first.", true); $("token").focus(); return false; }
+    return true;
+  }
+
+  function toBase64(buf) {
+    const bytes = new Uint8Array(buf); let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+
+  async function publish(path, base64, message) {
+    const url = "https://api.github.com/repos/" + REPO + "/contents/" + path;
+    const headers = { Authorization: "Bearer " + getToken(), Accept: "application/vnd.github+json" };
+    const cur = await fetch(url + "?ref=main", { headers, cache: "no-store" });
+    if (cur.status === 401 || cur.status === 403) throw new Error("token");
+    const sha = cur.ok ? (await cur.json()).sha : undefined;
+    const r = await fetch(url, { method: "PUT", headers, body: JSON.stringify({ message, content: base64, sha, branch: "main" }) });
+    if (r.status === 401 || r.status === 403 || r.status === 404) throw new Error("token");
+    if (!r.ok) throw new Error("GitHub said " + r.status);
+  }
+  function publishError(e) {
+    if (e.message === "token") {
+      try { localStorage.removeItem(TOKEN_KEY); } catch (x) {}
+      syncTokenUi();
+      status("GitHub didn't accept the token. Check it has Contents read and write on the Toolbox repo, then paste it again.", true);
+    } else status("Couldn't publish: " + e.message + ". Try again.", true);
+  }
+
+  $("adminBtn").addEventListener("click", () => { status(""); syncTokenUi(); $("admin").showModal(); });
+  $("tokenChange").addEventListener("click", () => { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} syncTokenUi(); $("token").focus(); });
+  $("pubWorkbook").addEventListener("click", () => { if (needToken()) $("file").click(); });
+  $("pubImage").addEventListener("click", () => { if (needToken()) $("imgFile").click(); });
+
+  $("file").addEventListener("change", async (ev) => {
+    const f = ev.target.files && ev.target.files[0]; ev.target.value = "";
     if (!f) return;
-    showError("");
-    const rd = new FileReader();
-    rd.onerror = () => showError("Couldn't open that file. Try choosing it again.");
-    rd.onload = () => {
-      try {
-        const wb = XLSX.read(new Uint8Array(rd.result), { type: "array" });
-        const data = NPS.parseWorkbook(wb, f.name);
-        state.data = data;
-        if (state.store && state.store[0] !== "@" && !data.stores.some((s) => s.name === state.store)) state.store = "";
-        state.open.clear();
-        save();
-        render();
-      } catch (e) {
-        showError(e && e.message ? e.message : "That file isn't the NPS workbook. Upload the dated .xlsx.");
-      }
-    };
-    rd.readAsArrayBuffer(f);
+    let data;
+    try {
+      const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), { type: "array" });
+      data = NPS.parseWorkbook(wb, f.name);
+    } catch (e) { status(e.message || "That file isn't the NPS workbook.", true); return; }
+    status("Publishing " + f.name + "...");
+    try {
+      const json = JSON.stringify({ date: data.date, fileName: data.fileName, stores: data.stores, area: data.area, published: new Date().toISOString() }, null, 1);
+      await publish(DATA_PATH, toBase64(new TextEncoder().encode(json)), "Update NPS data" + (data.date ? " (" + data.date + ")" : ""));
+      useData(data);
+      status("Done. The page now shows " + (data.date || "the new data") + ".");
+    } catch (e) { publishError(e); }
   });
 
-  function renderLoad() {
-    const d = state.data;
-    if (!d) return;
-    $("loadInfo").innerHTML =
-      "<strong>" + (d.date ? "Data from " + esc(d.date) : "Workbook loaded") + "</strong>" +
-      "<span>" + d.stores.length + " stores, area NPS " + pct(NPS.nps(d.area)) + "</span>";
-    $("fileLabel").textContent = "Replace";
-  }
+  $("imgFile").addEventListener("change", async (ev) => {
+    const f = ev.target.files && ev.target.files[0]; ev.target.value = "";
+    if (!f) return;
+    status("Publishing " + f.name + "...");
+    try {
+      let blob = f;
+      if (f.type !== "image/png") {   // store everything as PNG so the address never changes
+        const bmp = await createImageBitmap(f);
+        const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
+        c.getContext("2d").drawImage(bmp, 0, 0);
+        blob = await new Promise((res) => c.toBlob(res, "image/png"));
+      }
+      await publish(IMG_PATH, toBase64(await blob.arrayBuffer()), "Update NPS YTD trends chart");
+      setTrendsImage(URL.createObjectURL(blob));
+      status("Done. The old chart has been replaced.");
+    } catch (e) { publishError(e); }
+  });
 
   /* ---------- calculator ---------- */
   function counts() {
@@ -385,8 +465,7 @@
       b.setAttribute("aria-selected", String(on));
       b.tabIndex = on ? 0 : -1;
     });
-    $("tab-calc").hidden = t !== "calc";
-    $("tab-overview").hidden = t !== "overview";
+    ["calc", "overview", "trends"].forEach((k) => { $("tab-" + k).hidden = t !== k; });
     save();
   }
   document.querySelector(".nps-tabs").addEventListener("click", (e) => {
@@ -395,13 +474,13 @@
   });
   document.querySelector(".nps-tabs").addEventListener("keydown", (e) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-    const next = state.tab === "calc" ? "overview" : "calc";
+    const order = ["calc", "overview", "trends"], i = order.indexOf(state.tab);
+    const next = order[(i + (e.key === "ArrowRight" ? 1 : order.length - 1)) % order.length];
     setTab(next);
     $("tabbtn-" + next).focus();
   });
 
   function render() {
-    renderLoad();
     $("main").hidden = !state.data;
     if (!state.data) return;
     renderCalc();
@@ -410,5 +489,5 @@
   }
 
   restore();
-  render();
+  loadPublished();
 })();

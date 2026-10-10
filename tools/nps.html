@@ -8,41 +8,63 @@
 <meta name="apple-mobile-web-app-title" content="Toolbox">
 <title>NPS</title>
 <link rel="manifest" href="../manifest.json">
-<link rel="stylesheet" href="../style.css?v=20261010c">
-<link rel="stylesheet" href="nps/nps.css?v=20261010c">
+<link rel="stylesheet" href="../style.css?v=20261010d">
+<link rel="stylesheet" href="nps/nps.css?v=20261010d">
 </head>
 <body>
 <div class="wrap nps">
-  <a class="back" href="../index.html">&larr; Toolbox</a>
+  <div class="nps-top">
+    <a class="back" href="../index.html">&larr; Toolbox</a>
+    <button class="edge" id="adminBtn" type="button" aria-label="Update NPS data" title="Update data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
+    </button>
+  </div>
   <h1>NPS</h1>
   <p class="nps-sub">See how many promoters it takes to hit your target, and how every store in the area is doing.</p>
 
-  <section class="nps-file" id="load">
-    <div class="nps-file-info" id="loadInfo">
-      <strong>No workbook yet</strong>
-      <span>Upload the dated NPS workbook (.xlsx) to start.</span>
-    </div>
-    <label class="btn btn-primary" for="file">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
-      <span id="fileLabel">Upload workbook</span>
-    </label>
-    <input id="file" type="file" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
-  </section>
+  <p class="nps-meta" id="meta">Loading the latest data</p>
   <p class="nps-error" id="error" role="alert" hidden></p>
 
   <div id="main" hidden>
     <div class="nps-tabs" role="tablist" aria-label="NPS views">
       <button type="button" role="tab" id="tabbtn-calc" aria-controls="tab-calc" data-tab="calc" aria-selected="true" class="is-on">Calculator</button>
       <button type="button" role="tab" id="tabbtn-overview" aria-controls="tab-overview" data-tab="overview" aria-selected="false">Overview</button>
+      <button type="button" role="tab" id="tabbtn-trends" aria-controls="tab-trends" data-tab="trends" aria-selected="false">YTD trends</button>
     </div>
 
     <section id="tab-calc" role="tabpanel" aria-labelledby="tabbtn-calc"></section>
     <section id="tab-overview" role="tabpanel" aria-labelledby="tabbtn-overview" hidden></section>
+    <section id="tab-trends" role="tabpanel" aria-labelledby="tabbtn-trends" hidden>
+      <a class="trends" id="trendsLink" href="#" target="_blank" rel="noopener">
+        <img id="trendsImg" alt="Year-to-date NPS trend charts by division">
+      </a>
+      <p class="hint" id="trendsHint">Tap the chart to open it full size.</p>
+    </section>
   </div>
 </div>
 
+<dialog class="admin" id="admin" aria-labelledby="adminTitle">
+  <form method="dialog" class="admin-in">
+    <div class="admin-head"><h2 id="adminTitle">Update data</h2><button class="x" value="close" aria-label="Close">&times;</button></div>
+    <p class="admin-sub">Uploads replace what everyone sees on this page. It can take a minute or two to show for others.</p>
+    <div id="tokenBox">
+      <label class="lbl" for="token">GitHub token</label>
+      <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_...">
+      <p class="hint">Needed once on this device. Make a fine-grained token for the Toolbox repo with Contents set to read and write: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">create token</a>.</p>
+    </div>
+    <p class="hint" id="tokenSaved" hidden>Token saved on this device. <button class="link" type="button" id="tokenChange">Change</button></p>
+    <div class="admin-actions">
+      <button class="btn btn-primary" type="button" id="pubWorkbook">Replace workbook</button>
+      <button class="btn" type="button" id="pubImage">Replace YTD trends image</button>
+    </div>
+    <p class="admin-status" id="adminStatus" role="status" aria-live="polite"></p>
+  </form>
+  <input id="file" type="file" accept=".xlsx,.xlsm" hidden>
+  <input id="imgFile" type="file" accept="image/*" hidden>
+</dialog>
+
 <script src="nps/xlsx.mini.min.js?v=20261010b"></script>
-<script src="nps/engine.js?v=20261010c"></script>
-<script src="nps/app.js?v=20261010c"></script>
+<script src="nps/engine.js?v=20261010d"></script>
+<script src="nps/app.js?v=20261010d"></script>
 </body>
 </html>

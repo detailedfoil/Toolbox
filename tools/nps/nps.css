@@ -1,6 +1,6 @@
 /* NPS tool. Builds on the Toolbox tokens in style.css (--bg, --card, --border, --text, --muted, --accent). */
 
-.nps {
+.nps, .admin {
   --good: #3ccf82;          /* status text: on target */
   --bad: #ff8080;           /* status text: below target */
   --m-p: #1faa63;           /* marks: promoters / passives / detractors */
@@ -12,7 +12,7 @@
   --panel-line: color-mix(in srgb, var(--accent) 38%, var(--border));
 }
 @media (prefers-color-scheme: light) {
-  .nps {
+  .nps, .admin {
     --good: #11804a; --bad: #c62828;
     --m-p: #11804a; --m-pa: #8a93a3; --m-d: #d03b3b;
     --field: #f7f9fc; --line: #e8ecf3;
@@ -41,8 +41,8 @@
 .nps-error { margin: 10px 2px 0; color: var(--bad); font-size: .9rem; }
 
 /* ---------- tabs ---------- */
-.nps-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 18px 0 16px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
-.nps-tabs button { min-height: 42px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: .95rem; font-weight: 650; cursor: pointer; }
+.nps-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; margin: 18px 0 16px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+.nps-tabs button { min-height: 42px; padding: 0 4px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: .95rem; font-weight: 650; cursor: pointer; }
 .nps-tabs button.is-on { background: var(--accent); color: #fff; }
 
 /* ---------- shared bits ---------- */
@@ -182,3 +182,30 @@
 @media (prefers-reduced-motion: reduce) {
   .nps * { transition: none !important; }
 }
+
+/* ---------- top edge: back link + the quiet update button ---------- */
+.nps-top { display: flex; align-items: center; justify-content: space-between; }
+.edge { width: 34px; height: 34px; margin: 8px -6px 16px 0; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--muted); opacity: .45; cursor: pointer; }
+.edge:hover, .edge:focus-visible { opacity: 1; background: var(--card); }
+.edge svg { width: 18px; height: 18px; }
+.nps-meta { margin: -8px 2px 0; color: var(--muted); font-size: .85rem; }
+
+/* ---------- YTD trends ---------- */
+.trends { display: block; border-radius: 18px; overflow: hidden; border: 1px solid var(--border); background: #fafafa; }
+.trends img { display: block; width: 100%; height: auto; }
+
+/* ---------- update dialog ---------- */
+.admin { width: min(440px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--border); border-radius: 20px; background: var(--card); color: var(--text); }
+.admin::backdrop { background: rgba(0, 0, 0, .55); }
+.admin-in { padding: 18px 18px 20px; }
+.admin-head { display: flex; align-items: center; justify-content: space-between; }
+.admin-head h2 { margin: 0; font-size: 1.15rem; }
+.x { width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: 1.6rem; line-height: 1; cursor: pointer; }
+.admin-sub { color: var(--muted); font-size: .88rem; margin: 6px 0 16px; }
+.admin input[type=password] { width: 100%; min-height: 48px; padding: 0 14px; font-size: 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--field); color: var(--text); outline: none; }
+.admin input[type=password]:focus { border-color: var(--accent); }
+.admin .hint a { color: var(--accent); }
+.admin-actions { display: grid; gap: 8px; margin-top: 16px; }
+.admin-status { min-height: 1.3em; margin: 12px 2px 0; font-size: .88rem; color: var(--good); }
+.admin-status.bad { color: var(--bad); }
+.admin input, .admin button { font-family: inherit; }
