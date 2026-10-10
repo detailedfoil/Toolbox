@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Toolbox">
+<title>NPS</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../style.css?v=20261010b">
+<link rel="stylesheet" href="nps/nps.css?v=20261010b">
+</head>
+<body>
+<div class="wrap nps">
+  <a class="back" href="../index.html">&larr; Toolbox</a>
+  <h1>NPS</h1>
+  <p class="nps-sub">Upload the dated NPS workbook and get the calculator, leaderboard and store breakdown.</p>
+
+  <section class="nps-load" id="load">
+    <div class="nps-load-info" id="loadInfo">
+      <strong>No workbook loaded</strong>
+      <span>Choose the latest DD.MM.YYYY.xlsx</span>
+    </div>
+    <label class="btn btn-primary" for="file">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <span id="fileLabel">Upload</span>
+    </label>
+    <input id="file" type="file" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+  </section>
+  <p class="nps-error" id="error" role="alert" hidden></p>
+
+  <div id="main" hidden>
+    <nav class="nps-tabs" role="tablist" aria-label="NPS views">
+      <button type="button" role="tab" class="is-on" data-tab="calc" aria-selected="true">Calculator</button>
+      <button type="button" role="tab" data-tab="board" aria-selected="false">Leaderboard</button>
+      <button type="button" role="tab" data-tab="stores" aria-selected="false">Stores</button>
+    </nav>
+
+    <section id="tab-calc" class="nps-pane"></section>
+    <section id="tab-board" class="nps-pane" hidden></section>
+    <section id="tab-stores" class="nps-pane" hidden></section>
+  </div>
+</div>
+
+<script src="nps/xlsx.mini.min.js?v=20261010b"></script>
+<script src="nps/engine.js?v=20261010b"></script>
+<script src="nps/app.js?v=20261010b"></script>
+</body>
+</html>
