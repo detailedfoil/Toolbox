@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#0f1115">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Toolbox">
-<title>Shelf Check</title>
+<title>Monday Price Check</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
-<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261011b">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261011c">
 <script src="../auth-data.js?v=20261011b"></script>
 <script src="../auth.js?v=20261011c"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -17,8 +17,9 @@
 <body>
 <div class="wrap sc">
   <a class="back" href="../index.html">&larr; Toolbox</a>
-  <h1>Shelf Check</h1>
+  <h1>Monday Price Check</h1>
   <p class="sc-sub" id="sub">Front of house shelf prices, checked against screwfix.com every Monday morning.</p>
+  <div class="sc-notice" id="notice" hidden></div>
 
   <p class="sc-meta" id="meta">Loading the latest check</p>
   <p class="sc-error" id="error" role="alert" hidden></p>
@@ -67,6 +68,6 @@
 <div class="sc-toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="shelf-check/sheet-engine.js?v=20261011b"></script>
-<script src="shelf-check/app.js?v=20261011b"></script>
+<script src="shelf-check/app.js?v=20261011d"></script>
 </body>
 </html>

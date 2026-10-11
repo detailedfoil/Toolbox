@@ -100,8 +100,15 @@
   function render() {
     var d = data, now = london(), week = mondayOf(now.date);
     $('error').hidden = true;
-    $('meta').hidden = false;
+    $('meta').hidden = !!d.checked;                      // the notice above says the same
     $('sub').textContent = (d.plan.name || 'Front of house') + ' shelf prices, checked against screwfix.com every Monday morning.';
+    $('notice').hidden = !d.checked;
+    if (d.checked) {
+      var prevMon = d.previous_checked && utc(d.previous_checked).getUTCDay() === 1;
+      $('notice').innerHTML = '<b>Prices correct as of ' + esc(Sheet.nice(d.checked)) + '.</b> ' +
+        (d.previous_checked ? 'Price changes are based off ' + (prevMon ? "last Monday's report" : 'the last report') + ' (' + esc(Sheet.nice(d.previous_checked)) + '). ' : 'This was the first check, so changes show from next week. ') +
+        'Use this tool as well as this week\'s updates at noon for best accuracy.';
+    }
     var nw = function (s) { return '<span class="sc-nw">' + esc(s) + '</span>'; };
     $('meta').innerHTML = d.checked
       ? 'Checked <b>' + nw(Sheet.nice(d.checked)) + '</b>' + (d.previous_checked ? ', compared with ' + nw(day(d.previous_checked)) + '.' : '. First check, nothing to compare with yet.')
