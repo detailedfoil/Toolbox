@@ -14,6 +14,16 @@
 }
 .ps-tip { margin: 6px 2px 0; font-size: .78rem; color: var(--muted); }
 
+/* price + was price side by side, then what the sale flash will say */
+.ps-main .pt-fields { grid-template-columns: minmax(0, 1fr); }
+.ps-prices { display: grid; grid-template-columns: repeat(2, minmax(0, 11rem)); gap: 10px; }
+.ps-prices .pt-money { max-width: none; }
+.ps-opt { text-transform: none; letter-spacing: 0; font-weight: 500; margin-left: 3px; opacity: .85; }
+.ps-sale { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: -2px 2px 0; font-size: .84rem; color: var(--muted); }
+.ps-sale.off { color: var(--warn); }
+.ps-flash { display: inline-block; padding: 4px 9px 3px; background: #ed1c24; color: #fff; font: 800 .86rem/1.1 'PosterBold', system-ui, sans-serif; letter-spacing: .01em;
+  clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px); }
+
 /* the poster preview: the same layout as the PDF, drawn as SVG on a sheet of A4 */
 .ps-preview { padding: 12px; border-radius: 12px; background: var(--paper); position: relative; }
 .ps-sheet { position: relative; max-width: 300px; margin: 0 auto; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .22); aspect-ratio: 210 / 297; }
@@ -22,6 +32,8 @@
 .ps-busy { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
 .ps-busy span { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(31, 78, 161, .2); border-top-color: #1f4ea1; animation: pt-spin .8s linear infinite; }
 .ps-svg .t-blue { fill: #1f4ea1; }
+.ps-svg .t-red { fill: #ed1c24; }
+.ps-svg .t-white { fill: #fff; }
 .ps-svg .t-ref { fill: #231f20; }
 .ps-svg .ph { opacity: .28; }
 .ps-svg .ps-hole { fill: #f3f5f9; stroke: #c3cad8; stroke-width: 1.5; stroke-dasharray: 7 6; }

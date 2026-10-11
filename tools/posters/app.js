@@ -30,7 +30,7 @@
     return {
       id: r.id || uid(), code: r.code, price: r.price || '', product: r.product || '',
       status: r.status === 'looking' ? 'manual' : (r.status || 'manual'), checkedAt: r.checkedAt || 0,
-      editedPrice: !!r.editedPrice, editedProduct: !!r.editedProduct, unsure: !!r.unsure,
+      was: r.was || '', editedPrice: !!r.editedPrice, editedProduct: !!r.editedProduct, editedWas: !!r.editedWas, unsure: !!r.unsure,
       age: !!r.age, ageSet: typeof r.ageSet === 'boolean' ? r.ageSet : null,
       photos: Array.isArray(r.photos) ? r.photos.filter(function (x) { return typeof x === 'string'; }) : [],
       photo: r.photo && (r.photo.kind === 'sf' || r.photo.kind === 'own') ? r.photo : null,
@@ -49,7 +49,7 @@
     var write = function () {
       store(ROWS_KEY, rows.map(function (r) {
         return { id: r.id, code: r.code, price: r.price, product: r.product, status: r.status === 'looking' ? 'manual' : r.status,
-                 checkedAt: r.checkedAt, editedPrice: r.editedPrice, editedProduct: r.editedProduct, unsure: r.unsure,
+                 checkedAt: r.checkedAt, was: r.was, editedPrice: r.editedPrice, editedProduct: r.editedProduct, editedWas: r.editedWas, unsure: r.unsure,
                  age: r.age, ageSet: r.ageSet, photos: r.photos, photo: r.photo, scale: r.scale, pos: r.pos };
       }));
     };
@@ -82,13 +82,14 @@
 
   function posterOf(r) {
     var img = imgs.get(r.id);
-    return { code: r.code, price: normPrice(r.price) || r.price, product: cleanProduct(r.product, r.code), age: hasAge(r),
+    return { code: r.code, price: normPrice(r.price) || r.price, was: normPrice(r.was) || '', product: cleanProduct(r.product, r.code), age: hasAge(r),
              pos: r.pos, scale: r.scale, image: img ? { bytes: img.bytes, w: img.w, h: img.h } : null };
   }
 
   function problem(r) {
     if (!r.price) return 'Add the price';
     if (normPrice(r.price) === null) return 'Price should look like 12.99';
+    if (r.was && normPrice(r.was) === null) return 'Was price should look like 29.99';
     if (!cleanProduct(r.product, r.code)) return 'Add the product name';
     if (!engine) return null;
     var e = engine.check(posterOf(r));
@@ -115,7 +116,7 @@
     var prob = problem(r);
     if (prob) return [r.price || r.product ? 'bad' : 'muted', prob];
     if (s === 'found' && r.unsure) return ['warn', 'Check this is the right product'];
-    if (s === 'found' && (r.editedPrice || r.editedProduct)) return ['info', 'Edited by you'];
+    if (s === 'found' && (r.editedPrice || r.editedProduct || r.editedWas)) return ['info', 'Edited by you'];
     if (s === 'found') {
       var when = whenChecked(r.checkedAt), today = E.ukDate(new Date(r.checkedAt)).iso === E.ukDate().iso;
       return today ? ['ok', 'Live price, checked ' + when] : ['muted', 'Checked ' + when + '. Tap ↻ for today’s price'];
@@ -159,7 +160,7 @@
   function makeRow(r) {
     var el = document.createElement('article');
     el.className = 'pt-row ps-row';
-    var pid = 'p-' + r.id, nid = 'n-' + r.id, sid = 's-' + r.id;
+    var pid = 'p-' + r.id, nid = 'n-' + r.id, sid = 's-' + r.id, wid = 'w-' + r.id;
     el.innerHTML =
       '<div class="pt-row-top">' +
         '<input class="pt-code" type="text" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Product code">' +
@@ -172,7 +173,11 @@
       '<div class="pt-chip" role="status"><span></span></div>' +
       '<div class="ps-main">' +
         '<div class="pt-fields">' +
-          '<div class="pt-field"><label for="' + pid + '">Price</label><div class="pt-money"><input id="' + pid + '" class="pt-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"></div></div>' +
+          '<div class="ps-prices">' +
+            '<div class="pt-field"><label for="' + pid + '">Price</label><div class="pt-money"><input id="' + pid + '" class="pt-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"></div></div>' +
+            '<div class="pt-field"><label for="' + wid + '">Was <span class="ps-opt">on offer</span></label><div class="pt-money"><input id="' + wid + '" class="ps-was" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"></div></div>' +
+          '</div>' +
+          '<p class="ps-sale" hidden></p>' +
           '<div class="pt-field"><label for="' + nid + '">Product name</label><textarea id="' + nid + '" class="pt-product" rows="1" placeholder="As written on Screwfix"></textarea>' +
             '<p class="ps-tip">Lines break by themselves. Press Enter to choose where.</p></div>' +
         '</div>' +
@@ -203,7 +208,7 @@
     var q = function (s) { return el.querySelector(s); };
     var v = {
       el: el, code: q('.pt-code'), chip: q('.pt-chip'), chipText: q('.pt-chip span'), sf: q('.sf'),
-      refresh: q('.refresh'), remove: q('.remove'), price: q('.pt-price'), product: q('.pt-product'),
+      refresh: q('.refresh'), remove: q('.remove'), price: q('.pt-price'), product: q('.pt-product'), was: q('.ps-was'), sale: q('.ps-sale'),
       dl: q('.dl'), age: q('.pt-age'), preview: q('.ps-preview'), sheet: q('.ps-sheet'), busy: q('.ps-busy'),
       pstatus: q('.ps-photo-status'), thumbs: q('.ps-thumbs'), paste: q('.paste'), upload: q('.upload'),
       adjust: q('.ps-adjust'), size: q('.ps-size input'), sizeOut: q('.ps-size output'), seg: el.querySelectorAll('.ps-seg button'),
@@ -220,7 +225,7 @@
       var c = normCode(v.code.value);
       if (c && c !== r.code && !isSku(c)) toast(v.code.value.trim() + " isn't a Screwfix code. Codes are 5 characters, like 872RE");
       if (!c || c === r.code || !isSku(c)) { v.code.value = r.code; return; }
-      r.code = c; r.price = ''; r.product = ''; r.editedPrice = r.editedProduct = false; r.unsure = false;
+      r.code = c; r.price = ''; r.product = ''; r.was = ''; r.editedPrice = r.editedProduct = r.editedWas = false; r.unsure = false;
       r.age = false; r.ageSet = null; r.photos = []; r.missing = [];
       enqueue(r);
       if (!r.photo || r.photo.kind === 'sf') loadScrewfixPhoto(r, c + '_P');
@@ -235,6 +240,16 @@
       if (n) { r.price = n; v.price.value = n.slice(1); }
       changedRow(r);
     });
+    v.was.addEventListener('input', function () {
+      r.was = v.was.value.trim() ? v.was.value : ''; r.editedWas = true;
+      if (r.status !== 'found' && r.status !== 'looking') r.status = 'manual';
+      changedRow(r);
+    });
+    v.was.addEventListener('blur', function () {
+      var n = normPrice(r.was);
+      if (n) { r.was = n; v.was.value = n.slice(1); }
+      changedRow(r);
+    });
     v.product.addEventListener('input', function () {
       r.product = v.product.value; r.editedProduct = true;
       if (r.status !== 'found' && r.status !== 'looking') r.status = 'manual';
@@ -242,7 +257,7 @@
       changedRow(r);
     });
     v.refresh.addEventListener('click', function () {
-      r.editedPrice = r.editedProduct = false;
+      r.editedPrice = r.editedProduct = r.editedWas = false;
       enqueue(r);
       if (r.photoState === 'failed' && (!r.photo || r.photo.kind === 'sf')) loadScrewfixPhoto(r, (r.photo && r.photo.id) || r.code + '_P');
     });
@@ -310,7 +325,10 @@
     if (active !== v.code) v.code.value = r.code;
     if (active !== v.price) v.price.value = String(r.price || '').replace(/^£/, '');
     if (active !== v.product) { v.product.value = r.product; autosize(v.product); }
+    if (active !== v.was) v.was.value = String(r.was || '').replace(/^£/, '');
     v.price.classList.toggle('invalid', !!r.price && normPrice(r.price) === null);
+    v.was.classList.toggle('invalid', !!r.was && normPrice(r.was) === null);
+    paintSale(r, v);
     var st = statusOf(r);
     v.chip.className = 'pt-chip ' + st[0];
     v.chipText.textContent = st[1];
@@ -326,6 +344,27 @@
                       : 'Tap to add the 18+ badge for a Challenge 25 product';
     paintPhoto(r, v);
     paintPreview(r, v);
+  }
+
+  /* Under the prices: what the sale flash will say, and why */
+  function paintSale(r, v) {
+    var price = normPrice(r.price), was = normPrice(r.was), s = price && was ? E.saleOf(price, was) : null;
+    var msg = '';
+    v.sale.textContent = '';
+    if (s) {
+      var flash = document.createElement('span');
+      flash.className = 'ps-flash';
+      flash.textContent = s.flash;
+      v.sale.appendChild(flash);
+      var pct = Math.floor(s.pct * 10) / 10, real = pct % 1 ? pct.toFixed(1) : String(pct);
+      msg = s.over >= 5 ? 'Actual saving ' + real + '%, rounded down to the nearest 5%'
+                        : 'Actual saving ' + real + '%, so it shows the money off instead';
+    } else if (was && price) {
+      msg = 'The was price needs to be higher than the price to show a sale';
+    }
+    if (msg) v.sale.appendChild(document.createTextNode(msg));
+    v.sale.classList.toggle('off', !s);
+    v.sale.hidden = !msg;
   }
 
   function paintPhoto(r, v) {
@@ -410,6 +449,12 @@
                (r.photoState === 'loading' ? 'Getting the photo' : 'Photo') + '</text>');
     }
     out.push(textEl('t-blue' + (pl.phPrice ? ' ph' : ''), lay.price.run, lay.price.x, lay.price.y, lay.price.size, 'PosterBold', lay.price.text));
+    if (lay.sale) {
+      var sl = lay.sale;
+      out.push('<polygon class="t-red" points="' + E.flashOutline(sl.box).map(function (pt) { return pt[0].toFixed(2) + ',' + pt[1].toFixed(2); }).join(' ') + '"/>');
+      out.push(textEl('t-white', sl.flash.run, sl.flash.x, sl.flash.y, sl.flash.size, 'PosterBold', sl.flash.text));
+      out.push(textEl('t-red', sl.was.run, sl.was.x, sl.was.y, sl.was.size, 'PosterBold', sl.was.text));
+    }
     lay.names.forEach(function (n) { out.push(textEl('t-blue' + (pl.phName ? ' ph' : ''), n.run, n.x, n.y, LY.name.size, 'PosterText', n.text)); });
     out.push(textEl('t-blue', lay.code.run, lay.code.x, lay.code.y, LY.code.size, 'PosterText', lay.code.text));
     if (lay.badge) {
@@ -601,7 +646,7 @@
   }
 
   function newRow(c) {
-    return { id: uid(), code: c, price: '', product: '', status: 'manual', checkedAt: 0, editedPrice: false, editedProduct: false,
+    return { id: uid(), code: c, price: '', product: '', was: '', status: 'manual', checkedAt: 0, editedPrice: false, editedProduct: false, editedWas: false,
              unsure: false, age: false, ageSet: null, photos: [], photo: null, scale: 1, pos: 'middle',
              photoState: 'none', photoMsg: '', token: 0, ptoken: 0, rev: 0 };
   }
@@ -661,7 +706,7 @@
   });
 
   checkAll.addEventListener('click', function () {
-    rows.forEach(function (r) { r.editedPrice = r.editedProduct = false; enqueue(r); });
+    rows.forEach(function (r) { r.editedPrice = r.editedProduct = r.editedWas = false; enqueue(r); });
   });
 
   $('clearAll').addEventListener('click', function () {
@@ -713,6 +758,7 @@
     if (res.status === 'found' || res.status === 'partial') {
       if (res.price && !r.editedPrice) r.price = res.price;
       if (res.name && !r.editedProduct) r.product = res.name;
+      if (!r.editedWas) r.was = res.was || '';        // on offer: the old price; none means it isn't any more
       r.unsure = !!res.unsure;
       r.age = !!res.age;
       if (res.status === 'found') r.checkedAt = Date.now();
@@ -734,7 +780,7 @@
   function fileName(r) { return 'UK-' + r.code + '-A4-' + E.ukDate().ref + '.pdf'; }
   function keyOf(r) {
     var p = posterOf(r);
-    return [r.id, r.rev, p.code, p.price, p.product, p.age, p.pos, p.scale].join('|');
+    return [r.id, r.rev, p.code, p.price, p.was, p.product, p.age, p.pos, p.scale].join('|');
   }
 
   // PDFs are made ahead of time so a tap can share or save them straight away

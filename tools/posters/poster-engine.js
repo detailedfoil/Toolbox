@@ -19,16 +19,20 @@
   // Colours as InDesign wrote them: Screwfix blue C100 M72 Y0 K6, and process black for the reference line
   var BLUE = [1, 0.72, 0, 0.06];
   var BLACK = [0, 0, 0, 1];
-  var RED = [0, 1, 1, 0];                                // 18+ badge
+  var RED = [0, 1, 1, 0];                                // sale flash, "Was" price and the 18+ badge
+  var WHITE = [0, 0, 0, 0];
   var SCREEN_BLUE = '#1f4ea1';                           // the same blue on screen (preview)
+  var SCREEN_RED = '#ed1c24';
 
   /* Everything in points, measured from the top-left corner of the page. */
   var L = {
     price: { size: 116.8, baseline: 130.69, inkLeft: 31.44, right: PAGE_W - MARGIN },
-    name: { size: 36, x: MARGIN, baseline: 265.11, leading: 38.99, width: 400 },
+    name: { size: 36, x: MARGIN, baseline: 265.11, leading: 38.99, width: 400, maxWidth: 490 },
     code: { size: 25, x: MARGIN, below: 56.51 },                 // code baseline sits this far under the last name line
     photo: { left: MARGIN, right: PAGE_W - MARGIN, gap: 26, bottom: PAGE_H - MARGIN },   // fills the page inside 10 mm margins
-    ref: { size: 5.25, hscale: 0.95, x: 571.119, y: PAGE_H - 28.3666 }  // reads bottom to top, baseline x
+    ref: { size: 5.25, hscale: 0.95, x: 571.119, y: PAGE_H - 28.3666 },  // reads bottom to top, baseline x
+    // on offer: a red "SAVE OVER 30%" flash under the price (corners cut off at 45°) and "Was £29.99" in red after it
+    sale: { x: MARGIN, top: 144.567, height: 49.89, corner: 2 * MM, padL: 6.88, padR: 7.16, size: 26.5, baseline: 179.26, gap: 13.43 }
   };
   var DASHES = '-–—';        // hyphen, en dash, em dash: a line may break after these
 
@@ -181,11 +185,28 @@
     return lines.map(str).filter(Boolean);
   }
 
+  /* Does a line (other than the last) end by splitting a hyphenated word ("Double- / Countersunk")? */
+  function splitsWord(lines) {
+    return lines.slice(0, -1).some(function (l) { return DASHES.indexOf(l.slice(-1)) >= 0 && l.length > 1 && l.slice(-2, -1) !== ' '; });
+  }
+
+  /* One paragraph of the name: the usual 400 pt measure, but rather than split a hyphenated word the line may
+     run longer, up to 490 pt, as the official posters do ("TurboGold PZ Double-Countersunk / Woodscrews ..."). */
+  function fitName(face, text) {
+    var base = wrap(face, text, L.name.size, L.name.width);
+    if (!splitsWord(base)) return base;
+    for (var w = L.name.width + 10; w <= L.name.maxWidth; w += 10) {
+      var lines = wrap(face, text, L.name.size, w);
+      if (!splitsWord(lines) && lines.length <= base.length) return lines;
+    }
+    return base;
+  }
+
   /* The name as poster lines: the user's own line breaks first (Enter in the name box), then wrapped to fit. */
   function nameLines(face, product) {
     var out = [];
     String(product || '').split(/\r?\n/).forEach(function (part) {
-      if (squash(part)) out = out.concat(wrap(face, part, L.name.size, L.name.width) || [squash(part)]);
+      if (squash(part)) out = out.concat(fitName(face, part));
     });
     return out;
   }
@@ -194,17 +215,41 @@
 
   var PRICE_RE = /^£\d{1,3}(,\d{3})*\.\d{2}$/;
   function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function pence(price) { return Math.round(parseFloat(String(price).replace(/[£,]/g, '')) * 100); }
+  function money(p) {
+    return '£' + (p / 100).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  /* What the sale flash says. "Save over" rounds the real saving down to a multiple of 5 and stays under it,
+     so it's always true: 33.3% -> SAVE OVER 30%, 46% -> SAVE OVER 45%, exactly 35% -> SAVE OVER 30%.
+     Savings of 5% or less show the money instead: SAVE £1.00. -> null when it isn't cheaper than the was price. */
+  function saleOf(price, was) {
+    if (!was || !PRICE_RE.test(price) || !PRICE_RE.test(was)) return null;
+    var now = pence(price), before = pence(was);
+    if (!(before > now) || now <= 0) return null;
+    var off = before - now;
+    var step = Math.floor((off * 100 - 1) / (5 * before)) * 5;     // largest multiple of 5 below the real %
+    return {
+      pct: off * 100 / before,
+      over: step,
+      flash: step >= 5 ? 'SAVE OVER ' + step + '%' : 'SAVE ' + money(off),
+      was: 'Was ' + money(before)
+    };
+  }
 
   function clean(p) {
     var code = String(p.code || '').trim().toUpperCase().replace(/O/g, '0');
     var price = String(p.price || '').trim().replace(/ /g, '');
     if (price.charAt(0) !== '£') price = '£' + price;
     if (!PRICE_RE.test(price)) throw PosterError('Bad price "' + (p.price || '') + '" for ' + code + ': use £12.34', 'price');
+    var was = String(p.was || '').trim().replace(/ /g, '');
+    if (was && was.charAt(0) !== '£') was = '£' + was;
+    if (!PRICE_RE.test(was)) was = '';
     var lines = String(p.product || '').split(/\r?\n/).map(squash).filter(Boolean);
     if (lines.length) lines[lines.length - 1] = lines[lines.length - 1].replace(new RegExp('\\s*\\(' + escapeRe(code) + '\\)\\s*$', 'i'), '');
     var pos = p.pos === 'top' || p.pos === 'bottom' ? p.pos : 'middle';
     var scale = Math.min(1, Math.max(0.3, +p.scale || 1));
-    return { code: code, price: price, product: lines.filter(Boolean).join('\n'), age: !!p.age, pos: pos, scale: scale };
+    return { code: code, price: price, was: was, product: lines.filter(Boolean).join('\n'), age: !!p.age, pos: pos, scale: scale };
   }
 
   /* ---------- layout (shared by the PDF and the on-screen preview) ---------- */
@@ -240,8 +285,26 @@
     var refText = 'UK-' + t.code + '-A4-' + (refDate || ukDate().ref);
     var ref = { text: refText, x: L.ref.x, y: L.ref.y, size: L.ref.size, hscale: L.ref.hscale, run: fonts.bold.layout(refText, L.ref.size) };
 
-    return { poster: t, price: price, names: names, code: code, badge: badge, area: area, photo: photo, ref: ref,
+    var sale = null, s = saleOf(t.price, t.was);
+    if (s) {
+      var S = L.sale, flashRun = fonts.bold.layout(s.flash, S.size), wasRun = fonts.bold.layout(s.was, S.size);
+      var boxW = S.padL + flashRun.width + S.padR;
+      sale = {
+        info: s,
+        box: { x: S.x, y: S.top, w: boxW, h: S.height, corner: S.corner },
+        flash: { text: s.flash, x: S.x + S.padL, y: S.baseline, size: S.size, run: flashRun },
+        was: { text: s.was, x: S.x + boxW + S.gap, y: S.baseline, size: S.size, run: wasRun }
+      };
+    }
+
+    return { poster: t, price: price, sale: sale, names: names, code: code, badge: badge, area: area, photo: photo, ref: ref,
              page: { w: PAGE_W, h: PAGE_H } };
+  }
+
+  /* The flash outline: a rectangle with its corners cut off at 45°, as [x, y] points (top-left page coords) */
+  function flashOutline(b) {
+    var c = b.corner, x0 = b.x, y0 = b.y, x1 = b.x + b.w, y1 = b.y + b.h;
+    return [[x0 + c, y0], [x1 - c, y0], [x1, y0 + c], [x1, y1 - c], [x1 - c, y1], [x0 + c, y1], [x0, y1 - c], [x0, y0 + c]];
   }
 
   /* ---------- PDF content ---------- */
@@ -299,6 +362,14 @@
       c.push('q ' + fp(ph.w, 0, 0, ph.h, ph.x, PAGE_H - ph.y - ph.h) + ' cm /' + imgName + ' Do Q');
     }
     drawRun(c, fonts.bold, lay.price.size, lay.price.run, lay.price.x, lay.price.y, BLUE);
+    if (lay.sale) {
+      var pts = flashOutline(lay.sale.box);
+      c.push('q ' + fp(RED[0], RED[1], RED[2], RED[3]) + ' k');
+      pts.forEach(function (pt, i) { c.push(fp(pt[0], PAGE_H - pt[1]) + (i ? ' l' : ' m')); });
+      c.push('h f Q');
+      drawRun(c, fonts.bold, lay.sale.flash.size, lay.sale.flash.run, lay.sale.flash.x, lay.sale.flash.y, WHITE);
+      drawRun(c, fonts.bold, lay.sale.was.size, lay.sale.was.run, lay.sale.was.x, lay.sale.was.y, RED);
+    }
     lay.names.forEach(function (n) { drawRun(c, fonts.text, L.name.size, n.run, n.x, n.y, BLUE); });
     drawRun(c, fonts.text, L.code.size, lay.code.run, lay.code.x, lay.code.y, BLUE);
     if (lay.badge) drawBadge(c, lay.badge);
@@ -492,7 +563,7 @@
     return { ref: parts.day + '_' + parts.month + '_' + parts.year.slice(-2), iso: parts.year + '-' + parts.month + '-' + parts.day };
   }
 
-  var api = { Engine: Engine, clean: clean, ukDate: ukDate, PRICE_RE: PRICE_RE, BADGE: BADGE, LAYOUT: L,
-              PAGE_W: PAGE_W, PAGE_H: PAGE_H, SCREEN_BLUE: SCREEN_BLUE };
+  var api = { Engine: Engine, clean: clean, saleOf: saleOf, flashOutline: flashOutline, ukDate: ukDate, PRICE_RE: PRICE_RE,
+              BADGE: BADGE, LAYOUT: L, PAGE_W: PAGE_W, PAGE_H: PAGE_H, SCREEN_BLUE: SCREEN_BLUE, SCREEN_RED: SCREEN_RED };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.PosterEngine = api;
 })(this);

@@ -75,7 +75,7 @@
   }
 
   /* The selling price shown next to the heading: "£28.99 Inc Vat". Skips ex-VAT, was and multi-buy prices. */
-  function priceFromText(text, from) {
+  function priceMatch(text, from) {
     var re = /£\s?(\d{1,3}(?:,\d{3})+|\d+)\.(\d{2})/g, m, best = null, loose = null;
     while ((m = re.exec(text))) {
       var after = text.slice(re.lastIndex, re.lastIndex + 14).toLowerCase();
@@ -86,9 +86,34 @@
       if (incVat && !best) best = m;
       if (!skip && !loose && m.index >= from) loose = m;
     }
-    var hit = best || loose;
+    return best || loose;
+  }
+
+  function priceFromText(text, from) {
+    var hit = priceMatch(text, from);
     return hit ? normPrice(hit[1] + '.' + hit[2]) : null;
   }
+
+  /* On offer, Screwfix prints the old price with the selling one: "Save-33% £19.99 Inc Vat Was £29.99".
+     Only the text right next to the selling price counts, so other products' offers further down the page don't. */
+  function wasFromText(text, hit) {
+    if (!hit) return null;
+    var re = /was\s*:?\s*£\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{2}))?/i;   // "Inc VatWas £29.99" too
+    // nothing but "Inc Vat" (and maybe the ex-VAT price) may sit between the two prices
+    var close = function (gap) {
+      gap = gap.replace(/£\s?[\d,]+(?:\.\d{2})?\s*ex\.?\s*vat/gi, ' ').replace(/inc\.?\s*vat|now|\s+/gi, ' ');
+      return gap.indexOf('£') < 0 && gap.trim().length <= 12;
+    };
+    var end = hit.index + hit[0].length, after = text.slice(end, end + 120), m = after.match(re);
+    if (m && close(after.slice(0, m.index))) return normPrice(m[1] + '.' + (m[2] || '00'));
+    var before = text.slice(Math.max(0, hit.index - 80), hit.index), all = [], r2 = new RegExp(re.source, 'gi'), x;
+    while ((x = r2.exec(before))) all.push(x);
+    m = all[all.length - 1];
+    if (m && close(before.slice(m.index + m[0].length))) return normPrice(m[1] + '.' + (m[2] || '00'));
+    return null;
+  }
+
+  function pounds(p) { return parseFloat(String(p).replace(/[£,]/g, '')); }
 
   function findProduct(node, out, depth) {
     if (!node || typeof node !== 'object' || depth > 8) return;
@@ -129,14 +154,19 @@
       var at = p.text.indexOf(squash(p.h1).slice(0, 30));
       if (at >= 0) anchor = at;
     }
-    var price = priceFromText(p.text, anchor) || normPrice(p.ldPrice) || normPrice(p.itemPrice);
+    var hit = priceMatch(p.text, anchor);
+    var price = (hit ? normPrice(hit[1] + '.' + hit[2]) : null) || normPrice(p.ldPrice) || normPrice(p.itemPrice);
     var age = AGE.test(p.text);
+    // on offer: the old price (only the poster maker uses it)
+    var was = price && hit ? wasFromText(p.text, hit) : null;
+    if (was && !(pounds(was) > pounds(price))) was = null;
+    var sale = function (r) { if (was) r.was = was; return r; };
 
     if (BLOCKED.test(p.title) || BLOCKED.test(p.h1) || (!screwfix && !mentions)) return { status: 'blocked' };
     if (p.status === 404 || MISSING.test(p.title + ' ' + p.h1) || (!mentions && !price)) return { status: 'notfound' };
-    if (!mentions && price) return { status: 'found', name: name, price: price, age: age, unsure: true };
-    if (!price || !name) return { status: 'partial', name: name || '', price: price || '', age: age };
-    return { status: 'found', name: name, price: price, age: age };
+    if (!mentions && price) return sale({ status: 'found', name: name, price: price, age: age, unsure: true });
+    if (!price || !name) return sale({ status: 'partial', name: name || '', price: price || '', age: age });
+    return sale({ status: 'found', name: name, price: price, age: age });
   }
 
   /* Product photo ids on the page (872RE_P, 872RE_A1, ...), main photo first. Used by the A4 poster maker. */
@@ -228,8 +258,9 @@
     return isHtml ? parseHtml(t, code, res.status) : parseText(t, code, res.status);
   }
 
-  /* -> Promise<{status: 'found'|'partial'|'notfound'|'blocked', name, price, age (Challenge 25), unsure, images, via}>
-     (images: the product photo ids on the page, main one first; only the poster maker uses them) */
+  /* -> Promise<{status: 'found'|'partial'|'notfound'|'blocked', name, price, age (Challenge 25), unsure, was, images, via}>
+     (was: the old price when it's on offer; images: the product photo ids on the page, main one first.
+      Only the poster maker uses those two.) */
   function lookup(code) {
     code = String(code || '').toUpperCase();
     var order = proxyOrder(), i = 0, partial = null, notFound = 0;
