@@ -139,7 +139,27 @@
     return { status: 'found', name: name, price: price, age: age };
   }
 
+  /* Product photo ids on the page (872RE_P, 872RE_A1, ...), main photo first. Used by the A4 poster maker. */
+  function photoIds(text, code) {
+    var re = new RegExp('media\\.screwfix\\.com/is/image/ae235/(' + code + '_[A-Z0-9]+)', 'gi'), m, out = [];
+    while ((m = re.exec(text))) {
+      var id = m[1].toUpperCase();
+      if (out.indexOf(id) < 0) out.push(id);
+    }
+    out.sort(function (a, b) { return (b === code + '_P') - (a === code + '_P'); });
+    return out;
+  }
+
+  function withPhotos(r, text, code) {
+    if (r.status === 'found' || r.status === 'partial') r.images = photoIds(text, code);
+    return r;
+  }
+
   function parseHtml(html, code, status) {
+    return withPhotos(parseHtmlPage(html, code, status), html, code);
+  }
+
+  function parseHtmlPage(html, code, status) {
     var doc = new DOMParser().parseFromString(html, 'text/html');
     var meta = function (sel) { var el = doc.querySelector(sel); return el ? el.getAttribute('content') || '' : ''; };
     var ld = {};
@@ -174,6 +194,10 @@
 
   /* Reader-style proxies (r.jina.ai) send back the page as plain text / markdown. */
   function parseText(text, code, status) {
+    return withPhotos(parseTextPage(text, code, status), text, code);
+  }
+
+  function parseTextPage(text, code, status) {
     var err = text.match(/returned error (\d{3})/i);
     if (err && err[1] === '404') return { status: 'notfound' };
     var title = (text.match(/^Title:\s*(.+)$/m) || [])[1] || '';
@@ -204,7 +228,8 @@
     return isHtml ? parseHtml(t, code, res.status) : parseText(t, code, res.status);
   }
 
-  /* -> Promise<{status: 'found'|'partial'|'notfound'|'blocked', name, price, age (Challenge 25), unsure, via}> */
+  /* -> Promise<{status: 'found'|'partial'|'notfound'|'blocked', name, price, age (Challenge 25), unsure, images, via}>
+     (images: the product photo ids on the page, main one first; only the poster maker uses them) */
   function lookup(code) {
     code = String(code || '').toUpperCase();
     var order = proxyOrder(), i = 0, partial = null, notFound = 0;
