@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Toolbox">
+<title>Suggestions Box</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../style.css?v=20261010c">
+<link rel="stylesheet" href="suggestions/suggestions.css?v=202610112100">
+<script src="../auth-data.js?v=20261011b"></script>
+<script src="../auth.js?v=20261011c"></script>
+<script src="../analytics.js?v=20261011d"></script>
+</head>
+<body>
+<div class="wrap sg">
+  <a class="back" href="../index.html">&larr; Toolbox</a>
+  <h1>Suggestions Box</h1>
+  <p class="sg-sub">Got an idea for a new tool, or a way to make one of these better? Write it on a slip and post it in the box. It's anonymous: no name or store goes with it.</p>
+
+  <p class="sg-off" id="offline" hidden>The box isn't connected yet, so slips can't be posted right now.</p>
+
+  <form class="slip" id="slip" autocomplete="off" novalidate>
+    <div class="slip-sh" id="sheet">
+    <div class="slip-paper" id="paper">
+      <div class="slip-head">
+        <span class="slip-title">Suggestion slip</span>
+        <span class="slip-no" id="slipDate"></span>
+      </div>
+      <div class="slip-kind" role="radiogroup" aria-label="What is it?">
+        <label><input type="radio" name="type" value="idea" checked><span>New tool idea</span></label>
+        <label><input type="radio" name="type" value="improve"><span>Improve a tool</span></label>
+      </div>
+      <div class="slip-tool" id="toolRow" hidden>
+        <label for="tool">Which tool?</label>
+        <select id="tool" name="tool"></select>
+      </div>
+      <label class="sr" for="text">Your suggestion</label>
+      <textarea id="text" name="text" maxlength="1000" rows="5" placeholder="It would be handy if..."></textarea>
+      <div class="slip-foot">
+        <span class="slip-anon">Anonymous</span>
+        <span class="slip-count" id="count">0 / 1000</span>
+      </div>
+    </div>
+    </div>
+    <button class="post" id="post" type="submit">Post it in the box</button>
+    <p class="sg-err" id="err" role="alert"></p>
+  </form>
+
+  <div class="box" id="box">
+    <div class="box-lid" id="lid"><span class="box-slot" id="slot"></span></div>
+    <div class="box-front">
+      <span class="box-plate">Suggestions</span>
+      <span class="box-lock" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path id="shackle" d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      </span>
+      <button class="box-unlock" id="unlockBtn" type="button">Unlock the box</button>
+    </div>
+  </div>
+
+  <section class="inside" id="inside" hidden aria-labelledby="insideTitle">
+    <div class="inside-head">
+      <h2 id="insideTitle">In the box</h2>
+      <div class="inside-actions">
+        <a class="link" id="sheetLink" href="#" target="_blank" rel="noopener" hidden>Open sheet</a>
+        <button class="link" id="refresh" type="button">Refresh</button>
+        <button class="link" id="lockBtn" type="button">Lock</button>
+      </div>
+    </div>
+    <div class="inside-filter" role="tablist" aria-label="Filter">
+      <button type="button" data-f="New" class="is-on">New <b id="nNew">0</b></button>
+      <button type="button" data-f="Done">Done <b id="nDone">0</b></button>
+      <button type="button" data-f="all">All <b id="nAll">0</b></button>
+    </div>
+    <div class="slips" id="slips"></div>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <span id="toastMsg">Posted. Thanks!</span>
+  <button type="button" id="undoBtn">Undo</button>
+  <i class="toast-bar" id="toastBar"></i>
+</div>
+
+<dialog class="key" id="key" aria-labelledby="keyTitle">
+  <form class="key-in" id="keyForm" novalidate>
+    <div class="key-head"><h2 id="keyTitle">Unlock the box</h2><button class="x" type="button" id="keyClose" aria-label="Close">&times;</button></div>
+    <p>Only the box owner's sign-in opens it.</p>
+    <label for="kUser">Store code</label>
+    <input id="kUser" autocapitalize="characters" spellcheck="false" autocomplete="off" placeholder="Store code">
+    <label for="kPass">Cost code</label>
+    <input id="kPass" type="password" inputmode="numeric" autocomplete="off">
+    <button class="post" type="submit" id="kGo">Unlock</button>
+    <p class="sg-err" id="kErr" role="alert"></p>
+  </form>
+</dialog>
+
+<script src="../tools.js?v=202610112100"></script>
+<script src="suggestions/app.js?v=202610112100"></script>
+</body>
+</html>
