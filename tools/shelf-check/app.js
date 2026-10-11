@@ -7,12 +7,12 @@
   var Sheet = window.ShelfSheet;
   var RAW = 'https://raw.githubusercontent.com/detailedfoil/Toolbox/main/tools/shelf-check/data/';
   var RUNS = 'https://github.com/detailedfoil/Toolbox/actions/workflows/shelf-check.yml';
-  var DONE_KEY = 'sc-done-v2', TAB_KEY = 'sc-tab-v1';
+  var DONE_KEY = 'sc-done-v3', TAB_KEY = 'sc-tab-v1', OFF_KEY = 'sc-bays-off-v1';
   // iPhone / iPad: the share sheet (Print, Save to Files) beats a download there
   var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   var $ = function (id) { return document.getElementById(id); };
-  var data = null, loadedAt = 0, pdfs = {};
+  var data = null, src = null, loadedAt = 0, pdfs = {}, warmTimer = 0;
 
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: keep going */ } }
@@ -58,9 +58,9 @@
       var got = res.filter(function (r) { return r && r.plan && r.plan.bays && r.prices; })
                    .sort(function (a, b) { return stamp(b.prices) - stamp(a.prices); })[0];
       if (!got) throw new Error('no data');
-      data = merge(got.plan, got.prices);
-      pdfs = {};
-      render();
+      src = got;
+      build();
+      renderFloor();
       setTimeout(warm, 300);
     }).catch(function () {
       if (data) return;                                  // keep showing what we had
@@ -69,6 +69,53 @@
       $('error').textContent = "The latest check couldn't be loaded. Check your connection and refresh the page.";
     });
   }
+
+  /* ---------- your shop floor: the bays this store has (unticked ones are left out of everything) ---------- */
+
+  function offBays() { var v = load(OFF_KEY, []); return Array.isArray(v) ? v : []; }
+  function build() {
+    var off = offBays(), plan = {};
+    for (var k in src.plan) plan[k] = src.plan[k];
+    plan.bays = src.plan.bays.filter(function (b) { return off.indexOf(b.name) < 0; });
+    data = merge(plan, src.prices);
+    data.allBays = src.plan.bays.length;
+    pdfs = {};
+    render();
+  }
+  function floorSummary() {
+    var n = data.bays.length, all = data.allBays;
+    $('floorSum').innerHTML = n === all ? 'All <b>' + all + '</b> bays from the brief' : '<b>' + n + '</b> of ' + all + ' bays from the brief';
+  }
+  function renderFloor() {
+    var off = offBays();
+    $('floorList').innerHTML = src.plan.bays.map(function (b, i) {
+      var on = off.indexOf(b.name) < 0, n = Sheet.places([b]).length;
+      return '<li><label class="sc-floor-i"><span class="sc-tick"><input type="checkbox" data-bay="' + i + '"' + (on ? ' checked' : '') + '><span></span></span>' +
+        '<span class="sc-floor-t">' + esc(b.name) + '<small>' + n + ' line' + (n === 1 ? '' : 's') + '</small></span></label></li>';
+    }).join('');
+    floorSummary();
+    $('floor').hidden = false;
+  }
+  function setFloor(off) {
+    store(OFF_KEY, off);
+    build();
+    floorSummary();
+    clearTimeout(warmTimer);
+    warmTimer = setTimeout(warm, 800);
+  }
+  $('floorList').addEventListener('change', function (e) {
+    var i = e.target.getAttribute('data-bay');
+    if (i == null || !src) return;
+    var name = src.plan.bays[+i].name, off = offBays().filter(function (n) { return n !== name; });
+    if (!e.target.checked) off.push(name);
+    setFloor(off);
+  });
+  $('floorAll').addEventListener('click', function () { if (!src) return; setFloor([]); renderFloor(); });
+  $('floorNone').addEventListener('click', function () {
+    if (!src) return;
+    setFloor(src.plan.bays.map(function (b) { return b.name; }));
+    renderFloor();
+  });
 
   /* plan + prices -> what the page and the PDF builder use */
   function merge(plan, prices) {
@@ -174,7 +221,7 @@
     var s = load(DONE_KEY, null);
     return s && s.checked === data.checked && Array.isArray(s.codes) ? s.codes : [];
   }
-  function spotKey(s) { return s.code + '@' + s.bi; }
+  function spotKey(s) { return s.code + '@' + s.bay; }
   function posTag(s) { return s.pos ? '<span class="sc-pos">' + esc(s.pos) + '</span>' : ''; }
 
   /* tickets to swap, in the order you walk them: one row for each place the product sits */
@@ -191,7 +238,7 @@
     }).join('');
     list.hidden = !d.changed.length;
     $('changesEmpty').hidden = !!d.changed.length;
-    $('changesEmpty').innerHTML = '<strong>No price changes</strong>' +
+    $('changesEmpty').innerHTML = !d.bays.length ? '<strong>No bays ticked</strong>Tick the bays your store has under Your shop floor.' : '<strong>No price changes</strong>' +
       (d.previous_checked ? 'Every price matches ' + esc(day(d.previous_checked)) + '. Nothing to swap this week.' : 'This was the first check, so changes show from next week.');
     hint();
   }

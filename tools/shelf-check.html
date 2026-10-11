@@ -9,7 +9,7 @@
 <title>Monday Price Check</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
-<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261011c">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261011d">
 <script src="../auth-data.js?v=20261011b"></script>
 <script src="../auth.js?v=20261011c"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -24,6 +24,18 @@
   <p class="sc-meta" id="meta">Loading the latest check</p>
   <p class="sc-error" id="error" role="alert" hidden></p>
   <div class="sc-alert" id="alert" role="status" hidden></div>
+
+  <details class="sc-floor" id="floor" hidden>
+    <summary>
+      <span class="sc-floor-h"><strong>Your shop floor</strong><small id="floorSum"></small></span>
+      <svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </summary>
+    <div class="sc-floor-b">
+      <p class="sc-floor-n">Not every store has every bay. Untick the ones yours doesn't have and they're left out of the counts, the lists and both PDFs. Saved on this device.</p>
+      <div class="sc-floor-btns"><button class="btn" id="floorAll" type="button">Tick all</button><button class="btn" id="floorNone" type="button">Untick all</button></div>
+      <ul class="sc-floor-list" id="floorList"></ul>
+    </div>
+  </details>
 
   <div id="main" hidden>
     <div class="sc-stats" id="stats"></div>
@@ -68,6 +80,6 @@
 <div class="sc-toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="shelf-check/sheet-engine.js?v=20261011b"></script>
-<script src="shelf-check/app.js?v=20261011d"></script>
+<script src="shelf-check/app.js?v=20261011e"></script>
 </body>
 </html>
