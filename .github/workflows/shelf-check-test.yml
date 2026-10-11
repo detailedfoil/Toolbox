@@ -1,0 +1,45 @@
+# TEMPORARY: one-off test that a GitHub Actions runner can read Screwfix prices.
+# Runs only on the shelf-check-test branch and is deleted along with it.
+name: Shelf check test (temporary)
+
+on:
+  push:
+    branches: [shelf-check-test]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shelf-check-test
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install the page parser and headless browser driver
+        working-directory: .github/shelf-check-test
+        run: npm install --no-save --no-audit --no-fund jsdom@26 playwright-core@1
+
+      - name: Fetch 11 Screwfix pages, strictly one at a time
+        env:
+          # 10 real codes plus one made-up code (000QZ) to see what a missing product looks like
+          CODES: "13267 415AH 868RJ 449AW 1030P 104KH 14295 40237 1863F 323FV 000QZ"
+          GAP_MS: "5000"
+        run: node .github/shelf-check-test/test.mjs
+
+      - name: Save the results to this test branch
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add shelf-test-results
+          if git commit -q -m "Shelf check test results [skip ci]"; then git push; else echo "Nothing to save"; fi
