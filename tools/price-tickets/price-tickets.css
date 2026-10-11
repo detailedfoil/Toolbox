@@ -1,9 +1,9 @@
 @font-face { font-family: 'TicketPrice'; src: url('fonts/BarlowCondensed-ExtraBold.ttf') format('truetype'); font-weight: 800; font-display: block; }
 @font-face { font-family: 'TicketText'; src: url('fonts/BarlowSemiCondensed-Regular.ttf') format('truetype'); font-weight: 400; font-display: block; }
 
-:root { --field: #12151b; --ok: #3ccf82; --warn: #f2b13d; --bad: #ff7272; --info: #7fa8ff; --paper: #262a33; }
+:root { --field: #12151b; --ok: #3ccf82; --warn: #f2b13d; --bad: #ff7272; --info: #7fa8ff; --paper: #262a33; --age-line: rgba(237, 28, 36, .6); --age-bg: rgba(237, 28, 36, .16); }
 @media (prefers-color-scheme: light) {
-  :root { --field: #f7f9fc; --ok: #11804a; --warn: #a86400; --bad: #c62828; --info: #2d6df6; --paper: #e3e7ef; }
+  :root { --field: #f7f9fc; --ok: #11804a; --warn: #a86400; --bad: #c62828; --info: #2d6df6; --paper: #e3e7ef; --age-line: rgba(237, 28, 36, .5); --age-bg: rgba(237, 28, 36, .07); }
 }
 
 .pt { padding-bottom: 0; }
@@ -89,8 +89,22 @@ input, textarea, button { font-family: inherit; }
 .tk-code { font-size: 12px; line-height: 1.2; margin-top: 24px; }
 .tk-ref { position: absolute; left: 326px; top: 269px; width: 80px; height: 10px; line-height: 10px; font-size: 7px; white-space: nowrap; transform: rotate(-90deg); transform-origin: 0 0; }
 .tk .ph { opacity: .3; }
+/* 18+ badge: a zero-size box on the code baseline, the badge hangs off it (placed by inline styles from the engine's numbers) */
+.tk-age { position: relative; display: inline-block; width: 0; height: 0; }
+.tk-age svg { position: absolute; }
 
-.pt-row-foot { display: flex; align-items: center; justify-content: flex-end; margin-top: 12px; }
+.pt-row-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+
+/* Challenge 25 switch: grey when off, the real red badge when on */
+.pt-age { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 12px 0 7px; border-radius: 11px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .12s, border-color .12s, color .12s, transform .1s; }
+.pt-age:hover { border-color: var(--accent); }
+.pt-age:active { transform: scale(.97); }
+.pt-age svg { width: 24px; height: 24px; flex: none; }
+.pt-age circle { fill: none; stroke: currentColor; }
+.pt-age path { fill: currentColor; }
+.pt-age.on { color: var(--text); border-color: var(--age-line); background: var(--age-bg); }
+.pt-age.on svg { color: #ed1c24; }
+.pt-age.on circle { fill: #fff; }
 
 /* bottom action bar */
 .pt-bar { position: sticky; bottom: 0; z-index: 5; margin: 16px -16px 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); background: var(--bg); background: color-mix(in srgb, var(--bg) 86%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid var(--border); display: grid; gap: 8px; }

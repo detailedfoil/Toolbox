@@ -4,6 +4,8 @@
  * same fonts (Barlow Condensed ExtraBold + Barlow Semi Condensed Regular v1.408),
  * same kerning, ligatures, line breaking, pixel snapping and page geometry, so the
  * PDFs match the ones the skill makes. Do not restyle anything in here.
+ * The one addition is the 18+ badge for Challenge 25 products (ticket.age), copied from
+ * the official Screwfix artwork. Tickets without it come out exactly as before.
  */
 (function (root) {
   'use strict';
@@ -15,7 +17,39 @@
   var BLUE = [0x1F / 255, 0x4E / 255, 0xA1 / 255];       // price #1f4ea1
   var INK = [0x1C / 255, 0x20 / 255, 0x33 / 255];        // text  #1c2033
   var CUT = [0xC4 / 255, 0xC4 / 255, 0xC4 / 255];        // cut line #c4c4c4
+  var RED = [0xED / 255, 0x1C / 255, 0x24 / 255];        // 18+ badge #ed1c24
   var DASHES = '-–—';        // hyphen, en dash, em dash: a line may break after these
+
+  /* The Challenge 25 "18+" badge, copied from the official Screwfix ticket artwork (UK-17091-90X75):
+   * a white disc with a red ring and red "18+", printed at the same size as there (6.6 mm across).
+   * Points, with the origin at the circle's outer left edge on the baseline of the "Code: XXXXX" line, y up. */
+  var BADGE = {
+    gap: 3.959,                                           // from the end of the code to the circle
+    size: 18.744,                                         // outer diameter, ring included
+    circle: { cx: 9.372, cy: 3.3719, r: 8.901, w: 0.942 },
+    ops: parsePath(
+      'm 6.2219 -0.381 l 6.2219 7.2704 l 4.9102 7.2704 c 4.3065 6.7186 3.6506 6.1252 2.7033 5.5423 l 3.5257 4.2619 ' +
+      'c 3.8588 4.4388 4.1919 4.7095 4.4938 4.9593 l 4.4938 -0.381 h m 10.6878 3.6268 c 11.1979 4.0432 11.6559 4.4596 ' +
+      '11.6559 5.5527 c 11.6559 6.8852 10.8752 7.4681 9.4802 7.4681 c 8.0749 7.4681 7.367 6.8435 7.367 5.4174 c 7.367 ' +
+      '4.5221 7.6897 4.0016 8.179 3.6164 c 7.5231 3.2 7.0547 2.5963 7.0547 1.5865 c 7.0547 0.254 7.9083 -0.5059 9.4594 ' +
+      '-0.5059 c 11.1562 -0.5059 11.8017 0.3685 11.8017 1.6698 c 11.8017 2.6171 11.302 3.2105 10.6878 3.6268 h m 9.3761 ' +
+      '2.8253 c 9.7925 2.565 10.1361 2.3048 10.1361 1.753 c 10.1361 1.2638 9.9591 0.9307 9.4282 0.9307 c 9.0326 0.9307 ' +
+      '8.7203 1.1284 8.7203 1.6698 c 8.7203 2.2319 8.9493 2.513 9.3761 2.8253 h m 9.449 4.3764 c 9.1263 4.6158 8.8452 ' +
+      '4.8865 8.8452 5.4486 c 8.8452 5.9587 9.1367 6.1252 9.5219 6.1252 c 9.8966 6.1252 10.1777 5.9483 10.1777 5.459 ' +
+      'c 10.1777 4.9801 9.8862 4.6783 9.449 4.3764 h m 14.9559 1.3471 l 14.9559 3.0751 l 16.5278 3.0751 l 16.5278 ' +
+      '4.3243 l 14.9559 4.3243 l 14.9559 6.0316 l 13.7067 6.0316 l 13.7067 4.3243 l 12.1764 4.3243 l 12.1764 3.0751 ' +
+      'l 13.7067 3.0751 l 13.7067 1.3471 h')                // "18+" outlines
+  };
+
+  /* 'm x y l x y c x1 y1 x2 y2 x y h' -> [['m', x, y], ...] */
+  function parsePath(s) {
+    var out = [];
+    s.trim().split(/\s+/).forEach(function (tok) {
+      if (/^[mlch]$/.test(tok)) out.push([tok]);
+      else out[out.length - 1].push(parseFloat(tok));
+    });
+    return out;
+  }
 
   function LU(v) { return Math.floor(v * 64) / 64; }   // layout unit (1/64 px)
   function SNAP(v) { return Math.floor(v + 0.5); }     // whole-pixel snap
@@ -206,6 +240,29 @@
     });
   }
 
+  /* The 18+ badge, BADGE.gap after the code text that ends at x (px), sitting on the code baseline y (px). */
+  function drawBadge(c, x, y) {
+    var o = pxToPdf(x, y), C = BADGE.circle, k = C.r * 0.5522847498;
+    var cx = C.cx, cy = C.cy, r = C.r;
+    c.push('q');
+    c.push('1 0 0 1 ' + fp(o[0] + BADGE.gap, o[1]) + ' cm');
+    // white disc, red ring
+    c.push('1 1 1 rg ' + fp(RED[0], RED[1], RED[2]) + ' RG ' + fp(C.w) + ' w');
+    c.push(fp(cx, cy - r) + ' m');
+    c.push(fp(cx + k, cy - r, cx + r, cy - k, cx + r, cy) + ' c');
+    c.push(fp(cx + r, cy + k, cx + k, cy + r, cx, cy + r) + ' c');
+    c.push(fp(cx - k, cy + r, cx - r, cy + k, cx - r, cy) + ' c');
+    c.push(fp(cx - r, cy - k, cx - k, cy - r, cx, cy - r) + ' c');
+    c.push('b');
+    // red "18+"
+    c.push(fp(RED[0], RED[1], RED[2]) + ' rg');
+    BADGE.ops.forEach(function (op) {
+      c.push(op.length > 1 ? fp.apply(null, op.slice(1)) + ' ' + op[0] : op[0]);
+    });
+    c.push('f');
+    c.push('Q');
+  }
+
   function drawTicket(c, fonts, t, slot, refDate) {
     var col = slot % 2, row = Math.floor(slot / 2);
     var cx = GRID_X + col * CELL_W, cy = GRID_Y + row * CELL_H;
@@ -226,7 +283,10 @@
     });
     // code line: 12px, 24px below the name
     var rc = fonts.text.layout('Code: ' + t.code, 12);
-    drawRun(c, fonts.text, 12, rc.items, LU(ox + 15), SNAP(oy + 116 + lines.length * lh + 24 + 12), INK);
+    var codeX = LU(ox + 15), codeY = SNAP(oy + 116 + lines.length * lh + 24 + 12);
+    drawRun(c, fonts.text, 12, rc.items, codeX, codeY, INK);
+    // Challenge 25 products: the 18+ badge straight after the code
+    if (t.age) drawBadge(c, codeX + rc.width, codeY);
     // side reference line: 7px, reads bottom-to-top, right-hand edge
     var rr = fonts.text.layout('UK-' + t.code + '-90X75-' + refDate, 7);
     drawRun(c, fonts.text, 7, rr.items, SNAP(ox + 326) + 8, SNAP(oy + 189) + 80, INK, true);
@@ -245,7 +305,7 @@
     if (price.charAt(0) !== '£') price = '£' + price;
     if (!PRICE_RE.test(price)) throw TicketError('Bad price "' + (t.price || '') + '" for ' + code + ': use £12.34', 'price');
     var product = squash(t.product || '').replace(new RegExp('\\s*\\(' + escapeRe(code) + '\\)\\s*$', 'i'), '');
-    return { code: code, price: price, product: product };
+    return { code: code, price: price, product: product, age: !!t.age };
   }
 
   /* ---------- minimal PDF writer: CID TrueType fonts (Identity-H), Flate streams ---------- */
@@ -417,6 +477,6 @@
     return { ref: parts.day + '_' + parts.month + '_' + parts.year.slice(-2), iso: parts.year + '-' + parts.month + '-' + parts.day };
   }
 
-  var api = { Engine: Engine, clean: clean, ukDate: ukDate, PRICE_RE: PRICE_RE };
+  var api = { Engine: Engine, clean: clean, ukDate: ukDate, PRICE_RE: PRICE_RE, BADGE: BADGE };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.TicketEngine = api;
 })(this);

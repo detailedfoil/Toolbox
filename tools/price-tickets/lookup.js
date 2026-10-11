@@ -109,6 +109,11 @@
   var BLOCKED = /access denied|just a moment|attention required|are you a robot|captcha|request blocked|forbidden|too many requests|rate limit|bad gateway|service unavailable|gateway time-?out|cloudflare|error code/i;
   var MISSING = /page not found|can.t find (that|the) page|no results for|couldn.t find any|0 results|sorry,? we couldn.t|product (is )?no longer available/i;
   var GENERIC = /^(screwfix(\.com)?|home|search( results)?|basket|menu)\b/i;
+  // Age-restricted (18+) products. Screwfix shows, in red under the heading: "We operate a Challenge 25 policy
+  // in all our stores and may be asked for proof of age upon collection. You must be 18 years old or over to buy
+  // this product." The words "Challenge 25" alone are enough, so a change of wording still gets picked up.
+  // ("18V" drills and the "18th Edition" footer link don't count.)
+  var AGE = /challenge[\s -]*25(?!\d)|proof\s+of\s+age|\b(?:18|eighteen)\s*(?:years?|yrs?)\s*(?:old\s*|of\s+age\s*)?or\s+(?:over|older|above)\b|\baged\s+(?:18|eighteen)\s*(?:\+|or\s+(?:over|older|above)\b)/i;
   var BLOCK_TAGS = 'address,article,aside,blockquote,br,button,dd,div,dl,dt,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,header,hr,label,li,main,nav,ol,option,p,pre,section,table,td,th,tr,ul';
 
   function decide(p, code) {
@@ -125,12 +130,13 @@
       if (at >= 0) anchor = at;
     }
     var price = priceFromText(p.text, anchor) || normPrice(p.ldPrice) || normPrice(p.itemPrice);
+    var age = AGE.test(p.text);
 
     if (BLOCKED.test(p.title) || BLOCKED.test(p.h1) || (!screwfix && !mentions)) return { status: 'blocked' };
     if (p.status === 404 || MISSING.test(p.title + ' ' + p.h1) || (!mentions && !price)) return { status: 'notfound' };
-    if (!mentions && price) return { status: 'found', name: name, price: price, unsure: true };
-    if (!price || !name) return { status: 'partial', name: name || '', price: price || '' };
-    return { status: 'found', name: name, price: price };
+    if (!mentions && price) return { status: 'found', name: name, price: price, age: age, unsure: true };
+    if (!price || !name) return { status: 'partial', name: name || '', price: price || '', age: age };
+    return { status: 'found', name: name, price: price, age: age };
   }
 
   function parseHtml(html, code, status) {
@@ -198,7 +204,7 @@
     return isHtml ? parseHtml(t, code, res.status) : parseText(t, code, res.status);
   }
 
-  /* -> Promise<{status: 'found'|'partial'|'notfound'|'blocked', name, price, unsure, via}> */
+  /* -> Promise<{status: 'found'|'partial'|'notfound'|'blocked', name, price, age (Challenge 25), unsure, via}> */
   function lookup(code) {
     code = String(code || '').toUpperCase();
     var order = proxyOrder(), i = 0, partial = null, notFound = 0;

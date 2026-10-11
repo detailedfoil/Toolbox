@@ -26,7 +26,8 @@
     return {
       id: r.id || uid(), code: r.code, price: r.price || '', product: r.product || '',
       status: r.status === 'looking' ? 'manual' : (r.status || 'manual'), checkedAt: r.checkedAt || 0,
-      editedPrice: !!r.editedPrice, editedProduct: !!r.editedProduct, unsure: !!r.unsure, token: 0
+      editedPrice: !!r.editedPrice, editedProduct: !!r.editedProduct, unsure: !!r.unsure,
+      age: !!r.age, ageSet: typeof r.ageSet === 'boolean' ? r.ageSet : null, token: 0
     };
   });
   try { localStorage.removeItem('pt-history-v1'); } catch (e) { /* nothing stored */ }
@@ -39,7 +40,8 @@
     var write = function () {
       store(ROWS_KEY, rows.map(function (r) {
         return { id: r.id, code: r.code, price: r.price, product: r.product, status: r.status === 'looking' ? 'manual' : r.status,
-                 checkedAt: r.checkedAt, editedPrice: r.editedPrice, editedProduct: r.editedProduct, unsure: r.unsure };
+                 checkedAt: r.checkedAt, editedPrice: r.editedPrice, editedProduct: r.editedProduct, unsure: r.unsure,
+                 age: r.age, ageSet: r.ageSet };
       }));
     };
     if (now) write(); else saveTimer = setTimeout(write, 250);
@@ -64,7 +66,10 @@
     return squash(product).replace(new RegExp('\\s*\\(' + escapeRe(code) + '\\)\\s*$', 'i'), '');
   }
 
-  function ticketOf(r) { return { code: r.code, price: normPrice(r.price) || r.price, product: cleanProduct(r.product, r.code) }; }
+  // 18+ badge: what Screwfix says (Challenge 25 on the page), unless it has been switched on or off by hand
+  function hasAge(r) { return r.ageSet != null ? r.ageSet : !!r.age; }
+
+  function ticketOf(r) { return { code: r.code, price: normPrice(r.price) || r.price, product: cleanProduct(r.product, r.code), age: hasAge(r) }; }
 
   function problem(r) {
     if (!r.price) return 'Add the price';
@@ -112,6 +117,24 @@
     pdf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>'
   };
 
+  /* The 18+ badge as SVG, from the same outlines the PDF uses. 'tk' = sized and placed for the ticket preview
+     (CSS px, sitting on the code baseline); otherwise a one-colour icon styled by CSS. */
+  function badgeSvg(kind) {
+    var B = E.BADGE, C = B.circle, top = C.cy + C.r + C.w / 2;
+    var d = B.ops.map(function (o) {
+      var s = { m: 'M', l: 'L', c: 'C', h: 'Z' }[o[0]];
+      for (var i = 1; i < o.length; i += 2) s += (i > 1 ? ' ' : '') + o[i] + ' ' + (-o[i + 1]);
+      return s;
+    }).join('');
+    var px = function (pt) { return (pt / 0.75).toFixed(4) + 'px'; };
+    var tk = kind === 'tk';
+    return '<svg viewBox="0 ' + (-top) + ' ' + B.size + ' ' + B.size + '"' +
+      (tk ? ' style="left:' + px(B.gap) + ';bottom:-' + px(B.size - top) + ';width:' + px(B.size) + ';height:' + px(B.size) + '"' : '') +
+      ' aria-hidden="true" focusable="false">' +
+      '<circle cx="' + C.cx + '" cy="' + (-C.cy) + '" r="' + C.r + '" stroke-width="' + C.w + '"' + (tk ? ' fill="#fff" stroke="#ed1c24"' : '') + '/>' +
+      '<path d="' + d + '"' + (tk ? ' fill="#ed1c24"' : '') + '/></svg>';
+  }
+
   function makeRow(r) {
     var el = document.createElement('article');
     el.className = 'pt-row';
@@ -133,18 +156,20 @@
         '</div>' +
         '<div class="pt-preview"><div class="pt-stage"><div class="tk" aria-hidden="true">' +
           '<div class="tk-price"></div>' +
-          '<div class="tk-body"><div class="tk-name"></div><div class="tk-code"></div></div>' +
+          '<div class="tk-body"><div class="tk-name"></div><div class="tk-code"><span class="tk-code-t"></span><span class="tk-age" hidden>' + badgeSvg('tk') + '</span></div></div>' +
           '<div class="tk-ref"></div>' +
         '</div></div></div>' +
       '</div>' +
       '<div class="pt-row-foot">' +
+        '<button class="pt-age" type="button" role="switch" aria-checked="false">' + badgeSvg() + '<span>Challenge 25</span></button>' +
         '<button class="btn btn-sm dl" type="button">' + ICON.pdf + 'PDF</button></div>';
 
     var q = function (s) { return el.querySelector(s); };
     var v = {
       el: el, code: q('.pt-code'), chip: q('.pt-chip'), chipText: q('.pt-chip span'), sf: q('.sf'),
       refresh: q('.refresh'), remove: q('.remove'), price: q('.pt-price'), product: q('.pt-product'),
-      dl: q('.dl'), tkPrice: q('.tk-price'), tkName: q('.tk-name'), tkCode: q('.tk-code'), tkRef: q('.tk-ref')
+      dl: q('.dl'), age: q('.pt-age'), tkPrice: q('.tk-price'), tkName: q('.tk-name'), tkCode: q('.tk-code-t'),
+      tkAge: q('.tk-age'), tkRef: q('.tk-ref')
     };
     views.set(r.id, v);
 
@@ -154,6 +179,7 @@
       if (c && c !== r.code && !isSku(c)) toast(v.code.value.trim() + " isn't a Screwfix code. Codes are 5 characters, like 843PG");
       if (!c || c === r.code || !isSku(c)) { v.code.value = r.code; return; }
       r.code = c; r.price = ''; r.product = ''; r.editedPrice = r.editedProduct = false; r.unsure = false;
+      r.age = false; r.ageSet = null;
       enqueue(r);
     });
     v.price.addEventListener('input', function () {
@@ -174,6 +200,10 @@
     });
     v.refresh.addEventListener('click', function () { r.editedPrice = r.editedProduct = false; enqueue(r); });
     v.remove.addEventListener('click', function () { removeRow(r); });
+    v.age.addEventListener('click', function () {
+      r.ageSet = !hasAge(r);           // a choice made here sticks, even when prices are checked again
+      changedRow(r);
+    });
     v.dl.addEventListener('click', function () {
       if (!ready(r)) return;
       deliver([{ name: r.code + '-ticket.pdf', tickets: [ticketOf(r)] }], v.dl);
@@ -202,6 +232,11 @@
     v.refresh.disabled = r.status === 'looking';
     v.refresh.classList.toggle('spin', r.status === 'looking');
     v.dl.disabled = !ready(r);
+    var age = hasAge(r);
+    v.age.classList.toggle('on', age);
+    v.age.setAttribute('aria-checked', age ? 'true' : 'false');
+    v.age.title = age ? (r.ageSet == null ? 'Screwfix lists this as a Challenge 25 product. ' : '') + 'Tap to take the 18+ badge off'
+                      : 'Tap to add the 18+ badge for a Challenge 25 product';
     paintPreview(r, v);
   }
 
@@ -217,6 +252,7 @@
     lines.forEach(function (l) { var d = document.createElement('div'); d.textContent = l; v.tkName.appendChild(d); });
     v.tkName.classList.toggle('ph', !product);
     v.tkCode.textContent = 'Code: ' + r.code;
+    v.tkAge.hidden = !hasAge(r);
     v.tkRef.textContent = 'UK-' + r.code + '-90X75-' + E.ukDate().ref;
   }
 
@@ -255,7 +291,8 @@
     codes.forEach(function (c) {
       if (rows.some(function (r) { return r.code === c; }) || added.indexOf(c) >= 0) { dupes.push(c); return; }
       added.push(c);
-      var r = { id: uid(), code: c, price: '', product: '', status: 'manual', checkedAt: 0, editedPrice: false, editedProduct: false, unsure: false, token: 0 };
+      var r = { id: uid(), code: c, price: '', product: '', status: 'manual', checkedAt: 0, editedPrice: false, editedProduct: false, unsure: false,
+                age: false, ageSet: null, token: 0 };
       rows.push(r);
       listEl.appendChild(makeRow(r));
       enqueue(r);
@@ -354,6 +391,7 @@
       if (res.price && !r.editedPrice) r.price = res.price;
       if (res.name && !r.editedProduct) r.product = res.name;
       r.unsure = !!res.unsure;
+      r.age = !!res.age;
       if (res.status === 'found') r.checkedAt = Date.now();
     }
     paint(r);
