@@ -20,7 +20,7 @@
     { id: 'corsproxy',  build: function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); } }
   ];
   var ORDER_KEY = 'pt-proxy-order-v1';
-  var TIMEOUT = 10000;
+  var TIMEOUT = 25000;                   // Screwfix pages are big: some relays take 10-20 s on a slow network
   var GAP = 400;                         // at least this long between relay requests (bursts get rate-limited)
   var RETRY_AFTER = [2500, 8000];        // when every relay fails: wait, then try again (twice)
 
@@ -344,7 +344,7 @@
           var again = mine.filter(function (t) { return t.outcome !== 'network' && !/^http-4(0[0-4]|10)$/.test(t.outcome); })
                           .map(function (t) { return t.via; });
           if (noAnswer && n === 0) again = mine.map(function (t) { return t.via; });
-          if (n < RETRY_AFTER.length && again.length && now() - started < 45000) {
+          if (n < RETRY_AFTER.length && again.length && now() - started < 70000) {
             if (opts.onRetry) { try { opts.onRetry(n + 1); } catch (e) { /* display only */ } }
             return wait(RETRY_AFTER[n]).then(function () { return round(n + 1, again); });
           }
