@@ -66,6 +66,7 @@
           return;
         }
         try { localStorage.setItem(KEY, user); } catch (x) {}
+        try { window.dispatchEvent(new CustomEvent("toolbox:login", { detail: { user: user } })); } catch (x) {}
         root.remove();
         var h2 = document.getElementById("tb-auth-hide");
         if (h2) h2.remove();
