@@ -220,19 +220,22 @@
     return '£' + (p / 100).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  /* What the sale flash says. "Save over" rounds the real saving down to a multiple of 5 and stays under it,
-     so it's always true: 33.3% -> SAVE OVER 30%, 46% -> SAVE OVER 45%, exactly 35% -> SAVE OVER 30%.
-     Savings of 5% or less show the money instead: SAVE £1.00. -> null when it isn't cheaper than the was price. */
+  /* What the sale flash says, the same way as the sale tickets (and the official Screwfix ones): the real saving
+     rounded down to a multiple of 5, with OVER only when it's more than that: 33.3% -> SAVE OVER 30%,
+     46% -> SAVE OVER 45%, exactly 35% -> SAVE 35% (anything that rounds to 35%, up to 35.4%, says SAVE 35%).
+     Savings under 5% show the money instead: SAVE £1.00. -> null when it isn't cheaper than the was price. */
   function saleOf(price, was) {
     if (!was || !PRICE_RE.test(price) || !PRICE_RE.test(was)) return null;
     var now = pence(price), before = pence(was);
     if (!(before > now) || now <= 0) return null;
     var off = before - now;
-    var step = Math.floor((off * 100 - 1) / (5 * before)) * 5;     // largest multiple of 5 below the real %
+    var step = Math.floor(off * 20 / before) * 5;                         // largest multiple of 5 at or below the real %
+    var exact = step >= 5 && 2 * (off * 100 - step * before) < before;    // and the real % rounds to it
     return {
       pct: off * 100 / before,
       over: step,
-      flash: step >= 5 ? 'SAVE OVER ' + step + '%' : 'SAVE ' + money(off),
+      exact: exact,
+      flash: step < 5 ? 'SAVE ' + money(off) : (exact ? 'SAVE ' : 'SAVE OVER ') + step + '%',
       was: 'Was ' + money(before)
     };
   }

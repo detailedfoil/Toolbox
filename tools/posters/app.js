@@ -449,8 +449,9 @@
       flash.textContent = s.flash;
       v.sale.appendChild(flash);
       var pct = Math.floor(s.pct * 10) / 10, real = pct % 1 ? pct.toFixed(1) : String(pct);
-      msg = s.over >= 5 ? 'Actual saving ' + real + '%, rounded down to the nearest 5%'
-                        : 'Actual saving ' + real + '%, so it shows the money off instead';
+      msg = s.over < 5 ? 'Actual saving ' + real + '%, so it shows the money off instead'
+          : s.exact ? 'Actual saving ' + real + '%'
+          : 'Actual saving ' + real + '%, rounded down to the nearest 5%';
     } else if (was && price) {
       msg = 'The was price needs to be higher than the price to show a sale';
     }
