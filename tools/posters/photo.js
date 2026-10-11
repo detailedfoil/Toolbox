@@ -29,13 +29,23 @@
     { id: 'corsproxy',  build: function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); } }
   ];
 
+  /* The image server itself and the image relay (wsrv) always go first: they don't touch the relays the price
+     lookup needs. After them, whichever general relay last worked. */
+  var IMAGE_ROUTES = ['direct', 'wsrv'];
   function routeOrder() {
     var saved = null;
     try { saved = localStorage.getItem(ROUTE_KEY); } catch (e) { saved = null; }
-    var list = ROUTES.slice();
-    var i = list.findIndex(function (r) { return r.id === saved; });
-    if (i > 0) list.unshift(list.splice(i, 1)[0]);
-    return list;
+    var first = ROUTES.filter(function (r) { return IMAGE_ROUTES.indexOf(r.id) >= 0; });
+    var rest = ROUTES.filter(function (r) { return IMAGE_ROUTES.indexOf(r.id) < 0; });
+    var i = rest.findIndex(function (r) { return r.id === saved; });
+    if (i > 0) rest.unshift(rest.splice(i, 1)[0]);
+    return first.concat(rest);
+  }
+
+  /* General relays are shared with the price lookup, so photo requests take their turn in its queue */
+  function paced(route) {
+    var L = root.ScrewfixLookup;
+    return IMAGE_ROUTES.indexOf(route.id) < 0 && L && L.slot ? L.slot() : Promise.resolve();
   }
   function remember(id) { try { localStorage.setItem(ROUTE_KEY, id); } catch (e) { /* private mode */ } }
 
@@ -71,7 +81,7 @@
   function fetchFirst(srcs) {
     var order = routeOrder(), i = 0, missing = 0;
     function viaRoute(route, k) {
-      return fetchImage(route.build(srcs[k])).then(function (blob) {
+      return paced(route).then(function () { return fetchImage(route.build(srcs[k])); }).then(function (blob) {
         remember(route.id);
         return { blob: blob, via: route.id };
       }, function (e) {

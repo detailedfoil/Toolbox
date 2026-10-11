@@ -95,7 +95,9 @@
     var filled = !!(r.price && r.product);
     if (s === 'looking') return ['busy', 'Checking Screwfix…'];
     if (s === 'notfound') return ['bad', filled ? 'Not found on Screwfix now. Check the code' : 'Not found on Screwfix. Check the code, digits often get swapped'];
-    if (s === 'blocked') return ['warn', filled ? "Couldn't reach Screwfix, so this is the last price you had" : "Couldn't reach Screwfix. Type the price and name"];
+    if (s === 'blocked' && r.reason === 'network') return ['warn', filled ? "Couldn't connect to the price lookup (this network may block it), so this is the last price you had"
+                                                                   : "Couldn't connect to the price lookup (this network may block it). Copy the whole Screwfix page and paste it into the code box, or type the price and name"];
+    if (s === 'blocked') return ['warn', filled ? "Couldn't reach Screwfix, so this is the last price you had. Tap ↻ to try again" : "Couldn't reach Screwfix just now. Tap ↻ to try again, or type the price and name"];
     if (s === 'partial' && !filled) return ['warn', 'Found it, but fill in the missing details'];
     var prob = problem(r);
     if (prob) return [r.price || r.product ? 'bad' : 'muted', prob];
@@ -338,6 +340,37 @@
     if (addCodes(input.value)) input.value = '';
   });
 
+  /* A whole Screwfix product page pasted in (select all + copy on screwfix.com) fills in that ticket.
+     Works even where the lookup services are blocked, because the browser loaded the page itself. */
+  document.addEventListener('paste', function (e) {
+    var text = e.clipboardData && e.clipboardData.getData ? e.clipboardData.getData('text/plain') : '';
+    var res = text && text.length > 30 && L.fromCopiedPage ? L.fromCopiedPage(text) : null;
+    if (!res) return;
+    e.preventDefault();
+    var r = rows.filter(function (x) { return x.code === res.code; })[0], isNew = !r;
+    if (isNew) {
+      r = { id: uid(), code: res.code, price: '', product: '', status: 'manual', checkedAt: 0, editedPrice: false, editedProduct: false, unsure: false,
+            age: false, ageSet: null, token: 0 };
+      rows.push(r);
+      listEl.appendChild(makeRow(r));
+      fitPreviews();
+    }
+    r.token++;                                   // any lookup still running for it is now out of date
+    r.status = res.status;
+    r.reason = '';
+    if (res.price) r.price = res.price;
+    if (res.name) r.product = res.name;
+    r.editedPrice = r.editedProduct = false;
+    r.unsure = false;
+    r.age = !!res.age;
+    if (res.status === 'found') r.checkedAt = Date.now();
+    paint(r);
+    persist(true);
+    refreshBar();
+    warmSoon();
+    toast((isNew ? 'Added ' : 'Filled in ') + r.code + ' from the copied Screwfix page');
+  });
+
   checkAll.addEventListener('click', function () {
     rows.forEach(function (r) { r.editedPrice = r.editedProduct = false; enqueue(r); });
   });
@@ -387,6 +420,7 @@
   function apply(r, token, code, res) {
     if (r.token !== token || r.code !== code) return;
     r.status = res.status;
+    r.reason = res.status === 'blocked' ? res.reason || '' : '';
     if (res.status === 'found' || res.status === 'partial') {
       if (res.price && !r.editedPrice) r.price = res.price;
       if (res.name && !r.editedProduct) r.product = res.name;

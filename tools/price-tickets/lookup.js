@@ -1,8 +1,13 @@
-/* Live Screwfix name + price lookup for the price ticket tool.
+/* Live Screwfix name + price lookup for the price ticket tool (and the A4 poster maker).
  *
  * A static site can't read screwfix.com directly (the browser blocks cross-site reads),
- * so this goes through free public CORS proxies. They come and go, so several are tried
- * in turn and whichever worked last is tried first next time.
+ * so this goes through free public CORS relays. They come and go, rate-limit bursts and
+ * sometimes get turned away by Screwfix, so:
+ *  - several are tried in turn, whichever worked last first, and ones that just failed last;
+ *  - requests are spaced out a little so adding a list of codes doesn't trip rate limits;
+ *  - if every relay fails, the whole lot is tried again a couple of times before giving up;
+ *  - every attempt is recorded (result.trace), and diagnose() tests each relay on demand,
+ *    so a failure can be explained instead of guessed at.
  */
 (function (root) {
   'use strict';
@@ -15,9 +20,23 @@
     { id: 'corsproxy',  build: function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); } }
   ];
   var ORDER_KEY = 'pt-proxy-order-v1';
-  var TIMEOUT = 12000;
+  var TIMEOUT = 10000;
+  var GAP = 400;                         // at least this long between relay requests (bursts get rate-limited)
+  var RETRY_AFTER = [2500, 8000];        // when every relay fails: wait, then try again (twice)
 
   function productUrl(code) { return 'https://www.screwfix.com/p/product/' + String(code).toLowerCase(); }
+  function now() { return Date.now(); }
+  function wait(ms) { return new Promise(function (ok) { setTimeout(ok, ms); }); }
+
+  /* Relays that just failed are tried after the others for a while (only the order changes). */
+  var cool = {};
+  var COOL_FOR = { network: 600000, timeout: 60000, limited: 90000, refused: 60000, other: 30000 };
+  function coolDown(id, outcome) {
+    var kind = outcome === 'network' || outcome === 'timeout' ? outcome
+             : /^http-429$|^limited$/.test(outcome) ? 'limited'
+             : /^http-|^denied$/.test(outcome) ? 'refused' : 'other';
+    cool[id] = now() + COOL_FOR[kind];
+  }
 
   function proxyOrder() {
     var saved = [];
@@ -27,22 +46,35 @@
     var out = [];
     saved.forEach(function (id) { if (byId[id] && out.indexOf(byId[id]) < 0) out.push(byId[id]); });
     PROXIES.forEach(function (p) { if (out.indexOf(p) < 0) out.push(p); });
-    return out;
+    var t = now();
+    return out.filter(function (p) { return !(cool[p.id] > t); }).concat(out.filter(function (p) { return cool[p.id] > t; }));
   }
 
   function promote(id) {
+    delete cool[id];
     var ids = proxyOrder().map(function (p) { return p.id; }).filter(function (x) { return x !== id; });
     ids.unshift(id);
     try { localStorage.setItem(ORDER_KEY, JSON.stringify(ids)); } catch (e) { /* private mode */ }
   }
 
+  /* Space relay requests out (shared with the poster maker's photo fetches). */
+  var nextSlot = 0;
+  function slot() {
+    var t = now(), at = Math.max(t, nextSlot);
+    nextSlot = at + GAP;
+    return at > t ? wait(at - t) : Promise.resolve();
+  }
+
+  /* -> {status, text}; rejects with {kind: 'timeout' | 'network'} when no answer came back */
   function fetchText(url) {
     var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, TIMEOUT);
+    var timedOut = false;
+    var timer = setTimeout(function () { timedOut = true; if (ctrl) ctrl.abort(); }, TIMEOUT);
     return fetch(url, { signal: ctrl ? ctrl.signal : undefined, cache: 'no-store', credentials: 'omit' })
       .then(function (res) {
         return res.text().then(function (text) { return { status: res.status, text: text }; });
       })
+      .catch(function () { throw { kind: timedOut ? 'timeout' : 'network' }; })
       .finally(function () { clearTimeout(timer); });
   }
 
@@ -162,7 +194,12 @@
     if (was && !(pounds(was) > pounds(price))) was = null;
     var sale = function (r) { if (was) r.was = was; return r; };
 
-    if (BLOCKED.test(p.title) || BLOCKED.test(p.h1) || (!screwfix && !mentions)) return { status: 'blocked' };
+    if (BLOCKED.test(p.title) || BLOCKED.test(p.h1)) {
+      var head = p.title + ' ' + p.h1;
+      return { status: 'blocked', why: p.status === 429 || /too many requests|rate limit/i.test(head) ? 'limited'
+                                      : /bad gateway|service unavailable|gateway time-?out|error code/i.test(head) ? 'relay-error' : 'denied' };
+    }
+    if (!screwfix && !mentions) return { status: 'blocked', why: 'other' };
     if (p.status === 404 || MISSING.test(p.title + ' ' + p.h1) || (!mentions && !price)) return { status: 'notfound' };
     if (!mentions && price) return sale({ status: 'found', name: name, price: price, age: age, unsure: true });
     if (!price || !name) return sale({ status: 'partial', name: name || '', price: price || '', age: age });
@@ -238,13 +275,13 @@
     var h1 = (md.match(/^#\s+(.+?)\s*#*\s*$/m) || md.match(/^(.+)\n=+\s*$/m) || [])[1] || '';
     var p = { status: status, title: decodeEntities(title), og: '', h1: squash(decodeEntities(h1)), ldName: '', ldPrice: null, sku: '', itemPrice: null };
     p.text = squash(decodeEntities(md.replace(/[*_`#>|]+/g, ' ')));
-    if (err && !p.h1) return { status: 'blocked' };
+    if (err && !p.h1) return { status: 'blocked', why: 'http-' + err[1] };
     return decide(p, code);
   }
 
   function interpret(res, code) {
     var t = res.text || '';
-    if (t.length < 40) return { status: 'blocked' };
+    if (t.length < 40) return { status: 'blocked', why: res.status >= 400 ? 'http-' + res.status : 'other' };
     var head = t.slice(0, 4000);
     if (/^\s*[{[]/.test(head) && !/<html/i.test(head)) {          // JSON error from a proxy, or a wrapped page
       try {
@@ -252,35 +289,123 @@
         var inner = j && (j.contents || j.html || j.body || (j.data && j.data.content));
         if (typeof inner === 'string' && inner.length > 200) return interpret({ status: res.status, text: inner }, code);
       } catch (e) { /* not JSON */ }
-      return { status: 'blocked' };
+      return { status: 'blocked', why: res.status === 429 ? 'http-429' : res.status >= 400 ? 'http-' + res.status : 'other' };
     }
     var isHtml = /<!doctype html|<html[\s>]|<head[\s>]|<body[\s>]/i.test(head) || /<\/(div|span|h1|p)>/i.test(t.slice(0, 50000));
     return isHtml ? parseHtml(t, code, res.status) : parseText(t, code, res.status);
   }
 
-  /* -> Promise<{status: 'found'|'partial'|'notfound'|'blocked', name, price, age (Challenge 25), unsure, was, images, via}>
-     (was: the old price when it's on offer; images: the product photo ids on the page, main one first.
-      Only the poster maker uses those two.) */
-  function lookup(code) {
-    code = String(code || '').toUpperCase();
-    var order = proxyOrder(), i = 0, partial = null, notFound = 0;
-    function next() {
-      if (i >= order.length || notFound >= 2) {
-        if (partial) return partial;
-        return { status: notFound ? 'notfound' : 'blocked' };
-      }
-      var proxy = order[i++];
-      return fetchText(proxy.build(productUrl(code))).then(function (res) {
-        var r = interpret(res, code);
-        r.via = proxy.id;
-        if (r.status === 'found') { promote(proxy.id); return r; }
-        if (r.status === 'notfound') { notFound++; if (notFound === 1) promote(proxy.id); }
-        if (r.status === 'partial' && !partial) partial = r;
-        return next();
-      }, function () { return next(); });
-    }
-    return Promise.resolve().then(next);
+  /* One relay, one go -> {via, outcome, ms, http, result}. outcome: found | partial | notfound | network (no answer:
+     blocked by the network, offline or the relay is down) | timeout | limited | denied (Screwfix turned it away) |
+     http-NNN (the relay answered with an error) | relay-error | other (something that isn't the product page) */
+  function tryRelay(proxy, code) {
+    var t0 = now();
+    return slot().then(function () {
+      t0 = now();
+      return fetchText(proxy.build(productUrl(code)));
+    }).then(function (res) {
+      var r;
+      try { r = interpret(res, code); } catch (e) { r = { status: 'blocked', why: 'other' }; }
+      var outcome = r.status === 'blocked' ? (r.why || (res.status >= 400 ? 'http-' + res.status : 'other')) : r.status;
+      if (outcome === 'http-429') outcome = 'limited';
+      return { via: proxy.id, outcome: outcome, ms: now() - t0, http: res.status, result: r };
+    }, function (e) {
+      return { via: proxy.id, outcome: e && e.kind === 'timeout' ? 'timeout' : 'network', ms: now() - t0, http: 0, result: { status: 'blocked' } };
+    });
   }
 
-  root.ScrewfixLookup = { lookup: lookup, productUrl: productUrl, interpret: interpret, normPrice: normPrice };
+  function brief(t) {
+    var r = t.result || {};
+    return { via: t.via, outcome: t.outcome, ms: t.ms, http: t.http, round: t.round, price: r.price || '', name: r.name || '' };
+  }
+
+  /* -> Promise<{status: 'found'|'partial'|'notfound'|'blocked', name, price, age (Challenge 25), unsure, was, images, via,
+                 reason, trace}>
+     (was: the old price when it's on offer; images: the product photo ids on the page, main one first.
+      Only the poster maker uses those two. reason, when blocked: 'network' if no relay could be reached at all,
+      otherwise 'relays'. trace: every attempt, for working out why.)
+     opts.onRetry(round): called before each extra round when every relay failed. */
+  function lookup(code, opts) {
+    opts = opts || {};
+    code = String(code || '').toUpperCase();
+    var trace = [], started = now();
+    function finish(r) { r.trace = trace.map(brief); return r; }
+    function round(n, only) {
+      var order = proxyOrder().filter(function (p) { return !only || only.indexOf(p.id) >= 0; });
+      var i = 0, partial = null, notFound = 0;
+      function next() {
+        if (i >= order.length || notFound >= 2) {
+          if (partial) return finish(partial);
+          if (notFound) return finish({ status: 'notfound' });
+          var mine = trace.filter(function (t) { return t.round === n; });
+          var noAnswer = mine.every(function (t) { return t.outcome === 'network'; });
+          // try again shortly: relays that answered or timed out may well work next time; ones that couldn't be
+          // reached at all get one more go (a blip), then aren't worth waiting for
+          var again = mine.filter(function (t) { return t.outcome !== 'network' && !/^http-4(0[0-4]|10)$/.test(t.outcome); })
+                          .map(function (t) { return t.via; });
+          if (noAnswer && n === 0) again = mine.map(function (t) { return t.via; });
+          if (n < RETRY_AFTER.length && again.length && now() - started < 45000) {
+            if (opts.onRetry) { try { opts.onRetry(n + 1); } catch (e) { /* display only */ } }
+            return wait(RETRY_AFTER[n]).then(function () { return round(n + 1, again); });
+          }
+          var everyone = trace.every(function (t) { return t.outcome === 'network'; });
+          return finish({ status: 'blocked', reason: everyone ? 'network' : 'relays' });
+        }
+        var proxy = order[i++];
+        return tryRelay(proxy, code).then(function (t) {
+          t.round = n;
+          trace.push(t);
+          var r = t.result;
+          r.via = proxy.id;
+          if (r.status === 'found') { promote(proxy.id); return finish(r); }
+          if (r.status === 'notfound') { notFound++; if (notFound === 1) promote(proxy.id); }
+          else if (r.status === 'partial') { if (!partial) partial = r; }
+          else coolDown(proxy.id, t.outcome);
+          return next();
+        });
+      }
+      return next();
+    }
+    return Promise.resolve().then(function () { return round(0, null); });
+  }
+
+  /* Text copied from a Screwfix product page (Ctrl+A, Ctrl+C on screwfix.com) -> the lookup result plus its code,
+     or null if it isn't one. This works on any network, because the browser loaded the page itself. */
+  var SKU_IN_BRACKETS = /\(\s*(\d{3}[A-Z]{2}|\d{4}[A-Z]|\d{5})\s*\)\s*$/i;
+  function fromCopiedPage(text) {
+    text = String(text || '');
+    if (text.length < 30 || !/inc\.?\s*vat/i.test(text)) return null;
+    var lines = text.split(/\r?\n/).map(squash).filter(Boolean), code = null, h1 = '';
+    for (var i = 0; i < lines.length && !code; i++) {
+      var m = lines[i].match(SKU_IN_BRACKETS);
+      if (m && lines[i].length > m[0].length + 2) { code = m[1].toUpperCase(); h1 = lines[i]; }
+    }
+    if (!code) return null;
+    var p = { status: 200, title: '', og: '', h1: h1, ldName: '', ldPrice: null, sku: '', itemPrice: null,
+              text: squash(text) + (/screwfix/i.test(text) ? '' : ' Screwfix') };
+    var r = decide(p, code);
+    if (r.status !== 'found' && r.status !== 'partial') return null;
+    r.code = code;
+    r.via = 'copied page';
+    return r;
+  }
+
+  /* Try every relay once for this code, whatever happens, -> Promise<[{via, outcome, ms, http, price, name}]>.
+     For the "test the lookup" button: shows which relays work from this network right now. */
+  function diagnose(code) {
+    code = String(code || '').toUpperCase();
+    var out = [];
+    return PROXIES.reduce(function (p, proxy) {
+      return p.then(function () {
+        return tryRelay(proxy, code).then(function (t) {
+          out.push(brief(t));
+          if (t.result.status === 'found') promote(proxy.id);
+        });
+      });
+    }, Promise.resolve()).then(function () { return out; });
+  }
+
+  root.ScrewfixLookup = { lookup: lookup, diagnose: diagnose, fromCopiedPage: fromCopiedPage, slot: slot,
+                          productUrl: productUrl, interpret: interpret, normPrice: normPrice,
+                          relays: PROXIES.map(function (p) { return p.id; }) };
 })(this);

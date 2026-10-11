@@ -13,7 +13,7 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var listEl = $('list'), emptyEl = $('empty'), barEl = $('bar'), toolbarEl = $('toolbar'), countEl = $('count'), noteEl = $('note');
-  var dlAll = $('dlAll'), dlAllText = $('dlAllText'), checkAll = $('checkAll'), filePick = $('filePick');
+  var dlAll = $('dlAll'), dlAllText = $('dlAllText'), checkAll = $('checkAll'), filePick = $('filePick'), netNote = $('netNote');
 
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: keep going */ } }
@@ -109,9 +109,11 @@
   function statusOf(r) {
     var s = r.status;
     var filled = !!(r.price && r.product);
-    if (s === 'looking') return ['busy', 'Checking Screwfix…'];
+    if (s === 'looking') return ['busy', r.retrying ? 'Screwfix is slow to answer. Trying again…' : 'Checking Screwfix…'];
     if (s === 'notfound') return ['bad', filled ? 'Not found on Screwfix now. Check the code' : 'Not found on Screwfix. Check the code, digits often get swapped'];
-    if (s === 'blocked') return ['warn', filled ? "Couldn't reach Screwfix, so this is the last price you had" : "Couldn't reach Screwfix. Type the price and name"];
+    if (s === 'blocked' && r.reason === 'network') return ['warn', filled ? "Couldn't connect to the price lookup (this network may block it), so this is the last price you had"
+                                                                   : "Couldn't connect to the price lookup. This network may block it: try your phone, or type the price and name"];
+    if (s === 'blocked') return ['warn', filled ? "Couldn't reach Screwfix, so this is the last price you had. Tap ↻ to try again" : "Couldn't reach Screwfix just now. Tap ↻ to try again, or type the price and name"];
     if (s === 'partial' && !filled) return ['warn', 'Found it, but fill in the missing details'];
     var prob = problem(r);
     if (prob) return [r.price || r.product ? 'bad' : 'muted', prob];
@@ -170,7 +172,9 @@
           '<button class="icon-btn remove" type="button" title="Remove" aria-label="Remove poster">' + ICON.close + '</button>' +
         '</div>' +
       '</div>' +
-      '<div class="pt-chip" role="status"><span></span></div>' +
+      '<div class="ps-status"><div class="pt-chip" role="status"><span></span></div>' +
+        '<button class="ps-why" type="button" aria-expanded="false" hidden>Details</button></div>' +
+      '<div class="ps-diag" hidden></div>' +
       '<div class="ps-main">' +
         '<div class="pt-fields">' +
           '<div class="ps-prices">' +
@@ -207,7 +211,7 @@
 
     var q = function (s) { return el.querySelector(s); };
     var v = {
-      el: el, code: q('.pt-code'), chip: q('.pt-chip'), chipText: q('.pt-chip span'), sf: q('.sf'),
+      el: el, code: q('.pt-code'), chip: q('.pt-chip'), chipText: q('.pt-chip span'), sf: q('.sf'), why: q('.ps-why'), diag: q('.ps-diag'),
       refresh: q('.refresh'), remove: q('.remove'), price: q('.pt-price'), product: q('.pt-product'), was: q('.ps-was'), sale: q('.ps-sale'),
       dl: q('.dl'), age: q('.pt-age'), preview: q('.ps-preview'), sheet: q('.ps-sheet'), busy: q('.ps-busy'),
       pstatus: q('.ps-photo-status'), thumbs: q('.ps-thumbs'), paste: q('.paste'), upload: q('.upload'),
@@ -262,6 +266,7 @@
       if (r.photoState === 'failed' && (!r.photo || r.photo.kind === 'sf')) loadScrewfixPhoto(r, (r.photo && r.photo.id) || r.code + '_P');
     });
     v.remove.addEventListener('click', function () { removeRow(r); });
+    v.why.addEventListener('click', function () { r.diagOpen = !r.diagOpen; paint(r); });
     v.age.addEventListener('click', function () {
       r.ageSet = !hasAge(r);           // a choice made here sticks, even when prices are checked again
       changedRow(r);
@@ -333,6 +338,7 @@
     v.chip.className = 'pt-chip ' + st[0];
     v.chipText.textContent = st[1];
     v.chip.title = st[1];
+    paintDiag(r, v);
     v.sf.href = L.productUrl(r.code);
     v.refresh.disabled = r.status === 'looking';
     v.refresh.classList.toggle('spin', r.status === 'looking');
@@ -344,6 +350,92 @@
                       : 'Tap to add the 18+ badge for a Challenge 25 product';
     paintPhoto(r, v);
     paintPreview(r, v);
+  }
+
+  /* ---------- why a lookup failed (Details under the status), and a test of every lookup service ---------- */
+
+  var OUTCOME = {
+    found: 'worked', partial: 'found the page, but not every detail', notfound: 'says there is no such product',
+    network: "couldn't connect", timeout: 'took too long to answer', limited: 'too busy (rate limited)',
+    denied: 'Screwfix turned it away', 'relay-error': 'having problems of its own', other: 'sent back something that isn’t the product page'
+  };
+  function outcomeText(t) {
+    var o = t.outcome, txt = OUTCOME[o] || (/^http-\d+$/.test(o) ? 'refused (error ' + o.slice(5) + ')' : o);
+    if ((o === 'found' || o === 'partial') && t.price) txt += ', ' + t.price;
+    return txt + ' (' + (t.ms / 1000).toFixed(1) + ' s)';
+  }
+
+  function diagList(list, rounds) {
+    var ul = document.createElement('ul');
+    list.forEach(function (t) {
+      var li = document.createElement('li');
+      li.className = t.outcome === 'found' ? 'ok' : t.outcome === 'network' ? 'bad' : '';
+      var b = document.createElement('b');
+      b.textContent = t.via + (rounds && t.round ? ' (try ' + (t.round + 1) + ')' : '');
+      li.appendChild(b);
+      li.appendChild(document.createTextNode(': ' + outcomeText(t)));
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  function paintDiag(r, v) {
+    var failed = (r.status === 'blocked' || r.status === 'notfound') && r.trace && r.trace.length;
+    v.why.hidden = !failed && !r.test;
+    v.why.setAttribute('aria-expanded', r.diagOpen ? 'true' : 'false');
+    v.why.textContent = r.diagOpen ? 'Hide details' : 'Details';
+    var open = !!r.diagOpen && !v.why.hidden;
+    v.diag.hidden = !open;
+    if (!open) return;
+    var key = JSON.stringify([r.trace, r.test, r.reason]);
+    if (key === v.diagKey) return;
+    v.diagKey = key;
+    v.diag.textContent = '';
+    var p = document.createElement('p');
+    if (r.test && r.test.running) {
+      p.textContent = 'Testing every lookup service from this device. This can take up to a minute…';
+      v.diag.appendChild(p);
+      return;
+    }
+    if (r.test && r.test.results) {
+      var works = r.test.results.filter(function (t) { return t.outcome === 'found' || t.outcome === 'partial'; }).length;
+      var none = r.test.results.every(function (t) { return t.outcome === 'network'; });
+      p.textContent = works ? works + ' of ' + r.test.results.length + ' lookup services work from here right now, so tap ↻ to try again.'
+                    : none ? 'None of the lookup services can be reached from this device. If you’re on a work network it is probably blocking them; on your phone’s mobile data it should work.'
+                    : 'The lookup services can be reached, but none could get the page from Screwfix just now. It usually comes back after a few minutes.';
+      v.diag.appendChild(p);
+      v.diag.appendChild(diagList(r.test.results, false));
+    } else {
+      p.textContent = r.reason === 'network'
+        ? 'None of the lookup services could be reached from this device. Work networks often block them. ' +
+          'Way round it: open the product on screwfix.com, select all and copy, then paste it into the product code box here.'
+        : r.status === 'notfound' ? 'The lookup services say this code isn’t a Screwfix product.'
+        : 'The lookup services answered, but couldn’t get the page from Screwfix:';
+      v.diag.appendChild(p);
+      v.diag.appendChild(diagList(r.trace, true));
+    }
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm ps-test';
+    btn.textContent = r.test && r.test.results ? 'Test again' : 'Test every lookup service';
+    btn.addEventListener('click', function () { runTest(r); });
+    v.diag.appendChild(btn);
+  }
+
+  function runTest(r) {
+    if (r.test && r.test.running) return;
+    r.test = { running: true };
+    r.diagOpen = true;
+    paint(r);
+    L.diagnose(r.code).then(function (results) {
+      r.test = { results: results, at: Date.now() };
+      paint(r);
+      refreshBar();
+    }, function () {
+      r.test = null;
+      paint(r);
+      toast("Couldn't run the test");
+    });
   }
 
   /* Under the prices: what the sale flash will say, and why */
@@ -481,8 +573,11 @@
   /* ---------- photos ---------- */
 
   var photoQueue = [], photoActive = 0;
+  /* Photos go through some of the same free relays as the price lookups, so they wait their turn:
+     while prices are still being looked up only one photo is fetched at a time. */
   function photoPump() {
-    while (photoActive < PHOTO_LIMIT && photoQueue.length) {
+    var limit = active || queue.length ? 1 : PHOTO_LIMIT;
+    while (photoActive < limit && photoQueue.length) {
       var job = photoQueue.shift();
       photoActive++;
       job().then(done, done);
@@ -617,7 +712,37 @@
   });
 
   // Ctrl+V / long-press Paste anywhere on the page puts a copied picture on the poster you're working on
+  /* A whole Screwfix product page pasted in (select all + copy on screwfix.com): fill that poster in from it.
+     Works even where the lookup services are blocked, because the browser loaded the page itself. */
+  function useCopiedPage(res) {
+    var r = rows.filter(function (x) { return x.code === res.code; })[0], isNew = !r;
+    if (isNew) {
+      r = newRow(res.code);
+      rows.push(r);
+      listEl.appendChild(makeRow(r));
+    }
+    r.token++;                                   // any lookup still running for it is now out of date
+    r.status = res.status; r.reason = ''; r.trace = []; r.retrying = 0; r.test = null; r.diagOpen = false;
+    if (res.price) r.price = res.price;
+    if (res.name) r.product = res.name;
+    r.was = res.was || '';
+    r.editedPrice = r.editedProduct = r.editedWas = false;
+    r.unsure = false;
+    r.age = !!res.age;
+    if (res.status === 'found') r.checkedAt = Date.now();
+    activeRow = r;
+    if (!imgs.has(r.id) && r.photoState !== 'loading') loadScrewfixPhoto(r, r.code + '_P');
+    changedRow(r);
+    persist(true);
+    toast((isNew ? 'Added ' : 'Filled in ') + r.code + ' from the copied Screwfix page');
+    var v = views.get(r.id);
+    if (v) v.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
   document.addEventListener('paste', function (e) {
+    var text = e.clipboardData && e.clipboardData.getData ? e.clipboardData.getData('text/plain') : '';
+    var page = text && text.length > 30 ? L.fromCopiedPage(text) : null;
+    if (page) { e.preventDefault(); useCopiedPage(page); return; }
     var got = P.fromPasteEvent(e);
     if (!got) return;
     var typing = e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName);
@@ -746,8 +871,10 @@
       if (r.token !== token || rows.indexOf(r) < 0) continue;
       active++;
       (function (r, token, code) {
-        L.lookup(code).then(function (res) { apply(r, token, code, res); }, function () { apply(r, token, code, { status: 'blocked' }); })
-          .then(function () { active--; pump(); });
+        r.retrying = 0;
+        L.lookup(code, { onRetry: function (n) { if (r.token === token) { r.retrying = n; paint(r); } } })
+          .then(function (res) { apply(r, token, code, res); }, function () { apply(r, token, code, { status: 'blocked' }); })
+          .then(function () { active--; pump(); photoPump(); });
       })(r, token, r.code);
     }
   }
@@ -755,6 +882,11 @@
   function apply(r, token, code, res) {
     if (r.token !== token || r.code !== code) return;
     r.status = res.status;
+    r.retrying = 0;
+    r.reason = res.status === 'blocked' ? res.reason || '' : '';
+    r.trace = res.trace || [];
+    r.traceAt = Date.now();
+    if (res.status === 'found' || res.status === 'partial') { r.test = null; r.diagOpen = false; }
     if (res.status === 'found' || res.status === 'partial') {
       if (res.price && !r.editedPrice) r.price = res.price;
       if (res.name && !r.editedProduct) r.product = res.name;
@@ -887,6 +1019,10 @@
 
   function refreshBar() {
     var n = rows.length;
+    netNote.hidden = !rows.some(function (r) {
+      return (r.status === 'blocked' && r.reason === 'network') ||
+             (r.test && r.test.results && r.test.results.every(function (t) { return t.outcome === 'network'; }));
+    });
     emptyEl.hidden = n > 0;
     toolbarEl.hidden = n === 0;
     barEl.hidden = n === 0;

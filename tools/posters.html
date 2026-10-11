@@ -10,7 +10,7 @@
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
 <link rel="stylesheet" href="price-tickets/price-tickets.css?v=20261011a">
-<link rel="stylesheet" href="posters/posters.css?v=20261011c">
+<link rel="stylesheet" href="posters/posters.css?v=20261011e">
 <link rel="preload" href="posters/fonts/BarlowSemiCondensed-ExtraBold.ttf" as="fetch" type="font/ttf" crossorigin>
 <link rel="preload" href="posters/fonts/BarlowSemiCondensed-Medium.ttf" as="fetch" type="font/ttf" crossorigin>
 <script src="../auth-data.js?v=20261011b"></script>
@@ -29,6 +29,11 @@
     <button class="btn btn-primary" type="submit">Add</button>
   </form>
   <p class="pt-hint">Add one code or paste a whole list. Each code makes its own A4 poster.</p>
+
+  <div class="ps-net" id="netNote" role="status" hidden>
+    <strong>The price lookup can't get through on this network</strong>
+    <p>Open the product on screwfix.com, select all (Ctrl+A) and copy (Ctrl+C), then paste it into the product code box above (Ctrl+V). The price, name and was price fill in from the page.</p>
+  </div>
 
   <div class="pt-toolbar" id="toolbar" hidden>
     <span class="pt-count" id="count"></span>
@@ -60,10 +65,10 @@
 <div class="pt-toast" id="toast" role="status" aria-live="polite"></div>
 <input id="filePick" type="file" accept="image/*" hidden>
 
-<script src="price-tickets/lookup.js?v=20261011c"></script>
+<script src="price-tickets/lookup.js?v=20261011e"></script>
 <script src="posters/font-data.js?v=20261011a"></script>
 <script src="posters/poster-engine.js?v=20261011c"></script>
-<script src="posters/photo.js?v=20261011a"></script>
-<script src="posters/app.js?v=20261011c"></script>
+<script src="posters/photo.js?v=20261011d"></script>
+<script src="posters/app.js?v=20261011e"></script>
 </body>
 </html>
