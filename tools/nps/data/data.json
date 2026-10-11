@@ -1,58 +1,58 @@
 {
- "date": "09.10.2026",
- "fileName": "09.10.2026.xlsx",
+ "date": "11.10.2026",
+ "fileName": "11.10.2026.xlsx",
  "stores": [
   {
    "name": "Hoddesdon (UB4)",
-   "p": 130,
-   "pa": 7,
+   "p": 132,
+   "pa": 8,
    "d": 1
   },
   {
    "name": "Flitwick (JM5)",
-   "p": 153,
+   "p": 154,
    "pa": 7,
    "d": 3
   },
   {
    "name": "Berkhamsted (CB3)",
-   "p": 134,
+   "p": 135,
    "pa": 6,
    "d": 3
   },
   {
    "name": "Hertford (IC6)",
-   "p": 138,
-   "pa": 7,
-   "d": 3
-  },
-  {
-   "name": "Houghton Regis (DB4)",
-   "p": 130,
+   "p": 139,
    "pa": 7,
    "d": 3
   },
   {
    "name": "Epping - Thornwood (RB9)",
-   "p": 138,
+   "p": 140,
    "pa": 8,
    "d": 3
   },
   {
-   "name": "Chesham (SB9)",
-   "p": 154,
-   "pa": 6,
-   "d": 6
+   "name": "Houghton Regis (DB4)",
+   "p": 134,
+   "pa": 7,
+   "d": 4
   },
   {
    "name": "Biggleswade (ED1)",
-   "p": 142,
+   "p": 145,
    "pa": 11,
    "d": 3
   },
   {
+   "name": "Chesham (SB9)",
+   "p": 155,
+   "pa": 7,
+   "d": 6
+  },
+  {
    "name": "Saffron Walden (JR8)",
-   "p": 172,
+   "p": 175,
    "pa": 8,
    "d": 7
   },
@@ -64,7 +64,7 @@
   },
   {
    "name": "Leighton Buzzard (FA2)",
-   "p": 157,
+   "p": 158,
    "pa": 12,
    "d": 5
   },
@@ -75,56 +75,56 @@
    "d": 7
   },
   {
-   "name": "Dunstable (LB1)",
-   "p": 123,
-   "pa": 9,
-   "d": 5
-  },
-  {
    "name": "Letchworth (TT8)",
-   "p": 135,
+   "p": 137,
    "pa": 11,
    "d": 5
   },
   {
    "name": "Stevenage (ET3)",
-   "p": 125,
+   "p": 126,
    "pa": 14,
    "d": 3
   },
   {
    "name": "St Albans (OA7)",
-   "p": 145,
+   "p": 147,
    "pa": 20,
    "d": 2
   },
   {
+   "name": "Dunstable (LB1)",
+   "p": 124,
+   "pa": 10,
+   "d": 5
+  },
+  {
    "name": "Amersham (XA6)",
-   "p": 154,
+   "p": 155,
    "pa": 12,
    "d": 8
   },
   {
-   "name": "Royston (ED6)",
-   "p": 189,
-   "pa": 21,
-   "d": 8
-  },
-  {
    "name": "Bishops Stortford (VA2)",
-   "p": 111,
+   "p": 115,
    "pa": 14,
    "d": 4
   },
   {
+   "name": "Royston (ED6)",
+   "p": 190,
+   "pa": 21,
+   "d": 8
+  },
+  {
    "name": "Welwyn Garden City (IT6)",
-   "p": 120,
+   "p": 122,
    "pa": 19,
    "d": 5
   },
   {
    "name": "Hemel Hempstead (IT9)",
-   "p": 116,
+   "p": 117,
    "pa": 8,
    "d": 11
   },
@@ -137,9 +137,9 @@
  ],
  "area": {
   "name": "Area Total",
-  "p": 3028,
-  "pa": 232,
-  "d": 107
+  "p": 3062,
+  "pa": 235,
+  "d": 108
  },
- "published": "2026-10-10T00:50:43.703Z"
+ "published": "2026-10-11T11:51:46.043Z"
 }
