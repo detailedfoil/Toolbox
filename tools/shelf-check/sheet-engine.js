@@ -413,7 +413,26 @@
   /* ---------- the full list: two narrow columns, SKU and price only, folds in half down the middle ---------- */
 
   var CW = 86 * MM, CGAP = 10 * MM;                       // column width, and the gap the fold runs down
-  var RH = { item: 6.4 * MM, chg: 8 * MM, shelf: 5 * MM, head: 4.6 * MM };
+  var RH = { item: 6.4 * MM, chg: 10.4 * MM, shelf: 5 * MM, head: 4.6 * MM };
+  var NSZ = 6.4, NLEAD = 7.2;                              // product names: small, cut off to fit
+
+  /* wrap a name onto at most `lines` lines of `maxW` points (first line starts `indent` in), cutting the rest off with ... */
+  function fitName(text, maxW, lines, indent) {
+    var words = win(text).split(/ +/).filter(Boolean), out = [], cur = '', n = 0;
+    function w(t) { return width('H', NSZ, t); }
+    for (var i = 0; i < words.length; i++) {
+      var lim = maxW - (out.length === 0 ? indent : 0), t = cur ? cur + ' ' + words[i] : words[i];
+      if (w(t) <= lim) { cur = t; continue; }
+      if (out.length === lines - 1) {                                  // last line: fill it, then cut
+        var rest = words.slice(i).join(' '), full = cur ? cur + ' ' + rest : rest;
+        while (full.length > 1 && w(full + '...') > lim) full = full.slice(0, -1);
+        return out.concat([full.replace(/ +$/, '') + (full.length < (cur ? cur.length + 1 : 0) + rest.length ? '...' : '')]);
+      }
+      out.push(cur); cur = words[i];
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
 
   function colText(g, font, size, gray, x, y, s) { g.text(font, size, gray, x, y, win(s)); }
   function colRight(g, font, size, gray, xr, y, s) { s = win(s); g.text(font, size, gray, xr - width(font, size, s), y, s); }
@@ -438,11 +457,24 @@
       } else if (r.kind === 'shelf') {
         colText(g, 'HB', 7.5, 0, x + 5, mid - 2.6, r.label.toUpperCase());
       } else {
-        var chg = r.changed, bx = x + (chg ? 7 : 5);
-        colText(g, 'CB', 10.5, 0, bx, chg && r.pos ? mid - 1.2 : mid - 3.5, r.code);
-        if (r.pos) {
-          if (chg) colText(g, 'H', 7, 0.2, bx, mid - 8.6, r.pos);
-          else colText(g, 'H', 7, GREY, bx + width('CB', 10.5, r.code) + 5, mid - 2.5, r.pos);
+        var chg = r.changed, bx = x + (chg ? 7 : 5), nm = r.name || '', ps = r.pos ? win(r.pos) : '';
+        if (chg) mid = bottom + r.h * 0.62;
+        colText(g, 'CB', 10.5, 0, bx, mid - 3.5, r.code);
+        if (chg) {
+          // one line of name under the main line, across the row
+          var ind = ps ? width('HB', NSZ, ps) + 4 : 0, ln = fitName(nm, 65 * MM - ind, 1, 0)[0] || '';
+          if (ps) g.text('HB', NSZ, 0, bx, bottom + 4.3, ps);
+          if (ln) g.text('H', NSZ, 0.15, bx + ind, bottom + 4.3, ln);
+        } else {
+          // up to two small lines between the SKU and the price
+          var nx = x + 19.5 * MM, lim = (r.na ? 49 : 55) * MM - (nx - x), pin = ps ? width('HB', NSZ, ps) + 4 : 0;
+          var lines = fitName(nm, lim, 2, pin);
+          var y0 = mid + lines.length * NLEAD / 2 - 5;
+          lines.forEach(function (t, i) {
+            if (i === 0 && ps) g.text('HB', NSZ, GREY, nx, y0, ps);
+            g.text('H', NSZ, 0.15, nx + (i === 0 ? pin : 0), y0 - i * NLEAD, t);
+          });
+          if (!lines.length && ps) g.text('HB', NSZ, GREY, nx, mid - 2.2, ps);
         }
         if (chg) {
           var bd = new Badge(r.up); bd.w = 16.5 * MM;
@@ -592,7 +624,7 @@
     ]);
     flow.spacer(3 * MM);
     flow.para(new Para(ST.info, ONLY ? 'Only lines whose price changed are listed, in shelf order: each bay top shelf first, left to right. A product on more than one shelf has a row for each. Swap each ticket to the new price, then tick the box.' : [
-      { t: 'Fold down the middle (portrait). Each bay runs top shelf first, left to right along each shelf, down the left half then the right. Check the shelf ticket matches the ' }, { t: 'Price', b: 1 }, { t: ', and tick the box. Rows with a ' },
+      { t: 'Fold down the middle (portrait). Names are small and cut off to fit. Each bay runs top shelf first, left to right along each shelf, down the left half then the right. Check the shelf ticket matches the ' }, { t: 'Price', b: 1 }, { t: ', and tick the box. Rows with a ' },
       { t: 'thick black edge', b: 1 }, { t: ' and an ' }, { t: 'UP', b: 1 }, { t: ' or ' }, { t: 'DOWN', b: 1 },
       { t: ' tag have a new price: swap the ticket.' + (notChecked ? ' A * after a price means it was not rechecked this week.' : '') }]));
     flow.spacer(ONLY ? 5 * MM : 4 * MM);
@@ -609,7 +641,7 @@
         var named = shelvesOf(b).length > 1 || (shelvesOf(b)[0] || {}).label;
         mine.forEach(function (s) {
           if (named && s.si !== last) { rows.push({ kind: 'shelf', label: s.shelf || 'Shelf ' + (s.si + 1), h: RH.shelf }); last = s.si; k = 0; }
-          var p = prod(s.code), chg = isChange(s.code), r = { kind: 'item', code: s.code, pos: s.pos, h: chg ? RH.chg : RH.item, price: p.price };
+          var p = prod(s.code), chg = isChange(s.code), r = { kind: 'item', code: s.code, pos: s.pos, name: p.name || '', h: chg ? RH.chg : RH.item, price: p.price };
           if (chg) { r.changed = true; r.up = p.price > p.prev; r.was = p.prev; }
           else {
             if (p.status === 'not_found') r.na = 'not found online';
