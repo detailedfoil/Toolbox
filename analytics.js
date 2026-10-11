@@ -4,7 +4,7 @@
    per signed-in store, so you can see which stores use it. The cost code is never sent. */
 (function () {
   "use strict";
-  var CODE = ""; // e.g. "detailedfoil" -> https://detailedfoil.goatcounter.com
+  var CODE = "detailedfoil"; // -> https://detailedfoil.goatcounter.com
   var KEY = "toolbox.signedIn.area20";
 
   window.TOOLBOX_STATS = { code: CODE, url: CODE ? "https://" + CODE + ".goatcounter.com" : "" };
