@@ -1,0 +1,74 @@
+# Weekly Screwfix shelf price check for the Toolbox "Shelf Check" page.
+#
+# Monday, early morning UK time: checks every code on the shop plan against screwfix.com, one at a
+# time with a gap between requests, and saves the results to tools/shelf-check/data/prices.json.
+# The later Monday runs only finish off lines the first run couldn't check, and do nothing once the
+# week is done. Changing the shop plan (tools/shelf-check/data/plan.json) checks any new codes.
+#
+# To run it by hand: Actions tab > Shelf price check > Run workflow.
+#   auto  the normal Monday run (does nothing if this week is already done)
+#   full  check every line now (the results become the new starting point)
+#   test  check every line but save nothing
+name: Shelf price check
+
+on:
+  schedule:
+    # GitHub reads these as UTC: 03:17 UTC is 04:17 in summer (BST) and 03:17 in winter (GMT)
+    - cron: '17 3 * * 1'
+    - cron: '47 5 * * 1'
+    - cron: '47 9 * * 1'
+    - cron: '47 14 * * 1'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/shelf-check/data/plan.json'
+      - 'tools/price-tickets/lookup.js'
+      - '.github/shelf-check/**'
+      - '.github/workflows/shelf-check.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'auto = the normal Monday run, full = check every line now, test = check every line but save nothing'
+        type: choice
+        default: auto
+        options: [auto, full, test]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shelf-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 175
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install the page reader
+        working-directory: .github/shelf-check
+        run: npm ci --no-audit --no-fund
+
+      - name: Check prices on screwfix.com
+        timeout-minutes: 150
+        env:
+          MODE: ${{ inputs.mode || 'auto' }}
+          GAP_MS: '5000'
+        run: node .github/shelf-check/check.mjs
+
+      - name: Save the results
+        if: always()
+        run: |
+          git add tools/shelf-check/data/prices.json
+          if git diff --cached --quiet; then echo "Nothing new to save"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          if [ -f "$RUNNER_TEMP/shelf-commit.txt" ]; then git commit -q -F "$RUNNER_TEMP/shelf-commit.txt"; else git commit -q -m "Shelf check results (run stopped early)"; fi
+          for i in 1 2 3; do git push -q && exit 0; sleep 5; git pull -q --rebase; done
+          exit 1
