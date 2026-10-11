@@ -136,6 +136,11 @@
   }
 
   $("adminBtn").addEventListener("click", () => { status(""); syncTokenUi(); $("admin").showModal(); });
+  $("tokenCopy").addEventListener("click", async () => {
+    const t = getToken();
+    try { await navigator.clipboard.writeText(t); status("Token copied. Paste it into this box on your other device."); }
+    catch (e) { window.prompt("Copy your token:", t); }
+  });
   $("tokenChange").addEventListener("click", () => { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} syncTokenUi(); $("token").focus(); });
   $("pubWorkbook").addEventListener("click", () => { if (needToken()) $("file").click(); });
   $("pubImage").addEventListener("click", () => { if (needToken()) $("imgFile").click(); });
