@@ -1,5 +1,6 @@
 @font-face { font-family: 'TicketPrice'; src: url('fonts/BarlowCondensed-ExtraBold.ttf') format('truetype'); font-weight: 800; font-display: block; }
 @font-face { font-family: 'TicketText'; src: url('fonts/BarlowSemiCondensed-Regular.ttf') format('truetype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'TicketBold'; src: url('fonts/BarlowSemiCondensed-ExtraBold.ttf') format('truetype'); font-weight: 800; font-display: block; }
 
 :root { --field: #12151b; --ok: #3ccf82; --warn: #f2b13d; --bad: #ff7272; --info: #7fa8ff; --paper: #262a33; --age-line: rgba(237, 28, 36, .6); --age-bg: rgba(237, 28, 36, .16); }
 @media (prefers-color-scheme: light) {
@@ -60,8 +61,7 @@ input, textarea, button { font-family: inherit; }
 .icon-btn.spin svg { animation: pt-spin .9s linear infinite; }
 @keyframes pt-spin { to { transform: rotate(360deg); } }
 
-.pt-fields { display: grid; grid-template-columns: 8.5rem 1fr; gap: 10px; margin-top: 10px; align-content: start; }
-@media (max-width: 480px) { .pt-fields { grid-template-columns: 1fr; } }
+.pt-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 10px; align-content: start; }
 @media (min-width: 760px) {
   .pt-main { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: start; }
   .pt-main .pt-fields { grid-template-columns: 1fr; }
@@ -78,10 +78,20 @@ input, textarea, button { font-family: inherit; }
 .pt-money::before { content: '£'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 600; pointer-events: none; }
 .pt-money input { padding-left: 25px; font-weight: 600; }
 
+/* price + was price side by side, then what the sale flash will say */
+.pt-prices { display: grid; grid-template-columns: repeat(2, minmax(0, 11rem)); gap: 10px; }
+.pt-prices .pt-money { max-width: none; }
+.pt-opt { text-transform: none; letter-spacing: 0; font-weight: 500; margin-left: 3px; opacity: .85; }
+.pt-sale { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: -2px 2px 0; font-size: .84rem; color: var(--muted); }
+.pt-sale.off { color: var(--warn); }
+.pt-flash { display: inline-block; padding: 4px 9px 3px; background: #ed1c24; color: #fff; font: 800 .86rem/1.1 'TicketBold', system-ui, sans-serif; letter-spacing: .01em;
+  clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px); }
+
 /* live preview of the printed ticket (same fonts and measurements, scaled to fit) */
 .pt-preview { margin-top: 12px; padding: 10px; border-radius: 12px; background: var(--paper); }
 .pt-stage { position: relative; width: calc(340.15625px * var(--s, 1)); height: calc(283.453125px * var(--s, 1)); margin: 0 auto; }
 .tk { position: absolute; top: 0; left: 0; width: 340.15625px; height: 283.453125px; transform: scale(var(--s, 1)); transform-origin: 0 0; box-sizing: border-box; border: 1px dashed #c4c4c4; background: #fff; color: #1c2033; font-family: 'TicketText', sans-serif; font-weight: 400; font-kerning: normal; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+.tk-sale { position: absolute; left: 0; top: 0; width: 338.15625px; height: 281.453125px; overflow: visible; }
 .tk-price { position: absolute; left: 11px; top: 2px; font: 800 75px/1 'TicketPrice', sans-serif; letter-spacing: 1px; color: #1f4ea1; white-space: nowrap; font-variant-ligatures: none; }
 .tk-body { position: absolute; left: 15px; top: 116px; width: 282px; }
 .tk-name { font-size: 16.5px; line-height: 1.2; }

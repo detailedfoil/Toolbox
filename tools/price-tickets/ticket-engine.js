@@ -4,8 +4,9 @@
  * same fonts (Barlow Condensed ExtraBold + Barlow Semi Condensed Regular v1.408),
  * same kerning, ligatures, line breaking, pixel snapping and page geometry, so the
  * PDFs match the ones the skill makes. Do not restyle anything in here.
- * The one addition is the 18+ badge for Challenge 25 products (ticket.age), copied from
- * the official Screwfix artwork. Tickets without it come out exactly as before.
+ * Two additions, both from the official Screwfix artwork: the 18+ badge for Challenge 25
+ * products (ticket.age), and the sale flash + WAS box for products on offer (ticket.was).
+ * Tickets without them come out exactly as the skill makes them.
  */
 (function (root) {
   'use strict';
@@ -17,7 +18,26 @@
   var BLUE = [0x1F / 255, 0x4E / 255, 0xA1 / 255];       // price #1f4ea1
   var INK = [0x1C / 255, 0x20 / 255, 0x33 / 255];        // text  #1c2033
   var CUT = [0xC4 / 255, 0xC4 / 255, 0xC4 / 255];        // cut line #c4c4c4
-  var RED = [0xED / 255, 0x1C / 255, 0x24 / 255];        // 18+ badge #ed1c24
+  var RED = [0xED / 255, 0x1C / 255, 0x24 / 255];        // 18+ badge, sale flash and WAS box #ed1c24
+  var WHITE = [1, 1, 1];
+
+  /* Sale tickets: a red "SAVE OVER 25%" flash under the price (corners cut off at 45°) and "WAS £11.99" in a
+   * red outlined box after it, measured from the official Screwfix sale tickets (UK-242PN, 545PJ, 67928, 90147,
+   * 453VF-90X75). Points. The boxes start at the text column (the name's left edge) and hang below the price
+   * baseline. Screwfix-Bold isn't free to use, so Barlow Semi Condensed ExtraBold stands in, at a size that gives
+   * the same cap height and widths within 2%. */
+  var SALE = {
+    top: 10.6732,               // box tops, below the price baseline
+    height: 18.455,             // flash box
+    corner: 2.473,              // flash corners cut off at 45°
+    padL: 3.6, padR: 4.2,       // flash text ink to the box edges
+    gap: 5.05,                  // flash box to the WAS box's line
+    line: 0.5,                  // WAS box: red outline, centred on these edges
+    lineH: 18.205, lineCorner: 2.327,
+    wasPad: 4.0,                // WAS text ink to the line
+    size: 10.25,                // text size
+    baseline: 12.89             // text baseline below the box tops (caps centred in the flash)
+  };
   var DASHES = '-–—';        // hyphen, en dash, em dash: a line may break after these
 
   /* The Challenge 25 "18+" badge, copied from the official Screwfix ticket artwork (UK-17091-90X75):
@@ -159,6 +179,15 @@
 
   Face.prototype.width = function (text, size) { return this.layout(text, size).width; };
 
+  /* Ink of a laid-out run: where the first glyph's ink starts after its origin, where the last one's
+     ends before the run's advance, and the inked width in between (px). Needs lsb/rsb in the font data. */
+  Face.prototype.ink = function (run, size) {
+    var it = run.items, k = size / this.upm, lsb = this.d.lsb || [], rsb = this.d.rsb || [];
+    if (!it.length) return { left: 0, right: 0, width: 0 };
+    var left = (lsb[it[0][1]] || 0) * k, right = (rsb[it[it.length - 1][1]] || 0) * k;
+    return { left: left, right: right, width: run.width - left - right };
+  };
+
   function rstripSpace(s) { return s.replace(/ +$/, ''); }
   function squash(s) { return String(s).split(/\s+/).filter(Boolean).join(' '); }
 
@@ -263,6 +292,68 @@
     c.push('Q');
   }
 
+  /* ---------- sale tickets ---------- */
+
+  function pence(p) { return Math.round(parseFloat(String(p).replace(/[£,]/g, '')) * 100); }
+  function money(p) { return '£' + (p / 100).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  /* What a sale ticket says, worked out the way the official ones are: the saving rounded down to a multiple
+     of 5, "SAVE OVER 25%" when it's more than that (29.2%), "SAVE 20%" when that's what it rounds to (20.0%).
+     Under 5% it shows the money off instead: "SAVE £0.40". null unless the price is lower than the was price. */
+  function saleOf(price, was) {
+    if (!price || !was || !PRICE_RE.test(price) || !PRICE_RE.test(was)) return null;
+    var now = pence(price), before = pence(was);
+    if (!(before > now) || now <= 0) return null;
+    var off = before - now, step = Math.floor(off * 20 / before) * 5;
+    var exact = step >= 5 && 2 * (off * 100 - step * before) < before;     // real saving under step + 0.5%
+    return {
+      pct: off * 100 / before, step: step, exact: exact,
+      flash: step < 5 ? 'SAVE ' + money(off) : (exact ? 'SAVE ' : 'SAVE OVER ') + step + '%',
+      was: 'WAS ' + money(before)
+    };
+  }
+
+  /* Where the flash and the WAS box go (px): x = the text column, priceBase = the price baseline. */
+  function saleLayout(fonts, t, x, priceBase) {
+    var s = saleOf(t.price, t.was);
+    if (!s) return null;
+    var S = SALE, P = 1 / PT, size = S.size * P;
+    var fr = fonts.bold.layout(s.flash, size, 0, false), fi = fonts.bold.ink(fr, size);
+    var wr = fonts.bold.layout(s.was, size, 0, false), wi = fonts.bold.ink(wr, size);
+    var top = priceBase + S.top * P, base = top + S.baseline * P;
+    var fw = (S.padL + S.padR) * P + fi.width;
+    var bx = x + fw + S.gap * P, bw = 2 * S.wasPad * P + wi.width;
+    return {
+      sale: s, size: size,
+      flash: { x: x, y: top, w: fw, h: S.height * P, corner: S.corner * P,
+               text: { s: s.flash, x: x + S.padL * P - fi.left, y: base, run: fr } },
+      box: { x: bx, y: top, w: bw, h: S.lineH * P, corner: S.lineCorner * P, line: S.line * P,
+             text: { s: s.was, x: bx + S.wasPad * P - wi.left, y: base, run: wr } }
+    };
+  }
+
+  /* A rectangle with its corners cut off at 45°, as [x, y] points */
+  function chamfer(b) {
+    var k = b.corner, x0 = b.x, y0 = b.y, x1 = b.x + b.w, y1 = b.y + b.h;
+    return [[x0 + k, y0], [x1 - k, y0], [x1, y0 + k], [x1, y1 - k], [x1 - k, y1], [x0 + k, y1], [x0, y1 - k], [x0, y0 + k]];
+  }
+
+  function drawSale(c, fonts, sl) {
+    var poly = function (pts) {
+      return pts.map(function (pt, i) { var q = pxToPdf(pt[0], pt[1]); return fp(q[0], q[1]) + (i ? ' l' : ' m'); }).join('\n') + '\nh';
+    };
+    c.push('q');
+    c.push(fp(RED[0], RED[1], RED[2]) + ' rg');
+    c.push(poly(chamfer(sl.flash)));
+    c.push('f');
+    c.push(fp(RED[0], RED[1], RED[2]) + ' RG ' + fp(sl.box.line * PT) + ' w');
+    c.push(poly(chamfer(sl.box)));
+    c.push('S');
+    c.push('Q');
+    drawRun(c, fonts.bold, sl.size, sl.flash.text.run.items, sl.flash.text.x, sl.flash.text.y, WHITE);
+    drawRun(c, fonts.bold, sl.size, sl.box.text.run.items, sl.box.text.x, sl.box.text.y, RED);
+  }
+
   function drawTicket(c, fonts, t, slot, refDate) {
     var col = slot % 2, row = Math.floor(slot / 2);
     var cx = GRID_X + col * CELL_W, cy = GRID_Y + row * CELL_H;
@@ -273,7 +364,11 @@
     c.push(fp(lt[0], lb[1], (CELL_W - 2) * PT, lt[1] - lb[1]) + ' re W n');
     // price: Barlow Condensed ExtraBold 75px, letter-spacing 1px, top 2px, left 11px
     var r = fonts.price.layout(t.price, 75, 1.0, false);
-    drawRun(c, fonts.price, 75, r.items, LU(ox + 11), SNAP(oy + 2 + 67), BLUE);
+    var priceBase = SNAP(oy + 2 + 67);
+    drawRun(c, fonts.price, 75, r.items, LU(ox + 11), priceBase, BLUE);
+    // on offer: the SAVE flash and the WAS box under the price
+    var sl = t.was ? saleLayout(fonts, t, LU(ox + 15), priceBase) : null;
+    if (sl) drawSale(c, fonts, sl);
     // product name: Barlow Semi Condensed 16.5px / 1.2, 282px wide, top 116px, left 15px
     var lh = LU(16.5 * 1.2);
     var lines = wrap(fonts.text, t.product, 16.5, 282);
@@ -305,7 +400,11 @@
     if (price.charAt(0) !== '£') price = '£' + price;
     if (!PRICE_RE.test(price)) throw TicketError('Bad price "' + (t.price || '') + '" for ' + code + ': use £12.34', 'price');
     var product = squash(t.product || '').replace(new RegExp('\\s*\\(' + escapeRe(code) + '\\)\\s*$', 'i'), '');
-    return { code: code, price: price, product: product, age: !!t.age };
+    // on offer: the old price ('' when there isn't one, or it isn't a price)
+    var was = String(t.was || '').trim().replace(/ /g, '');
+    if (was && was.charAt(0) !== '£') was = '£' + was;
+    if (!PRICE_RE.test(was)) was = '';
+    return { code: code, price: price, product: product, age: !!t.age, was: was };
   }
 
   /* ---------- minimal PDF writer: CID TrueType fonts (Identity-H), Flate streams ---------- */
@@ -352,12 +451,13 @@
            p2(d.getUTCHours()) + p2(d.getUTCMinutes()) + p2(d.getUTCSeconds()) + 'Z';
   }
 
-  function Engine(fontData, priceTtf, textTtf) {
+  function Engine(fontData, priceTtf, textTtf, boldTtf) {
     this.fonts = {
       price: new Face(fontData.price, 'F1', 'price'),
-      text: new Face(fontData.text, 'F2', 'text')
+      text: new Face(fontData.text, 'F2', 'text'),
+      bold: new Face(fontData.bold, 'F3', 'bold')            // sale tickets only
     };
-    this.ttf = { F1: new Uint8Array(priceTtf), F2: new Uint8Array(textTtf) };
+    this.ttf = { F1: new Uint8Array(priceTtf), F2: new Uint8Array(textTtf), F3: new Uint8Array(boldTtf) };
     this._packed = {};
   }
 
@@ -386,13 +486,21 @@
 
   Engine.prototype.lines = function (product) { return wrap(this.fonts.text, product, 16.5, 282); };
 
-  /* tickets: [{code, price, product}] -> Promise<Uint8Array> (6 per A4 page, in order) */
+  /* For the on-screen preview: the sale flash and WAS box in px from the ticket's top-left corner
+     (inside the cut line), or null when the ticket isn't a sale one. */
+  Engine.prototype.sale = function (t) {
+    var c;
+    try { c = clean(t); } catch (e) { return null; }
+    return c.was ? saleLayout(this.fonts, c, 15, SNAP(2 + 67)) : null;
+  };
+
+  /* tickets: [{code, price, product, age?, was?}] -> Promise<Uint8Array> (6 per A4 page, in order) */
   Engine.prototype.render = function (tickets, opts) {
     opts = opts || {};
     var self = this;
     var refDate = opts.date || ukDate().ref;
     var list = tickets.map(clean);
-    var used = { F1: new Set(), F2: new Set() };
+    var used = { F1: new Set(), F2: new Set(), F3: new Set() };
     var pages = [];
     for (var i = 0; i < list.length; i += 6) {
       var c = [];
@@ -402,10 +510,11 @@
     }
     if (!pages.length) throw TicketError('No tickets to print', 'empty');
 
-    return Promise.all([this._fontFile('F1'), this._fontFile('F2'),
+    var bold = used.F3.size > 0;                    // the bold font only goes in when a sale ticket needs it
+    return Promise.all([this._fontFile('F1'), this._fontFile('F2'), bold ? this._fontFile('F3') : null,
                         Promise.all(pages.map(function (p) { return deflate(latin1(p)); }))])
       .then(function (res) {
-        var files = { F1: res[0], F2: res[1] }, packedPages = res[2];
+        var files = { F1: res[0], F2: res[1], F3: res[2] }, packedPages = res[3];
         var chunks = [], len = 0, offsets = [];
         function w(x) { var b = typeof x === 'string' ? latin1(x) : x; chunks.push(b); len += b.length; }
         function obj(num, dict, stream) {
@@ -416,16 +525,19 @@
         }
         w('%PDF-1.4\n%âãÏÓ\n');
 
-        // 1 catalog, 2 pages, 3 info, 4-8 price font, 9-13 text font, then page + content pairs
-        var fontObj = { F1: 4, F2: 9 };
+        // 1 catalog, 2 pages, 3 info, 4-8 price font, 9-13 text font, then page + content pairs,
+        // then (sale tickets only) the bold font
         var firstPage = 14;
+        var boldObj = firstPage + 2 * pages.length;
+        var fontRes = '/F1 4 0 R /F2 9 0 R' + (bold ? ' /F3 ' + boldObj + ' 0 R' : '');
         var kids = pages.map(function (_, i) { return (firstPage + 2 * i) + ' 0 R'; }).join(' ');
         obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
         obj(2, '<< /Type /Pages /Kids [' + kids + '] /Count ' + pages.length + ' >>');
         obj(3, '<< /Title (Price tickets) /Producer (Toolbox price tickets) /CreationDate (' + pdfDate(new Date()) + ') >>');
 
-        ['F1', 'F2'].forEach(function (key) {
-          var face = key === 'F1' ? self.fonts.price : self.fonts.text, d = face.d, n = fontObj[key];
+        var faceOf = { F1: self.fonts.price, F2: self.fonts.text, F3: self.fonts.bold };
+        function writeFont(key, n) {
+          var face = faceOf[key], d = face.d;
           var s = 1000 / d.upm;
           var widths = d.adv.map(function (a) { return Math.round(a * s); }).join(' ');
           var file = files[key];
@@ -443,16 +555,19 @@
           obj(n + 3, '<< /Length ' + file.bytes.length + ' /Length1 ' + self.ttf[key].length +
                      (file.filter ? ' /Filter /FlateDecode' : '') + ' >>', file.bytes);
           obj(n + 4, '<< /Length ' + cmap.length + ' >>', cmap);
-        });
+        }
+        writeFont('F1', 4);
+        writeFont('F2', 9);
 
         pages.forEach(function (p, i) {
           var pn = firstPage + 2 * i, z = packedPages[i], body = z || latin1(p);
           obj(pn, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + fp(PAGE_W, PAGE_H) + ']' +
-                  ' /Resources << /Font << /F1 4 0 R /F2 9 0 R >> /ProcSet [/PDF /Text] >> /Contents ' + (pn + 1) + ' 0 R >>');
+                  ' /Resources << /Font << ' + fontRes + ' >> /ProcSet [/PDF /Text] >> /Contents ' + (pn + 1) + ' 0 R >>');
           obj(pn + 1, '<< /Length ' + body.length + (z ? ' /Filter /FlateDecode' : '') + ' >>', body);
         });
+        if (bold) writeFont('F3', boldObj);
 
-        var count = firstPage + 2 * pages.length;
+        var count = boldObj + (bold ? 5 : 0);
         var xref = len;
         var x = 'xref\n0 ' + count + '\n0000000000 65535 f \n';
         for (var k = 1; k < count; k++) x += ('0000000000' + offsets[k]).slice(-10) + ' 00000 n \n';
@@ -477,6 +592,6 @@
     return { ref: parts.day + '_' + parts.month + '_' + parts.year.slice(-2), iso: parts.year + '-' + parts.month + '-' + parts.day };
   }
 
-  var api = { Engine: Engine, clean: clean, ukDate: ukDate, PRICE_RE: PRICE_RE, BADGE: BADGE };
+  var api = { Engine: Engine, clean: clean, ukDate: ukDate, PRICE_RE: PRICE_RE, BADGE: BADGE, saleOf: saleOf, chamfer: chamfer };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.TicketEngine = api;
 })(this);

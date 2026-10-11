@@ -26,7 +26,7 @@
     return {
       id: r.id || uid(), code: r.code, price: r.price || '', product: r.product || '',
       status: r.status === 'looking' ? 'manual' : (r.status || 'manual'), checkedAt: r.checkedAt || 0,
-      editedPrice: !!r.editedPrice, editedProduct: !!r.editedProduct, unsure: !!r.unsure,
+      was: r.was || '', editedPrice: !!r.editedPrice, editedProduct: !!r.editedProduct, editedWas: !!r.editedWas, unsure: !!r.unsure,
       age: !!r.age, ageSet: typeof r.ageSet === 'boolean' ? r.ageSet : null, token: 0
     };
   });
@@ -40,8 +40,8 @@
     var write = function () {
       store(ROWS_KEY, rows.map(function (r) {
         return { id: r.id, code: r.code, price: r.price, product: r.product, status: r.status === 'looking' ? 'manual' : r.status,
-                 checkedAt: r.checkedAt, editedPrice: r.editedPrice, editedProduct: r.editedProduct, unsure: r.unsure,
-                 age: r.age, ageSet: r.ageSet };
+                 checkedAt: r.checkedAt, was: r.was, editedPrice: r.editedPrice, editedProduct: r.editedProduct, editedWas: r.editedWas,
+                 unsure: r.unsure, age: r.age, ageSet: r.ageSet };
       }));
     };
     if (now) write(); else saveTimer = setTimeout(write, 250);
@@ -69,11 +69,14 @@
   // 18+ badge: what Screwfix says (Challenge 25 on the page), unless it has been switched on or off by hand
   function hasAge(r) { return r.ageSet != null ? r.ageSet : !!r.age; }
 
-  function ticketOf(r) { return { code: r.code, price: normPrice(r.price) || r.price, product: cleanProduct(r.product, r.code), age: hasAge(r) }; }
+  function ticketOf(r) {
+    return { code: r.code, price: normPrice(r.price) || r.price, was: normPrice(r.was) || '', product: cleanProduct(r.product, r.code), age: hasAge(r) };
+  }
 
   function problem(r) {
     if (!r.price) return 'Add the price';
     if (normPrice(r.price) === null) return 'Price should look like 12.99';
+    if (r.was && normPrice(r.was) === null) return 'Was price should look like 29.99';
     if (!squash(r.product)) return 'Add the product name';
     if (!engine) return null;
     var e = engine.check(ticketOf(r));
@@ -102,7 +105,7 @@
     var prob = problem(r);
     if (prob) return [r.price || r.product ? 'bad' : 'muted', prob];
     if (s === 'found' && r.unsure) return ['warn', 'Check this is the right product'];
-    if (s === 'found' && (r.editedPrice || r.editedProduct)) return ['info', 'Edited by you'];
+    if (s === 'found' && (r.editedPrice || r.editedProduct || r.editedWas)) return ['info', 'Edited by you'];
     if (s === 'found') {
       var when = whenChecked(r.checkedAt), today = E.ukDate(new Date(r.checkedAt)).iso === E.ukDate().iso;
       return today ? ['ok', 'Live price, checked ' + when] : ['muted', 'Checked ' + when + '. Tap ↻ for today’s price'];
@@ -140,7 +143,7 @@
   function makeRow(r) {
     var el = document.createElement('article');
     el.className = 'pt-row';
-    var pid = 'p-' + r.id, nid = 'n-' + r.id;
+    var pid = 'p-' + r.id, nid = 'n-' + r.id, wid = 'w-' + r.id;
     el.innerHTML =
       '<div class="pt-row-top">' +
         '<input class="pt-code" type="text" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Product code">' +
@@ -153,11 +156,16 @@
       '<div class="pt-chip" role="status"><span></span></div>' +
       '<div class="pt-main">' +
         '<div class="pt-fields">' +
-          '<div class="pt-field"><label for="' + pid + '">Price</label><div class="pt-money"><input id="' + pid + '" class="pt-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"></div></div>' +
+          '<div class="pt-prices">' +
+            '<div class="pt-field"><label for="' + pid + '">Price</label><div class="pt-money"><input id="' + pid + '" class="pt-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"></div></div>' +
+            '<div class="pt-field"><label for="' + wid + '">Was <span class="pt-opt">on offer</span></label><div class="pt-money"><input id="' + wid + '" class="pt-was" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"></div></div>' +
+          '</div>' +
+          '<p class="pt-sale" hidden></p>' +
           '<div class="pt-field"><label for="' + nid + '">Product name</label><textarea id="' + nid + '" class="pt-product" rows="1" placeholder="As written on Screwfix"></textarea></div>' +
         '</div>' +
         '<div class="pt-preview"><div class="pt-stage"><div class="tk" aria-hidden="true">' +
           '<div class="tk-price"></div>' +
+          '<svg class="tk-sale" viewBox="0 0 338.15625 281.453125" hidden></svg>' +
           '<div class="tk-body"><div class="tk-name"></div><div class="tk-code"><span class="tk-code-t"></span><span class="tk-age" hidden>' + badgeSvg('tk') + '</span></div></div>' +
           '<div class="tk-ref"></div>' +
         '</div></div></div>' +
@@ -169,9 +177,9 @@
     var q = function (s) { return el.querySelector(s); };
     var v = {
       el: el, code: q('.pt-code'), chip: q('.pt-chip'), chipText: q('.pt-chip span'), sf: q('.sf'),
-      refresh: q('.refresh'), remove: q('.remove'), price: q('.pt-price'), product: q('.pt-product'),
-      dl: q('.dl'), age: q('.pt-age'), tkPrice: q('.tk-price'), tkName: q('.tk-name'), tkCode: q('.tk-code-t'),
-      tkAge: q('.tk-age'), tkRef: q('.tk-ref')
+      refresh: q('.refresh'), remove: q('.remove'), price: q('.pt-price'), product: q('.pt-product'), was: q('.pt-was'), sale: q('.pt-sale'),
+      dl: q('.dl'), age: q('.pt-age'), tkPrice: q('.tk-price'), tkSale: q('.tk-sale'), tkName: q('.tk-name'), tkCode: q('.tk-code-t'),
+      tkAge: q('.tk-age'), tkRef: q('.tk-ref'), saleKey: ''
     };
     views.set(r.id, v);
 
@@ -180,7 +188,7 @@
       var c = normCode(v.code.value);
       if (c && c !== r.code && !isSku(c)) toast(v.code.value.trim() + " isn't a Screwfix code. Codes are 5 characters, like 843PG");
       if (!c || c === r.code || !isSku(c)) { v.code.value = r.code; return; }
-      r.code = c; r.price = ''; r.product = ''; r.editedPrice = r.editedProduct = false; r.unsure = false;
+      r.code = c; r.price = ''; r.product = ''; r.was = ''; r.editedPrice = r.editedProduct = r.editedWas = false; r.unsure = false;
       r.age = false; r.ageSet = null;
       enqueue(r);
     });
@@ -194,13 +202,24 @@
       if (n) { r.price = n; v.price.value = n.slice(1); }
       changedRow(r);
     });
+    // on offer: the old price. The lookup fills it in; type one in, change it, or clear it to take the sale off
+    v.was.addEventListener('input', function () {
+      r.was = v.was.value.trim() ? v.was.value : ''; r.editedWas = true;
+      if (r.status !== 'found' && r.status !== 'looking') r.status = 'manual';
+      changedRow(r);
+    });
+    v.was.addEventListener('blur', function () {
+      var n = normPrice(r.was);
+      if (n) { r.was = n; v.was.value = n.slice(1); }
+      changedRow(r);
+    });
     v.product.addEventListener('input', function () {
       r.product = v.product.value; r.editedProduct = true;
       if (r.status !== 'found' && r.status !== 'looking') r.status = 'manual';
       autosize(v.product);
       changedRow(r);
     });
-    v.refresh.addEventListener('click', function () { r.editedPrice = r.editedProduct = false; enqueue(r); });
+    v.refresh.addEventListener('click', function () { r.editedPrice = r.editedProduct = r.editedWas = false; enqueue(r); });
     v.remove.addEventListener('click', function () { removeRow(r); });
     v.age.addEventListener('click', function () {
       r.ageSet = !hasAge(r);           // a choice made here sticks, even when prices are checked again
@@ -225,7 +244,10 @@
     if (active !== v.code) v.code.value = r.code;
     if (active !== v.price) v.price.value = String(r.price || '').replace(/^£/, '');
     if (active !== v.product) { v.product.value = r.product; autosize(v.product); }
+    if (active !== v.was) v.was.value = String(r.was || '').replace(/^£/, '');
     v.price.classList.toggle('invalid', !!r.price && normPrice(r.price) === null);
+    v.was.classList.toggle('invalid', !!r.was && normPrice(r.was) === null);
+    paintSale(r, v);
     var st = statusOf(r);
     v.chip.className = 'pt-chip ' + st[0];
     v.chipText.textContent = st[1];
@@ -242,10 +264,52 @@
     paintPreview(r, v);
   }
 
+  /* Under the prices: what the sale flash will say, and why */
+  function paintSale(r, v) {
+    var price = normPrice(r.price), was = normPrice(r.was), s = price && was ? E.saleOf(price, was) : null;
+    var msg = '';
+    v.sale.textContent = '';
+    if (s) {
+      var flash = document.createElement('span');
+      flash.className = 'pt-flash';
+      flash.textContent = s.flash;
+      v.sale.appendChild(flash);
+      var real = (Math.floor(s.pct * 10) / 10).toFixed(1);
+      msg = s.step < 5 ? 'Actual saving ' + real + '%, so it shows the money off instead'
+          : s.exact ? 'Actual saving ' + real + '%'
+          : 'Actual saving ' + real + '%, rounded down to the nearest 5%';
+    } else if (was && price) {
+      msg = 'The was price needs to be higher than the price to show a sale';
+    }
+    if (msg) v.sale.appendChild(document.createTextNode(msg));
+    v.sale.classList.toggle('off', !s);
+    v.sale.hidden = !msg;
+  }
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  /* The flash and WAS box for the preview, drawn from the engine's layout (same sizes and glyph positions as the PDF) */
+  function saleSvg(sl) {
+    var pts = function (b) { return E.chamfer(b).map(function (p) { return p[0].toFixed(3) + ',' + p[1].toFixed(3); }).join(' '); };
+    var text = function (t, fill) {
+      // one x per character, from the engine (no ligatures here, so characters and glyphs line up)
+      var xs = t.run.items.map(function (it) { return (t.x + it[0]).toFixed(3); }).join(' ');
+      return '<text x="' + xs + '" y="' + t.y.toFixed(3) + '" fill="' + fill + '">' + esc(t.s) + '</text>';
+    };
+    return '<polygon fill="#ed1c24" points="' + pts(sl.flash) + '"/>' +
+      '<polygon fill="none" stroke="#ed1c24" stroke-width="' + sl.box.line.toFixed(4) + '" points="' + pts(sl.box) + '"/>' +
+      '<g font-family="TicketBold" font-weight="800" font-size="' + sl.size.toFixed(4) + '">' +
+        text(sl.flash.text, '#fff') + text(sl.box.text, '#ed1c24') + '</g>';
+  }
+
   function paintPreview(r, v) {
     var price = normPrice(r.price);
     v.tkPrice.textContent = price || '£0.00';
     v.tkPrice.classList.toggle('ph', !price);
+    var sl = engine && price ? engine.sale(ticketOf(r)) : null;
+    var key = sl ? sl.flash.text.s + '|' + sl.box.text.s : '';
+    if (key !== v.saleKey) { v.saleKey = key; v.tkSale.innerHTML = sl ? saleSvg(sl) : ''; }
+    v.tkSale.toggleAttribute('hidden', !sl);         // an <svg> has no .hidden property
     var product = cleanProduct(r.product, r.code), lines = [product || 'Product name'];
     if (engine && product) {
       try { lines = engine.lines(product); } catch (e) { lines = [product]; }
@@ -293,7 +357,7 @@
     codes.forEach(function (c) {
       if (rows.some(function (r) { return r.code === c; }) || added.indexOf(c) >= 0) { dupes.push(c); return; }
       added.push(c);
-      var r = { id: uid(), code: c, price: '', product: '', status: 'manual', checkedAt: 0, editedPrice: false, editedProduct: false, unsure: false,
+      var r = { id: uid(), code: c, price: '', product: '', was: '', status: 'manual', checkedAt: 0, editedPrice: false, editedProduct: false, editedWas: false, unsure: false,
                 age: false, ageSet: null, token: 0 };
       rows.push(r);
       listEl.appendChild(makeRow(r));
@@ -349,7 +413,7 @@
     e.preventDefault();
     var r = rows.filter(function (x) { return x.code === res.code; })[0], isNew = !r;
     if (isNew) {
-      r = { id: uid(), code: res.code, price: '', product: '', status: 'manual', checkedAt: 0, editedPrice: false, editedProduct: false, unsure: false,
+      r = { id: uid(), code: res.code, price: '', product: '', was: '', status: 'manual', checkedAt: 0, editedPrice: false, editedProduct: false, editedWas: false, unsure: false,
             age: false, ageSet: null, token: 0 };
       rows.push(r);
       listEl.appendChild(makeRow(r));
@@ -360,7 +424,8 @@
     r.reason = '';
     if (res.price) r.price = res.price;
     if (res.name) r.product = res.name;
-    r.editedPrice = r.editedProduct = false;
+    r.was = res.was || '';
+    r.editedPrice = r.editedProduct = r.editedWas = false;
     r.unsure = false;
     r.age = !!res.age;
     if (res.status === 'found') r.checkedAt = Date.now();
@@ -372,7 +437,7 @@
   });
 
   checkAll.addEventListener('click', function () {
-    rows.forEach(function (r) { r.editedPrice = r.editedProduct = false; enqueue(r); });
+    rows.forEach(function (r) { r.editedPrice = r.editedProduct = r.editedWas = false; enqueue(r); });
   });
 
   $('clearAll').addEventListener('click', function () {
@@ -424,6 +489,7 @@
     if (res.status === 'found' || res.status === 'partial') {
       if (res.price && !r.editedPrice) r.price = res.price;
       if (res.name && !r.editedProduct) r.product = res.name;
+      if (!r.editedWas) r.was = res.was || '';        // on offer: the old price; none means it isn't any more
       r.unsure = !!res.unsure;
       r.age = !!res.age;
       if (res.status === 'found') r.checkedAt = Date.now();
@@ -581,9 +647,10 @@
   function getFont(path) {
     return fetch(path).then(function (res) { if (!res.ok) throw new Error(res.status); return res.arrayBuffer(); });
   }
-  Promise.all([getFont('price-tickets/fonts/BarlowCondensed-ExtraBold.ttf'), getFont('price-tickets/fonts/BarlowSemiCondensed-Regular.ttf')])
+  Promise.all([getFont('price-tickets/fonts/BarlowCondensed-ExtraBold.ttf'), getFont('price-tickets/fonts/BarlowSemiCondensed-Regular.ttf'),
+               getFont('price-tickets/fonts/BarlowSemiCondensed-ExtraBold.ttf')])
     .then(function (b) {
-      engine = new E.Engine(window.TICKET_FONT_DATA, b[0], b[1]);
+      engine = new E.Engine(window.TICKET_FONT_DATA, b[0], b[1], b[2]);
       rows.forEach(paint);
       refreshBar();
       warmSoon();

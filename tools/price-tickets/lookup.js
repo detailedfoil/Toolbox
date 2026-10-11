@@ -189,7 +189,7 @@
     var hit = priceMatch(p.text, anchor);
     var price = (hit ? normPrice(hit[1] + '.' + hit[2]) : null) || normPrice(p.ldPrice) || normPrice(p.itemPrice);
     var age = AGE.test(p.text);
-    // on offer: the old price (only the poster maker uses it)
+    // on offer: the old price (sale tickets and posters)
     var was = price && hit ? wasFromText(p.text, hit) : null;
     if (was && !(pounds(was) > pounds(price))) was = null;
     var sale = function (r) { if (was) r.was = was; return r; };
@@ -321,8 +321,8 @@
 
   /* -> Promise<{status: 'found'|'partial'|'notfound'|'blocked', name, price, age (Challenge 25), unsure, was, images, via,
                  reason, trace}>
-     (was: the old price when it's on offer; images: the product photo ids on the page, main one first.
-      Only the poster maker uses those two. reason, when blocked: 'network' if no relay could be reached at all,
+     (was: the old price when it's on offer, for sale tickets and posters; images: the product photo ids on the
+      page, main one first, for posters only. reason, when blocked: 'network' if no relay could be reached at all,
       otherwise 'relays'. trace: every attempt, for working out why.)
      opts.onRetry(round): called before each extra round when every relay failed. */
   function lookup(code, opts) {
