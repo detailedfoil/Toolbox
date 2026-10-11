@@ -167,7 +167,9 @@ if (process.env.GITHUB_EVENT_NAME === 'push') {
   // pushed changes: a new shop plan gets checked, anything else just gets a quick smoke test
   let files = [];
   try { files = (JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).commits || []).flatMap((c) => [...(c.added || []), ...(c.modified || [])]); } catch (e) { /* no event file */ }
-  mode = files.includes(PLAN_FILE) ? 'auto' : 'smoke';
+  // (the push event doesn't always list the files, so lines on the plan with no price yet count too)
+  const unpriced = codes.some((c) => !old.products[c] || old.products[c].price == null);
+  mode = files.includes(PLAN_FILE) || unpriced ? 'auto' : 'smoke';
 }
 if (!['auto', 'full', 'test', 'smoke'].includes(mode)) throw new Error('Unknown MODE ' + mode);
 
