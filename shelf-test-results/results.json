@@ -1,0 +1,626 @@
+{
+  "ranAt": "2026-10-11T16:19:58.866Z",
+  "image": "ubuntu24 20261004.327.1",
+  "node": "v22.23.3",
+  "chrome": "154",
+  "gapMs": 5000,
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+  "summary": [
+    {
+      "code": "13267",
+      "via": "direct",
+      "status": "found",
+      "price": "£9.99",
+      "was": "£14.99",
+      "name": "DEWALT SDS Plus Shank Chisel Set 3 Pcs",
+      "age": false,
+      "unsure": false,
+      "why": ""
+    },
+    {
+      "code": "415AH",
+      "via": "direct",
+      "status": "found",
+      "price": "£129.99",
+      "was": "",
+      "name": "DEWALT DCD778M1T-SFGB 18V 1 x 4.0Ah Li-Ion XR Brushless Cordless Combi Drill",
+      "age": false,
+      "unsure": false,
+      "why": ""
+    },
+    {
+      "code": "868RJ",
+      "via": "direct",
+      "status": "found",
+      "price": "£259.99",
+      "was": "",
+      "name": "Mountfield SP185 46cm 139cc Self-Propelled Rotary Petrol Lawn Mower",
+      "age": false,
+      "unsure": false,
+      "why": ""
+    },
+    {
+      "code": "449AW",
+      "via": "direct",
+      "status": "found",
+      "price": "£0.48",
+      "was": "",
+      "name": "Tower 1-Gang Galvanised Steel Knockout Back Box 25mm",
+      "age": false,
+      "unsure": false,
+      "why": ""
+    },
+    {
+      "code": "1030P",
+      "via": "direct",
+      "status": "found",
+      "price": "£4.99",
+      "was": "",
+      "name": "Fischer Duopower Wall Plugs 6mm x 30mm 100 Pack",
+      "age": false,
+      "unsure": false,
+      "why": ""
+    },
+    {
+      "code": "104KH",
+      "via": "direct",
+      "status": "found",
+      "price": "£6.99",
+      "was": "",
+      "name": "No Nonsense UV & Water-Resistant Painters Masking Tape 41m x 48mm",
+      "age": false,
+      "unsure": false,
+      "why": ""
+    },
+    {
+      "code": "14295",
+      "via": "direct",
+      "status": "found",
+      "price": "£7.98",
+      "was": "",
+      "name": "FloPlast SC250 Solvent Cement 250ml",
+      "age": true,
+      "unsure": false,
+      "why": ""
+    },
+    {
+      "code": "40237",
+      "via": "direct",
+      "status": "found",
+      "price": "£19.99",
+      "was": "£29.99",
+      "name": "TurboGold PZ Double-Countersunk Woodscrews Trade Pack 1400 Pcs",
+      "age": false,
+      "unsure": false,
+      "why": ""
+    },
+    {
+      "code": "1863F",
+      "via": "direct",
+      "status": "found",
+      "price": "£28.99",
+      "was": "£33.99",
+      "name": "JSP Force 8 Medium Mask Respirator with Press-to-Check Filters P3",
+      "age": false,
+      "unsure": false,
+      "why": ""
+    },
+    {
+      "code": "323FV",
+      "via": "direct",
+      "status": "found",
+      "price": "£22.49",
+      "was": "£24.99",
+      "name": "Aico Ei208 Battery Standalone AudioLink 10-Year Carbon Monoxide Alarm",
+      "age": false,
+      "unsure": false,
+      "why": ""
+    },
+    {
+      "code": "000QZ",
+      "via": "direct",
+      "status": "notfound",
+      "price": "",
+      "was": "",
+      "name": "",
+      "age": false,
+      "unsure": false,
+      "why": ""
+    }
+  ],
+  "rows": [
+    {
+      "code": "13267",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 200,
+          "finalUrl": "https://www.screwfix.com/p/dewalt-sds-plus-shank-chisel-set-3-pcs/13267",
+          "ms": 881,
+          "bytes": 249087,
+          "signals": {
+            "title": "DEWALT SDS Plus Shank Chisel Set 3 Pcs - Screwfix",
+            "jsonPrices": [
+              "9.99",
+              "9.99"
+            ],
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Miss from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "found",
+            "name": "DEWALT SDS Plus Shank Chisel Set 3 Pcs",
+            "price": "£9.99",
+            "age": false,
+            "was": "£14.99",
+            "parseMs": 292
+          },
+          "saved": "pages/13267-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "found",
+        "name": "DEWALT SDS Plus Shank Chisel Set 3 Pcs",
+        "price": "£9.99",
+        "age": false,
+        "was": "£14.99",
+        "parseMs": 292
+      },
+      "via": "direct"
+    },
+    {
+      "code": "415AH",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 200,
+          "finalUrl": "https://www.screwfix.com/p/dewalt-dcd778m1t-sfgb-18v-1-x-4-0ah-li-ion-xr-brushless-cordless-combi-drill/415ah",
+          "ms": 964,
+          "bytes": 266737,
+          "signals": {
+            "title": "DEWALT DCD778M1T-SFGB 18V 1 x 4.0Ah Li-Ion XR Brushless Cordless Combi Drill - Screwfix",
+            "jsonPrices": [
+              "129.99",
+              "129.99"
+            ],
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Miss from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "found",
+            "name": "DEWALT DCD778M1T-SFGB 18V 1 x 4.0Ah Li-Ion XR Brushless Cordless Combi Drill",
+            "price": "£129.99",
+            "age": false,
+            "parseMs": 155
+          },
+          "saved": "pages/415AH-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "found",
+        "name": "DEWALT DCD778M1T-SFGB 18V 1 x 4.0Ah Li-Ion XR Brushless Cordless Combi Drill",
+        "price": "£129.99",
+        "age": false,
+        "parseMs": 155
+      },
+      "via": "direct"
+    },
+    {
+      "code": "868RJ",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 200,
+          "finalUrl": "https://www.screwfix.com/p/mountfield-sp185-46cm-139cc-self-propelled-rotary-petrol-lawn-mower/868rj",
+          "ms": 649,
+          "bytes": 275206,
+          "signals": {
+            "title": "Mountfield SP185 46cm 139cc Self-Propelled Rotary Petrol Lawn Mower - Screwfix",
+            "jsonPrices": [
+              "259.99",
+              "259.99"
+            ],
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Miss from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "found",
+            "name": "Mountfield SP185 46cm 139cc Self-Propelled Rotary Petrol Lawn Mower",
+            "price": "£259.99",
+            "age": false,
+            "parseMs": 123
+          },
+          "saved": "pages/868RJ-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "found",
+        "name": "Mountfield SP185 46cm 139cc Self-Propelled Rotary Petrol Lawn Mower",
+        "price": "£259.99",
+        "age": false,
+        "parseMs": 123
+      },
+      "via": "direct"
+    },
+    {
+      "code": "449AW",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 200,
+          "finalUrl": "https://www.screwfix.com/p/tower-1-gang-galvanised-steel-knockout-back-box-25mm/449aw",
+          "ms": 681,
+          "bytes": 260649,
+          "signals": {
+            "title": "Tower 1-Gang Galvanised Steel Knockout Back Box 25mm - Screwfix",
+            "jsonPrices": [
+              "0.48",
+              "0.48"
+            ],
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Miss from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "found",
+            "name": "Tower 1-Gang Galvanised Steel Knockout Back Box 25mm",
+            "price": "£0.48",
+            "age": false,
+            "parseMs": 87
+          },
+          "saved": "pages/449AW-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "found",
+        "name": "Tower 1-Gang Galvanised Steel Knockout Back Box 25mm",
+        "price": "£0.48",
+        "age": false,
+        "parseMs": 87
+      },
+      "via": "direct"
+    },
+    {
+      "code": "1030P",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 200,
+          "finalUrl": "https://www.screwfix.com/p/fischer-duopower-wall-plugs-6mm-x-30mm-100-pack/1030p",
+          "ms": 665,
+          "bytes": 260320,
+          "signals": {
+            "title": "Fischer Duopower Wall Plugs 6mm x 30mm 100 Pack - Screwfix",
+            "jsonPrices": [
+              "4.99",
+              "4.99"
+            ],
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Miss from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "found",
+            "name": "Fischer Duopower Wall Plugs 6mm x 30mm 100 Pack",
+            "price": "£4.99",
+            "age": false,
+            "parseMs": 85
+          },
+          "saved": "pages/1030P-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "found",
+        "name": "Fischer Duopower Wall Plugs 6mm x 30mm 100 Pack",
+        "price": "£4.99",
+        "age": false,
+        "parseMs": 85
+      },
+      "via": "direct"
+    },
+    {
+      "code": "104KH",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 200,
+          "finalUrl": "https://www.screwfix.com/p/no-nonsense-uv-water-resistant-painters-masking-tape-41m-x-48mm/104kh",
+          "ms": 902,
+          "bytes": 258619,
+          "signals": {
+            "title": "No Nonsense UV &amp; Water-Resistant Painters Masking Tape 41m x 48mm - Screwfix",
+            "jsonPrices": [
+              "6.99",
+              "6.99"
+            ],
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Miss from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "found",
+            "name": "No Nonsense UV & Water-Resistant Painters Masking Tape 41m x 48mm",
+            "price": "£6.99",
+            "age": false,
+            "parseMs": 83
+          },
+          "saved": "pages/104KH-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "found",
+        "name": "No Nonsense UV & Water-Resistant Painters Masking Tape 41m x 48mm",
+        "price": "£6.99",
+        "age": false,
+        "parseMs": 83
+      },
+      "via": "direct"
+    },
+    {
+      "code": "14295",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 200,
+          "finalUrl": "https://www.screwfix.com/p/floplast-sc250-solvent-cement-250ml/14295",
+          "ms": 667,
+          "bytes": 260623,
+          "signals": {
+            "title": "FloPlast SC250 Solvent Cement 250ml - Screwfix",
+            "jsonPrices": [
+              "7.98",
+              "7.98"
+            ],
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Miss from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "found",
+            "name": "FloPlast SC250 Solvent Cement 250ml",
+            "price": "£7.98",
+            "age": true,
+            "parseMs": 110
+          },
+          "saved": "pages/14295-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "found",
+        "name": "FloPlast SC250 Solvent Cement 250ml",
+        "price": "£7.98",
+        "age": true,
+        "parseMs": 110
+      },
+      "via": "direct"
+    },
+    {
+      "code": "40237",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 200,
+          "finalUrl": "https://www.screwfix.com/p/turbogold-pz-double-countersunk-woodscrews-trade-pack-1400-pcs/40237",
+          "ms": 727,
+          "bytes": 268910,
+          "signals": {
+            "title": "TurboGold PZ Double-Countersunk Woodscrews Trade Pack 1400 Pcs - Screwfix",
+            "jsonPrices": [
+              "19.99",
+              "19.99"
+            ],
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Miss from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "found",
+            "name": "TurboGold PZ Double-Countersunk Woodscrews Trade Pack 1400 Pcs",
+            "price": "£19.99",
+            "age": false,
+            "was": "£29.99",
+            "parseMs": 88
+          },
+          "saved": "pages/40237-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "found",
+        "name": "TurboGold PZ Double-Countersunk Woodscrews Trade Pack 1400 Pcs",
+        "price": "£19.99",
+        "age": false,
+        "was": "£29.99",
+        "parseMs": 88
+      },
+      "via": "direct"
+    },
+    {
+      "code": "1863F",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 200,
+          "finalUrl": "https://www.screwfix.com/p/jsp-force-8-medium-mask-respirator-with-press-to-check-filters-p3/1863f",
+          "ms": 798,
+          "bytes": 275223,
+          "signals": {
+            "title": "JSP Force 8 Medium Mask Respirator with Press-to-Check Filters P3 - Screwfix",
+            "jsonPrices": [
+              "28.99",
+              "28.99"
+            ],
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Miss from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "found",
+            "name": "JSP Force 8 Medium Mask Respirator with Press-to-Check Filters P3",
+            "price": "£28.99",
+            "age": false,
+            "was": "£33.99",
+            "parseMs": 95
+          },
+          "saved": "pages/1863F-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "found",
+        "name": "JSP Force 8 Medium Mask Respirator with Press-to-Check Filters P3",
+        "price": "£28.99",
+        "age": false,
+        "was": "£33.99",
+        "parseMs": 95
+      },
+      "via": "direct"
+    },
+    {
+      "code": "323FV",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 200,
+          "finalUrl": "https://www.screwfix.com/p/aico-ei208-battery-standalone-audiolink-10-year-carbon-monoxide-alarm/323fv",
+          "ms": 709,
+          "bytes": 266078,
+          "signals": {
+            "title": "Aico Ei208 Battery Standalone AudioLink 10-Year Carbon Monoxide Alarm - Screwfix",
+            "jsonPrices": [
+              "22.49",
+              "22.49"
+            ],
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Miss from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "found",
+            "name": "Aico Ei208 Battery Standalone AudioLink 10-Year Carbon Monoxide Alarm",
+            "price": "£22.49",
+            "age": false,
+            "was": "£24.99",
+            "parseMs": 88
+          },
+          "saved": "pages/323FV-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "found",
+        "name": "Aico Ei208 Battery Standalone AudioLink 10-Year Carbon Monoxide Alarm",
+        "price": "£22.49",
+        "age": false,
+        "was": "£24.99",
+        "parseMs": 88
+      },
+      "via": "direct"
+    },
+    {
+      "code": "000QZ",
+      "attempts": [
+        {
+          "method": "direct",
+          "http": 404,
+          "finalUrl": "https://www.screwfix.com/p/product/000qz",
+          "ms": 521,
+          "bytes": 147507,
+          "signals": {
+            "title": "404 | Screwfix",
+            "server": "CloudFront",
+            "cookies": [
+              "unsupported_browser",
+              "JSESSIONID",
+              "BIGipServersfx.com_HTTPS_Pool",
+              "__Host-fusionx.sid",
+              "cf_feature_flag_user_id"
+            ],
+            "x-cache": "Error from cloudfront",
+            "content-type": "text/html; charset=utf-8"
+          },
+          "read": {
+            "status": "notfound",
+            "parseMs": 35
+          },
+          "saved": "pages/000QZ-direct.html.gz"
+        }
+      ],
+      "result": {
+        "status": "notfound",
+        "parseMs": 35
+      },
+      "via": "direct"
+    }
+  ]
+}
