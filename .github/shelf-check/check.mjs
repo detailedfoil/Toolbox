@@ -298,7 +298,7 @@ log('\n' + headline);
 changeLines.forEach((l) => log('  ' + l));
 
 const enc = (s) => s.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
-log(`::notice title=Shelf check ${mode === 'test' ? '(test, not saved)' : ''}::${enc(headline)}`);
+log(`::notice title=${mode === 'test' ? 'Shelf check test run (not saved)' : 'Shelf check'}::${enc(headline)}`);   // no commas in titles
 if (changeLines.length) log(`::notice title=Price changes::${enc(changeLines.join('\n'))}`);
 if (left.length) log(`::warning title=Could not check::${enc(left.map((c) => c + ': ' + fails[c]).join('\n'))}`);
 
