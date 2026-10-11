@@ -11,12 +11,26 @@ function render(filter = "") {
   shown.forEach(t => (groups[t.category || "Tools"] ||= []).push(t));
   grid.innerHTML = Object.entries(groups).map(([cat, items]) =>
     '<h2 class="cat">' + cat + '</h2><div class="grid">' +
-    items.map(t => '<a class="tile" href="' + t.url + '"><div class="icon">' + (t.icon || "🔧") +
-      '</div><div class="name">' + t.name + '</div><div class="desc">' + t.desc + '</div></a>').join("") +
+    items.map(t => {
+      const ext = /^https?:\/\//i.test(t.url);
+      const slug = t.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      return '<a class="tile" href="' + t.url + '"' +
+        (ext ? ' target="_blank" rel="noopener" data-ext="' + slug + '"' : "") +
+        '><div class="icon">' + (t.icon || "🔧") +
+        '</div><div class="name">' + t.name + '</div><div class="desc">' + t.desc + '</div></a>';
+    }).join("") +
     "</div>").join("");
 }
 search.addEventListener("input", e => render(e.target.value));
 render();
+
+/* Tiles that link to other sites open in a new tab, so count those opens in the stats as tool/<name>. */
+grid.addEventListener("click", e => {
+  const a = e.target.closest("a[data-ext]");
+  if (a && window.goatcounter && window.goatcounter.count) {
+    try { window.goatcounter.count({ path: "tool/" + a.dataset.ext, title: a.querySelector(".name").textContent, event: true }); } catch (x) {}
+  }
+});
 
 /* Hidden stats panel: tap the "Toolbox" title 5 times quickly. */
 (function () {
