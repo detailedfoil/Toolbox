@@ -102,7 +102,19 @@
 .sc-bay-n { flex: none; padding: 3px 8px; border-radius: 999px; background: var(--text); color: var(--bg); font-size: .75rem; font-weight: 750; }
 .sc-chev { flex: none; width: 18px; height: 18px; color: var(--muted); transition: transform .15s; }
 .sc-bay[open] .sc-chev { transform: rotate(180deg); }
-.sc-bay .sc-list { border-top: 0; border-radius: 0 0 16px 16px; }
+.sc-bay-body { background: var(--card); border: 1px solid var(--border); border-top: 0; border-radius: 0 0 16px 16px; overflow: clip; }
+.sc-bay-body .sc-list { border: 0; border-radius: 0; background: transparent; }
+.sc-shelf + .sc-shelf { border-top: 1px solid var(--border); }
+.sc-shelf-h { position: sticky; top: 0; z-index: 1; margin: 0; padding: 8px 14px 7px; background: var(--field); border-bottom: 1px solid var(--line);
+  font-size: .74rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.sc-pos { display: inline-block; margin-left: 8px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--border); color: var(--muted);
+  font-size: .72rem; font-weight: 700; vertical-align: 1px; white-space: nowrap; }
+
+/* changes list: a heading for each bay, in walking order */
+.sc-group { padding: 9px 14px 7px; border-top: 1px solid var(--border); background: var(--field); font-size: .78rem; font-weight: 800;
+  letter-spacing: .03em; color: var(--muted); }
+.sc-group:first-child { border-top: 0; }
+.sc-group + .sc-row { border-top: 0; }
 
 .sc-foot { color: var(--muted); font-size: .82rem; margin: 22px 2px 0; line-height: 1.5; }
 .sc-foot a { color: var(--accent); font-weight: 600; text-decoration: none; }

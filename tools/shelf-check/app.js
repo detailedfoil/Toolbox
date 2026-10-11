@@ -7,7 +7,7 @@
   var Sheet = window.ShelfSheet;
   var RAW = 'https://raw.githubusercontent.com/detailedfoil/Toolbox/main/tools/shelf-check/data/';
   var RUNS = 'https://github.com/detailedfoil/Toolbox/actions/workflows/shelf-check.yml';
-  var DONE_KEY = 'sc-done-v1', TAB_KEY = 'sc-tab-v1';
+  var DONE_KEY = 'sc-done-v2', TAB_KEY = 'sc-tab-v1';
   // iPhone / iPad: the share sheet (Print, Save to Files) beats a download there
   var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -72,13 +72,9 @@
 
   /* plan + prices -> what the page and the PDF builder use */
   function merge(plan, prices) {
-    var codes = [], seen = {}, bayOf = {}, products = {}, P = prices.products || {};
-    plan.bays.forEach(function (b) {
-      b.codes.forEach(function (c) {
-        if (!seen[c]) { seen[c] = 1; codes.push(c); }
-        (bayOf[c] = bayOf[c] || []).indexOf(b.name) < 0 && bayOf[c].push(b.name);
-      });
-    });
+    var codes = [], seen = {}, products = {}, P = prices.products || {};
+    var spots = Sheet.places(plan.bays);                  // every line in shelf order: bay, top shelf first, left to right
+    spots.forEach(function (s) { if (!seen[s.code]) { seen[s.code] = 1; codes.push(s.code); } });
     codes.forEach(function (c) { products[c] = P[c] || { name: null, price: null, prev: null, status: 'unchecked' }; });
     var isDone = function (c) { return /^(ok|changed|not_found)$/.test(products[c].status); };
     var changed = codes.filter(function (c) { var p = products[c]; return p.status === 'changed' && p.price != null && p.prev != null; });
@@ -86,7 +82,8 @@
       checked: prices.checked, previous_checked: prices.previous_checked, run: prices.run || {},
       complete: codes.every(isDone),
       plan: { name: plan.name, short: plan.short, store: plan.store }, bays: plan.bays, products: products,
-      codes: codes, bayOf: bayOf, changed: changed,
+      codes: codes, spots: spots, changed: changed,
+      swaps: spots.filter(function (s) { return changed.indexOf(s.code) >= 0; }),
       up: changed.filter(function (c) { return products[c].price > products[c].prev; }).length,
       done: codes.filter(isDone).length,
       notFound: codes.filter(function (c) { return products[c].status === 'not_found'; }).length
@@ -132,7 +129,7 @@
         (n ? '<span class="sc-split" title="' + d.up + ' up, ' + (n - d.up) + ' down"><span>' + ARROW_UP + d.up + '</span><span>' + ARROW_DOWN + (n - d.up) + '</span></span>' : '') + '</span></div>' +
       '<div class="sc-stat"><span class="sc-stat-v">' + d.done + '<small>/' + d.codes.length + '</small></span><span class="sc-stat-k">lines checked</span></div>' +
       '<div class="sc-stat"><span class="sc-stat-v">' + d.notFound + '</span><span class="sc-stat-k">not found online</span></div>';
-    $('nChanges').textContent = ' ' + n;
+    $('nChanges').textContent = ' ' + d.swaps.length;
     $('nAll').textContent = ' ' + d.codes.length;
 
     renderChanges();
@@ -170,15 +167,19 @@
     var s = load(DONE_KEY, null);
     return s && s.checked === data.checked && Array.isArray(s.codes) ? s.codes : [];
   }
+  function spotKey(s) { return s.code + '@' + s.bi; }
+  function posTag(s) { return s.pos ? '<span class="sc-pos">' + esc(s.pos) + '</span>' : ''; }
 
+  /* tickets to swap, in the order you walk them: one row for each place the product sits */
   function renderChanges() {
-    var d = data, done = doneSet(), list = $('changesList');
-    list.innerHTML = d.changed.map(function (c) {
-      var p = d.products[c], ticked = done.indexOf(c) >= 0;
-      return '<li class="sc-row has-tick is-changed' + (ticked ? ' is-done' : '') + '" data-code="' + esc(c) + '">' +
+    var d = data, done = doneSet(), list = $('changesList'), bay = -1;
+    list.innerHTML = d.swaps.map(function (s) {
+      var c = s.code, p = d.products[c], k = spotKey(s), ticked = done.indexOf(k) >= 0, head = '';
+      if (s.bi !== bay) { bay = s.bi; head = '<li class="sc-group">' + esc(s.bay) + '</li>'; }
+      return head + '<li class="sc-row has-tick is-changed' + (ticked ? ' is-done' : '') + '" data-key="' + esc(k) + '">' +
         '<label class="sc-tick"><input type="checkbox"' + (ticked ? ' checked' : '') + ' aria-label="Ticket swapped for ' + esc(c) + '"><span></span></label>' +
         '<div><span class="sc-code">' + esc(c) + '</span><span class="sc-name">' + esc(p.name || '(name not found yet)') + '</span>' +
-        '<span class="sc-bays">' + esc((d.bayOf[c] || []).join(', ')) + '</span></div>' +
+        '<span class="sc-bays">' + esc([s.shelf, s.pos].filter(Boolean).join(', ') || s.bay) + '</span></div>' +
         priceCell(c) + '</li>';
     }).join('');
     list.hidden = !d.changed.length;
@@ -189,18 +190,20 @@
   }
 
   function hint() {
-    var n = data.changed.length, done = doneSet().filter(function (c) { return data.changed.indexOf(c) >= 0; }).length;
+    var keys = data.swaps.map(spotKey), n = keys.length, more = n > data.changed.length;
+    var done = doneSet().filter(function (k) { return keys.indexOf(k) >= 0; }).length;
     $('changesHint').hidden = !n;
     $('changesHint').innerHTML = done >= n && n
       ? '<b>All ' + n + ' tickets done.</b>'
-      : 'Swap ' + (n === 1 ? 'this ticket' : 'these ' + n + ' tickets') + ', then tick ' + (n === 1 ? 'it' : 'them') + ' off.' + (done ? ' <b>' + done + ' of ' + n + ' done.</b>' : '');
+      : 'In shelf order, bay by bay. Swap ' + (n === 1 ? 'this ticket' : 'these ' + n + ' tickets') + ', then tick ' + (n === 1 ? 'it' : 'them') + ' off.' +
+        (more ? ' Some products sit in more than one place, so they come up once for each.' : '') + (done ? ' <b>' + done + ' of ' + n + ' done.</b>' : '');
   }
 
   $('changesList').addEventListener('change', function (e) {
-    var row = e.target.closest('[data-code]');
+    var row = e.target.closest('[data-key]');
     if (!row || !data) return;
-    var code = row.getAttribute('data-code'), codes = doneSet().filter(function (c) { return c !== code; });
-    if (e.target.checked) codes.push(code);
+    var key = row.getAttribute('data-key'), codes = doneSet().filter(function (c) { return c !== key; });
+    if (e.target.checked) codes.push(key);
     store(DONE_KEY, { checked: data.checked, codes: codes });
     row.classList.toggle('is-done', e.target.checked);
     hint();
@@ -209,16 +212,27 @@
   function renderBays() {
     var d = data;
     $('bays').innerHTML = d.bays.map(function (b, i) {
-      var moved = b.codes.filter(function (c) { return d.changed.indexOf(c) >= 0; }).length;
+      var mine = d.spots.filter(function (s) { return s.bi === i; });
+      var moved = mine.filter(function (s) { return d.changed.indexOf(s.code) >= 0; }).length;
+      var shelves = [];
+      mine.forEach(function (s) {
+        var sh = shelves[shelves.length - 1];
+        if (!sh || sh.si !== s.si) shelves.push(sh = { si: s.si, label: s.shelf, spots: [] });
+        sh.spots.push(s);
+      });
       return '<details class="sc-bay" data-bay="' + i + '"><summary>' +
-        '<span class="sc-bay-t"><strong>' + esc(b.name) + '</strong><small>p.' + esc(b.page) + ' &middot; ' + b.codes.length + ' line' + (b.codes.length === 1 ? '' : 's') + '</small></span>' +
+        '<span class="sc-bay-t"><strong>' + esc(b.name) + '</strong><small>p.' + esc(b.page) + ' &middot; ' + mine.length + ' line' + (mine.length === 1 ? '' : 's') +
+        (b.note ? ' &middot; ' + esc(b.note) : '') + '</small></span>' +
         (moved ? '<span class="sc-bay-n">' + moved + ' change' + (moved === 1 ? '' : 's') + '</span>' : '') + CHEV + '</summary>' +
-        '<ul class="sc-list">' + b.codes.map(function (c) {
-          var p = d.products[c], changed = d.changed.indexOf(c) >= 0;
-          return '<li class="sc-row' + (changed ? ' is-changed' : '') + '" data-q="' + esc((c + ' ' + (p.name || '')).toLowerCase()) + '">' +
-            '<div><span class="sc-code">' + esc(c) + '</span><span class="sc-name">' + esc(p.name || '(name not found yet)') + '</span></div>' +
-            priceCell(c) + '</li>';
-        }).join('') + '</ul></details>';
+        '<div class="sc-bay-body">' + shelves.map(function (sh) {
+          return '<div class="sc-shelf">' + (sh.label ? '<p class="sc-shelf-h">' + esc(sh.label) + '</p>' : '') +
+            '<ul class="sc-list">' + sh.spots.map(function (s) {
+              var c = s.code, p = d.products[c], changed = d.changed.indexOf(c) >= 0;
+              return '<li class="sc-row' + (changed ? ' is-changed' : '') + '" data-q="' + esc((c + ' ' + (p.name || '')).toLowerCase()) + '">' +
+                '<div><span class="sc-code">' + esc(c) + '</span>' + posTag(s) + '<span class="sc-name">' + esc(p.name || '(name not found yet)') + '</span></div>' +
+                priceCell(c) + '</li>';
+            }).join('') + '</ul></div>';
+        }).join('') + '</div></details>';
     }).join('');
     if ($('search').value) search();
   }
@@ -233,7 +247,7 @@
       Array.prototype.forEach.call(bays, function (b, i) {
         b.hidden = false;
         b.open = !!(openBefore && openBefore[i]);
-        Array.prototype.forEach.call(b.querySelectorAll('.sc-row'), function (r) { r.hidden = false; });
+        Array.prototype.forEach.call(b.querySelectorAll('.sc-row, .sc-shelf'), function (r) { r.hidden = false; });
       });
       openBefore = null;
       $('searchHint').hidden = true;
@@ -248,6 +262,7 @@
         r.hidden = !ok;
         if (ok) n++;
       });
+      Array.prototype.forEach.call(b.querySelectorAll('.sc-shelf'), function (sh) { sh.hidden = !sh.querySelector('.sc-row:not([hidden])'); });
       b.hidden = !n;
       b.open = n > 0;
       hits += n;

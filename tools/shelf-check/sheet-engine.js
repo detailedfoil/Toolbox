@@ -7,13 +7,16 @@
  * Changed prices: grey row, heavy black frame, thick black bar on the left edge, a black UP or
  * DOWN tag, the new price, and the old price struck through.
  *
- * Two small additions: a line the latest run couldn't check keeps its last price with a
- * "not rechecked" note, and a product that's gone from screwfix.com always reads
- * "not found online" (the old sheet showed its last price).
+ * Additions: a line the latest run couldn't check keeps its last price with a "not rechecked"
+ * note, a product that's gone from screwfix.com always reads "not found online" (the old sheet
+ * showed its last price), and the lines run in shelf order: each bay top shelf first, left to
+ * right, with a divider for each shelf. The changes table lists every ticket to swap in the same
+ * walking order, one row per place the product sits.
  *
  * ShelfSheet.build(data, {changesOnly}) -> Promise<Uint8Array>
  *   data: {checked, previous_checked, complete, plan: {name, short, store},
- *          bays: [{page, name, codes}], products: {CODE: {name, price, prev, status}}}
+ *          bays: [{page, name, shelves: [{label, codes, pos?}], codes}],
+ *          products: {CODE: {name, price, prev, status}}}
  *   status: ok | changed | not_found | unchecked
  */
 (function (root) {
@@ -111,7 +114,7 @@
     sku: S('CB', 10.5, 12), bh: S('HB', 11.5, 14, WHITE), bs: S('H', 9, 14, WHITE, 'right'),
     ch: S('HB', 8, 10), chr: S('HB', 8, 10, 0, 'right'), chc: S('HB', 8, 10, 0, 'center'),
     title: S('HB', 20, 24), meta: S('H', 9.5, 12, GREY), info: S('H', 9.5, 12),
-    note: S('HO', 7.5, 9, GREY, 'center')
+    note: S('HO', 7.5, 9, GREY, 'center'), shelf: S('HB', 8.5, 10)
   };
 
   /* runs: a string, or a list of {t, b, size, color, strike} and {br: 1} */
@@ -220,7 +223,9 @@
     this.rows = rows;
     rows.forEach(function (row) {
       var h = 0;
-      if (row.kind === 'title') {
+      if (row.kind === 'shelf') {
+        h = row.cells[0].p.wrap(FRAME_W - 10) + 7;
+      } else if (row.kind === 'title') {
         var spans = [[0, 3], [3, 5]];
         spans.forEach(function (sp) {
           var cw = 0;
@@ -261,11 +266,12 @@
     var x1 = x + FRAME_W, tops = [], y = top;
     rows.forEach(function (r) { tops.push(y); y -= r.h; });
     rows.forEach(function (r, i) {
-      var bg = r.kind === 'title' ? BLACK : r.changed ? CHG : r.zebra ? ZEB : null;
+      var bg = r.kind === 'title' ? BLACK : r.kind === 'shelf' ? null : r.changed ? CHG : r.zebra ? ZEB : null;
       if (bg != null) g.rect(x, tops[i] - r.h, FRAME_W, r.h, bg);
     });
     rows.forEach(function (r, i) {
       var bottom = tops[i] - r.h;
+      if (r.kind === 'shelf') { r.cells[0].p.drawOn(g, x + 5, bottom + 3); return; }
       if (r.kind === 'title') {
         drawCell(g, r.cells[0], x, COLS[0] + COLS[1] + COLS[2], bottom, r.h, cellPad(0), false);
         drawCell(g, r.cells[3], x + COLS[0] + COLS[1] + COLS[2], COLS[3] + COLS[4], bottom, r.h, cellPad(3), false);
@@ -284,6 +290,7 @@
     g.line(x, bot(1), x1, bot(1), 1.2, BLACK);
     if (!first) g.line(x, bot(1), x1, bot(1), 0.3, GRID);
     for (var i = 2; i <= end; i++) g.line(x, bot(i), x1, bot(i), 0.3, GRID);
+    for (i = 2; i <= end; i++) if (rows[i].kind === 'shelf' && i > 2) g.line(x, tops[i], x1, tops[i], 0.8, BLACK);
     if (first && last) box(tops[1], bot(end), 0.8);
     else {
       g.line(x, tops[1], x1, tops[1], 0.8, BLACK);
@@ -333,6 +340,7 @@
       }
       var room = this.y - FRAME_Y, acc = 0, n = 0;
       for (var i = 0; i < rows.length; i++) { if (acc + rows[i].h > room) break; acc += rows[i].h; n++; }
+      while (n > 3 && rows[n - 1].kind === 'shelf') { acc -= rows[n - 1].h; n--; }   // a shelf divider goes with its lines
       if (n <= 2 && !this.atTop) { this.newPage(); continue; } // not even one line fits under the headings
       if (n <= 2) { n = Math.min(3, rows.length); acc = rows.slice(0, n).reduce(function (s, r) { return s + r.h; }, 0); }
       drawTable(this.g, FRAME_X, this.y, rows.slice(0, n), first, n >= rows.length);
@@ -383,25 +391,39 @@
   }
   function money(v) { return '£' + Number(v).toFixed(2); }
 
+  /* ---------- where each line sits: bay by bay, top shelf first, left to right ---------- */
+
+  function shelvesOf(b) { return b.shelves && b.shelves.length ? b.shelves : [{ label: '', codes: b.codes || [] }]; }
+  function places(bays) {
+    var out = [];
+    (bays || []).forEach(function (b, bi) {
+      var seen = {};
+      shelvesOf(b).forEach(function (sh, si) {
+        (sh.codes || []).forEach(function (c, i) {
+          if (seen[c]) return;                                   // the same line twice in one bay: once is enough
+          seen[c] = 1;
+          out.push({ code: c, bi: bi, si: si, bay: b.name, shelf: sh.label || '', pos: (sh.pos && sh.pos[i]) || '' });
+        });
+      });
+    });
+    return out;
+  }
+  function where(s) { return s ? [s.bay, s.shelf, s.pos].filter(Boolean).join(', ') : ''; }
+
   /* ---------- the sheet itself (make_pdf.py) ---------- */
 
   function layout(data, opts) {
     var ONLY = !!(opts && opts.changesOnly);
     var P = data.products || {}, bays = data.bays || [], plan = data.plan || {};
-    var codes = [], seen = {}, bayOf = {};
-    bays.forEach(function (b) {
-      b.codes.forEach(function (c) {
-        if (!seen[c]) { seen[c] = 1; codes.push(c); }
-        bayOf[c] = bayOf[c] || [];
-        if (bayOf[c].indexOf(b.name) < 0) bayOf[c].push(b.name);
-      });
-    });
+    var spots = places(bays), codes = [], seen = {};
+    spots.forEach(function (s) { if (!seen[s.code]) { seen[s.code] = 1; codes.push(s.code); } });
     function prod(c) { return P[c] || { name: null, price: null, prev: null, status: 'unchecked' }; }
     function isChange(c) { var p = prod(c); return p.status === 'changed' && p.price != null && p.prev != null; }
 
     var checked = data.checked, prevc = data.previous_checked;
     var when = checked ? (data.complete === false ? 'partial check, ' : '') + nice(checked) : 'partial check, ' + nice(ukToday());
     var changed = codes.filter(isChange);
+    var swaps = spots.filter(function (s) { return isChange(s.code); });
     var up = changed.filter(function (c) { return prod(c).price > prod(c).prev; }).length;
     var notFound = codes.filter(function (c) { return prod(c).status === 'not_found'; }).length;
     var notChecked = codes.filter(function (c) { var s = prod(c).status; return s !== 'ok' && s !== 'changed' && s !== 'not_found'; }).length;
@@ -421,9 +443,11 @@
                                 { p: new Para(ST.chc, 'CHANGE') }, { p: new Para(ST.chc, 'TICK') }] }
       ];
     }
-    function row(c, withBay) {
-      var p = prod(c), name = [{ t: p.name || '(name not found yet)' }];
-      if (withBay) name.push({ br: 1 }, { t: (bayOf[c] || []).join(', '), size: 8, color: BAYS });
+    function row(c, spot, withBay) {
+      var p = prod(c), name = [];
+      if (spot && spot.pos && !withBay) name.push({ t: spot.pos + '  ', b: 1, size: 8.5 });
+      name.push({ t: p.name || '(name not found yet)' });
+      if (withBay) name.push({ br: 1 }, { t: where(spot), size: 8, color: BAYS });
       if (isChange(c)) {
         return { changed: true, cells: [{ p: new Para(ST.nmb, name) }, { p: new Para(ST.sku, c) },
           { list: [new Para(ST.prc, money(p.price)), new Para(ST.was, [{ t: 'was ' }, { t: money(p.prev), strike: 1 }])] },
@@ -439,9 +463,11 @@
       return { cells: [{ p: new Para(ST.nm, name) }, { p: new Para(ST.sku, c) }, { p: price }, note, { flow: new Box() }] };
     }
     function table(head, rows) {
-      rows.forEach(function (r, i) { r.zebra = !r.changed && i % 2 === 1; });
+      var k = 0;
+      rows.forEach(function (r) { if (r.kind === 'shelf') { k = 0; return; } r.zebra = !r.changed && k++ % 2 === 1; });
       return new Table(head.concat(rows));
     }
+    function shelfRow(label) { return { kind: 'shelf', cells: [{ p: new Para(ST.shelf, label.toUpperCase()) }] }; }
 
     flow.para(new Para(ST.title, ONLY ? 'Price Changes' : 'Shelf Price Check'));
     flow.spacer(1.5 * MM);
@@ -454,21 +480,28 @@
       [{ t: String(notFound), b: 1 }, { t: ' not found online  |  ' }, { t: String(notChecked), b: 1 }, { t: ' not checked yet' }]
     ]);
     flow.spacer(3 * MM);
-    flow.para(new Para(ST.info, ONLY ? 'Only lines whose price changed are listed. Swap each shelf ticket to the new price, then tick the box.' : [
-      { t: 'Walk each bay in order, check the shelf ticket matches the ' }, { t: 'Price', b: 1 }, { t: ', and tick the box. Rows with a ' },
+    flow.para(new Para(ST.info, ONLY ? 'Only lines whose price changed are listed, in shelf order: each bay top shelf first, left to right. A product on more than one shelf has a row for each. Swap each ticket to the new price, then tick the box.' : [
+      { t: 'Each bay runs top shelf first, left to right along each shelf. Check the shelf ticket matches the ' }, { t: 'Price', b: 1 }, { t: ', and tick the box. Rows with a ' },
       { t: 'thick black edge', b: 1 }, { t: ' and an ' }, { t: 'UP', b: 1 }, { t: ' or ' }, { t: 'DOWN', b: 1 },
       { t: ' tag have a new price: swap the ticket. They are also listed together on the first page so you can print the new tickets in one go.' }]));
     flow.spacer(5 * MM);
 
     if (ONLY && !changed.length) flow.para(new Para(ST.nm, [{ t: 'No price changes this week.', b: 1 }]));
     if (changed.length) {
-      flow.table(table(header('Price changes: tickets to replace', changed.length + ' lines'), changed.map(function (c) { return row(c, true); })));
+      flow.table(table(header('Price changes: tickets to replace', swaps.length + ' ticket' + (swaps.length === 1 ? '' : 's')),
+        swaps.map(function (s) { return row(s.code, s, true); })));
       flow.spacer(7 * MM);
     }
     if (!ONLY) {
-      bays.forEach(function (b) {
+      bays.forEach(function (b, bi) {
+        var mine = spots.filter(function (s) { return s.bi === bi; }), rows = [], last = -1;
+        var named = shelvesOf(b).length > 1 || (shelvesOf(b)[0] || {}).label;
+        mine.forEach(function (s) {
+          if (named && s.si !== last) { rows.push(shelfRow(s.shelf || 'Shelf ' + (s.si + 1))); last = s.si; }
+          rows.push(row(s.code, s, false));
+        });
         flow.condBreak(45 * MM);
-        flow.table(table(header(b.name, 'p.' + b.page + '  |  ' + b.codes.length + ' lines'), b.codes.map(function (c) { return row(c, false); })));
+        flow.table(table(header(b.name, 'p.' + b.page + '  |  ' + mine.length + ' lines'), rows));
         flow.spacer(6 * MM);
       });
     }
@@ -535,6 +568,6 @@
     });
   }
 
-  var api = { build: build, nice: nice, money: money };
+  var api = { build: build, nice: nice, money: money, places: places, where: where };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.ShelfSheet = api;
 })(this);
