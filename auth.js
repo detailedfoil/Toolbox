@@ -39,10 +39,10 @@
     root.id = "tb-auth";
     root.innerHTML =
       '<form autocomplete="on" novalidate>' +
-        "<h1>Toolbox</h1><p>Sign in with your store details.</p>" +
-        '<label for="tb-user">Store code</label>' +
+        "<h1>Toolbox</h1><p>Sign in to continue.</p>" +
+        '<label for="tb-user">Username</label>' +
         '<input id="tb-user" name="username" autocomplete="username" autocapitalize="characters" spellcheck="false" placeholder="e.g. LB1">' +
-        '<label for="tb-pass">Cost code</label>' +
+        '<label for="tb-pass">Password</label>' +
         '<input id="tb-pass" name="password" type="password" autocomplete="current-password">' +
         '<button type="submit">Sign in</button>' +
         '<p class="err" role="alert"></p>' +
@@ -56,11 +56,11 @@
       var user = form.username.value.trim().toUpperCase();
       var pass = form.password.value.trim().replace(/^0+(?=\d)/, "");
       var auth = window.TOOLBOX_AUTH;
-      if (!user || !pass) { err.textContent = "Enter your store code and cost code."; return; }
+      if (!user || !pass) { err.textContent = "Enter your username and password."; return; }
       if (!auth || !window.crypto || !crypto.subtle) { err.textContent = "Sign-in isn't available right now. Reload and try again."; return; }
       sha256Hex(auth.salt + "|" + user + "|" + pass).then(function (h) {
         if (auth.keys.indexOf(h.slice(0, 20)) === -1) {
-          err.textContent = "That store code and cost code don't match.";
+          err.textContent = "That username and password don't match.";
           form.password.value = "";
           form.password.focus();
           return;
