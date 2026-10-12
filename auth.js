@@ -43,7 +43,7 @@
         '<label for="tb-user">Store code</label>' +
         '<input id="tb-user" name="username" autocomplete="username" autocapitalize="characters" spellcheck="false" placeholder="e.g. LB1">' +
         '<label for="tb-pass">Cost code</label>' +
-        '<input id="tb-pass" name="password" type="password" autocomplete="current-password" inputmode="numeric">' +
+        '<input id="tb-pass" name="password" type="password" autocomplete="current-password">' +
         '<button type="submit">Sign in</button>' +
         '<p class="err" role="alert"></p>' +
       "</form>";
