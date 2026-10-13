@@ -215,12 +215,13 @@
     $('error').hidden = true;
     $('meta').hidden = !!d.checked;                      // the notice above says the same
     $('sub').textContent = (d.plan.name || 'Front of house') + ' shelf prices, checked against screwfix.com every Monday morning.';
+    $('sub').hidden = !!d.checked;                      // the notice carries it
     $('notice').hidden = !d.checked;
     if (d.checked) {
       var prevMon = d.previous_checked && utc(d.previous_checked).getUTCDay() === 1;
-      $('notice').innerHTML = '<b>Prices correct as of ' + esc(Sheet.nice(d.checked)) + '.</b> ' +
-        (d.previous_checked ? 'Price changes are based off ' + (prevMon ? "last Monday's report" : 'the last report') + ' (' + esc(Sheet.nice(d.previous_checked)) + '). ' : 'This was the first check, so changes show from next week. ') +
-        'Use this tool as well as this week\'s updates at noon for best accuracy.';
+      $('notice').innerHTML = '<b>' + esc(d.plan.name || 'Front of house') + ' prices correct as of ' + esc(Sheet.nice(d.checked)) + '.</b> ' +
+        (d.previous_checked ? 'Changes are against ' + (prevMon ? "last Monday's report" : 'the last report') + ' (' + esc(Sheet.nice(d.previous_checked)) + '). ' : 'This was the first check, so changes show from next week. ') +
+        'Use this as well as this week\'s noon updates for best accuracy.';
     }
     var nw = function (s) { return '<span class="sc-nw">' + esc(s) + '</span>'; };
     $('meta').innerHTML = d.checked
@@ -514,8 +515,8 @@
     var r = savedRun(), n = everything.codes.length, left = r ? [] : notYet(), some = left.length && left.length < n;
     $('runStatus').innerHTML = r
       ? (r.retry ? r.codes.length + " line" + (r.codes.length === 1 ? '' : 's') + " couldn't be read last time." : 'A check on this phone stopped part way, <b>' + r.codes.length + ' left</b>.') + ' Keep this page open while it runs.'
-      : some ? '<b>' + left.length + ' line' + (left.length === 1 ? '' : 's') + '</b> on the plan ' + (left.length === 1 ? "hasn't" : "haven't") + ' been checked this week. About ' + mins(left.length) + ' with this page open.'
-      : 'If GitHub\'s Monday check gets blocked, check from here instead. It reads all <b>' + n + ' lines</b> on the plan, not just your shop floor, one at a time, about ' + mins(n) + ' with this page open.';
+      : some ? '<b>' + left.length + ' line' + (left.length === 1 ? '' : 's') + '</b> on the plan ' + (left.length === 1 ? "hasn't" : "haven't") + ' been checked this week. About ' + mins(left.length) + '.'
+      : 'Checks all <b>' + n + ' lines</b>, about ' + mins(n) + ' with this page open.';
     $('phoneLabel').textContent = r ? (r.retry ? 'Retry the ' + r.codes.length + ' missed' : 'Carry on (' + r.codes.length + ' left)')
       : some ? 'Check the ' + left.length + ' not checked' : 'Check on this phone';
     $('phoneFresh').hidden = !r && !some;
