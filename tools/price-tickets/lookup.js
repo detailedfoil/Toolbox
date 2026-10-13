@@ -192,7 +192,10 @@
     // on offer: the old price (sale tickets and posters)
     var was = price && hit ? wasFromText(p.text, hit) : null;
     if (was && !(pounds(was) > pounds(price))) was = null;
-    var sale = function (r) { if (was) r.was = was; return r; };
+    // the product data built into the page, and whether it's for this code (the Counter trial page uses these
+    // to confirm a price change; nothing else does)
+    var ld = normPrice(p.ldPrice), ldSure = !!ld && String(p.sku || '').trim().toUpperCase().replace(/O/g, '0') === code;
+    var sale = function (r) { if (was) r.was = was; if (ld) { r.ld = ld; r.ldSure = ldSure; } return r; };
 
     if (BLOCKED.test(p.title) || BLOCKED.test(p.h1)) {
       var head = p.title + ' ' + p.h1;

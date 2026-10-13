@@ -82,7 +82,8 @@
   function confirmed() { var v = load(SHELF_KEY, {}); return v && typeof v === 'object' ? v : {}; }
 
   /* prices read on this device (Check on this device); a line uses whichever reading is newer, GitHub's or the phone's */
-  var PHONE_KEY = 'ct-phone-prices-v1', PHONE_LAST_KEY = 'ct-phone-last-v1', PHONE_RUN_KEY = 'ct-phone-run-v1';
+  // v2: readings from before a change had to be confirmed by the page's product data are dropped
+  var PHONE_KEY = 'ct-phone-prices-v2', PHONE_LAST_KEY = 'ct-phone-last-v2', PHONE_RUN_KEY = 'ct-phone-run-v2';
   function phonePrices() { var v = load(PHONE_KEY, {}); return v && typeof v === 'object' ? v : {}; }
   function phoneLast() { var v = load(PHONE_LAST_KEY, null); return v && v.at ? v : null; }
   function ghFinished() { var r = (src && src.prices && src.prices.run) || {}; var t = Date.parse(r.finished || ''); return isFinite(t) ? t : 0; }
@@ -486,6 +487,16 @@
   }
   function pounds(v) { if (v == null || v === '') return null; var n = Number(String(v).replace(/[£,\s]/g, '')); return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null; }
 
+  /* The price to trust from one reading, or null. The page's own product data for this code wins. Without it
+   * (some relays only send the page's text), a price read off the text only counts if it hasn't changed: a
+   * different price there could be another size or a product further down the page, so it waits for a
+   * reading that can confirm it. */
+  function readPrice(r, before) {
+    if (r.ld && r.ldSure) return pounds(r.ld);
+    var p = pounds(r.price), ref = before ? (before.price != null ? before.price : before.shelf) : null;
+    return p != null && ref != null && same(p, ref) ? p : null;
+  }
+
   function keepAwake() {
     if (!phone || !navigator.wakeLock || !navigator.wakeLock.request) return;
     navigator.wakeLock.request('screen').then(function (l) { wakeLock = l; }, function () { wakeLock = null; });
@@ -532,9 +543,10 @@
     progress();
     SL.lookup(code).then(function (r) {
       if (phone !== me) return;                           // stopped while this one was being read
-      var price = r && (r.status === 'found' || r.status === 'partial') && !r.unsure ? pounds(r.price) : null;
+      var before = L.filter(function (l) { return l.code === code; })[0];
+      var price = r && (r.status === 'found' || r.status === 'partial') && !r.unsure ? readPrice(r, before) : null;
       if (price != null) {
-        var ph = phonePrices(), was = pounds(r.was), before = L.filter(function (l) { return l.code === code; })[0];
+        var ph = phonePrices(), was = same(pounds(r.price), price) ? pounds(r.was) : null;
         var moved = before && before.price != null && !same(before.price, price);
         ph[code] = { price: price, name: r.name || (before && before.name) || null, was: was != null && was > price ? was : null,
                      at: new Date().toISOString(), since: moved || !before ? london().date : before.since || london().date };
