@@ -532,7 +532,7 @@
   function progress() {
     if (!phone) return;
     var n = phone.total, d = n - phone.queue.length;
-    $('progText').textContent = (phone.retry ? 'Retrying ' : 'Checking ') + Math.min(d + 1, n) + ' of ' + n;
+    $('progText').textContent = (phone.test ? 'Test: ' : phone.retry ? 'Retrying ' : 'Checking ') + Math.min(d + 1, n) + ' of ' + n;
     $('progBar').style.width = Math.round(d / n * 100) + '%';
     $('progNote').innerHTML = (phone.current ? '<b>' + esc(phone.current) + '</b> &middot; ' : '') + phone.got + ' read' +
       (phone.moved ? ', <b>' + phone.moved + '</b> changed' : '') + (phone.fails ? ', ' + phone.fails + " couldn't be read" : '') +
@@ -540,20 +540,22 @@
   }
 
   function saveRun() {
+    if (phone.test) return;
     store(PHONE_RUN_KEY, { started: phone.started, total: phone.total, got: phone.got, fails: phone.fails, moved: phone.moved,
                            failed: phone.failed, retry: phone.retry, codes: phone.queue });
   }
 
-  function startPhone(fresh) {
+  function startPhone(fresh, test) {
     if (phone || !data) return;
     if (!SL || !SL.lookup) { toast("The price reader didn't load. Refresh the page."); return; }
-    var r = fresh ? null : savedRun();
-    var left = notYet(), codes = r ? r.codes : !fresh && left.length ? left : everything.codes.slice();
+    var r = fresh || test ? null : savedRun();
+    var left = notYet(), codes = r ? r.codes : !fresh && !test && left.length ? left : everything.codes.slice();
     if (!codes.length) return;
     var run = r || { started: new Date().toISOString(), total: codes.length };
     phone = { queue: codes.slice(), total: run.total, got: run.got || 0, fails: run.fails || 0, moved: run.moved || 0,
-              failed: (r && r.failed) || [], unshared: 0, started: run.started, retry: !!(r && r.retry), streak: 0, current: '' };
+              failed: (r && r.failed) || [], unshared: 0, test: !!test, diffs: [], started: run.started, retry: !!(r && r.retry), streak: 0, current: '' };
     saveRun();
+    $('phoneTest').hidden = true;
     $('runBar').classList.add('is-running');
     $('runStatus').hidden = true; $('phoneRun').hidden = true; $('phoneFresh').hidden = true;
     $('prog').hidden = false;
@@ -571,7 +573,11 @@
     SL.lookup(code).then(function (r) {
       if (phone !== me) return;                           // stopped while this one was being read
       var price = r && (r.status === 'found' || r.status === 'partial') && !r.unsure ? pounds(r.price) : null;
-      if (price != null) {
+      if (price != null && phone.test) {
+        var b0 = everything.products[code], base0 = b0 && (b0.status === 'changed' && !b0.phone ? b0.prev : b0.price);
+        phone.got++; phone.streak = 0;
+        if (base0 != null && Math.abs(base0 - price) > 0.001) { phone.moved++; phone.diffs.push(code + ' ' + money(base0) + ' to ' + money(price)); }
+      } else if (price != null) {
         var R = localReadings();
         var was = pounds(r.was), before = everything.products[code];
         R[code] = { price: price, name: r.name || (before && before.name) || null, was: was != null && was > price ? was : null, at: new Date().toISOString() };
@@ -602,7 +608,7 @@
         return;
       }
       saveRun();
-      if (++sinceBuild >= 15) { sinceBuild = 0; build(); }
+      if (!phone.test && ++sinceBuild >= 15) { sinceBuild = 0; build(); }
       if (phone.unshared >= 100) { phone.unshared = 0; share(true); }    // refresh the lists every so often, not every line
       progress();
       setTimeout(nextPhone, PHONE_GAP);
@@ -616,6 +622,13 @@
     $('runBar').classList.remove('is-running');
     $('prog').hidden = true;
     $('runStatus').hidden = false; $('phoneRun').hidden = false;
+    if (p.test) {
+      $('phoneTest').hidden = false;
+      $('runStatus').innerHTML = '<b>Test ' + (why === 'done' ? 'finished' : why === 'stopped' ? 'stopped' : 'stopped, nothing getting through') + '.</b> Read ' + p.got + ' of ' + (p.got + p.failed.length + p.queue.length) +
+        (p.failed.length ? ', ' + p.failed.length + " couldn't be read" + (p.failed.length <= 8 ? ' (' + p.failed.map(esc).join(', ') + ')' : '') : '') +
+        '. ' + (p.moved ? p.moved + ' price' + (p.moved === 1 ? '' : 's') + " differ from Monday's" + (p.diffs.length <= 6 ? ': ' + p.diffs.map(esc).join(', ') : '') + '.' : "No prices differ from Monday's.") + ' Nothing was saved or shared.';
+      return;
+    }
     if (why === 'done') {
       if (p.failed.length) store(PHONE_RUN_KEY, { started: new Date().toISOString(), total: p.failed.length, got: 0, fails: 0, moved: 0, failed: [], retry: true, codes: p.failed });
       else { try { localStorage.removeItem(PHONE_RUN_KEY); } catch (e) { /* fine */ } }
@@ -701,6 +714,7 @@
     try { localStorage.removeItem(PHONE_RUN_KEY); } catch (e) { /* fine */ }
     startPhone(true);
   });
+  $('phoneTest').addEventListener('click', function () { startPhone(true, true); });
   $('phoneStop').addEventListener('click', function () { if (phone) finishPhone('stopped'); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden && phone) keepAwake(); });
   window.addEventListener('beforeunload', function (e) { if (phone) { e.preventDefault(); e.returnValue = ''; } });
