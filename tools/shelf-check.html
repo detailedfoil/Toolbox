@@ -9,7 +9,7 @@
 <title>Monday Price Check</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
-<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261013d">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261013e">
 <script src="../auth-data.js?v=202610120756"></script>
 <script src="../auth.js?v=202610120755"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -78,7 +78,8 @@
         <div class="sc-floor-btns"><button class="btn btn-primary" id="shareSave" type="button">Save token</button></div>
       </div>
       <div id="shareOn" hidden>
-        <p class="sc-floor-n">When a check on this phone finishes, its readings are saved to the site so every store sees them (a minute or two later). Failed reads are never shared, and the Monday GitHub check always wins over older phone readings.</p>
+        <label class="sc-switch"><span>Share my checks with other stores</span><input type="checkbox" id="shareSwitch"><i aria-hidden="true"></i></label>
+        <p class="sc-floor-n" id="shareNote"></p>
         <div class="sc-floor-btns"><button class="btn" id="shareNow" type="button">Share what's on this phone now</button><button class="btn" id="shareForget" type="button">Remove token</button></div>
       </div>
     </div>
@@ -128,6 +129,6 @@
 
 <script src="shelf-check/sheet-engine.js?v=20261011d"></script>
 <script src="price-tickets/lookup.js?v=20261011g"></script>
-<script src="shelf-check/app.js?v=20261013h"></script>
+<script src="shelf-check/app.js?v=20261013i"></script>
 </body>
 </html>

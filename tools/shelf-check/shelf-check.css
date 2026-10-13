@@ -49,8 +49,9 @@
 .sc-floor[open] .sc-chev { transform: rotate(180deg); }
 .sc-floor-b { border-top: 1px solid var(--line); padding: 12px 14px 6px; }
 .sc-floor-n { margin: 0 0 10px; color: var(--muted); font-size: .86rem; line-height: 1.4; }
-.sc-floor-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
-.sc-floor-btns .btn { min-height: 40px; font-size: .88rem; }
+.sc-floor-btns { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; margin-bottom: 6px; }
+.sc-floor-btns > * { min-width: 0; }
+.sc-floor-btns .btn { min-height: 40px; font-size: .88rem; white-space: normal; line-height: 1.2; padding-top: 6px; padding-bottom: 6px; }
 .sc-floor-list { list-style: none; margin: 0; padding: 0; }
 .sc-floor-list li + li { border-top: 1px solid var(--line); }
 .sc-floor-i { display: flex; align-items: center; gap: 12px; padding: 9px 0; cursor: pointer; }
@@ -207,3 +208,12 @@
 .sc-go-t { display: flex; flex-direction: column; align-items: flex-start; text-align: left; line-height: 1.2; }
 .sc-go-t small { font-size: .74rem; font-weight: 500; opacity: .85; margin-top: 2px; }
 .sc-run-alt { background: var(--card); }
+
+/* on/off switch */
+.sc-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 8px; padding: 4px 2px; font-size: .95rem; font-weight: 600; cursor: pointer; }
+.sc-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.sc-switch i { flex: none; position: relative; width: 50px; height: 30px; border-radius: 15px; background: var(--border); transition: background .15s; }
+.sc-switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .15s; }
+.sc-switch input:checked + i { background: var(--accent); }
+.sc-switch input:checked + i::after { transform: translateX(20px); }
+.sc-switch input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }

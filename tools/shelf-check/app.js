@@ -8,7 +8,7 @@
   var RAW = 'https://raw.githubusercontent.com/detailedfoil/Toolbox/main/tools/shelf-check/data/';
   var RUNS = 'https://github.com/detailedfoil/Toolbox/actions/workflows/shelf-check.yml';
   var DONE_KEY = 'sc-done-v3', TAB_KEY = 'sc-tab-v1', OFF_KEY = 'sc-bays-off-v1';
-  var PHONE_KEY = 'sc-phone-v1', PHONE_RUN_KEY = 'sc-phone-run-v1', TOKEN_KEY = 'sc-gh-token-v1';
+  var PHONE_KEY = 'sc-phone-v1', PHONE_RUN_KEY = 'sc-phone-run-v1', TOKEN_KEY = 'sc-gh-token-v1', SHARE_OFF_KEY = 'sc-share-off-v1';
   var SESSION_KEY = 'sc-session-v1', SESSION_RUN_KEY = 'sc-session-run-v1';   // a check kept for this window only (sessionStorage)
   var SHARE_API = 'https://api.github.com/repos/detailedfoil/Toolbox/contents/tools/shelf-check/data/phone.json';
   // iPhone / iPad: the share sheet (Print, Save to Files) beats a download there
@@ -580,7 +580,7 @@
     $('runBar').hidden = false;
     if (phone) return;
     var r = curRun(), n = everything.codes.length, left = r ? [] : notYet(), some = left.length && left.length < n;
-    var more = r && r.queue.length, pending = r && !more && r.failed.length, can = token() ? 'Saves for every store' : 'Needs a GitHub token first';
+    var more = r && r.queue.length, pending = r && !more && r.failed.length, can = !token() ? 'Needs a GitHub token first' : sharingOn() ? 'Saves for every store' : 'Saves on this phone only (sharing is off)';
     $('failBox').hidden = !pending;
     if (pending) renderFails(r);
     $('phoneRun').hidden = !!pending || !!(r && r.session);
@@ -594,7 +594,7 @@
       : 'Checks all <b>' + n + ' lines</b>, about ' + mins(n) + ' with this page open.';
     var what = more ? 'Carry on (' + r.queue.length + ' left)' : some ? 'Check the ' + left.length + ' not checked' : 'Check all ' + n + ' lines';
     $('phoneLabel').textContent = what;
-    $('phoneSub').textContent = more && !r.session ? 'Saves for every store' : can;
+    $('phoneSub').textContent = more && !r.session && sharingOn() ? 'Saves for every store' : can;
     $('sessionLabel').textContent = what;
     $('phoneFresh').textContent = r ? 'Drop this and start again' : 'Check all ' + n + ' again instead';
   }
@@ -784,7 +784,7 @@
     clearTimeout(warmTimer);
     warmTimer = setTimeout(warm, 800);
     runBar();
-    var kept = r.session ? ' Kept for this window only.' : '';
+    var kept = r.session ? ' Kept for this window only.' : !sharingOn() ? ' Saved on this phone only.' : '';
     if (why === 'done' && !r.failed.length) toast('Read ' + r.got + ' of ' + r.total + (r.moved ? ', ' + plural(r.moved, 'price change') : ', no price changes') + '.' + kept);
     else if (why === 'done') toast(plural(r.failed.length, 'line') + " couldn't be read. Choose which to retry or ignore.");
     else if (why === 'stopped') toast('Stopped. Tap Carry on to finish the other ' + r.queue.length + '.');
@@ -796,6 +796,7 @@
    * Without one, readings stay on this phone. Only lines that read cleanly are ever shared. */
 
   var sharing = false;
+  function sharingOn() { return !!token() && !load(SHARE_OFF_KEY, false); }
   function token() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
   function b64(str) { return btoa(unescape(encodeURIComponent(str))); }
   function unb64(str) { return decodeURIComponent(escape(atob(str.replace(/\s/g, '')))); }
@@ -823,7 +824,7 @@
   }
   function share(quiet) {
     var t = token();
-    if (!t || sharing) return Promise.resolve();
+    if (!t || sharing || !sharingOn()) return Promise.resolve();
     sharing = true;
     return putShared(t, 0).then(function (n) {
       if (!quiet) toast('Shared ' + n + ' readings with every store. They show up in a minute or two.');
@@ -835,11 +836,22 @@
     }).then(function () { sharing = false; });
   }
   function shareUI() {
-    var on = !!token();
-    $('shareSum').textContent = on ? 'On: your checks update every store' : 'Off: checks stay on this phone';
-    $('shareOn').hidden = !on; $('shareOff').hidden = on;
+    var has = !!token(), on = sharingOn();
+    $('shareSum').textContent = !has ? 'Off: checks stay on this phone' : on ? 'On: your checks update every store' : 'Off: the token is saved, but nothing is shared';
+    $('shareOn').hidden = !has; $('shareOff').hidden = has;
+    $('shareSwitch').checked = on;
+    $('shareNow').hidden = !on;
+    $('shareNote').textContent = on
+      ? 'When a check finishes, its readings are saved to the site so every store sees them (a minute or two later). Failed reads are never shared, and the Monday GitHub check always wins over older phone readings.'
+      : 'Nothing is shared. A check from the blue button stays on this phone only. Switch this on to share again.';
     if (data) runBar();
   }
+  $('shareSwitch').addEventListener('change', function () {
+    if (this.checked) { try { localStorage.removeItem(SHARE_OFF_KEY); } catch (e) { /* fine */ } }
+    else store(SHARE_OFF_KEY, true);
+    shareUI();
+    toast(this.checked ? 'Sharing is on. Your checks update every store.' : 'Sharing is off. Checks stay on this phone.');
+  });
   $('shareSave').addEventListener('click', function () {
     var v = $('shareToken').value.replace(/\s/g, '');
     if (!v) return;
