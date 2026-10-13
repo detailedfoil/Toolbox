@@ -141,7 +141,8 @@
     renderAll();
 
     $('foot').innerHTML = 'Checks every ticket early every morning. Lines it can\'t check keep their last price and never show as a change. ' +
-      'Ticks are saved on this device. <a href="' + RUNS + '" target="_blank" rel="noopener">Runs on GitHub</a>';
+      'Ticks are saved on this device. <a href="' + RUNS + '" target="_blank" rel="noopener">Runs on GitHub</a>' +
+      (token() ? ' &middot; <a href="#" data-forget>Remove saved GitHub token</a>' : '');
     $('main').hidden = false;
     showTab(load(TAB_KEY, 'todo'));
   }
@@ -309,9 +310,135 @@
   function hideToast() { clearTimeout(toastTimer); undoFn = null; $('toast').classList.remove('show'); }
   $('toastUndo').addEventListener('click', function () { if (undoFn) undoFn(); });
 
+  /* ---------- check now: starts the GitHub Action straight away ----------
+   * With a GitHub token saved on this device (fine-grained, Toolbox repo only, Actions read and write)
+   * the button starts a full check itself. Without one it opens the Action on GitHub, where
+   * "Run workflow" does the same. The token is only ever kept in this browser. */
+
+  var API = 'https://api.github.com/repos/detailedfoil/Toolbox/actions/workflows/counter-trial.yml';
+  var TOKEN_KEY = 'ct-gh-token-v1';
+  var running = false, pollTimer = 0, lastRun = null;
+
+  function token() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+  function ghHeaders(t) {
+    var h = { 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    if (t) h.Authorization = 'Bearer ' + t;
+    return h;
+  }
+  function clock(d) { return time(d.toISOString()); }
+
+  function runStatus() {
+    return fetch(API + '/runs?per_page=1&t=' + Date.now(), { headers: ghHeaders(token()), cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) { showRun((j.workflow_runs || [])[0] || null); })
+      .catch(function () { /* status is a nice-to-have; the button still works */ });
+  }
+
+  function showRun(run) {
+    var was = running;
+    lastRun = run;
+    running = !!run && run.status !== 'completed';
+    var bar = $('runBar'), s = $('runStatus');
+    bar.classList.toggle('is-running', running);
+    $('runNow').disabled = running;
+    $('runLabel').textContent = running ? 'Checking' : 'Check now';
+    if (running) {
+      var start = new Date(run.run_started_at || run.created_at), done = new Date(start.getTime() + 125 * 60000);
+      s.innerHTML = '<span class="ct-dot"></span><b>Checking now</b>, started ' + esc(clock(start)) + '. ' +
+        (run.status === 'queued' ? 'Waiting to start.' : 'Should be done about ' + esc(clock(done)) + '.');
+    } else {
+      s.innerHTML = 'Checks every night at 3am. Run a fresh one any time.';
+    }
+    clearTimeout(pollTimer);
+    if (running) pollTimer = setTimeout(function () { if (!document.hidden) runStatus(); else pollTimer = 0; }, 60000);
+    // a check just finished: pull in the new prices (GitHub's copy can lag a few minutes)
+    if (was && !running) { refresh(); setTimeout(refresh, 180000); toast('Check finished, prices updated'); }
+  }
+
+  function dispatch(t) {
+    return fetch(API + '/dispatches', {
+      method: 'POST', headers: ghHeaders(t), cache: 'no-store',
+      body: JSON.stringify({ ref: 'main', inputs: { mode: 'full' } })
+    }).then(function (r) {
+      if (r.status === 204) return null;
+      if (r.status === 401) return "GitHub didn't accept that token. It may have expired or been copied wrong.";
+      if (r.status === 403 || r.status === 404) return "That token can't start the check. It needs the Toolbox repo and Actions: Read and write.";
+      return "GitHub said no (HTTP " + r.status + "). Try again in a minute.";
+    }, function () { return "Couldn't reach GitHub. Check your connection."; });
+  }
+
+  function started() {
+    toast('Check started. It takes about 2 hours.');
+    showRun({ status: 'queued', created_at: new Date().toISOString() });
+    setTimeout(runStatus, 6000);
+  }
+
+  $('runNow').addEventListener('click', function () {
+    if (running) return;
+    var t = token();
+    if (!t) { setupSheet(); return; }
+    if (!window.confirm('Start a full check of all ' + (L.length || 69) + ' tickets now?\n\nIt runs on GitHub and takes about 2 hours.')) return;
+    var btn = this;
+    btn.classList.add('is-busy');
+    dispatch(t).then(function (err) {
+      btn.classList.remove('is-busy');
+      if (!err) { started(); return; }
+      if (/token/.test(err)) setupSheet(err); else toast(err);
+    });
+  });
+
+  $('foot').addEventListener('click', function (e) {
+    if (!e.target.closest('[data-forget]')) return;
+    e.preventDefault();
+    if (!window.confirm('Remove the GitHub token from this phone? Check now will open GitHub instead until you add one again.')) return;
+    try { localStorage.removeItem(TOKEN_KEY); } catch (x) { /* nothing saved */ }
+    toast('Token removed from this phone');
+    render();
+  });
+
+  function setupSheet(err) {
+    var wrap = document.createElement('div');
+    wrap.className = 'sc-sheet ct-sheet';
+    wrap.innerHTML = '<div class="sc-sheet-card" role="dialog" aria-modal="true" aria-labelledby="ctSheetH">' +
+      '<h2 id="ctSheetH">Check now</h2>' +
+      '<p>Starts a full check of all ' + (L.length || 69) + ' tickets straight away. It runs on GitHub and takes about 2 hours.</p>' +
+      '<a class="btn" href="' + RUNS + '" target="_blank" rel="noopener">Open on GitHub, then tap Run workflow</a>' +
+      '<hr><h2>Make it one tap</h2>' +
+      '<p>Save a GitHub token on this phone once, and this button starts the check itself. It stays on this phone and can only run Toolbox checks.</p>' +
+      '<ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Make a new fine-grained token</a> on GitHub.</li>' +
+      '<li>Expiration: the longest it allows. <b>Repository access</b>: Only select repositories, then <b>Toolbox</b>.</li>' +
+      '<li><b>Permissions</b>: Actions, <b>Read and write</b>. Nothing else.</li>' +
+      '<li>Generate it, copy it, and paste it here.</li></ol>' +
+      '<input id="ctTok" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_..." aria-label="GitHub token">' +
+      '<p class="ct-err" id="ctErr"' + (err ? '' : ' hidden') + '>' + esc(err || '') + '</p>' +
+      '<button class="btn btn-primary" id="ctSave" type="button">Save and check now</button>' +
+      '<button class="ct-link" id="ctClose" type="button">Cancel</button></div>';
+    function shut() { wrap.remove(); }
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) shut(); });
+    document.body.appendChild(wrap);
+    wrap.querySelector('#ctClose').addEventListener('click', shut);
+    wrap.querySelector('#ctSave').addEventListener('click', function () {
+      var t = wrap.querySelector('#ctTok').value.trim(), e = wrap.querySelector('#ctErr'), btn = this;
+      if (!t) { e.hidden = false; e.textContent = 'Paste the token first.'; return; }
+      btn.classList.add('is-busy');
+      dispatch(t).then(function (msg) {
+        btn.classList.remove('is-busy');
+        if (msg) { e.hidden = false; e.textContent = msg; return; }
+        try { localStorage.setItem(TOKEN_KEY, t); } catch (x) { /* private mode: it still ran this once */ }
+        shut();
+        started();
+        if (src) render();
+      });
+    });
+  }
+
   /* ---------- start ---------- */
 
   refresh();
+  runStatus();
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && (running || Date.now() - loadedAt > 15 * 60000)) runStatus();
+  });
   // back on the page after a while: fetch the latest check again
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden && Date.now() - loadedAt > 15 * 60000) refresh();

@@ -34,3 +34,27 @@
 .ct-toast { display: flex; align-items: center; gap: 12px; bottom: calc(24px + env(safe-area-inset-bottom)); }
 .ct-toast.show { pointer-events: auto; }
 .ct-toast button { flex: none; border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 750; cursor: pointer; padding: 4px 2px; }
+
+/* check now: status line and button */
+.ct-run { display: flex; align-items: center; gap: 12px; margin: -4px 0 14px; padding: 10px 10px 10px 14px; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--border); }
+.ct-run-s { flex: 1; min-width: 0; color: var(--muted); font-size: .86rem; line-height: 1.35; }
+.ct-run-s b { color: var(--text); font-weight: 650; }
+.ct-run-b { flex: none; min-height: 40px; padding: 0 14px; font-size: .9rem; }
+.ct-run.is-running { border-color: var(--hi-line); background: var(--hi); }
+.ct-run.is-running .ct-run-b svg { animation: ct-spin 1.4s linear infinite; }
+@keyframes ct-spin { to { transform: rotate(360deg); } }
+.ct-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 6px; vertical-align: 1px; animation: ct-pulse 1.6s ease-in-out infinite; }
+@keyframes ct-pulse { 50% { opacity: .3; } }
+
+/* set-up sheet for the button */
+.ct-sheet .sc-sheet-card { max-height: 88vh; overflow-y: auto; }
+.ct-sheet ol { margin: 0 0 12px; padding-left: 20px; color: var(--muted); font-size: .86rem; line-height: 1.5; }
+.ct-sheet ol b { color: var(--text); }
+.ct-sheet input { width: 100%; min-height: 48px; padding: 0 12px; margin: 0 0 10px; font: inherit; font-size: 16px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.ct-sheet .ct-err { color: #ff8080; font-size: .85rem; margin: -4px 0 10px; }
+.ct-sheet .ct-link { display: block; text-align: center; margin: 4px 0 0; color: var(--muted); font-size: .84rem; background: none; border: 0; width: 100%; padding: 8px; cursor: pointer; font-family: inherit; }
+.ct-sheet hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0 14px; }
+@media (prefers-reduced-motion: reduce) { .ct-run.is-running .ct-run-b svg, .ct-dot { animation: none; } }
+.ct-sheet ol a { color: var(--accent); font-weight: 650; }
