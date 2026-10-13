@@ -66,3 +66,18 @@
 .ct-sheet hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0 14px; }
 @media (prefers-reduced-motion: reduce) { .ct-run.is-running #runNow svg, .ct-dot, .ct-bar span { animation: none; transition: none; } }
 .ct-sheet ol a { color: var(--accent); font-weight: 650; }
+
+/* couldn't be read: type the price in by hand */
+.ct-missed { margin-top: 18px; }
+.ct-missed-h { margin: 0 2px 6px; font-size: 1rem; font-weight: 700; }
+.ct-missed-h span { color: var(--muted); font-weight: 600; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.ct-miss { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.ct-sfx { color: var(--accent); text-decoration: none; }
+.ct-enter { display: flex; gap: 8px; }
+.ct-pound { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--bg); }
+.ct-pound:focus-within { border-color: var(--accent); }
+.ct-pound span { color: var(--muted); font-weight: 700; }
+.ct-pound input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--text); font: inherit; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.ct-pound:has(input[aria-invalid="true"]) { border-color: #e5484d; }
+.ct-enter .btn { min-height: 44px; padding: 0 18px; }

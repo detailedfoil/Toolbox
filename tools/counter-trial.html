@@ -10,7 +10,7 @@
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
 <link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261011d">
-<link rel="stylesheet" href="counter-trial/counter-trial.css?v=20261013g">
+<link rel="stylesheet" href="counter-trial/counter-trial.css?v=20261014a">
 <script src="../auth-data.js?v=202610120756"></script>
 <script src="../auth.js?v=202610120755"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -63,6 +63,12 @@
       <ul class="sc-list" id="todoList"></ul>
       <div class="sc-empty" id="todoEmpty" hidden></div>
 
+      <section class="ct-missed" id="missBox" hidden aria-labelledby="missH">
+        <h2 class="ct-missed-h" id="missH">Couldn't be read <span id="missCount"></span></h2>
+        <p class="sc-hint">Tap a code to open it on screwfix.com, then type the price here. It counts as checked, and goes on To update if it's different from the ticket.</p>
+        <ul class="sc-list" id="missList"></ul>
+      </section>
+
       <details class="ct-done" id="doneBox" hidden>
         <summary><span>Ticked off recently</span><svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
         <ul class="sc-list" id="doneList"></ul>
@@ -83,6 +89,6 @@
 <div class="sc-toast ct-toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastUndo" hidden>Undo</button></div>
 
 <script src="price-tickets/lookup.js?v=20261013y"></script>
-<script src="counter-trial/app.js?v=20261013i"></script>
+<script src="counter-trial/app.js?v=20261014a"></script>
 </body>
 </html>

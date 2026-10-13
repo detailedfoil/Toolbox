@@ -96,6 +96,10 @@
 
   function lines() {
     var P = (src.prices && src.prices.products) || {}, mine = confirmed(), ph = phonePrices(), seen = {};
+    // the lines the latest check couldn't read: the device check's misses, or GitHub's when its run is newer
+    var last = phoneLast(), devNewer = !!last && Date.parse(last.at) > ghFinished(), lastAt = last ? Date.parse(last.at) : 0;
+    var missedSet = {};
+    if (devNewer) (last.failed || []).forEach(function (c) { missedSet[c] = 1; });
     return src.plan.lines.filter(function (l) { if (seen[l.code]) return false; seen[l.code] = 1; return true; }).map(function (l, i) {
       var p = P[l.code] || {}, c = mine[l.code], q = ph[l.code];
       var shelf = c && c.price != null ? c.price : l.shelf;
@@ -105,7 +109,9 @@
       return {
         i: i, code: l.code, sheet: l.sheet, name: (phone && q.name) || p.name || l.name, shelf: shelf, printed: l.shelf,
         price: price, since: phone ? q.since : p.since || null, status: status, was: phone ? q.was : p.was, moves: phone ? [] : p.moves || [],
-        phone: phone, todo: price != null && status !== 'not_found' && !same(price, shelf)
+        phone: phone, manual: !!(phone && q.manual),
+        missed: devNewer ? !!missedSet[l.code] && !(q && Date.parse(q.at) > lastAt) : status === 'unchecked' || price == null,
+        todo: price != null && status !== 'not_found' && !same(price, shelf)
       };
     });
   }
@@ -136,7 +142,7 @@
     if (phoneNewer) {
       var miss = ph.total - ph.done;
       if (miss > 0) alerts.push('The check on this device got ' + ph.done + ' of ' + ph.total + '. ' +
-        (miss === 1 ? 'The other one keeps its last price. Tap <b>Retry</b> to try it again.' : 'The other ' + miss + ' keep their last price. Tap <b>Retry</b> to try just those.'));
+        (miss === 1 ? 'The other one keeps its last price. Tap <b>Retry</b> to try it again, or type its price in under <b>Couldn\'t be read</b>.' : 'The other ' + miss + ' keep their last price. Tap <b>Retry</b> to try just those, or type the prices in under <b>Couldn\'t be read</b>.'));
     } else if (pr.checked && pr.checked < now.date && now.hour >= 9) {
       alerts.push("Today's check hasn't come in yet, so these prices are from " + esc(day(pr.checked)) + '. <a href="' + RUNS + '" target="_blank" rel="noopener">See the runs on GitHub</a>');
     } else if (pr.checked && !checkedOk) {
@@ -160,6 +166,7 @@
     $('nAll').textContent = ' ' + L.length;
 
     renderTodo();
+    renderMissed();
     renderDone();
     renderAll();
 
@@ -216,6 +223,59 @@
     $('todoHint').innerHTML = n ? 'Oldest first. Swap ' + (n === 1 ? 'this ticket' : 'these ' + n + ' tickets') + ', then tick ' + (n === 1 ? 'it' : 'each one') + ' off.' : '';
   }
 
+  /* lines the last check couldn't read: type the price from screwfix.com in by hand */
+  function renderMissed() {
+    var miss = L.filter(function (l) { return l.missed; });
+    $('missBox').hidden = !miss.length || (!src.prices.checked && !phoneLast());
+    $('missCount').textContent = miss.length;
+    $('missList').innerHTML = miss.map(function (l) {
+      return '<li class="sc-row ct-miss" data-code="' + esc(l.code) + '"><div>' +
+        '<a class="sc-code ct-sfx" href="https://www.screwfix.com/p/product/' + esc(l.code.toLowerCase()) + '" target="_blank" rel="noopener">' + esc(l.code) + ' &#8599;</a>' +
+        '<span class="sc-name">' + esc(l.name) + '</span>' +
+        '<span class="ct-when">' + (l.price != null ? 'Last price ' + money(l.price) : 'No price yet') + ' &middot; ticket ' + money(l.shelf) + '</span></div>' +
+        '<form class="ct-enter" novalidate><label class="ct-pound"><span aria-hidden="true">£</span>' +
+        '<input type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Price on screwfix.com for ' + esc(l.code) + '"></label>' +
+        '<button class="btn" type="submit">Save</button></form></li>';
+    }).join('');
+  }
+
+  function enterPrice(code, raw) {
+    var v = String(raw || '').replace(/[£,\s]/g, '');
+    if (!/^\d{1,5}(\.\d{1,2})?$/.test(v) || !(Number(v) > 0)) return false;
+    var price = Math.round(Number(v) * 100) / 100, l = L.filter(function (x) { return x.code === code; })[0];
+    var ph = phonePrices(), moved = l && l.price != null && !same(l.price, price);
+    ph[code] = { price: price, name: (l && l.name) || null, was: null, at: new Date().toISOString(),
+                 since: moved || !l || l.price == null ? london().date : l.since || london().date, manual: true };
+    store(PHONE_KEY, ph);
+    // it's been read now: take it out of any retry waiting on the button
+    var r = load(PHONE_RUN_KEY, null);
+    if (r && Array.isArray(r.codes)) {
+      r.codes = r.codes.filter(function (c) { return c !== code; });
+      if (r.codes.length) store(PHONE_RUN_KEY, r); else { try { localStorage.removeItem(PHONE_RUN_KEY); } catch (e) { /* fine */ } }
+    }
+    var last = phoneLast();
+    if (last && (last.failed || []).indexOf(code) >= 0) {
+      last.failed = last.failed.filter(function (c) { return c !== code; });
+      last.done = Math.min(last.total, last.done + 1);
+      store(PHONE_LAST_KEY, last);
+    }
+    render();
+    toast(code + ' saved at ' + money(price) + (l && !same(l.shelf, price) ? ', added to To update' : ', matches the ticket'));
+    return true;
+  }
+
+  $('missList').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var row = e.target.closest('[data-code]'), input = e.target.querySelector('input');
+    if (!row || !input) return;
+    if (!enterPrice(row.getAttribute('data-code'), input.value)) {
+      input.setAttribute('aria-invalid', 'true');
+      input.focus();
+      toast('Type the price like 31.99');
+    }
+  });
+  $('missList').addEventListener('input', function (e) { if (e.target.tagName === 'INPUT') e.target.removeAttribute('aria-invalid'); });
+
   function renderDone() {
     var log = load(LOG_KEY, []);
     log = Array.isArray(log) ? log.slice(-15).reverse() : [];
@@ -236,7 +296,7 @@
       else right = '<div class="ct-pair"><small>Ticket</small><small>Online</small><span class="' + (l.todo ? '' : 'is-muted') + '">' + money(l.shelf) + '</span><span>' + money(l.price) + '</span></div>';
       return '<li class="sc-row' + (l.todo ? ' is-changed' : '') + '" data-q="' + esc((l.code + ' ' + l.name).toLowerCase()) + '">' +
         '<div><span class="sc-code">' + esc(l.code) + '</span><span class="sc-name">' + esc(l.name) + '</span>' +
-        (l.status === 'unchecked' && l.price != null ? '<span class="sc-note">not rechecked last run</span>' : '') + '</div>' + right + '</li>';
+        (l.manual ? '<span class="ct-when">Entered by hand</span>' : l.missed && l.price != null ? '<span class="sc-note">not rechecked last time</span>' : '') + '</div>' + right + '</li>';
     }).join('');
     if ($('search').value) search();
   }
