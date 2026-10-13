@@ -564,7 +564,7 @@
     $('progText').textContent = (phone.test ? 'Test: ' : phone.retry ? 'Retrying ' : 'Checking ') + Math.min(d + 1, n) + ' of ' + n;
     $('progBar').style.width = Math.round(d / n * 100) + '%';
     $('progNote').innerHTML = (phone.current ? '<b>' + esc(phone.current) + '</b> &middot; ' : '') + phone.got + ' read' +
-      (phone.moved ? ', <b>' + phone.moved + '</b> changed' : '') + (phone.fails ? ', ' + phone.fails + " couldn't be read" : '') +
+      (phone.moved ? ', <b>' + phone.moved + '</b> changed since the last report' : '') + (phone.fails ? ', ' + phone.fails + " couldn't be read" : '') +
       '. About ' + mins(phone.queue.length) + ' left. Keep this page open and the screen on.';
   }
 
@@ -606,7 +606,8 @@
       if (price != null && phone.test) {
         var b0 = everything.products[code], base0 = b0 && (b0.status === 'changed' && !b0.phone ? b0.prev : b0.price);
         phone.got++; phone.streak = 0;
-        if (base0 != null && Math.abs(base0 - price) > 0.001) { phone.moved++; phone.diffs.push(code + ' ' + money(base0) + ' to ' + money(price)); }
+        if (base0 != null && Math.abs(base0 - price) > 0.001) phone.moved++;
+        if (b0 && b0.price != null && Math.abs(b0.price - price) > 0.001) phone.diffs.push(code + ' ' + money(b0.price) + ' to ' + money(price));
       } else if (price != null) {
         var R = localReadings();
         var was = pounds(r.was), before = everything.products[code];
@@ -657,7 +658,8 @@
       $('phoneTest').hidden = false;
       $('runStatus').innerHTML = '<b>Test ' + (why === 'done' ? 'finished' : why === 'stopped' ? 'stopped' : 'stopped, nothing getting through') + '.</b> Read ' + p.got + ' of ' + (p.got + p.failed.length + p.queue.length) +
         (p.failed.length ? ', ' + p.failed.length + " couldn't be read" + (p.failed.length <= 8 ? ' (' + p.failed.map(esc).join(', ') + ')' : '') : '') +
-        '. ' + (p.moved ? p.moved + ' price' + (p.moved === 1 ? '' : 's') + " differ from Monday's" + (p.diffs.length <= 6 ? ': ' + p.diffs.map(esc).join(', ') : '') + '.' : "No prices differ from Monday's.") + ' Nothing was saved or shared.';
+        '. ' + p.moved + ' differ from the previous report (the same basis as the Changes list). ' +
+        (p.diffs.length ? p.diffs.length + ' differ from what Monday\'s check found' + (p.diffs.length <= 8 ? ': ' + p.diffs.map(esc).join(', ') : '') + '.' : "None differ from what Monday's check found.") + ' Nothing was saved or shared.';
       return;
     }
     if (why === 'done') {
