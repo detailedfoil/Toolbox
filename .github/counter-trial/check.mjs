@@ -11,7 +11,8 @@
 // and the price is cross-checked against the product data built into the page, as Shelf Check does.
 //
 // Rules:
-//  - never more than one request at a time, GAP_MS between them; on HTTP 429 pause, then go slower
+//  - never more than one request at a time, GAP_MS between them; on HTTP 429 (or 202, Screwfix's
+//    bot check page) pause, then go slower, and stop if it happens again
 //  - a failed lookup never changes a price: the line keeps its last price, marked "unchecked"
 //  - "not_found" only when Screwfix itself answers 404 / 410 for the product page
 //
@@ -132,7 +133,9 @@ async function lookup(code) {
   } catch (e) {
     return { kind: 'fail', why: 'no answer (' + errText(e) + ')' };
   }
-  if (res.status === 429) return { kind: 'limited', retryAfter: Number(res.headers.get('retry-after')) || 0 };
+  if (res.status === 429) return { kind: 'limited', retryAfter: Number(res.headers.get('retry-after')) || 0, code: 429 };
+  // 202 is Screwfix's bot check page, not the product: back off the same way as a 429
+  if (res.status === 202) return { kind: 'limited', retryAfter: 0, code: 202 };
   if (res.status === 404 || res.status === 410) {
     return /screwfix/i.test(html) ? { kind: 'missing' } : { kind: 'fail', why: `HTTP ${res.status} that isn't a Screwfix page` };
   }
@@ -261,10 +264,10 @@ for (let pass = 1; pass <= 3 && queue.length && !stop; pass++) {
     const r = await lookup(code);
     if (r.kind === 'limited') {
       limited++;
-      if (limited >= 2) { stop = 'Screwfix rate limit (HTTP 429)'; queue.push(...todo.slice(i)); log('429 again: stopping, the rest are left for the next run.'); break; }
+      if (limited >= 2) { stop = `Screwfix asked it to slow down (HTTP ${r.code})`; queue.push(...todo.slice(i)); log(`HTTP ${r.code} again: stopping, the rest are left for the next run.`); break; }
       const pause = Math.min(Math.max(r.retryAfter * 1000, 15 * 60000), 20 * 60000);
       gap = Math.min(gap * 2, 20000);
-      log(`429 from Screwfix: pausing ${Math.round(pause / 60000)} min, then one every ${gap / 1000}s.`);
+      log(`HTTP ${r.code} from Screwfix: pausing ${Math.round(pause / 60000)} min, then one every ${gap / 1000}s.`);
       await sleep(pause);
       i--;
       continue;
