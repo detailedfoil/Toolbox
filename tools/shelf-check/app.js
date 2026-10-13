@@ -163,9 +163,10 @@
     sets.forEach(function (set) { if (set && typeof set === 'object' && !Array.isArray(set)) Object.keys(set).forEach(function (id) { out[id] = set[id]; }); });
     return out;
   }
+  var memManual = {};                                     // prices typed in just for this page: gone on refresh
   function phoneData() {
     var l = localData(), sh = (src && src.shared) || {};
-    return { readings: joinReadings([sh.readings, l.readings]), done: joinDone([sh.done, l.done]) };
+    return { readings: joinReadings([sh.readings, l.readings, memManual]), done: joinDone([sh.done, l.done]) };
   }
   function ghClock(gh) {                                  // when GitHub last read a line
     var run = gh.run || {}, fin = run.finished ? Date.parse(run.finished) : 0, finDay = run.finished ? londonDay(run.finished) : '';
@@ -174,16 +175,17 @@
   function overlay(gh) {
     var pd = phoneData(), R = pd.readings, done = pd.done, P = gh.products || {}, run = gh.run || {};
     var ghWeek = run.week || (gh.checked ? mondayOf(gh.checked) : ''), ghTime = ghClock(gh), fin = run.finished ? Date.parse(run.finished) : 0;
-    var good = {}, last = '';
+    var good = {}, last = '', lastAny = '';
     Object.keys(R).forEach(function (c) {
       var r = R[c], t = Date.parse(r.at);
       if (!(r.price > 0) || !isFinite(t) || t <= ghTime(P[c])) return;
       good[c] = r;
       var dd = londonDay(r.at);
-      if (dd > last) last = dd;
+      if (dd > lastAny) lastAny = dd;
+      if (!r.manual && !r.part && dd > last) last = dd;      // a typed price or a retry of a few lines doesn't make the whole list newer
     });
-    if (!last) return gh;
-    var week = mondayOf(last);
+    if (!lastAny) return gh;
+    var week = mondayOf(lastAny);
     if (week < ghWeek) return gh;
     var newer = week > ghWeek, out = {}, products = {};
     // the latest successful phone check replaces what earlier checks said had changed
@@ -199,11 +201,11 @@
       }
       var base = r.base !== undefined ? r.base : (!newer && p.status === 'changed' ? p.prev : p.price);
       var moved = base != null && Math.abs(base - r.price) > 0.001;
-      products[c] = { name: r.name || p.name, price: r.price, prev: moved ? base : null, status: moved ? 'changed' : 'ok', was: r.was, on: londonDay(r.at), phone: true };
+      products[c] = { name: r.name || p.name, price: r.price, prev: moved ? base : null, status: moved ? 'changed' : 'ok', was: r.was, on: londonDay(r.at), phone: true, typed: !!r.manual };
     });
     for (var k in gh) out[k] = gh[k];
     out.products = products;
-    out.checked = okRun ? londonDay(okRun) : newer ? last : (last > gh.checked ? last : gh.checked);
+    out.checked = okRun ? londonDay(okRun) : newer ? (last || lastAny) : (last > gh.checked ? last : gh.checked);
     out.previous_checked = okRun ? (done[okRun] || gh.previous_checked) : newer ? gh.checked : gh.previous_checked;
     out.run = newer ? { week: week, phone: true } : Object.assign({}, run, { phone: true });
     return out;
@@ -212,14 +214,16 @@
   /* A device search shows itself as if from scratch: only what it has read so far, compared with the last
    * successful update. Lines not read yet show as waiting; lines it couldn't read say so. Gone on refresh. */
   function liveView(gh) {
-    var P = gh.products || {}, R = live.session ? live.mem : {}, products = {}, out = {};
-    if (!live.session) { var all = localData().readings; Object.keys(all).forEach(function (c) { if (all[c].run === live.id) R[c] = all[c]; }); }
+    var P = gh.products || {}, R = {}, products = {}, out = {};
+    if (live.session) Object.keys(live.mem).forEach(function (c) { R[c] = live.mem[c]; });
+    else { var all = localData().readings; Object.keys(all).forEach(function (c) { if (all[c].run === live.id) R[c] = all[c]; }); }
+    var typed = manualReadings(); Object.keys(typed).forEach(function (c) { if (!R[c]) R[c] = typed[c]; });
     Object.keys(P).concat(Object.keys(R)).forEach(function (c) {
       if (products[c]) return;
       var p = P[c] || { name: null }, r = R[c];
       if (!r) { products[c] = { name: p.name, price: null, prev: null, status: 'unchecked', was: null, wait: live.failed[c] ? 'fail' : 'wait' }; return; }
       var moved = r.base != null && Math.abs(r.base - r.price) > 0.001;
-      products[c] = { name: r.name || p.name, price: r.price, prev: moved ? r.base : null, status: moved ? 'changed' : 'ok', was: r.was, on: londonDay(r.at), phone: true };
+      products[c] = { name: r.name || p.name, price: r.price, prev: moved ? r.base : null, status: moved ? 'changed' : 'ok', was: r.was, on: londonDay(r.at), phone: true, typed: !!r.manual };
     });
     for (var k in gh) out[k] = gh[k];
     out.products = products;
@@ -349,6 +353,7 @@
       out = '<span class="sc-now">' + money(p.price) + '</span>';
       if (changed) out += '<span class="sc-was">was <s>' + money(p.prev) + '</s></span>';
       else if (p.status === 'unchecked') out += '<span class="sc-note">not rechecked</span>';
+      else if (p.typed) out += '<span class="sc-note">typed in</span>';
     }
     var tags = '';
     if (changed) tags += '<span class="sc-tag">' + (p.price > p.prev ? ARROW_UP + 'UP' : ARROW_DOWN + 'DOWN') + '</span>';
@@ -614,10 +619,11 @@
   function runBar() {
     if (!data) return;
     $('runBar').hidden = false;
-    if (phone) return;
+    if (phone) { $('missBox').hidden = true; return; }
     var r = curRun(), more = r && r.queue.length, pending = r && !more && r.failed.length;
     $('failBox').hidden = !pending;
     if (pending) renderFails(r);
+    renderMiss(pending);
     $('phoneRun').hidden = !!pending || !!(r && r.session);
     $('phoneSession').hidden = !!pending || !!(r && !r.session);
     $('ghRun').hidden = !!r;
@@ -638,17 +644,29 @@
     everything.spots.forEach(function (s) { if (!spots[s.code]) spots[s.code] = s; });
     $('failTitle').innerHTML = '<b>' + plural(r.failed.length, 'line') + " couldn't be read</b>";
     $('failList').innerHTML = r.failed.map(function (f, i) {
-      var p = everything.products[f.c] || {}, on = f.pick !== 'ignore';
-      return '<li class="sc-fail-i"><div class="sc-fail-t"><b>' + esc(f.c) + '</b> ' + esc(p.name || '') +
+      var p = everything.products[f.c] || {}, on = f.pick === 'retry';
+      return '<li class="sc-fail-i" data-i="' + i + '"><div class="sc-fail-t"><b>' + esc(f.c) + '</b> ' + esc(p.name || '') +
         '<small>' + esc(f.why) + (p.price != null ? ' &middot; last price ' + money(p.price) : '') + (spots[f.c] ? ' &middot; ' + esc(Sheet.where(spots[f.c])) : '') + '</small></div>' +
         '<div class="sc-seg" role="group" aria-label="' + esc(f.c) + '"><button type="button" data-i="' + i + '" data-pick="retry" class="' + (on ? 'is-on' : '') + '" aria-pressed="' + on + '">Retry</button>' +
-        '<button type="button" data-i="' + i + '" data-pick="ignore" class="' + (on ? '' : 'is-on') + '" aria-pressed="' + !on + '">Ignore</button></div></li>';
+        '<button type="button" data-i="' + i + '" data-pick="ignore" class="' + (f.pick === 'ignore' ? 'is-on' : '') + '" aria-pressed="' + (f.pick === 'ignore') + '">Ignore</button>' +
+        '<button type="button" data-i="' + i + '" data-pick="price" class="' + (f.pick === 'price' ? 'is-on' : '') + '" aria-pressed="' + (f.pick === 'price') + '">Enter price</button></div>' +
+        (f.pick === 'price' ? entryForm(f.c) : '') + '</li>';
     }).join('');
-    var nr = r.failed.filter(function (f) { return f.pick !== 'ignore'; }).length, ni = r.failed.length - nr;
+    var nr = r.failed.filter(function (f) { return f.pick === 'retry'; }).length, ni = r.failed.length - nr;
     $('failGo').textContent = nr ? 'Retry ' + nr + (ni ? ', ignore ' + ni : '') : 'Finish, ignoring ' + ni;
   }
   $('failList').addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-pick]'), r = curRun();
+    var r = curRun(), s = e.target.closest('button[data-save]');
+    if (s && r) {
+      var li = s.closest('li'), f = r.failed[+li.getAttribute('data-i')];
+      if (f && saveEntry(li, f.c, s.getAttribute('data-save') === 'all')) {
+        r.failed = r.failed.filter(function (g) { return g !== f; }); r.ignored.push(f.c); r.got++;
+        if (!r.failed.length && !r.queue.length) { completeRun(r); build(); if (!r.session) share(false); runBar(); }
+        else { saveRun(r); build(); renderFails(r); }
+      }
+      return;
+    }
+    var b = e.target.closest('button[data-pick]');
     if (!b || !r) return;
     r.failed[+b.getAttribute('data-i')].pick = b.getAttribute('data-pick');
     saveRun(r);
@@ -660,13 +678,79 @@
   $('failGo').addEventListener('click', function () {
     var r = curRun();
     if (!r || phone) return;
-    var again = r.failed.filter(function (f) { return f.pick !== 'ignore'; }).map(function (f) { return f.c; });
-    r.failed.forEach(function (f) { if (f.pick === 'ignore') r.ignored.push(f.c); });
+    var again = r.failed.filter(function (f) { return f.pick === 'retry'; }).map(function (f) { return f.c; });
+    r.failed.forEach(function (f) { if (f.pick !== 'retry') r.ignored.push(f.c); });
     r.failed = [];
     if (!again.length) { completeRun(r); build(); if (!r.session) share(false); runBar(); return; }
     r.queue = again; r.passTotal = again.length;
     beginRun(r);
   });
+
+  /* ---------- typing a price in by hand, and retrying the lines that couldn't be checked ---------- */
+
+  function manualReadings() {
+    var l = localData().readings, out = {};
+    Object.keys(l).forEach(function (c) { if (l[c].manual) out[c] = l[c]; });
+    return joinReadings([out, memManual]);
+  }
+  function entryForm(code) {
+    return '<div class="sc-ent"><span class="sc-ent-p">&pound;</span><input class="sc-ent-in" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Price for ' + esc(code) + '">' +
+      '<button type="button" class="btn btn-primary" data-save="all">Save for everyone</button><button type="button" class="btn" data-save="me">Just for me</button></div>';
+  }
+  /* reads the box in that row; true when the price was kept */
+  function saveEntry(li, code, forAll) {
+    var inp = li.querySelector('.sc-ent-in'), price = pounds(inp && inp.value);
+    if (price == null) { toast('Type the price as a number, like 4.99.'); if (inp) inp.focus(); return false; }
+    if (forAll && !token()) { needToken('save a price for everyone'); return false; }
+    var p = everything.products[code] || {}, now = new Date().toISOString();
+    var reading = { price: price, name: p.name || null, was: null, at: now, base: refFor(code), run: 'manual-' + now, manual: 1 };
+    if (forAll) {
+      var pd = localData(); pd.readings[code] = reading; store(PHONE_KEY, pruneLocal(pd));
+      delete memManual[code];
+      share(true);
+      toast(code + ' saved at ' + money(price) + ' for everyone.');
+    } else { memManual[code] = reading; toast(code + ' set to ' + money(price) + ' for you. Gone when you refresh.'); }
+    return true;
+  }
+  function missing() { return everything.codes.filter(function (c) { return everything.products[c].status === 'unchecked'; }); }
+  function renderMiss(hide) {
+    var list = hide || live ? [] : missing(), box = $('missBox');
+    box.hidden = !list.length;
+    if (!list.length) return;
+    var spots = {};
+    everything.spots.forEach(function (s) { if (!spots[s.code]) spots[s.code] = s; });
+    $('missTitle').textContent = plural(list.length, 'line') + ' not checked';
+    $('missRetryAll').textContent = 'Retry these · save for everyone';
+    $('missRetryMe').textContent = 'Retry these · just for me';
+    $('missList').innerHTML = list.map(function (c) {
+      var p = everything.products[c];
+      return '<li class="sc-fail-i" data-code="' + esc(c) + '"><div class="sc-fail-t"><b>' + esc(c) + '</b> ' + esc(p.name || '') +
+        '<small>' + (p.price != null ? 'last price ' + money(p.price) : 'no price yet') + (spots[c] ? ' &middot; ' + esc(Sheet.where(spots[c])) : '') + '</small></div>' +
+        '<div class="sc-seg"><button type="button" data-enter="1">Enter price</button></div></li>';
+    }).join('');
+  }
+  $('missList').addEventListener('click', function (e) {
+    var li = e.target.closest('li'), s = e.target.closest('button[data-save]');
+    if (!li) return;
+    var code = li.getAttribute('data-code');
+    if (s) { if (saveEntry(li, code, s.getAttribute('data-save') === 'all')) { build(); } return; }
+    if (e.target.closest('button[data-enter]')) {
+      var f = li.querySelector('.sc-ent');
+      if (f) f.remove(); else { li.insertAdjacentHTML('beforeend', entryForm(code)); li.querySelector('.sc-ent-in').focus(); }
+    }
+  });
+  function startRetry(session) {
+    if (phone || !data) return;
+    if (!SL || !SL.lookup) { toast("The price reader didn't load. Refresh the page."); return; }
+    if (!session && !token()) { needToken('update the area'); return; }
+    var codes = missing();
+    if (!codes.length) return;
+    var r = newRun(codes, session);
+    r.partial = true;
+    beginRun(r);
+  }
+  $('missRetryAll').addEventListener('click', function () { startRetry(false); });
+  $('missRetryMe').addEventListener('click', function () { startRetry(true); });
 
   /* Background tabs get their timers slowed (down to one a minute after about 5 minutes in Chrome and Edge), which would
    * turn a 40 minute check into hours. A Web Worker's timers aren't slowed, so while a check runs, setTimeout is
@@ -737,8 +821,8 @@
     phone.current = ''; phone.streak = 0; phone.again = r.passTotal < r.total;
     saveRun(r);
     // show this search as if from scratch: earlier changes are hidden until the page is refreshed
-    if (!live || live.id !== r.id) live = { id: r.id, session: !!r.session, baseDay: r.baseDay, mem: {}, failed: {} };
-    $('phoneSession').hidden = true; $('ghRun').hidden = true; $('failBox').hidden = true;
+    if (!r.partial && (!live || live.id !== r.id)) live = { id: r.id, session: !!r.session, baseDay: r.baseDay, mem: {}, failed: {} };
+    $('phoneSession').hidden = true; $('ghRun').hidden = true; $('failBox').hidden = true; $('missBox').hidden = true;
     $('runBar').classList.add('is-running');
     $('runStatus').hidden = true; $('phoneRun').hidden = true; $('phoneFresh').hidden = true;
     $('prog').hidden = false;
@@ -767,7 +851,8 @@
         if (ref != null && Math.abs(ref - price) > 0.001) { me.moved++; me.changes.push(code + ' ' + money(ref) + ' to ' + money(price)); }
         var was = pounds(r.was), reading = { price: price, name: r.name || (before && before.name) || null, was: was != null && was > price ? was : null, at: new Date().toISOString(), base: ref, run: me.id };
         if (live && live.id === me.id) delete live.failed[code];
-        if (me.session) { if (live && live.id === me.id) live.mem[code] = reading; }
+        if (me.partial) reading.part = 1;
+        if (me.session) { if (me.partial) memManual[code] = reading; else if (live && live.id === me.id) live.mem[code] = reading; }
         else {
           var pd = localData();
           pd.readings[code] = reading;
@@ -803,7 +888,7 @@
 
   /* every line read, or its failure deliberately ignored: this check is now the last successful update */
   function completeRun(r) {
-    if (!r.session) {
+    if (!r.session && !r.partial) {                        // a retry of a few lines isn't a whole update
       var pd = localData();
       pd.done[r.id] = r.baseDay || '';
       store(PHONE_KEY, pd);

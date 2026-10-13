@@ -9,7 +9,7 @@
 <title>Monday Price Check</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
-<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261013g">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261014a">
 <script src="../auth-data.js?v=202610120756"></script>
 <script src="../auth.js?v=202610120755"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -25,6 +25,14 @@
   <p class="sc-error" id="error" role="alert" hidden></p>
   <div class="sc-alert" id="alert" role="status" hidden></div>
   <section class="sc-plan" id="planBox" aria-label="Shelf plan changes" hidden></section>
+  <details class="sc-floor sc-miss" id="missBox" hidden>
+    <summary>
+      <span class="sc-floor-h"><strong id="missTitle"></strong><small>Optional. They keep their last price.</small></span>
+      <svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </summary>
+    <div class="sc-miss-bar"><button class="btn" id="missRetryAll" type="button"></button><button class="btn" id="missRetryMe" type="button"></button></div>
+    <ul class="sc-fail-list" id="missList"></ul>
+  </details>
 
   <details class="sc-floor" id="floor" hidden>
     <summary>
