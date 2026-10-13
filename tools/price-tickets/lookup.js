@@ -106,13 +106,17 @@
     return '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  /* The selling price shown next to the heading: "£28.99 Inc Vat". Skips ex-VAT, was and multi-buy prices. */
+  /* What Screwfix prints after a selling price: "Inc Vat", or "0% VAT" on zero-rated products (lawn seed,
+     some safety kit). Missing the second one made 132KH read another product's "£12.99 Inc Vat" lower down. */
+  var SELLING = /^\s*(?:inc\.?\s*vat|0\s*%\s*vat)/;
+
+  /* The selling price shown next to the heading: "£28.99 Inc Vat" or "£31.99 0% VAT". Skips ex-VAT, was and multi-buy prices. */
   function priceMatch(text, from) {
     var re = /£\s?(\d{1,3}(?:,\d{3})+|\d+)\.(\d{2})/g, m, best = null, loose = null;
     while ((m = re.exec(text))) {
       var after = text.slice(re.lastIndex, re.lastIndex + 14).toLowerCase();
       var before = text.slice(Math.max(0, m.index - 16), m.index).toLowerCase();
-      var incVat = /^\s*inc\.?\s*vat/.test(after);
+      var incVat = SELLING.test(after);
       var skip = /ex\.?\s*vat/.test(after) || /(was|save|saving|from|buy \d+|rrp)\s*:?\s*$/.test(before) || /^\s*(each when|per item when|when you buy)/.test(after);
       if (incVat && m.index >= from) { best = m; break; }
       if (incVat && !best) best = m;
@@ -133,7 +137,7 @@
     var re = /was\s*:?\s*£\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{2}))?/i;   // "Inc VatWas £29.99" too
     // nothing but "Inc Vat" (and maybe the ex-VAT price) may sit between the two prices
     var close = function (gap) {
-      gap = gap.replace(/£\s?[\d,]+(?:\.\d{2})?\s*ex\.?\s*vat/gi, ' ').replace(/inc\.?\s*vat|now|\s+/gi, ' ');
+      gap = gap.replace(/£\s?[\d,]+(?:\.\d{2})?\s*ex\.?\s*vat/gi, ' ').replace(/inc\.?\s*vat|0\s*%\s*vat|now|\s+/gi, ' ');
       return gap.indexOf('£') < 0 && gap.trim().length <= 12;
     };
     var end = hit.index + hit[0].length, after = text.slice(end, end + 120), m = after.match(re);
@@ -380,7 +384,7 @@
   var SKU_IN_BRACKETS = /\(\s*(\d{3}[A-Z]{2}|\d{4}[A-Z]|\d{5})\s*\)\s*$/i;
   function fromCopiedPage(text) {
     text = String(text || '');
-    if (text.length < 30 || !/inc\.?\s*vat/i.test(text)) return null;
+    if (text.length < 30 || !/inc\.?\s*vat|0\s*%\s*vat/i.test(text)) return null;
     var lines = text.split(/\r?\n/).map(squash).filter(Boolean), code = null, h1 = '';
     for (var i = 0; i < lines.length && !code; i++) {
       var m = lines[i].match(SKU_IN_BRACKETS);
