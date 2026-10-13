@@ -9,6 +9,7 @@
   var RUNS = 'https://github.com/detailedfoil/Toolbox/actions/workflows/shelf-check.yml';
   var DONE_KEY = 'sc-done-v3', TAB_KEY = 'sc-tab-v1', OFF_KEY = 'sc-bays-off-v1';
   var PHONE_KEY = 'sc-phone-v1', PHONE_RUN_KEY = 'sc-phone-run-v1', TOKEN_KEY = 'sc-gh-token-v1';
+  var SESSION_KEY = 'sc-session-v1', SESSION_RUN_KEY = 'sc-session-run-v1';   // a check kept for this window only (sessionStorage)
   var SHARE_API = 'https://api.github.com/repos/detailedfoil/Toolbox/contents/tools/shelf-check/data/phone.json';
   // iPhone / iPad: the share sheet (Print, Save to Files) beats a download there
   var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -17,6 +18,10 @@
   var data = null, everything = null, src = null, loadedAt = 0, pdfs = {}, warmTimer = 0;
 
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+  var mem = {};                                         // sessionStorage's backup, if the browser won't let us use it
+  function sget(k) { try { var v = sessionStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return mem[k] || null; } }
+  function sput(k, v) { mem[k] = v; try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* kept in memory */ } }
+  function sdrop(k) { delete mem[k]; try { sessionStorage.removeItem(k); } catch (e) { /* fine */ } }
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: keep going */ } }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function money(v) { return '£' + Number(v).toFixed(2); }
@@ -88,6 +93,7 @@
     var ov = overlay(src.prices);
     data = merge(plan, ov);
     data.allBays = src.plan.bays.length;
+    data.session = !!ov.session;
     everything = merge(src.plan, ov);                   // every line on the plan: a phone check reads all of them
     pdfs = {};
     render();
@@ -132,10 +138,11 @@
    * than GitHub (say GitHub got blocked on Monday), that week is shown: lines the phone read are compared with
    * the last known price, and the rest show their last price as not rechecked. */
 
-  function localData() {
-    var v = load(PHONE_KEY, null) || {};
+  function localData(session) {
+    var v = (session ? sget(SESSION_KEY) : load(PHONE_KEY, null)) || {};
     return { readings: v.readings && typeof v.readings === 'object' ? v.readings : {}, done: v.done && typeof v.done === 'object' && !Array.isArray(v.done) ? v.done : {} };
   }
+  function storeData(pd, session) { if (session) sput(SESSION_KEY, pd); else store(PHONE_KEY, pd); }
   /* keep three weeks of readings at most, and only the checks they came from */
   function pruneLocal(pd) {
     var cut = Date.now() - 21 * 86400000, runs = {};
@@ -163,8 +170,9 @@
     return out;
   }
   function phoneData() {
-    var l = localData(), sh = (src && src.shared) || {};
-    return { readings: joinReadings([sh.readings, l.readings]), done: joinDone([sh.done, l.done]) };
+    var l = localData(false), ss = localData(true), sh = (src && src.shared) || {};
+    Object.keys(ss.readings).forEach(function (c) { ss.readings[c] = Object.assign({}, ss.readings[c], { s: 1 }); });   // marks the ones kept for this window only
+    return { readings: joinReadings([sh.readings, l.readings, ss.readings]), done: joinDone([sh.done, l.done, ss.done]) };
   }
   function ghClock(gh) {                                  // when GitHub last read a line
     var run = gh.run || {}, fin = run.finished ? Date.parse(run.finished) : 0, finDay = run.finished ? londonDay(run.finished) : '';
@@ -205,6 +213,7 @@
     out.checked = okRun ? londonDay(okRun) : newer ? last : (last > gh.checked ? last : gh.checked);
     out.previous_checked = okRun ? (done[okRun] || gh.previous_checked) : newer ? gh.checked : gh.previous_checked;
     out.run = newer ? { week: week, phone: true } : Object.assign({}, run, { phone: true });
+    out.session = Object.keys(good).some(function (c) { return good[c].s; });
     return out;
   }
 
@@ -257,15 +266,16 @@
     var alerts = [], lastWeek = d.run.week || (d.checked ? mondayOf(d.checked) : '');
     var overdue = lastWeek < week && (now.date > week || now.hour >= 10);
     if (overdue) {
-      alerts.push("This week's check hasn't come in yet, so these are from " + esc(day(d.checked)) + '. Tap <b>Check on this phone</b> to check now, or <a href="' + RUNS + '" target="_blank" rel="noopener">see the runs on GitHub</a>.');
+      alerts.push("This week's check hasn't come in yet, so these are from " + esc(day(d.checked)) + '. Use the <b>check</b> buttons below to check now, or <a href="' + RUNS + '" target="_blank" rel="noopener">see the runs on GitHub</a>.');
     } else if (!d.complete) {
       var left = d.codes.length - d.done, one = left === 1, sameDay = d.checked === now.date && now.hour < 16;
       alerts.push('Part checked: ' + d.done + ' of ' + d.codes.length + ' lines so far. ' +
         (one ? 'The other one shows its last price' : 'The other ' + left + ' show their last price') + ', marked <b>not rechecked</b>' +
         (/429/.test(d.run.stopped || '') ? ' (Screwfix asked it to slow down)' : '') + '. ' +
         (d.run.phone ? 'Tap the button below to check ' + (one ? 'it' : 'them') + ' on this phone.'
-          : sameDay ? 'It tries ' + (one ? 'it' : 'them') + ' again later today, or tap <b>Check on this phone</b>.' : (one ? "It'll" : "They'll") + ' be checked again next Monday, or tap <b>Check on this phone</b>.'));
+          : sameDay ? 'It tries ' + (one ? 'it' : 'them') + ' again later today, or use the check buttons below.' : (one ? "It'll" : "They'll") + ' be checked again next Monday, or use the check buttons below.'));
     }
+    if (d.session) alerts.push('Some prices here come from a check kept for this window only. Closing the window clears it.');
     $('alert').hidden = !alerts.length;
     $('alert').innerHTML = alerts.length ? WARN + '<div>' + alerts.join('<br>') + '</div>' : '';
 
@@ -524,18 +534,18 @@
    * were deliberately ignored) counts. A check that stopped part way doesn't, so the next one still compares with
    * the last good one. Each reading remembers the price it was compared with (base) and which check it came from. */
 
-  var SL = window.ScrewfixLookup, phone = null, testRun = null, testSummary = '', wakeLock = null, sinceBuild = 0;
+  var SL = window.ScrewfixLookup, phone = null, wakeLock = null, sinceBuild = 0;
   var PHONE_GAP = 1000, PER_LINE = 4;                      // ms between lines on top of the relay spacing; rough seconds per line
 
-  /* the check in hand: a saved real one (kept 3 days) or this page's test */
+  /* the check in hand: a saved one (kept 3 days), or one kept for this window only */
   function curRun() {
-    var r = load(PHONE_RUN_KEY, null);
-    if (r && Array.isArray(r.queue) && Array.isArray(r.failed) && Date.now() - Date.parse(r.started) <= 3 * 86400000 && (r.queue.length || r.failed.length)) return r;
-    return testRun && (testRun.queue.length || testRun.failed.length) ? testRun : null;
+    var live = function (r) { return r && Array.isArray(r.queue) && Array.isArray(r.failed) && Date.now() - Date.parse(r.started) <= 3 * 86400000 && (r.queue.length || r.failed.length); };
+    var r = load(PHONE_RUN_KEY, null), q = sget(SESSION_RUN_KEY);
+    return live(r) ? r : live(q) ? q : null;
   }
-  function saveRun(r) { if (r.test) testRun = r; else store(PHONE_RUN_KEY, r); }
+  function saveRun(r) { if (r.session) sput(SESSION_RUN_KEY, r); else store(PHONE_RUN_KEY, r); }
   function dropRun(r) {
-    if (r.test) { if (testRun === r) testRun = null; return; }
+    if (r.session) { sdrop(SESSION_RUN_KEY); return; }
     try { localStorage.removeItem(PHONE_RUN_KEY); } catch (e) { /* fine */ }
   }
   function pounds(v) { if (v == null || v === '') return null; var n = Number(String(v).replace(/[£,\s]/g, '')); return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null; }
@@ -570,20 +580,22 @@
     $('runBar').hidden = false;
     if (phone) return;
     var r = curRun(), n = everything.codes.length, left = r ? [] : notYet(), some = left.length && left.length < n;
-    var more = r && r.queue.length, pending = r && !more && r.failed.length;
+    var more = r && r.queue.length, pending = r && !more && r.failed.length, can = token() ? 'Saves for every store' : 'Needs a GitHub token first';
     $('failBox').hidden = !pending;
     if (pending) renderFails(r);
-    $('phoneRun').hidden = !!pending;
-    $('phoneTest').hidden = !!r;
+    $('phoneRun').hidden = !!pending || !!(r && r.session);
+    $('phoneSession').hidden = !!pending || !!(r && !r.session);
     $('phoneFresh').hidden = !r && !some;
     $('runStatus').innerHTML = pending
-        ? (r.test ? 'Test: read ' : 'Read ') + r.got + ' of ' + r.total + '. Choose what to do with the lines below.'
+        ? 'Read ' + r.got + ' of ' + r.total + '. Choose what to do with the lines below.'
       : more
-        ? (r.test ? 'The test' : 'The check') + ' stopped part way, <b>' + r.queue.length + ' left</b>. Keep this page open while it runs.'
-      : testSummary ? testSummary
+        ? 'The check stopped part way, <b>' + r.queue.length + ' left</b>' + (r.session ? ' (kept for this window only)' : '') + '. Keep this page open while it runs.'
       : some ? '<b>' + plural(left.length, 'line') + '</b> ' + (left.length === 1 ? "hasn't" : "haven't") + ' been checked this week. About ' + mins(left.length) + '.'
       : 'Checks all <b>' + n + ' lines</b>, about ' + mins(n) + ' with this page open.';
-    $('phoneLabel').textContent = more ? 'Carry on (' + r.queue.length + ' left)' : some && !r ? 'Check the ' + left.length + ' not checked' : 'Check on this phone';
+    var what = more ? 'Carry on (' + r.queue.length + ' left)' : some ? 'Check the ' + left.length + ' not checked' : 'Check all ' + n + ' lines';
+    $('phoneLabel').textContent = what;
+    $('phoneSub').textContent = more && !r.session ? 'Saves for every store' : can;
+    $('sessionLabel').textContent = what;
     $('phoneFresh').textContent = r ? 'Drop this and start again' : 'Check all ' + n + ' again instead';
   }
 
@@ -618,7 +630,7 @@
     var again = r.failed.filter(function (f) { return f.pick !== 'ignore'; }).map(function (f) { return f.c; });
     r.failed.forEach(function (f) { if (f.pick === 'ignore') r.ignored.push(f.c); });
     r.failed = [];
-    if (!again.length) { completeRun(r); if (!r.test) { build(); share(false); } runBar(); return; }
+    if (!again.length) { completeRun(r); build(); if (!r.session) share(false); runBar(); return; }
     r.queue = again; r.passTotal = again.length;
     beginRun(r);
   });
@@ -661,28 +673,32 @@
   function progress() {
     if (!phone) return;
     var n = phone.passTotal, d = n - phone.queue.length;
-    $('progText').textContent = (phone.test ? 'Test: ' : phone.again ? 'Retrying ' : 'Checking ') + Math.min(d + 1, n) + ' of ' + n;
+    $('progText').textContent = (phone.again ? 'Retrying ' : 'Checking ') + Math.min(d + 1, n) + ' of ' + n;
     $('progBar').style.width = Math.round(d / n * 100) + '%';
     $('progNote').innerHTML = (phone.current ? '<b>' + esc(phone.current) + '</b> &middot; ' : '') + phone.got + ' read' +
       (phone.moved ? ', <b>' + phone.moved + '</b> changed' : '') + (phone.failed.length ? ', ' + phone.failed.length + " couldn't be read" : '') +
       '. About ' + mins(phone.queue.length) + ' left. Keep this page open' + (ios ? ' and the screen on.' : '.');
   }
 
-  function newRun(codes, test) {
+  function newRun(codes, session) {
     var now = new Date().toISOString();
-    return { id: now, started: now, test: !!test, total: codes.length, passTotal: codes.length, got: 0, moved: 0, changes: [],
+    return { id: now, started: now, session: !!session, total: codes.length, passTotal: codes.length, got: 0, moved: 0, changes: [],
              queue: codes.slice(), failed: [], ignored: [], baseDay: refDay() || '' };
   }
-  function startPhone(fresh, test) {
+  function startPhone(fresh, session) {
     if (phone || !data) return;
     if (!SL || !SL.lookup) { toast("The price reader didn't load. Refresh the page."); return; }
+    if (!session && !token()) {
+      toast('To save a check for every store, add a GitHub token first.');
+      $('share').open = true; $('share').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     var r = fresh ? null : curRun();
-    if (r && !r.queue.length) r = null;
+    if (r && (!r.queue.length || !!r.session !== !!session)) r = null;
     if (!r) {
-      var left = notYet(), codes = !fresh && !test && left.length ? left : everything.codes.slice();
+      var left = notYet(), codes = !fresh && left.length ? left : everything.codes.slice();
       if (!codes.length) return;
-      r = newRun(codes, test);
-      testSummary = '';
+      r = newRun(codes, session);
     }
     beginRun(r);
   }
@@ -690,7 +706,7 @@
     phone = r;
     phone.current = ''; phone.streak = 0; phone.again = r.passTotal < r.total;
     saveRun(r);
-    $('phoneTest').hidden = true; $('failBox').hidden = true;
+    $('phoneSession').hidden = true; $('failBox').hidden = true;
     $('runBar').classList.add('is-running');
     $('runStatus').hidden = true; $('phoneRun').hidden = true; $('phoneFresh').hidden = true;
     $('prog').hidden = false;
@@ -712,12 +728,12 @@
       if (price != null) {
         var before = everything.products[code], ref = refFor(code);
         if (ref != null && Math.abs(ref - price) > 0.001) { me.moved++; me.changes.push(code + ' ' + money(ref) + ' to ' + money(price)); }
-        if (!me.test) {
-          var pd = localData(), R = pd.readings, was = pounds(r.was);
+        {
+          var pd = localData(me.session), R = pd.readings, was = pounds(r.was);
           R[code] = { price: price, name: r.name || (before && before.name) || null, was: was != null && was > price ? was : null, at: new Date().toISOString(), base: ref, run: me.id };
           pruneLocal(pd);
-          store(PHONE_KEY, pd);
-          me.unshared = (me.unshared || 0) + 1;
+          storeData(pd, me.session);
+          if (!me.session) me.unshared = (me.unshared || 0) + 1;
         }
         me.got++;
         me.streak = 0;
@@ -737,8 +753,8 @@
         return;
       }
       saveRun(me);
-      if (!me.test && ++sinceBuild >= 15) { sinceBuild = 0; build(); }
-      if (!me.test && me.unshared >= 100) { me.unshared = 0; share(true); }
+      if (++sinceBuild >= 15) { sinceBuild = 0; build(); }
+      if (!me.session && me.unshared >= 100) { me.unshared = 0; share(true); }
       progress();
       setTimeout(nextPhone, PHONE_GAP);
     });
@@ -746,17 +762,10 @@
 
   /* every line read, or its failure deliberately ignored: this check is now the last successful update */
   function completeRun(r) {
-    if (!r.test) {
-      var pd = localData();
-      pd.done[r.id] = r.baseDay || '';
-      store(PHONE_KEY, pd);
-    }
+    var pd = localData(r.session);
+    pd.done[r.id] = r.baseDay || '';
+    storeData(pd, r.session);
     dropRun(r);
-    if (r.test) {
-      testSummary = '<b>Test finished.</b> Read ' + r.got + ' of ' + r.total + (r.ignored.length ? ', ' + r.ignored.length + ' ignored' : '') + '. ' +
-        (r.moved ? plural(r.moved, 'price') + ' changed since ' + esc(r.baseDay ? day(r.baseDay) : 'the last update') + (r.changes.length <= 8 ? ': ' + r.changes.map(esc).join(', ') : '') + '.'
-                 : 'No prices changed since ' + esc(r.baseDay ? day(r.baseDay) : 'the last update') + '.') + ' Nothing was saved or shared.';
-    }
   }
 
   function finishPhone(why) {
@@ -770,13 +779,13 @@
     r.current = '';
     if (why === 'done' && !r.failed.length) completeRun(r); else saveRun(r);
     sinceBuild = 0;
-    if (!r.test) {
-      build();
-      if (r.got) share(false);
-      clearTimeout(warmTimer);
-      warmTimer = setTimeout(warm, 800);
-    } else runBar();
-    if (why === 'done' && !r.failed.length) toast((r.test ? 'Test: read ' : 'Read ') + r.got + ' of ' + r.total + (r.moved ? ', ' + plural(r.moved, 'price change') : ', no price changes') + '.');
+    build();
+    if (!r.session && r.got) share(false);
+    clearTimeout(warmTimer);
+    warmTimer = setTimeout(warm, 800);
+    runBar();
+    var kept = r.session ? ' Kept for this window only.' : '';
+    if (why === 'done' && !r.failed.length) toast('Read ' + r.got + ' of ' + r.total + (r.moved ? ', ' + plural(r.moved, 'price change') : ', no price changes') + '.' + kept);
     else if (why === 'done') toast(plural(r.failed.length, 'line') + " couldn't be read. Choose which to retry or ignore.");
     else if (why === 'stopped') toast('Stopped. Tap Carry on to finish the other ' + r.queue.length + '.');
     else toast("Couldn't read 6 in a row, so it stopped. The relays may be busy or this wifi blocks them. Try again in a bit, or on mobile data.");
@@ -829,6 +838,7 @@
     var on = !!token();
     $('shareSum').textContent = on ? 'On: your checks update every store' : 'Off: checks stay on this phone';
     $('shareOn').hidden = !on; $('shareOff').hidden = on;
+    if (data) runBar();
   }
   $('shareSave').addEventListener('click', function () {
     var v = $('shareToken').value.replace(/\s/g, '');
@@ -849,12 +859,11 @@
 
   $('phoneRun').addEventListener('click', function () { startPhone(false); });
   $('phoneFresh').addEventListener('click', function () {
-    var r = curRun(), t = !!(r && r.test);
+    var r = curRun(), t = !!(r && r.session);
     if (r) dropRun(r);
-    testSummary = '';
     startPhone(true, t);
   });
-  $('phoneTest').addEventListener('click', function () { startPhone(true, true); });
+  $('phoneSession').addEventListener('click', function () { startPhone(false, true); });
   $('phoneStop').addEventListener('click', function () { if (phone) finishPhone('stopped'); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden && phone) keepAwake(); });
   window.addEventListener('beforeunload', function (e) { if (phone) { e.preventDefault(); e.returnValue = ''; } });

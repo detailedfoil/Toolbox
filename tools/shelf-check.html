@@ -9,7 +9,7 @@
 <title>Monday Price Check</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
-<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261013c">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261013d">
 <script src="../auth-data.js?v=202610120756"></script>
 <script src="../auth.js?v=202610120755"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -45,10 +45,13 @@
       <button class="btn btn-primary sc-run-go" id="failGo" type="button"></button>
     </div>
     <button class="btn btn-primary sc-run-go" id="phoneRun" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
-      <span id="phoneLabel">Check on this phone</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 18a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.6-1.4A4.5 4.5 0 0 0 7 18z"/></svg>
+      <span class="sc-go-t"><span id="phoneLabel">Check all lines</span><small id="phoneSub">Saves for every store</small></span>
     </button>
-    <button class="sc-run-link" id="phoneTest" type="button">Test run (saves nothing)</button>
+    <button class="btn sc-run-go sc-run-alt" id="phoneSession" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
+      <span class="sc-go-t"><span id="sessionLabel">Check all lines</span><small>Only for this window, gone when you close it</small></span>
+    </button>
     <button class="sc-run-link" id="phoneFresh" type="button" hidden>Start again from the first line</button>
     <div class="sc-prog" id="prog" hidden>
       <div class="sc-prog-top"><b id="progText">Checking</b><button class="btn sc-stop" id="phoneStop" type="button">Stop</button></div>
@@ -125,6 +128,6 @@
 
 <script src="shelf-check/sheet-engine.js?v=20261011d"></script>
 <script src="price-tickets/lookup.js?v=20261011g"></script>
-<script src="shelf-check/app.js?v=20261013g"></script>
+<script src="shelf-check/app.js?v=20261013h"></script>
 </body>
 </html>
