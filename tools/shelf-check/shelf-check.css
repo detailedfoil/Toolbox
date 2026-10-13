@@ -179,3 +179,9 @@
   .sc-stat-v { font-size: 1.9rem; }
   .sc-row { padding: 12px 16px; }
 }
+
+/* share panel */
+#share { margin-top: 0; }
+.sc-steps { padding-left: 1.2em; }
+.sc-steps li { margin: 2px 0; }
+#share .sc-search { margin: 4px 0 10px; }

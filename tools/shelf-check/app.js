@@ -8,12 +8,13 @@
   var RAW = 'https://raw.githubusercontent.com/detailedfoil/Toolbox/main/tools/shelf-check/data/';
   var RUNS = 'https://github.com/detailedfoil/Toolbox/actions/workflows/shelf-check.yml';
   var DONE_KEY = 'sc-done-v3', TAB_KEY = 'sc-tab-v1', OFF_KEY = 'sc-bays-off-v1';
-  var PHONE_KEY = 'sc-phone-v1', PHONE_RUN_KEY = 'sc-phone-run-v1';
+  var PHONE_KEY = 'sc-phone-v1', PHONE_RUN_KEY = 'sc-phone-run-v1', TOKEN_KEY = 'sc-gh-token-v1';
+  var SHARE_API = 'https://api.github.com/repos/detailedfoil/Toolbox/contents/tools/shelf-check/data/phone.json';
   // iPhone / iPad: the share sheet (Print, Save to Files) beats a download there
   var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   var $ = function (id) { return document.getElementById(id); };
-  var data = null, src = null, loadedAt = 0, pdfs = {}, warmTimer = 0;
+  var data = null, everything = null, src = null, loadedAt = 0, pdfs = {}, warmTimer = 0;
 
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: keep going */ } }
@@ -52,8 +53,8 @@
     });
   }
   function from(base) {
-    return Promise.all([getJSON(base + 'plan.json'), getJSON(base + 'prices.json')])
-      .then(function (r) { return { plan: r[0], prices: r[1] }; }, function () { return null; });
+    return Promise.all([getJSON(base + 'plan.json'), getJSON(base + 'prices.json'), getJSON(base + 'phone.json').catch(function () { return {}; })])
+      .then(function (r) { return { plan: r[0], prices: r[1], shared: r[2] }; }, function () { return null; });
   }
   function stamp(p) { var t = Date.parse((p.run && p.run.finished) || p.checked || ''); return isFinite(t) ? t : 0; }
 
@@ -64,6 +65,7 @@
                    .sort(function (a, b) { return stamp(b.prices) - stamp(a.prices); })[0];
       if (!got) throw new Error('no data');
       src = got;
+      src.shared = joinReadings(res.map(function (r) { return r && r.shared && r.shared.readings; }));
       build();
       renderFloor();
       setTimeout(warm, 300);
@@ -82,8 +84,10 @@
     var off = offBays(), plan = {};
     for (var k in src.plan) plan[k] = src.plan[k];
     plan.bays = src.plan.bays.filter(function (b) { return off.indexOf(b.name) < 0; });
-    data = merge(plan, overlay(src.prices));
+    var ov = overlay(src.prices);
+    data = merge(plan, ov);
     data.allBays = src.plan.bays.length;
+    everything = merge(src.plan, ov);                   // every line on the plan: a phone check reads all of them
     pdfs = {};
     render();
   }
@@ -127,7 +131,21 @@
    * than GitHub (say GitHub got blocked on Monday), that week is shown: lines the phone read are compared with
    * the last known price, and the rest show their last price as not rechecked. */
 
-  function phoneReadings() { var v = load(PHONE_KEY, null); return v && v.readings && typeof v.readings === 'object' ? v.readings : {}; }
+  function localReadings() { var v = load(PHONE_KEY, null); return v && v.readings && typeof v.readings === 'object' ? v.readings : {}; }
+  /* newest reading per line from several sets */
+  function joinReadings(sets) {
+    var out = {};
+    sets.forEach(function (set) {
+      if (!set || typeof set !== 'object') return;
+      Object.keys(set).forEach(function (c) {
+        var r = set[c];
+        if (!r || !(r.price > 0) || !isFinite(Date.parse(r.at))) return;
+        if (!out[c] || Date.parse(r.at) > Date.parse(out[c].at)) out[c] = r;
+      });
+    });
+    return out;
+  }
+  function phoneReadings() { return joinReadings([src && src.shared, localReadings()]); }
   function overlay(gh) {
     var R = phoneReadings(), P = gh.products || {}, run = gh.run || {};
     var ghWeek = run.week || (gh.checked ? mondayOf(gh.checked) : '');
@@ -488,16 +506,16 @@
   function mins(n) { var m = Math.max(1, Math.round(n * PER_LINE / 60)); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; }
 
   /* this week's lines with no reading yet (GitHub's or this phone's) */
-  function notYet() { return data.codes.filter(function (c) { return !/^(ok|changed|not_found)$/.test(data.products[c].status); }); }
+  function notYet() { return everything.codes.filter(function (c) { return !/^(ok|changed|not_found)$/.test(everything.products[c].status); }); }
   function runBar() {
     if (!data) return;
     $('runBar').hidden = false;
     if (phone) return;
-    var r = savedRun(), n = data.codes.length, left = r ? [] : notYet(), some = left.length && left.length < n;
+    var r = savedRun(), n = everything.codes.length, left = r ? [] : notYet(), some = left.length && left.length < n;
     $('runStatus').innerHTML = r
       ? (r.retry ? r.codes.length + " line" + (r.codes.length === 1 ? '' : 's') + " couldn't be read last time." : 'A check on this phone stopped part way, <b>' + r.codes.length + ' left</b>.') + ' Keep this page open while it runs.'
-      : some ? '<b>' + left.length + ' line' + (left.length === 1 ? '' : 's') + '</b> on your shop floor ' + (left.length === 1 ? "hasn't" : "haven't") + ' been checked this week. About ' + mins(left.length) + ' with this page open.'
-      : 'If GitHub\'s Monday check gets blocked, check from here instead. It reads the <b>' + n + ' lines</b> on your shop floor one at a time, about ' + mins(n) + ' with this page open.';
+      : some ? '<b>' + left.length + ' line' + (left.length === 1 ? '' : 's') + '</b> on the plan ' + (left.length === 1 ? "hasn't" : "haven't") + ' been checked this week. About ' + mins(left.length) + ' with this page open.'
+      : 'If GitHub\'s Monday check gets blocked, check from here instead. It reads all <b>' + n + ' lines</b> on the plan, not just your shop floor, one at a time, about ' + mins(n) + ' with this page open.';
     $('phoneLabel').textContent = r ? (r.retry ? 'Retry the ' + r.codes.length + ' missed' : 'Carry on (' + r.codes.length + ' left)')
       : some ? 'Check the ' + left.length + ' not checked' : 'Check on this phone';
     $('phoneFresh').hidden = !r && !some;
@@ -529,11 +547,11 @@
     if (phone || !data) return;
     if (!SL || !SL.lookup) { toast("The price reader didn't load. Refresh the page."); return; }
     var r = fresh ? null : savedRun();
-    var left = notYet(), codes = r ? r.codes : !fresh && left.length ? left : data.codes.slice();
-    if (!codes.length) { toast('Tick at least one bay under Your shop floor first.'); return; }
+    var left = notYet(), codes = r ? r.codes : !fresh && left.length ? left : everything.codes.slice();
+    if (!codes.length) return;
     var run = r || { started: new Date().toISOString(), total: codes.length };
     phone = { queue: codes.slice(), total: run.total, got: run.got || 0, fails: run.fails || 0, moved: run.moved || 0,
-              failed: (r && r.failed) || [], started: run.started, retry: !!(r && r.retry), streak: 0, current: '' };
+              failed: (r && r.failed) || [], unshared: 0, started: run.started, retry: !!(r && r.retry), streak: 0, current: '' };
     saveRun();
     $('runBar').classList.add('is-running');
     $('runStatus').hidden = true; $('phoneRun').hidden = true; $('phoneFresh').hidden = true;
@@ -553,14 +571,15 @@
       if (phone !== me) return;                           // stopped while this one was being read
       var price = r && (r.status === 'found' || r.status === 'partial') && !r.unsure ? pounds(r.price) : null;
       if (price != null) {
-        var all = load(PHONE_KEY, null) || {}, R = all.readings && typeof all.readings === 'object' ? all.readings : {};
-        var was = pounds(r.was), before = data.products[code];
+        var R = localReadings();
+        var was = pounds(r.was), before = everything.products[code];
         R[code] = { price: price, name: r.name || (before && before.name) || null, was: was != null && was > price ? was : null, at: new Date().toISOString() };
         // keep three weeks of readings at most
         var cut = Date.now() - 21 * 86400000;
         Object.keys(R).forEach(function (c) { if (Date.parse(R[c].at) < cut) delete R[c]; });
         store(PHONE_KEY, { readings: R });
         phone.got++;
+        phone.unshared++;
         phone.streak = 0;
         var base = before && (before.status === 'changed' && !before.phone ? before.prev : before.price);
         if (base != null && Math.abs(base - price) > 0.001) phone.moved++;
@@ -582,7 +601,8 @@
         return;
       }
       saveRun();
-      if (++sinceBuild >= 15) { sinceBuild = 0; build(); }    // refresh the lists every so often, not every line
+      if (++sinceBuild >= 15) { sinceBuild = 0; build(); }
+      if (phone.unshared >= 100) { phone.unshared = 0; share(true); }    // refresh the lists every so often, not every line
       progress();
       setTimeout(nextPhone, PHONE_GAP);
     });
@@ -601,6 +621,7 @@
     }
     sinceBuild = 0;
     build();
+    if (p.got) share(false);
     clearTimeout(warmTimer);
     warmTimer = setTimeout(warm, 800);
     if (why === 'done') toast('Read ' + p.got + ' of ' + p.total + (p.moved ? ', ' + p.moved + ' price change' + (p.moved === 1 ? '' : 's') : ', no price changes') +
@@ -608,6 +629,71 @@
     else if (why === 'stopped') toast('Stopped. Tap Carry on to finish the other ' + p.queue.length + '.');
     else toast("Couldn't read 6 in a row, so it stopped. The relays may be busy or this wifi blocks them. Try again in a bit, or on mobile data.");
   }
+
+  /* ---------- sharing: readings go into the repo (tools/shelf-check/data/phone.json) so every store sees them ----------
+   * Needs a GitHub token saved on this phone (fine-grained, Toolbox repo only, Contents: read and write).
+   * Without one, readings stay on this phone. Only lines that read cleanly are ever shared. */
+
+  var sharing = false;
+  function token() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+  function b64(str) { return btoa(unescape(encodeURIComponent(str))); }
+  function unb64(str) { return decodeURIComponent(escape(atob(str.replace(/\s/g, '')))); }
+  function ghHeaders(t) { return { 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Authorization': 'Bearer ' + t }; }
+
+  function putShared(t, tries) {
+    return fetch(SHARE_API + '?ref=main&t=' + Date.now(), { headers: ghHeaders(t), cache: 'no-store' }).then(function (r) {
+      if (r.status === 404) return { sha: null, readings: {} };
+      if (!r.ok) throw r;
+      return r.json().then(function (j) {
+        var v = {}; try { v = JSON.parse(unb64(j.content)); } catch (e) { /* start over */ }
+        return { sha: j.sha, readings: v && v.readings || {} };
+      });
+    }).then(function (cur) {
+      var all = joinReadings([cur.readings, localReadings()]), cut = Date.now() - 21 * 86400000, n = 0;
+      Object.keys(all).forEach(function (c) { if (Date.parse(all[c].at) < cut) delete all[c]; else n++; });
+      var body = { message: 'Phone price check readings', branch: 'main', content: b64(JSON.stringify({ updated: new Date().toISOString(), readings: all }) + '\n') };
+      if (cur.sha) body.sha = cur.sha;
+      return fetch(SHARE_API, { method: 'PUT', headers: ghHeaders(t), body: JSON.stringify(body) }).then(function (r) {
+        if ((r.status === 409 || r.status === 422) && tries < 3) return putShared(t, tries + 1);   // someone else saved at the same moment
+        if (!r.ok) throw r;
+        return n;
+      });
+    });
+  }
+  function share(quiet) {
+    var t = token();
+    if (!t || sharing) return Promise.resolve();
+    sharing = true;
+    return putShared(t, 0).then(function (n) {
+      if (!quiet) toast('Shared ' + n + ' readings with every store. They show up in a minute or two.');
+    }, function (r) {
+      var st = r && r.status;
+      toast(st === 401 ? "GitHub didn't accept the token, so nothing was shared. Check it under Share with other stores."
+        : st === 403 || st === 404 ? "The token can't save to the Toolbox repo (it needs Contents: Read and write), so nothing was shared."
+        : "Couldn't share the readings just now. They're still on this phone; the next check tries again.");
+    }).then(function () { sharing = false; });
+  }
+  function shareUI() {
+    var on = !!token();
+    $('shareSum').textContent = on ? 'On: your checks update every store' : 'Off: checks stay on this phone';
+    $('shareOn').hidden = !on; $('shareOff').hidden = on;
+  }
+  $('shareSave').addEventListener('click', function () {
+    var v = $('shareToken').value.replace(/\s/g, '');
+    if (!v) return;
+    try { localStorage.setItem(TOKEN_KEY, v); } catch (e) { toast("Couldn't save the token on this device."); return; }
+    $('shareToken').value = '';
+    shareUI();
+    toast('Saved. Your checks will now update every store.');
+    if (Object.keys(localReadings()).length) share(false);
+  });
+  $('shareNow').addEventListener('click', function () { share(false); });
+  $('shareForget').addEventListener('click', function () {
+    if (!window.confirm('Remove the GitHub token from this phone? Your checks will stay on this phone until you add one again.')) return;
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* nothing saved */ }
+    shareUI();
+  });
+  shareUI();
 
   $('phoneRun').addEventListener('click', function () { startPhone(false); });
   $('phoneFresh').addEventListener('click', function () {
