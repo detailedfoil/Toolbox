@@ -523,6 +523,35 @@
     $('phoneFresh').textContent = r && !r.retry ? 'Start again from the first line' : 'Check all ' + n + ' again instead';
   }
 
+  /* Background tabs get their timers slowed (down to one a minute after about 5 minutes in Chrome and Edge), which would
+   * turn a 40 minute check into hours. A Web Worker's timers aren't slowed, so while a check runs, setTimeout is
+   * handed to one. If a worker can't be made the page just carries on with normal timers. */
+  var nativeSet = window.setTimeout, nativeClear = window.clearTimeout, tickWorker = null, tickFns = {}, tickId = 0;
+  function fastTimers(on) {
+    if (!on) {
+      if (tickWorker) { try { tickWorker.terminate(); } catch (e) { /* gone */ } }
+      tickWorker = null; tickFns = {};
+      window.setTimeout = nativeSet; window.clearTimeout = nativeClear;
+      return;
+    }
+    if (tickWorker) return;
+    try {
+      var blob = new Blob(['onmessage=function(e){var d=e.data;if(d.stop){clearTimeout(d.t[d.id]);return;}setTimeout(function(){postMessage(d.id)},d.ms)}'], { type: 'text/javascript' });
+      var w = new Worker(URL.createObjectURL(blob));
+      w.onmessage = function (e) { var f = tickFns[e.data]; delete tickFns[e.data]; if (f) f(); };
+      w.onerror = function () { fastTimers(false); };
+      tickWorker = w;
+      window.setTimeout = function (fn, ms) {
+        if (typeof fn !== 'function') return nativeSet.apply(window, arguments);
+        var id = -(++tickId), extra = Array.prototype.slice.call(arguments, 2);
+        tickFns[id] = function () { fn.apply(window, extra); };
+        w.postMessage({ id: id, ms: Math.max(0, +ms || 0) });
+        return id;
+      };
+      window.clearTimeout = function (id) { if (id < 0) delete tickFns[id]; else nativeClear(id); };
+    } catch (e) { tickWorker = null; }
+  }
+
   function keepAwake() {
     if (!phone || !navigator.wakeLock || !navigator.wakeLock.request) return;
     navigator.wakeLock.request('screen').then(function (l) { wakeLock = l; }, function () { wakeLock = null; });
@@ -560,6 +589,7 @@
     $('runStatus').hidden = true; $('phoneRun').hidden = true; $('phoneFresh').hidden = true;
     $('prog').hidden = false;
     keepAwake();
+    fastTimers(true);
     progress();
     nextPhone();
   }
@@ -619,6 +649,7 @@
     var p = phone;
     phone = null;
     letSleep();
+    fastTimers(false);
     $('runBar').classList.remove('is-running');
     $('prog').hidden = true;
     $('runStatus').hidden = false; $('phoneRun').hidden = false;
