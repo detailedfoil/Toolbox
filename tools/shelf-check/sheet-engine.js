@@ -408,6 +408,22 @@
     });
     return out;
   }
+  /* what the newest brief added and took away (plan.changes), limited to the bays on the sheet */
+  function planChanges(data) {
+    var ch = data && data.plan && data.plan.changes;
+    if (!ch) return null;
+    var have = {};
+    ((data && data.bays) || []).forEach(function (b) { have[b.name] = 1; });
+    var mine = function (l) { return (l || []).filter(function (x) { return !x.bay || have[x.bay]; }); };
+    var out = { brief: ch.brief, since: ch.since, added: mine(ch.added), removed: mine(ch.removed), check: ch.check || [] };
+    var P = data.products || {};
+    out.added = out.added.map(function (a) {
+      var p = P[a.code];
+      return { code: a.code, bay: a.bay, where: a.where, note: a.note, name: (p && p.name) || a.name || null, price: p && p.price != null ? p.price : null };
+    });
+    return out.added.length || out.removed.length ? out : null;
+  }
+
   function where(s) { return s ? [s.bay, s.shelf, s.pos].filter(Boolean).join(', ') : ''; }
 
   /* ---------- the full list: two narrow columns, SKU and price only, folds in half down the middle ---------- */
@@ -629,6 +645,28 @@
       { t: ' tag have a new price: swap the ticket.' + (notChecked ? ' A * after a price means it was not rechecked this week.' : '') }]));
     flow.spacer(ONLY ? 5 * MM : 4 * MM);
 
+    var pc = planChanges(data), newCodes = {};
+    if (pc) {
+      pc.added.forEach(function (a) { newCodes[a.code] = 1; });
+      var prow = function (kind, x) {
+        var name = [{ t: x.name || '(name not found yet)' }, { br: 1 }, { t: (kind === 'add' ? 'Now at: ' : 'Was at: ') + x.where + (x.note ? ' (' + x.note + ')' : ''), size: 8, color: BAYS }];
+        var priceCell = kind === 'add'
+          ? (x.price != null ? { p: new Para(ST.pr, money(x.price)) } : { p: new Para(ST.na, 'price next check') })
+          : { list: [new Para(ST.pr, money(x.price)), new Para(ST.was, 'last price')] };
+        return { cells: [{ p: new Para(ST.nm, name) }, { p: new Para(ST.sku, x.code) }, priceCell,
+          { p: new Para(ST.chc, kind === 'add' ? 'ADDED' : 'REMOVED') }, { flow: new Box() }] };
+      };
+      var prows = pc.added.map(function (x) { return prow('add', x); }).concat(pc.removed.map(function (x) { return prow('rm', x); }));
+      flow.table(table(header('Shelf plan changes: new brief ' + pc.brief, pc.added.length + ' added, ' + pc.removed.length + ' removed'), prows));
+      flow.spacer(2 * MM);
+      flow.para(new Para(ST.info, 'Added lines need a ticket on the shelf (they show NEW on the full list). Removed lines come off the shelf with their ticket. These stay on the sheets until the next brief.'));
+      if (pc.check.length) {
+        flow.spacer(1.5 * MM);
+        flow.para(new Para(ST.info, [{ t: 'Not sure about: ', b: 1 }].concat(pc.check.map(function (c, i) { return [{ t: (i ? '; ' : '') }, { t: c.code, b: 1 }, { t: ' ' + c.why }]; }).reduce(function (a, b) { return a.concat(b); }, []))));
+      }
+      flow.spacer(6 * MM);
+    }
+
     if (ONLY && !changed.length) flow.para(new Para(ST.nm, [{ t: 'No price changes this week.', b: 1 }]));
     if (ONLY && changed.length) {
       flow.table(table(header('Price changes: tickets to replace', swaps.length + ' ticket' + (swaps.length === 1 ? '' : 's')),
@@ -641,7 +679,7 @@
         var named = shelvesOf(b).length > 1 || (shelvesOf(b)[0] || {}).label;
         mine.forEach(function (s) {
           if (named && s.si !== last) { rows.push({ kind: 'shelf', label: s.shelf || 'Shelf ' + (s.si + 1), h: RH.shelf }); last = s.si; k = 0; }
-          var p = prod(s.code), chg = isChange(s.code), r = { kind: 'item', code: s.code, pos: s.pos, name: p.name || '', h: chg ? RH.chg : RH.item, price: p.price };
+          var p = prod(s.code), chg = isChange(s.code), r = { kind: 'item', code: s.code, pos: (newCodes[s.code] ? 'NEW' + (s.pos ? ' ' + s.pos : '') : s.pos), name: p.name || '', h: chg ? RH.chg : RH.item, price: p.price };
           if (chg) { r.changed = true; r.up = p.price > p.prev; r.was = p.prev; }
           else {
             if (p.status === 'not_found') r.na = 'not found online';
@@ -724,6 +762,6 @@
     });
   }
 
-  var api = { build: build, nice: nice, money: money, places: places, where: where };
+  var api = { build: build, nice: nice, money: money, places: places, where: where, planChanges: planChanges };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.ShelfSheet = api;
 })(this);

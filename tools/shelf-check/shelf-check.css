@@ -222,3 +222,19 @@
 .sc-token { margin-top: 18px; }
 .sc-run-go { white-space: normal; }
 .sc-go-t { min-width: 0; }
+
+/* shelf plan changes: what the newest brief added and removed */
+.sc-plan { margin: 0 0 14px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); }
+.sc-pc-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: .95rem; }
+.sc-pc-h span { color: var(--muted); font-size: .82rem; }
+.sc-pc-k { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.sc-pc-k span { padding: 0 7px; border-radius: 999px; font-size: .72rem; letter-spacing: 0; color: var(--text); border: 1px solid var(--border); }
+.sc-pc-k.is-add span { border-color: color-mix(in srgb, #3fb950 55%, var(--border)); }
+.sc-pc-k.is-rm span { border-color: color-mix(in srgb, #f85149 55%, var(--border)); }
+.sc-pc-l { list-style: none; margin: 0; padding: 0; }
+.sc-pc-l li { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; border-top: 1px solid var(--line); font-size: .9rem; }
+.sc-pc-l li:first-child { border-top: 0; }
+.sc-pc-sku { flex: none; min-width: 4.4em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; font-size: .88rem; padding-top: 1px; }
+.sc-pc-n { min-width: 0; overflow-wrap: anywhere; }
+.sc-pc-n small { display: block; color: var(--muted); font-size: .8rem; margin-top: 1px; }
+.sc-pc-q { margin: 10px 0 0; color: var(--muted); font-size: .82rem; }

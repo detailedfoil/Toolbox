@@ -240,7 +240,7 @@
     return {
       checked: prices.checked, previous_checked: prices.previous_checked, run: prices.run || {},
       complete: codes.every(isDone),
-      plan: { name: plan.name, short: plan.short, store: plan.store }, bays: plan.bays, products: products,
+      plan: { name: plan.name, short: plan.short, store: plan.store, changes: plan.changes }, bays: plan.bays, products: products,
       codes: codes, spots: spots, changed: changed,
       swaps: spots.filter(function (s) { return changed.indexOf(s.code) >= 0; }),
       up: changed.filter(function (c) { return products[c].price > products[c].prev; }).length,
@@ -291,6 +291,7 @@
     }
     $('alert').hidden = !alerts.length;
     $('alert').innerHTML = alerts.length ? WARN + '<div>' + alerts.join('<br>') + '</div>' : '';
+    renderPlanChanges();
 
     // the three numbers
     var n = d.changed.length;
@@ -313,9 +314,29 @@
 
     $('main').hidden = false;
     $('bar').hidden = false;
-    $('pdfChanges').disabled = !n;
-    $('pdfChanges').title = n ? '' : 'No price changes this week';
+    var hasPlan = !!Sheet.planChanges(data);
+    $('pdfChanges').disabled = !n && !hasPlan;
+    $('pdfChanges').title = n || hasPlan ? '' : 'No price changes this week';
     showTab(load(TAB_KEY, 'changes'));
+  }
+
+
+  /* what the newest brief added and removed: stays until the next brief replaces the plan */
+  function renderPlanChanges() {
+    var pc = Sheet.planChanges(data), box = $('planBox');
+    box.hidden = !pc;
+    if (!pc) { box.innerHTML = ''; return; }
+    var item = function (x, rm) {
+      var price = rm ? (x.price != null ? 'last price ' + money(x.price) : '') : (x.price != null ? money(x.price) : '');
+      return '<li><span class="sc-pc-sku">' + esc(x.code) + '</span><span class="sc-pc-n">' + esc(x.name || 'name not found yet') +
+        '<small>' + (rm ? 'Was at: ' : 'Now at: ') + esc(x.where) + (x.note ? ' (' + esc(x.note) + ')' : '') + (price ? ' &middot; ' + esc(price) : '') + '</small></span></li>';
+    };
+    var list = function (title, cls, arr, rm) {
+      return arr.length ? '<h3 class="sc-pc-k ' + cls + '">' + title + ' <span>' + arr.length + '</span></h3><ul class="sc-pc-l">' + arr.map(function (x) { return item(x, rm); }).join('') + '</ul>' : '';
+    };
+    box.innerHTML = '<div class="sc-pc-h"><strong>Shelf plan changes</strong><span>brief ' + esc(pc.brief || '') + '</span></div>' +
+      list('Added', 'is-add', pc.added, false) + list('Removed', 'is-rm', pc.removed, true) +
+      (pc.check.length ? '<p class="sc-pc-q"><b>Not sure:</b> ' + pc.check.map(function (c) { return '<b>' + esc(c.code) + '</b> ' + esc(c.why); }).join('; ') + '</p>' : '');
   }
 
   function priceCell(c) {

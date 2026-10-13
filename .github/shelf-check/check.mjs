@@ -30,6 +30,7 @@ const ROOT = process.cwd();
 const PLAN_FILE = 'tools/shelf-check/data/plan.json';
 const PRICES_FILE = 'tools/shelf-check/data/prices.json';
 const PHONE_FILE = 'tools/shelf-check/data/phone.json';
+const NEXT_FILE = 'tools/shelf-check/data/plan.next.json';
 const GAP = Number(process.env.GAP_MS || 5000);
 const BUDGET_MS = Number(process.env.BUDGET_MIN || 120) * 60000;
 const started = Date.now();
@@ -158,7 +159,18 @@ async function lookup(code) {
 
 /* ---------- the run ---------- */
 
-const plan = readJSON(PLAN_FILE);
+let plan = readJSON(PLAN_FILE);
+// A new brief waits in plan.next.json until its start day (its "effective" date, UK time). The first normal or
+// full run on or after that day makes it the shop plan, and the workflow saves that change with the results.
+const waiting = readJSON(NEXT_FILE, null);
+const askedMode = (process.env.MODE || 'auto').trim().toLowerCase();
+if (waiting && waiting.bays && waiting.effective && process.env.GITHUB_EVENT_NAME !== 'push' && (askedMode === 'auto' || askedMode === 'full') && londonDate() >= waiting.effective) {
+  const { effective, ...live } = waiting;
+  fs.writeFileSync(PLAN_FILE, JSON.stringify(live, null, 1) + '\n');
+  fs.unlinkSync(NEXT_FILE);
+  plan = live;
+  console.log(`The new brief (${live.brief}) is now the shop plan.`);
+}
 const old = readJSON(PRICES_FILE, { checked: null, previous_checked: null, run: null, products: {} });
 const codes = [...new Set(plan.bays.flatMap((b) => b.codes.map(normCode)))];
 const today = londonDate(), week = mondayOf(today);

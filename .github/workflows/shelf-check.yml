@@ -4,6 +4,7 @@
 # time with a gap between requests, and saves the results to tools/shelf-check/data/prices.json.
 # The later Monday runs only finish off lines the first run couldn't check, and do nothing once the
 # week is done. Changing the shop plan (tools/shelf-check/data/plan.json) checks any new codes.
+# A new brief can wait in plan.next.json: the first normal or full run on its "effective" date makes it the plan.
 #
 # To run it by hand: Actions tab > Shelf price check > Run workflow.
 #   auto  the normal Monday run (does nothing if this week is already done)
@@ -65,7 +66,7 @@ jobs:
       - name: Save the results
         if: always()
         run: |
-          git add tools/shelf-check/data/prices.json
+          git add -A tools/shelf-check/data
           if git diff --cached --quiet; then echo "Nothing new to save"; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
