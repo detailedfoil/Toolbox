@@ -9,7 +9,7 @@
 <title>Monday Price Check</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
-<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261013e">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261013f">
 <script src="../auth-data.js?v=202610120756"></script>
 <script src="../auth.js?v=202610120755"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -45,12 +45,16 @@
       <button class="btn btn-primary sc-run-go" id="failGo" type="button"></button>
     </div>
     <button class="btn btn-primary sc-run-go" id="phoneRun" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 18a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.6-1.4A4.5 4.5 0 0 0 7 18z"/></svg>
-      <span class="sc-go-t"><span id="phoneLabel">Check all lines</span><small id="phoneSub">Saves for every store</small></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
+      <span class="sc-go-t"><span id="phoneLabel">Device search</span><small id="phoneSub">Updates the area</small></span>
     </button>
     <button class="btn sc-run-go sc-run-alt" id="phoneSession" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
-      <span class="sc-go-t"><span id="sessionLabel">Check all lines</span><small>Only for this window, gone when you close it</small></span>
+      <span class="sc-go-t"><span id="sessionLabel">Device search</span><small>Doesn't update the area · gone when you refresh</small></span>
+    </button>
+    <button class="btn sc-run-go sc-run-alt" id="ghRun" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 18a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.6-1.4A4.5 4.5 0 0 0 7 18z"/></svg>
+      <span class="sc-go-t"><span>GitHub search</span><small id="ghSub">Updates the area · runs on GitHub</small></span>
     </button>
     <button class="sc-run-link" id="phoneFresh" type="button" hidden>Start again from the first line</button>
     <div class="sc-prog" id="prog" hidden>
@@ -59,31 +63,6 @@
       <p class="sc-prog-n" id="progNote"></p>
     </div>
   </div>
-
-  <details class="sc-floor" id="share">
-    <summary>
-      <span class="sc-floor-h"><strong>Share with other stores</strong><small id="shareSum"></small></span>
-      <svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-    </summary>
-    <div class="sc-floor-b">
-      <div id="shareOff">
-        <p class="sc-floor-n">A check on this phone reads every line on the plan. To have the results show for every store too, this phone needs a GitHub token once. The token stays on this phone only.</p>
-        <ol class="sc-floor-n sc-steps">
-          <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Make a new fine-grained token</a> on GitHub.</li>
-          <li>Repository access: Only select repositories, then Toolbox.</li>
-          <li>Permissions: Contents, set to Read and write.</li>
-          <li>Generate it, copy it, paste it below.</li>
-        </ol>
-        <input class="sc-search" id="shareToken" type="password" placeholder="Paste the token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="GitHub token">
-        <div class="sc-floor-btns"><button class="btn btn-primary" id="shareSave" type="button">Save token</button></div>
-      </div>
-      <div id="shareOn" hidden>
-        <label class="sc-switch"><span>Share my checks with other stores</span><input type="checkbox" id="shareSwitch"><i aria-hidden="true"></i></label>
-        <p class="sc-floor-n" id="shareNote"></p>
-        <div class="sc-floor-btns"><button class="btn" id="shareNow" type="button">Share what's on this phone now</button><button class="btn" id="shareForget" type="button">Remove token</button></div>
-      </div>
-    </div>
-  </details>
 
   <div id="main" hidden>
     <div class="sc-stats" id="stats"></div>
@@ -107,6 +86,29 @@
       <div id="bays"></div>
     </section>
 
+    <details class="sc-floor sc-token" id="share">
+      <summary>
+        <span class="sc-floor-h"><strong>GitHub token</strong><small id="shareSum"></small></span>
+        <svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </summary>
+      <div class="sc-floor-b">
+        <div id="shareOff">
+          <p class="sc-floor-n">The two update area buttons need a GitHub token on this phone, once. It stays on this phone only.</p>
+          <ol class="sc-floor-n sc-steps">
+            <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Make a new fine-grained token</a> on GitHub.</li>
+            <li>Repository access: Only select repositories, then Toolbox.</li>
+            <li>Permissions: Contents and Actions, both set to Read and write.</li>
+            <li>Generate it, copy it, paste it below.</li>
+          </ol>
+          <input class="sc-search" id="shareToken" type="password" placeholder="Paste the token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="GitHub token">
+          <div class="sc-floor-btns"><button class="btn btn-primary" id="shareSave" type="button">Save token</button></div>
+        </div>
+        <div id="shareOn" hidden>
+          <p class="sc-floor-n">Device search (update area) saves its results for every store. GitHub search starts the full check on GitHub. A token made before 13 Oct may only have Contents: if GitHub search says it needs Actions too, edit the token on GitHub to add Actions: Read and write.</p>
+          <div class="sc-floor-btns"><button class="btn" id="shareForget" type="button">Remove token</button></div>
+        </div>
+      </div>
+    </details>
     <p class="sc-foot" id="foot"></p>
   </div>
 
@@ -129,6 +131,6 @@
 
 <script src="shelf-check/sheet-engine.js?v=20261011d"></script>
 <script src="price-tickets/lookup.js?v=20261011g"></script>
-<script src="shelf-check/app.js?v=20261013i"></script>
+<script src="shelf-check/app.js?v=20261013j"></script>
 </body>
 </html>

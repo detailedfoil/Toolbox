@@ -217,3 +217,8 @@
 .sc-switch input:checked + i { background: var(--accent); }
 .sc-switch input:checked + i::after { transform: translateX(20px); }
 .sc-switch input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
+#ghRun { margin-bottom: 0; }
+#ghRun.is-busy { opacity: .75; }
+.sc-token { margin-top: 18px; }
+.sc-run-go { white-space: normal; }
+.sc-go-t { min-width: 0; }
