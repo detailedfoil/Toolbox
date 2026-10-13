@@ -120,7 +120,7 @@
       var left = run.unchecked || 0;
       alerts.push('Part checked: ' + (run.checked || 0) + ' of ' + (run.total || L.length) + ' so far. ' +
         (left === 1 ? 'The other one keeps its last price' : 'The other ' + left + ' keep their last price') +
-        (/slow down|429/.test(run.stopped || '') ? ' (Screwfix asked it to slow down)' : '') + ' and ' + (left === 1 ? 'gets' : 'get') + ' tried again later this morning.');
+        (/slow down|429/.test(run.stopped || '') ? ' (Screwfix asked it to slow down)' : '') + ' and ' + (left === 1 ? 'gets' : 'get') + ' tried again ' + (pr.checked === now.date && now.hour < 11 ? 'later this morning' : 'tonight') + '.');
     }
     $('alert').hidden = !alerts.length;
     $('alert').innerHTML = alerts.length ? WARN + '<div>' + alerts.join('<br>') + '</div>' : '';
