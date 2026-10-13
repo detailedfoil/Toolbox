@@ -9,7 +9,7 @@
 <title>Monday Price Check</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
-<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261011d">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261013a">
 <script src="../auth-data.js?v=202610120756"></script>
 <script src="../auth.js?v=202610120755"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -36,6 +36,20 @@
       <ul class="sc-floor-list" id="floorList"></ul>
     </div>
   </details>
+
+  <div class="sc-run" id="runBar" hidden>
+    <p class="sc-run-s" id="runStatus"></p>
+    <button class="btn btn-primary sc-run-go" id="phoneRun" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
+      <span id="phoneLabel">Check on this phone</span>
+    </button>
+    <button class="sc-run-link" id="phoneFresh" type="button" hidden>Start again from the first line</button>
+    <div class="sc-prog" id="prog" hidden>
+      <div class="sc-prog-top"><b id="progText">Checking</b><button class="btn sc-stop" id="phoneStop" type="button">Stop</button></div>
+      <div class="sc-pbar" aria-hidden="true"><span id="progBar"></span></div>
+      <p class="sc-prog-n" id="progNote"></p>
+    </div>
+  </div>
 
   <div id="main" hidden>
     <div class="sc-stats" id="stats"></div>
@@ -80,6 +94,7 @@
 <div class="sc-toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="shelf-check/sheet-engine.js?v=20261011d"></script>
-<script src="shelf-check/app.js?v=20261011e"></script>
+<script src="price-tickets/lookup.js?v=20261011g"></script>
+<script src="shelf-check/app.js?v=20261013a"></script>
 </body>
 </html>
