@@ -81,7 +81,7 @@
 
   function confirmed() { var v = load(SHELF_KEY, {}); return v && typeof v === 'object' ? v : {}; }
 
-  /* prices read on this phone (Check on this phone); a line uses whichever reading is newer, GitHub's or the phone's */
+  /* prices read on this device (Check on this device); a line uses whichever reading is newer, GitHub's or the phone's */
   var PHONE_KEY = 'ct-phone-prices-v1', PHONE_LAST_KEY = 'ct-phone-last-v1', PHONE_RUN_KEY = 'ct-phone-run-v1';
   function phonePrices() { var v = load(PHONE_KEY, {}); return v && typeof v === 'object' ? v : {}; }
   function phoneLast() { var v = load(PHONE_LAST_KEY, null); return v && v.at ? v : null; }
@@ -127,14 +127,14 @@
     var nw = function (s) { return '<span class="sc-nw">' + esc(s) + '</span>'; };
     var ph = phoneLast(), phoneNewer = !!ph && Date.parse(ph.at) > ghFinished();
     $('meta').innerHTML = phoneNewer
-      ? 'Last checked <b>' + nw(day(londonDay(ph.at))) + '</b> at ' + nw(time(ph.at)) + ', on this phone.'
+      ? 'Last checked <b>' + nw(day(londonDay(ph.at))) + '</b> at ' + nw(time(ph.at)) + ', on this device.'
       : pr.checked ? 'Last checked <b>' + nw(day(pr.checked)) + '</b>' + (run.finished ? ' at ' + nw(time(run.finished)) : '') + '.' : 'Not checked yet. The first check runs a few minutes after setup.';
 
     // anything to warn about
     var alerts = [], checkedOk = run.complete !== false;
     if (phoneNewer) {
       var miss = ph.total - ph.done;
-      if (miss > 0) alerts.push('The check on this phone got ' + ph.done + ' of ' + ph.total + '. ' +
+      if (miss > 0) alerts.push('The check on this device got ' + ph.done + ' of ' + ph.total + '. ' +
         (miss === 1 ? 'The other one keeps its last price. Tap <b>Retry</b> to try it again.' : 'The other ' + miss + ' keep their last price. Tap <b>Retry</b> to try just those.'));
     } else if (pr.checked && pr.checked < now.date && now.hour >= 9) {
       alerts.push("Today's check hasn't come in yet, so these prices are from " + esc(day(pr.checked)) + '. <a href="' + RUNS + '" target="_blank" rel="noopener">See the runs on GitHub</a>');
@@ -163,7 +163,7 @@
     renderAll();
 
     statusLine();
-    $('foot').innerHTML = 'Checks every ticket early every morning on GitHub, or whenever you tap Check on this phone. Lines it can\'t check keep their last price and never show as a change. ' +
+    $('foot').innerHTML = 'Checks every ticket early every morning on GitHub, or whenever you tap Check on this device. Lines it can\'t check keep their last price and never show as a change. ' +
       'Ticks are saved on this device. <a href="' + RUNS + '" target="_blank" rel="noopener">Runs on GitHub</a>' +
       (token() ? ' &middot; <a href="#" data-forget>Remove saved GitHub token</a>' : '');
     $('main').hidden = false;
@@ -411,9 +411,9 @@
   $('foot').addEventListener('click', function (e) {
     if (!e.target.closest('[data-forget]')) return;
     e.preventDefault();
-    if (!window.confirm('Remove the GitHub token from this phone? Check on GitHub will open GitHub instead until you add one again.')) return;
+    if (!window.confirm('Remove the GitHub token from this device? Check on GitHub will open GitHub instead until you add one again.')) return;
     try { localStorage.removeItem(TOKEN_KEY); } catch (x) { /* nothing saved */ }
-    toast('Token removed from this phone');
+    toast('Token removed from this device');
     render();
   });
 
@@ -425,7 +425,7 @@
       '<p>Starts a full check of all ' + (L.length || 69) + ' tickets straight away. It runs on GitHub and takes about 2 hours.</p>' +
       '<a class="btn" href="' + RUNS + '" target="_blank" rel="noopener">Open on GitHub, then tap Run workflow</a>' +
       '<hr><h2>Make it one tap</h2>' +
-      '<p>Save a GitHub token on this phone once, and the Check on GitHub button starts it itself. It stays on this phone and can only run Toolbox checks.</p>' +
+      '<p>Save a GitHub token on this device once, and the Check on GitHub button starts it itself. It stays on this device and can only run Toolbox checks.</p>' +
       '<ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Make a new fine-grained token</a> on GitHub.</li>' +
       '<li>Expiration: the longest it allows. <b>Repository access</b>: Only select repositories, then <b>Toolbox</b>.</li>' +
       '<li><b>Permissions</b>: Actions, <b>Read and write</b>. Nothing else.</li>' +
@@ -464,15 +464,15 @@
       s.innerHTML = '<span class="ct-dot"></span><b>GitHub is checking</b>, started ' + esc(clock(start)) + '. ' +
         (lastRun.status === 'queued' ? 'Waiting to start.' : 'Should be done about ' + esc(clock(done)) + '.');
     } else {
-      s.innerHTML = 'GitHub checks every night at 3am. <b>Check on this phone</b> takes a few minutes with this page open.';
+      s.innerHTML = 'GitHub checks every night at 3am. <b>Check on this device</b> takes a few minutes with this page open.';
     }
     var r = phone ? null : savedRun();
-    $('phoneLabel').textContent = !r ? 'Check on this phone' : r.retry ? 'Retry the ' + r.codes.length + ' missed' : 'Carry on (' + r.codes.length + ' left)';
+    $('phoneLabel').textContent = !r ? 'Check on this device' : r.retry ? 'Retry the ' + r.codes.length + ' missed' : 'Carry on (' + r.codes.length + ' left)';
     $('phoneFresh').hidden = !r;
     $('phoneFresh').textContent = r && r.retry ? 'Check all ' + (L.length || 69) + ' again instead' : 'Start again from the first ticket';
   }
 
-  /* ---------- check on this phone: reads every ticket's price through the same relays as Price Tickets ----------
+  /* ---------- check on this device: reads every ticket's price through the same relays as Price Tickets ----------
    * Runs in this page, one ticket at a time, while the page stays open. The screen is kept awake if the phone
    * allows it. If the phone locks or the page gets closed part way, the next tap carries on where it stopped. */
 
@@ -581,7 +581,7 @@
       p.summary = done + ' of ' + total;
     }
     if (src) render();
-    if (why === 'done') toast('Checked ' + p.summary + ' on this phone' + (todo.length ? ', ' + todo.length + ' to update' : ', all up to date'));
+    if (why === 'done') toast('Checked ' + p.summary + ' on this device' + (todo.length ? ', ' + todo.length + ' to update' : ', all up to date'));
     else if (why === 'stopped') toast('Stopped. Tap Carry on to finish the other ' + p.queue.length + '.');
     else toast("Couldn't read 6 in a row, so it stopped. The relays may be busy or this wifi blocks them. Try again in a bit, or on mobile data.");
   }
