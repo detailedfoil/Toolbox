@@ -9,7 +9,7 @@
 <title>Monday Price Check</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
-<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261013b">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261013c">
 <script src="../auth-data.js?v=202610120756"></script>
 <script src="../auth.js?v=202610120755"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -39,6 +39,11 @@
 
   <div class="sc-run" id="runBar" hidden>
     <p class="sc-run-s" id="runStatus"></p>
+    <div class="sc-fail" id="failBox" hidden>
+      <div class="sc-fail-h"><span id="failTitle"></span><span class="sc-fail-all"><button type="button" id="failAllRetry">Retry all</button><button type="button" id="failAllIgnore">Ignore all</button></span></div>
+      <ul class="sc-fail-list" id="failList"></ul>
+      <button class="btn btn-primary sc-run-go" id="failGo" type="button"></button>
+    </div>
     <button class="btn btn-primary sc-run-go" id="phoneRun" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
       <span id="phoneLabel">Check on this phone</span>
@@ -120,6 +125,6 @@
 
 <script src="shelf-check/sheet-engine.js?v=20261011d"></script>
 <script src="price-tickets/lookup.js?v=20261011g"></script>
-<script src="shelf-check/app.js?v=20261013f"></script>
+<script src="shelf-check/app.js?v=20261013g"></script>
 </body>
 </html>

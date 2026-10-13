@@ -29,6 +29,7 @@ const { JSDOM } = require('jsdom');
 const ROOT = process.cwd();
 const PLAN_FILE = 'tools/shelf-check/data/plan.json';
 const PRICES_FILE = 'tools/shelf-check/data/prices.json';
+const PHONE_FILE = 'tools/shelf-check/data/phone.json';
 const GAP = Number(process.env.GAP_MS || 5000);
 const BUDGET_MS = Number(process.env.BUDGET_MIN || 120) * 60000;
 const started = Date.now();
@@ -187,8 +188,17 @@ const state = {
              : { ...(old.run || {}), week, started: (old.run && old.run.started) || new Date().toISOString() },
   products: {}
 };
+// A complete check done on a phone (shared in phone.json) is the last successful update for the lines it read,
+// so this run compares against it rather than against the older Monday price.
+const phoneData = readJSON(PHONE_FILE, { readings: {}, done: {} });
+const finishedAt = old.run && old.run.finished ? Date.parse(old.run.finished) : 0;
+const lastRead = (p) => !p.on ? 0 : finishedAt && londonDate(new Date(finishedAt)) === p.on ? finishedAt : Date.parse(p.on + 'T12:00:00Z');
 for (const c of codes) {
-  const p = old.products[c] || {};
+  let p = old.products[c] || {};
+  const ph = phoneData.readings && phoneData.readings[c];
+  if (fresh && ph && ph.run && phoneData.done && phoneData.done[ph.run] !== undefined && ph.price > 0 && Date.parse(ph.at) > lastRead(p)) {
+    p = { ...p, price: ph.price, was: ph.was != null ? ph.was : null, name: p.name || ph.name || null };
+  }
   state.products[c] = fresh
     ? { name: p.name || null, price: p.price != null ? p.price : null, prev: null, status: 'unchecked', was: p.was != null ? p.was : null, on: p.on || null }
     : { name: p.name || null, price: p.price != null ? p.price : null, prev: p.prev != null ? p.prev : null, status: p.status || 'unchecked', was: p.was != null ? p.was : null, on: p.on || null };

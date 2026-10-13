@@ -185,3 +185,19 @@
 .sc-steps { padding-left: 1.2em; }
 .sc-steps li { margin: 2px 0; }
 #share .sc-search { margin: 4px 0 10px; }
+
+/* lines that couldn't be read: retry or ignore each */
+.sc-fail { margin: 0 0 10px; }
+.sc-fail-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 2px 8px; font-size: .9rem; }
+.sc-fail-all { display: flex; gap: 12px; }
+.sc-fail-all button { padding: 4px 0; background: none; border: 0; color: var(--muted); font: inherit; font-size: .82rem; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.sc-fail-list { list-style: none; margin: 0 0 10px; padding: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-height: 55vh; overflow-y: auto; background: var(--card); }
+.sc-fail-i { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; }
+.sc-fail-i + .sc-fail-i { border-top: 1px solid var(--border); }
+.sc-fail-t { min-width: 0; font-size: .88rem; line-height: 1.35; }
+.sc-fail-t b { font-weight: 700; }
+.sc-fail-t small { display: block; color: var(--muted); font-size: .78rem; }
+.sc-seg { display: flex; flex: none; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.sc-seg button { min-width: 62px; min-height: 38px; padding: 0 10px; background: none; border: 0; color: var(--muted); font: inherit; font-size: .84rem; cursor: pointer; }
+.sc-seg button + button { border-left: 1px solid var(--border); }
+.sc-seg button.is-on { background: var(--hi); color: var(--text); font-weight: 650; }
