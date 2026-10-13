@@ -602,7 +602,8 @@
     var id = Object.keys(done).filter(function (i) { return Date.parse(i) > fin; }).sort().pop();
     return id ? londonDay(id) : run.complete ? gh.checked : gh.previous_checked;
   }
-  var WHY = { notfound: 'Screwfix page not found', blocked: 'Blocked or timed out', unclear: 'No clear price on the page' };
+  var WHY = { notfound: 'Screwfix page not found', blocked: 'Blocked or timed out', unclear: 'No clear price on the page',
+              unconfirmed: "New price couldn't be confirmed" };
   function whyNot(r) {
     if (r && r.status === 'notfound') return WHY.notfound;
     if (r && (r.status === 'found' || r.status === 'partial')) return WHY.unclear;
@@ -756,9 +757,13 @@
     progress();
     SL.lookup(code).then(function (r) {
       if (phone !== me) return;                           // stopped while this one was being read
-      var price = r && (r.status === 'found' || r.status === 'partial') && !r.unsure ? pounds(r.price) : null;
+      var price = r && (r.status === 'found' || r.status === 'partial') && !r.unsure ? pounds(r.price) : null, ref = refFor(code);
+      // a price read only off the page's text (some relays send no product data) can confirm an unchanged price
+      // but never make a change: it could be another size or product on the page
+      var unconfirmed = price != null && !(r.ld && r.ldSure) && ref != null && Math.abs(ref - price) > 0.001;
+      if (unconfirmed) price = null;
       if (price != null) {
-        var before = everything.products[code], ref = refFor(code);
+        var before = everything.products[code];
         if (ref != null && Math.abs(ref - price) > 0.001) { me.moved++; me.changes.push(code + ' ' + money(ref) + ' to ' + money(price)); }
         var was = pounds(r.was), reading = { price: price, name: r.name || (before && before.name) || null, was: was != null && was > price ? was : null, at: new Date().toISOString(), base: ref, run: me.id };
         if (live && live.id === me.id) delete live.failed[code];
@@ -774,7 +779,7 @@
         me.streak = 0;
       } else {
         // a failed read is never a price change: the line keeps its last price
-        me.failed.push({ c: code, why: whyNot(r), pick: 'retry' });
+        me.failed.push({ c: code, why: unconfirmed ? WHY.unconfirmed : whyNot(r), pick: 'retry' });
         if (live && live.id === me.id) live.failed[code] = 1;
         me.streak++;
       }
