@@ -1,0 +1,73 @@
+# Daily Screwfix price check for the Toolbox "A25 Behind counter trial" page.
+#
+# Every night: checks each code on the trial's ticket list against screwfix.com, one at a time with
+# a gap between requests, and saves the results to tools/counter-trial/data/prices.json. The later
+# runs only finish off lines the first run couldn't check, and do nothing once the day is done.
+# Changing the ticket list (tools/counter-trial/data/plan.json) checks any new codes.
+#
+# To run it by hand: Actions tab > Counter trial price check > Run workflow.
+#   auto  the normal daily run (does nothing if today is already done)
+#   full  check every line now
+#   test  check every line but save nothing
+name: Counter trial price check
+
+on:
+  schedule:
+    # GitHub reads these as UTC: 02:07 UTC is 03:07 in summer (BST) and 02:07 in winter (GMT)
+    - cron: '7 2 * * *'
+    - cron: '37 5 * * *'
+    - cron: '37 9 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/counter-trial/data/plan.json'
+      - 'tools/price-tickets/lookup.js'
+      - '.github/counter-trial/**'
+      - '.github/workflows/counter-trial.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'auto = the normal daily run, full = check every line now, test = check every line but save nothing'
+        type: choice
+        default: auto
+        options: [auto, full, test]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: counter-trial
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install the page reader
+        working-directory: .github/counter-trial
+        run: npm ci --no-audit --no-fund
+
+      - name: Check prices on screwfix.com
+        timeout-minutes: 45
+        env:
+          MODE: ${{ inputs.mode || 'auto' }}
+          GAP_MS: '5000'
+        run: node .github/counter-trial/check.mjs
+
+      - name: Save the results
+        if: always()
+        run: |
+          git add tools/counter-trial/data/prices.json
+          if git diff --cached --quiet; then echo "Nothing new to save"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          if [ -f "$RUNNER_TEMP/counter-commit.txt" ]; then git commit -q -F "$RUNNER_TEMP/counter-commit.txt"; else git commit -q -m "Counter trial results (run stopped early)"; fi
+          for i in 1 2 3; do git push -q && exit 0; sleep 5; git pull -q --rebase; done
+          exit 1

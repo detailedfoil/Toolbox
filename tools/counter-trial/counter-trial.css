@@ -1,0 +1,36 @@
+/* A25 Behind counter trial. Builds on shelf-check.css (loaded first) and the Toolbox tokens. */
+
+.ct { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+
+.ct-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; }
+.ct-head .sc-hint { margin: 0 2px; flex: 1; min-width: 0; }
+.ct-copy { flex: none; min-height: 40px; padding: 0 12px; font-size: .88rem; }
+
+/* a ticket to update: tick | code + name + when | prices */
+.ct-row { grid-template-columns: 30px minmax(0, 1fr) auto; transition: opacity .25s, transform .25s; }
+.ct-row.is-leaving { opacity: 0; transform: translateX(24px); }
+.ct-when { display: block; color: var(--muted); font-size: .8rem; margin-top: 3px; }
+.ct-when b { color: var(--text); font-weight: 650; }
+.ct-off { display: block; color: var(--muted); font-size: .75rem; margin-top: 2px; }
+
+/* all tickets: ticket price and online price side by side */
+.ct-pair { display: grid; grid-template-columns: auto auto; gap: 0 12px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ct-pair small { color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.ct-pair span { font-weight: 700; font-size: .98rem; }
+.ct-pair .is-muted { color: var(--muted); font-weight: 600; }
+
+/* ticked off recently */
+.ct-done { margin-top: 14px; }
+.ct-done > summary { display: flex; align-items: center; gap: 10px; list-style: none; cursor: pointer; padding: 12px 14px; border-radius: 14px;
+  color: var(--muted); font-size: .9rem; font-weight: 650; border: 1px dashed var(--border); }
+.ct-done > summary::-webkit-details-marker { display: none; }
+.ct-done > summary span { flex: 1; }
+.ct-done[open] > summary { margin-bottom: 8px; }
+.ct-done[open] .sc-chev { transform: rotate(180deg); }
+.ct-done .sc-row { opacity: .75; }
+.ct-undo { min-height: 34px; padding: 0 12px; font-size: .82rem; border-radius: 10px; }
+
+/* toast with an undo button */
+.ct-toast { display: flex; align-items: center; gap: 12px; bottom: calc(24px + env(safe-area-inset-bottom)); }
+.ct-toast.show { pointer-events: auto; }
+.ct-toast button { flex: none; border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 750; cursor: pointer; padding: 4px 2px; }

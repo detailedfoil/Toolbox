@@ -4,7 +4,9 @@ const count = document.getElementById("count");
 
 function render(filter = "") {
   const q = filter.trim().toLowerCase();
-  const shown = TOOLS.filter(t => (t.name + " " + t.desc + " " + t.category).toLowerCase().includes(q));
+  let me = "";
+  try { me = (localStorage.getItem("toolbox.signedIn.area20") || "").toUpperCase(); } catch (e) {}
+  const shown = TOOLS.filter(t => !t.only || t.only.includes(me)).filter(t => (t.name + " " + t.desc + " " + t.category).toLowerCase().includes(q));
   count.textContent = shown.length + (shown.length === 1 ? " tool" : " tools");
   if (!shown.length) { grid.innerHTML = '<p class="empty">No tools found</p>'; return; }
   const groups = {};
@@ -23,6 +25,8 @@ function render(filter = "") {
 }
 search.addEventListener("input", e => render(e.target.value));
 render();
+// tiles for one store only appear once that store has signed in
+window.addEventListener("toolbox:login", () => render(search.value));
 
 /* Tiles that link to other sites open in a new tab, so count those opens in the stats as tool/<name>. */
 grid.addEventListener("click", e => {

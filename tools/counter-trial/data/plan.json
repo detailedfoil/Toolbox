@@ -1,0 +1,420 @@
+{
+ "name": "A25 Behind counter trial",
+ "set": "2026-10-13",
+ "lines": [
+  {
+   "code": "455HH",
+   "name": "Masterplug IP54 Weatherproof Outdoor Box Kit",
+   "shelf": 26.99,
+   "sheet": 1
+  },
+  {
+   "code": "67928",
+   "name": "British General IP66 13A 2-Gang SP Weatherproof Outdoor Switched Socket",
+   "shelf": 9.99,
+   "sheet": 1
+  },
+  {
+   "code": "950CH",
+   "name": "British General IP66 13A 2-Gang SP Weatherproof Outdoor Switched Socket",
+   "shelf": 14.99,
+   "sheet": 1
+  },
+  {
+   "code": "44241",
+   "name": "Masterplug TCM24-XD Mechanical Plug-In & Plug-Through Compact Timer",
+   "shelf": 4.99,
+   "sheet": 1
+  },
+  {
+   "code": "636LF",
+   "name": "1000 LED Indoor & Outdoor Very Warm White String Christmas Lights 54.95m",
+   "shelf": 35.99,
+   "sheet": 1
+  },
+  {
+   "code": "614LF",
+   "name": "750 LED Indoor & Outdoor Very Warm White String Christmas Lights",
+   "shelf": 27.99,
+   "sheet": 1
+  },
+  {
+   "code": "939LF",
+   "name": "500 LED Indoor & Outdoor Very Warm White String Christmas Lights",
+   "shelf": 19.99,
+   "sheet": 2
+  },
+  {
+   "code": "355LF",
+   "name": "350 LED Indoor & Outdoor Very Warm White String Christmas Lights",
+   "shelf": 14.99,
+   "sheet": 2
+  },
+  {
+   "code": "236PP",
+   "name": "4lite Festoon 10m Outdoor LED IP44 Lighting 20W 165lm",
+   "shelf": 39.99,
+   "sheet": 2
+  },
+  {
+   "code": "581RG",
+   "name": "Luceco Rechargeable LED Clamp Work Light w/ Power-Bank 1000lm",
+   "shelf": 26.98,
+   "sheet": 2
+  },
+  {
+   "code": "339PG",
+   "name": "Erbauer Rechargeable LED Work Light & USB with Power Bank 2000lm",
+   "shelf": 39.0,
+   "sheet": 2
+  },
+  {
+   "code": "847CX",
+   "name": "Essentials APW1021-N LED Work Light 10W 1000lm 220-240V",
+   "shelf": 11.99,
+   "sheet": 2
+  },
+  {
+   "code": "106YN",
+   "name": "British General IP54 Weatherproof Outdoor Smart Box Kit",
+   "shelf": 24.99,
+   "sheet": 3
+  },
+  {
+   "code": "94827",
+   "name": "Essentials Coach Outdoor Hanging Lantern Wall Light Black",
+   "shelf": 12.0,
+   "sheet": 3
+  },
+  {
+   "code": "433PG",
+   "name": "LAP Weyburn Outdoor LED Floodlight With PIR Sensor Black 10W 1000lm",
+   "shelf": 8.48,
+   "sheet": 3
+  },
+  {
+   "code": "404RR",
+   "name": "4lite Marinus Outdoor IP44 Up/Down Wall Light With PIR Sensor Anthracite",
+   "shelf": 36.99,
+   "sheet": 3
+  },
+  {
+   "code": "335PG",
+   "name": "LAP Weyburn Outdoor LED Floodlight With PIR Sensor Black 20W 2000lm",
+   "shelf": 10.18,
+   "sheet": 3
+  },
+  {
+   "code": "802EN",
+   "name": "LAP Twiny Outdoor LED Solar-Powered Floodlight With PIR Sensor Black 800lm",
+   "shelf": 29.99,
+   "sheet": 3
+  },
+  {
+   "code": "1402X",
+   "name": "Essentials GD120 White/Black Backpack Pressure Sprayer 12Ltr",
+   "shelf": 22.49,
+   "sheet": 4
+  },
+  {
+   "code": "7490X",
+   "name": "Essentials SY5002 White/Black Pressure Sprayer 5Ltr",
+   "shelf": 11.99,
+   "sheet": 4
+  },
+  {
+   "code": "132KH",
+   "name": "Westland Gro-Sure Multipurpose Lawn Seed 120m² 3.6kg",
+   "shelf": 31.99,
+   "sheet": 4
+  },
+  {
+   "code": "842CF",
+   "name": "Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr",
+   "shelf": 31.99,
+   "sheet": 4
+  },
+  {
+   "code": "10171",
+   "name": "Essentials Pop-Up Garden Bag 690 x 560mm 170Ltr",
+   "shelf": 12.99,
+   "sheet": 4
+  },
+  {
+   "code": "813AW",
+   "name": "Jeyes Classic Fluid Outdoor Disinfectant 5Ltr",
+   "shelf": 49.99,
+   "sheet": 4
+  },
+  {
+   "code": "66962",
+   "name": "Sika 5Ltr Clear Wood Treatment",
+   "shelf": 32.24,
+   "sheet": 5
+  },
+  {
+   "code": "47649",
+   "name": "Ronseal 5Ltr Clear Decking Cleaner",
+   "shelf": 13.49,
+   "sheet": 5
+  },
+  {
+   "code": "173VE",
+   "name": "Scrubb Brick & Patio Cleaner 5Ltr",
+   "shelf": 18.99,
+   "sheet": 5
+  },
+  {
+   "code": "606VE",
+   "name": "Scrubb Water Seal Moisture Repellent Sealer For Brickwork & Masonry 5Ltr",
+   "shelf": 22.49,
+   "sheet": 5
+  },
+  {
+   "code": "909PT",
+   "name": "DEWALT DCMBL562N-XJ 18V Li-Ion XR Brushless Cordless Axial Blower - Bare",
+   "shelf": 129.98,
+   "sheet": 5
+  },
+  {
+   "code": "404FG",
+   "name": "Mac Allister MBV2800 2800W 230-240V Corded Blower Vac",
+   "shelf": 39.99,
+   "sheet": 5
+  },
+  {
+   "code": "1391K",
+   "name": "DEWALT DCV100-XJ 18V Li-Ion XR Cordless Compact Blower - Bare",
+   "shelf": 79.99,
+   "sheet": 6
+  },
+  {
+   "code": "6781X",
+   "name": "Harris Trade 9\" Big Box Roller & Brush Set 19 Pieces",
+   "shelf": 34.99,
+   "sheet": 6
+  },
+  {
+   "code": "142FM",
+   "name": "Fortress Trade 9\" Big Box Set 20 Pieces",
+   "shelf": 24.99,
+   "sheet": 6
+  },
+  {
+   "code": "966FM",
+   "name": "Fortress Trade Paint Scuttle 15Ltr",
+   "shelf": 6.19,
+   "sheet": 6
+  },
+  {
+   "code": "843FM",
+   "name": "9\" Roller Set 7 Pieces",
+   "shelf": 12.99,
+   "sheet": 6
+  },
+  {
+   "code": "496FM",
+   "name": "Flat Paint Brush Set 10 Pieces",
+   "shelf": 9.99,
+   "sheet": 6
+  },
+  {
+   "code": "591EH",
+   "name": "Titan TTB1357STM 2000W Electric Wallpaper Stripper 220-240V",
+   "shelf": 34.99,
+   "sheet": 7
+  },
+  {
+   "code": "282FM",
+   "name": "Wallpaper Hanging Kit 6 Piece Set",
+   "shelf": 15.29,
+   "sheet": 7
+  },
+  {
+   "code": "990GT",
+   "name": "No Nonsense Extra Strong Ready-Mixed Wallpaper Paste 5 Roll Pack",
+   "shelf": 10.99,
+   "sheet": 7
+  },
+  {
+   "code": "7291V",
+   "name": "Leyland Retail 10Ltr Brilliant White Matt Emulsion Paint",
+   "shelf": 15.99,
+   "sheet": 7
+  },
+  {
+   "code": "1013V",
+   "name": "Dulux 10Ltr Pure Brilliant White Matt Emulsion Paint",
+   "shelf": 31.99,
+   "sheet": 7
+  },
+  {
+   "code": "985GE",
+   "name": "LickPro 10Ltr Pure Brilliant White Vinyl Matt Emulsion Paint",
+   "shelf": 31.99,
+   "sheet": 7
+  },
+  {
+   "code": "804PP",
+   "name": "Erbauer EMT300-QC 300W Electric Multi-Tool Kit 230-240V",
+   "shelf": 79.99,
+   "sheet": 8
+  },
+  {
+   "code": "107AF",
+   "name": "Erbauer ECCD18-Li 18V 1 x 2.0Ah Li-Ion EXT Brushless Cordless Combi Drill",
+   "shelf": 79.99,
+   "sheet": 8
+  },
+  {
+   "code": "318FX",
+   "name": "Erbauer EPR710 710W 1/4\" Electric Palm Router 220-240V",
+   "shelf": 59.99,
+   "sheet": 8
+  },
+  {
+   "code": "920AY",
+   "name": "Titan Multi-Material Multi-Tool Accessory Kit 116 Pieces",
+   "shelf": 24.99,
+   "sheet": 8
+  },
+  {
+   "code": "806CA",
+   "name": "Erbauer Multi-Material Drill & Screwdriver Bit Set 69 Pieces",
+   "shelf": 29.99,
+   "sheet": 8
+  },
+  {
+   "code": "480PG",
+   "name": "Erbauer Metal Power Tool Accessories Set 120 Pieces",
+   "shelf": 22.99,
+   "sheet": 8
+  },
+  {
+   "code": "509PT",
+   "name": "Titan 1/4\" Shank Router Bits 13 Piece Set",
+   "shelf": 26.99,
+   "sheet": 9
+  },
+  {
+   "code": "487EH",
+   "name": "Titan TTB1345SDM 6.6kg Electric SDS Max Hammer Drill 220-240V",
+   "shelf": 109.99,
+   "sheet": 9
+  },
+  {
+   "code": "874EH",
+   "name": "Titan TTB1325SDR 160W Electric Detail Sander 220-240V",
+   "shelf": 19.97,
+   "sheet": 9
+  },
+  {
+   "code": "135AN",
+   "name": "Titan TTB1471JSW 600W Electric Jigsaw 240V",
+   "shelf": 23.99,
+   "sheet": 9
+  },
+  {
+   "code": "912KJ",
+   "name": "Titan TTB773HTG 2000W Electric Heat Gun 220-240V",
+   "shelf": 19.97,
+   "sheet": 9
+  },
+  {
+   "code": "226EY",
+   "name": "Titan TTB1233DRH 600W Electric Percussion Drill 220-240V",
+   "shelf": 24.99,
+   "sheet": 9
+  },
+  {
+   "code": "688EH",
+   "name": "Titan TTB1323MLT 300W Electric Multi-Tool 220-240V",
+   "shelf": 39.99,
+   "sheet": 10
+  },
+  {
+   "code": "520KR",
+   "name": "Evolution R230DCT 230mm Electric Disc Cutter 220-240V",
+   "shelf": 129.99,
+   "sheet": 10
+  },
+  {
+   "code": "266FX",
+   "name": "Evolution R165CCSL 1200W 165mm Electric Multi-Material Circular Saw 220-240V",
+   "shelf": 49.99,
+   "sheet": 10
+  },
+  {
+   "code": "3691R",
+   "name": "LAP Bronx Outdoor Up & Down Wall Light With PIR Sensor Black",
+   "shelf": 20.99,
+   "sheet": 10
+  },
+  {
+   "code": "892PG",
+   "name": "LAP Weyburn Outdoor LED Floodlight With PIR Sensor Black 30W 3000lm",
+   "shelf": 12.68,
+   "sheet": 10
+  },
+  {
+   "code": "287LF",
+   "name": "1000 LED Indoor & Outdoor Very Warm White Compact String Christmas Lights",
+   "shelf": 29.99,
+   "sheet": 10
+  },
+  {
+   "code": "178KT",
+   "name": "Makita DUB186Z 18V Li-Ion LXT Cordless Blower - Bare",
+   "shelf": 84.99,
+   "sheet": 11
+  },
+  {
+   "code": "255VE",
+   "name": "Scrubb Driveway, Patio, Concrete & Masonry Cleaner 5Ltr",
+   "shelf": 16.99,
+   "sheet": 11
+  },
+  {
+   "code": "294YU",
+   "name": "Resolva Lawn Extra Weedkiller 150m² 3Ltr",
+   "shelf": 19.09,
+   "sheet": 11
+  },
+  {
+   "code": "121EH",
+   "name": "Titan TTB1359STM 2200W Electric Wallpaper Stripper 220-240V",
+   "shelf": 39.99,
+   "sheet": 11
+  },
+  {
+   "code": "812FM",
+   "name": "Fortress Trade Flat Paint Brush Set 5 Pieces",
+   "shelf": 11.99,
+   "sheet": 11
+  },
+  {
+   "code": "521FM",
+   "name": "Fortress Trade 12\" Pro Big Roller Set 17 Pieces",
+   "shelf": 25.99,
+   "sheet": 11
+  },
+  {
+   "code": "843PG",
+   "name": "Titan TTB949MLT 130W Electric Multi-Tool & Accessories 230-240V 214 Piece Set",
+   "shelf": 28.99,
+   "sheet": 12
+  },
+  {
+   "code": "1480V",
+   "name": "Erbauer 1/4\" Hex Shank Mixed Impact Screwdriver Bit Set 113 Pieces",
+   "shelf": 24.99,
+   "sheet": 12
+  },
+  {
+   "code": "6432V",
+   "name": "Erbauer Hex Shank Nut & Socket Driver Bit Set 12 Pieces",
+   "shelf": 20.99,
+   "sheet": 12
+  }
+ ]
+}

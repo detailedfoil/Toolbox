@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Toolbox">
+<title>A25 Behind counter trial</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../style.css?v=20261011a">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261011d">
+<link rel="stylesheet" href="counter-trial/counter-trial.css?v=20261013a">
+<script src="../auth-data.js?v=202610120756"></script>
+<script src="../auth.js?v=202610120755"></script>
+<script src="../analytics.js?v=20261011d"></script>
+</head>
+<body>
+<div class="wrap sc ct">
+  <a class="back" href="../index.html">&larr; Toolbox</a>
+  <h1>A25 Behind counter trial</h1>
+  <p class="sc-sub" id="sub">Behind counter tickets, checked against screwfix.com every night. A change stays here until you tick it off.</p>
+
+  <p class="sc-meta" id="meta">Loading the latest check</p>
+  <p class="sc-error" id="error" role="alert" hidden></p>
+  <div class="sc-alert" id="alert" role="status" hidden></div>
+
+  <div id="main" hidden>
+    <div class="sc-stats" id="stats"></div>
+
+    <div class="sc-tabs" role="tablist" aria-label="Views">
+      <button type="button" role="tab" id="tabbtn-todo" aria-controls="tab-todo" data-tab="todo" aria-selected="true" class="is-on">To update<span id="nTodo"></span></button>
+      <button type="button" role="tab" id="tabbtn-all" aria-controls="tab-all" data-tab="all" aria-selected="false">All tickets<span id="nAll"></span></button>
+    </div>
+
+    <section id="tab-todo" role="tabpanel" aria-labelledby="tabbtn-todo">
+      <div class="ct-head" id="todoHead">
+        <p class="sc-hint" id="todoHint"></p>
+        <button class="btn ct-copy" id="copy" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          Copy codes
+        </button>
+      </div>
+      <ul class="sc-list" id="todoList"></ul>
+      <div class="sc-empty" id="todoEmpty" hidden></div>
+
+      <details class="ct-done" id="doneBox" hidden>
+        <summary><span>Ticked off recently</span><svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <ul class="sc-list" id="doneList"></ul>
+      </details>
+    </section>
+
+    <section id="tab-all" role="tabpanel" aria-labelledby="tabbtn-all" hidden>
+      <input class="sc-search" id="search" type="search" placeholder="Find a code or product" autocomplete="off"
+             autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-label="Find a code or product">
+      <p class="sc-hint" id="searchHint" hidden></p>
+      <p class="sc-hint">Ticket price is what's printed on the shelf. Online is the latest screwfix.com price.</p>
+      <ul class="sc-list" id="allList"></ul>
+    </section>
+
+    <p class="sc-foot" id="foot"></p>
+  </div>
+</div>
+<div class="sc-toast ct-toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastUndo" hidden>Undo</button></div>
+
+<script src="counter-trial/app.js?v=20261013a"></script>
+</body>
+</html>
