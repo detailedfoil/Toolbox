@@ -1,8 +1,9 @@
 # Daily Screwfix price check for the Toolbox "A25 Behind counter trial" page.
 #
-# Every night: checks each code on the trial's ticket list against screwfix.com, one at a time with
-# a gap between requests, and saves the results to tools/counter-trial/data/prices.json. The later
-# runs only finish off lines the first run couldn't check, and do nothing once the day is done.
+# Every night: checks each code on the trial's ticket list against screwfix.com, one at a time and
+# very slowly (about one every 100 seconds, so roughly 2 hours), and saves the results to
+# tools/counter-trial/data/prices.json. The later runs only finish off lines the first run couldn't
+# check, and do nothing once the day is done.
 # Changing the ticket list (tools/counter-trial/data/plan.json) checks any new codes.
 #
 # To run it by hand: Actions tab > Counter trial price check > Run workflow.
@@ -42,7 +43,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 195
     steps:
       - uses: actions/checkout@v7
 
@@ -55,10 +56,10 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Check prices on screwfix.com
-        timeout-minutes: 45
+        timeout-minutes: 180
         env:
           MODE: ${{ inputs.mode || 'auto' }}
-          GAP_MS: '5000'
+          GAP_MS: '100000'      # one product every 100 s or so: about 2 hours for all 69
         run: node .github/counter-trial/check.mjs
 
       - name: Save the results

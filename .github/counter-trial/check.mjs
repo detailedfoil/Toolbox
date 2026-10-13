@@ -33,8 +33,8 @@ const { JSDOM } = require('jsdom');
 const ROOT = process.cwd();
 const PLAN_FILE = 'tools/counter-trial/data/plan.json';
 const PRICES_FILE = 'tools/counter-trial/data/prices.json';
-const GAP = Number(process.env.GAP_MS || 5000);
-const BUDGET_MS = Number(process.env.BUDGET_MIN || 40) * 60000;
+const GAP = Number(process.env.GAP_MS || 100000);
+const BUDGET_MS = Number(process.env.BUDGET_MIN || 165) * 60000;
 const MOVES_KEPT = 6;
 const started = Date.now();
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
@@ -244,7 +244,7 @@ function finishRun(stop) {
 const fails = {};
 let gap = GAP, last = 0, limited = 0, stop = null, done = 0, found = 0, missing = 0;
 async function polite() {
-  const wait = last + gap - Date.now();
+  const wait = last + gap * (0.8 + Math.random() * 0.4) - Date.now();   // a little uneven, like a person browsing
   if (wait > 0) await sleep(wait);
   last = Date.now();
 }
@@ -266,7 +266,7 @@ for (let pass = 1; pass <= 3 && queue.length && !stop; pass++) {
       limited++;
       if (limited >= 2) { stop = `Screwfix asked it to slow down (HTTP ${r.code})`; queue.push(...todo.slice(i)); log(`HTTP ${r.code} again: stopping, the rest are left for the next run.`); break; }
       const pause = Math.min(Math.max(r.retryAfter * 1000, 15 * 60000), 20 * 60000);
-      gap = Math.min(gap * 2, 20000);
+      gap = Math.min(gap * 2, 300000);
       log(`HTTP ${r.code} from Screwfix: pausing ${Math.round(pause / 60000)} min, then one every ${gap / 1000}s.`);
       await sleep(pause);
       i--;
@@ -282,6 +282,7 @@ for (let pass = 1; pass <= 3 && queue.length && !stop; pass++) {
     }
     const p = state.products[code];
     log(`[${String(done).padStart(2)}] ${code}  ${r.kind === 'found' ? '£' + r.price.toFixed(2) + (mv ? `  MOVED from £${p.moves[p.moves.length - 1].from.toFixed(2)}` : '') : r.kind === 'missing' ? 'not found (404)' : 'could not check: ' + r.why}`);
+    if (saving && done % 10 === 0) { finishRun('still running'); writePrices(state); }   // keep progress if the run gets cut short
   }
 }
 
