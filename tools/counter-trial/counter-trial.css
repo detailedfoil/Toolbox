@@ -35,17 +35,25 @@
 .ct-toast.show { pointer-events: auto; }
 .ct-toast button { flex: none; border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 750; cursor: pointer; padding: 4px 2px; }
 
-/* check now: status line and button */
-.ct-run { display: flex; align-items: center; gap: 12px; margin: -4px 0 14px; padding: 10px 10px 10px 14px; border-radius: 14px;
-  background: var(--card); border: 1px solid var(--border); }
-.ct-run-s { flex: 1; min-width: 0; color: var(--muted); font-size: .86rem; line-height: 1.35; }
+/* checking: status line, the two buttons, and progress while the phone checks */
+.ct-run { margin: -4px 0 14px; padding: 12px; border-radius: 16px; background: var(--card); border: 1px solid var(--border); }
+.ct-run-s { margin: 0 2px 10px; color: var(--muted); font-size: .86rem; line-height: 1.4; }
 .ct-run-s b { color: var(--text); font-weight: 650; }
-.ct-run-b { flex: none; min-height: 40px; padding: 0 14px; font-size: .9rem; }
+.ct-run-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ct-run-btns .btn { width: 100%; min-height: 44px; padding: 0 8px; font-size: .88rem; gap: 6px; white-space: normal; line-height: 1.15; text-align: center; }
 .ct-run.is-running { border-color: var(--hi-line); background: var(--hi); }
-.ct-run.is-running .ct-run-b svg { animation: ct-spin 1.4s linear infinite; }
+.ct-run.is-running #runNow svg { animation: ct-spin 1.4s linear infinite; }
 @keyframes ct-spin { to { transform: rotate(360deg); } }
 .ct-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 6px; vertical-align: 1px; animation: ct-pulse 1.6s ease-in-out infinite; }
 @keyframes ct-pulse { 50% { opacity: .3; } }
+.ct-fresh { display: block; width: 100%; margin: 6px 0 -4px; padding: 6px; background: none; border: 0; color: var(--muted); font: inherit; font-size: .82rem; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.ct-prog-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.ct-prog-top b { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.ct-stop { min-height: 36px; padding: 0 14px; font-size: .85rem; }
+.ct-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.ct-bar span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--accent); transition: width .3s; }
+.ct-prog-n { margin: 10px 2px 0; color: var(--muted); font-size: .84rem; line-height: 1.4; }
+.ct-prog-n b { color: var(--text); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 
 /* set-up sheet for the button */
 .ct-sheet .sc-sheet-card { max-height: 88vh; overflow-y: auto; }
@@ -56,5 +64,5 @@
 .ct-sheet .ct-err { color: #ff8080; font-size: .85rem; margin: -4px 0 10px; }
 .ct-sheet .ct-link { display: block; text-align: center; margin: 4px 0 0; color: var(--muted); font-size: .84rem; background: none; border: 0; width: 100%; padding: 8px; cursor: pointer; font-family: inherit; }
 .ct-sheet hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0 14px; }
-@media (prefers-reduced-motion: reduce) { .ct-run.is-running .ct-run-b svg, .ct-dot { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .ct-run.is-running #runNow svg, .ct-dot, .ct-bar span { animation: none; transition: none; } }
 .ct-sheet ol a { color: var(--accent); font-weight: 650; }

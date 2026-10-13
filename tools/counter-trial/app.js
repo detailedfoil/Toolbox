@@ -80,16 +80,31 @@
   /* ---------- shelf prices: printed price, unless a change has been ticked off on this device ---------- */
 
   function confirmed() { var v = load(SHELF_KEY, {}); return v && typeof v === 'object' ? v : {}; }
+
+  /* prices read on this phone (Check on this phone); a line uses whichever reading is newer, GitHub's or the phone's */
+  var PHONE_KEY = 'ct-phone-prices-v1', PHONE_LAST_KEY = 'ct-phone-last-v1', PHONE_RUN_KEY = 'ct-phone-run-v1';
+  function phonePrices() { var v = load(PHONE_KEY, {}); return v && typeof v === 'object' ? v : {}; }
+  function phoneLast() { var v = load(PHONE_LAST_KEY, null); return v && v.at ? v : null; }
+  function ghFinished() { var r = (src && src.prices && src.prices.run) || {}; var t = Date.parse(r.finished || ''); return isFinite(t) ? t : 0; }
+  function ghTime(p) {
+    if (!p || !p.on) return 0;
+    var r = src.prices.run || {};
+    if (p.on === r.date && r.finished) return Date.parse(r.finished);
+    return Date.parse(p.on + 'T06:00:00Z');
+  }
+
   function lines() {
-    var P = (src.prices && src.prices.products) || {}, mine = confirmed(), seen = {};
+    var P = (src.prices && src.prices.products) || {}, mine = confirmed(), ph = phonePrices(), seen = {};
     return src.plan.lines.filter(function (l) { if (seen[l.code]) return false; seen[l.code] = 1; return true; }).map(function (l, i) {
-      var p = P[l.code] || {}, c = mine[l.code];
+      var p = P[l.code] || {}, c = mine[l.code], q = ph[l.code];
       var shelf = c && c.price != null ? c.price : l.shelf;
-      var price = p.price != null ? p.price : null;
+      var phone = !!(q && q.price != null && Date.parse(q.at) > ghTime(p));
+      var price = phone ? q.price : p.price != null ? p.price : null;
+      var status = phone ? 'ok' : p.status || 'unchecked';
       return {
-        i: i, code: l.code, sheet: l.sheet, name: p.name || l.name, shelf: shelf, printed: l.shelf,
-        price: price, since: p.since || null, status: p.status || 'unchecked', was: p.was, moves: p.moves || [],
-        todo: price != null && p.status !== 'not_found' && !same(price, shelf)
+        i: i, code: l.code, sheet: l.sheet, name: (phone && q.name) || p.name || l.name, shelf: shelf, printed: l.shelf,
+        price: price, since: phone ? q.since : p.since || null, status: status, was: phone ? q.was : p.was, moves: phone ? [] : p.moves || [],
+        phone: phone, todo: price != null && status !== 'not_found' && !same(price, shelf)
       };
     });
   }
@@ -110,11 +125,18 @@
 
     $('error').hidden = true;
     var nw = function (s) { return '<span class="sc-nw">' + esc(s) + '</span>'; };
-    $('meta').innerHTML = pr.checked ? 'Last checked <b>' + nw(day(pr.checked)) + '</b>' + (run.finished ? ' at ' + nw(time(run.finished)) : '') + '.' : 'Not checked yet. The first check runs a few minutes after setup.';
+    var ph = phoneLast(), phoneNewer = !!ph && Date.parse(ph.at) > ghFinished();
+    $('meta').innerHTML = phoneNewer
+      ? 'Last checked <b>' + nw(day(londonDay(ph.at))) + '</b> at ' + nw(time(ph.at)) + ', on this phone.'
+      : pr.checked ? 'Last checked <b>' + nw(day(pr.checked)) + '</b>' + (run.finished ? ' at ' + nw(time(run.finished)) : '') + '.' : 'Not checked yet. The first check runs a few minutes after setup.';
 
     // anything to warn about
     var alerts = [], checkedOk = run.complete !== false;
-    if (pr.checked && pr.checked < now.date && now.hour >= 9) {
+    if (phoneNewer) {
+      var miss = ph.total - ph.done;
+      if (miss > 0) alerts.push('The check on this phone got ' + ph.done + ' of ' + ph.total + '. ' +
+        (miss === 1 ? 'The other one keeps its last price. Tap <b>Retry</b> to try it again.' : 'The other ' + miss + ' keep their last price. Tap <b>Retry</b> to try just those.'));
+    } else if (pr.checked && pr.checked < now.date && now.hour >= 9) {
       alerts.push("Today's check hasn't come in yet, so these prices are from " + esc(day(pr.checked)) + '. <a href="' + RUNS + '" target="_blank" rel="noopener">See the runs on GitHub</a>');
     } else if (pr.checked && !checkedOk) {
       var left = run.unchecked || 0;
@@ -126,12 +148,12 @@
     $('alert').innerHTML = alerts.length ? WARN + '<div>' + alerts.join('<br>') + '</div>' : '';
 
     var n = todo.length, up = todo.filter(function (l) { return l.price > l.shelf; }).length;
-    var done = L.filter(function (l) { return l.status === 'ok' || l.status === 'not_found'; }).length;
+    var done = phoneNewer ? ph.done : L.filter(function (l) { return l.status === 'ok' || l.status === 'not_found'; }).length;
     var nf = L.filter(function (l) { return l.status === 'not_found'; }).length;
     $('stats').innerHTML =
       '<div class="sc-stat' + (n ? ' is-hot' : '') + '"><span class="sc-stat-v">' + n + '</span><span class="sc-stat-k">to update' +
         (n ? '<span class="sc-split" title="' + up + ' up, ' + (n - up) + ' down"><span>' + ARROW_UP + up + '</span><span>' + ARROW_DOWN + (n - up) + '</span></span>' : '') + '</span></div>' +
-      '<div class="sc-stat"><span class="sc-stat-v">' + done + '<small>/' + L.length + '</small></span><span class="sc-stat-k">checked last run</span></div>' +
+      '<div class="sc-stat"><span class="sc-stat-v">' + done + '<small>/' + L.length + '</small></span><span class="sc-stat-k">checked last ' + (phoneNewer ? 'time' : 'run') + '</span></div>' +
       '<div class="sc-stat"><span class="sc-stat-v">' + nf + '</span><span class="sc-stat-k">not found online</span></div>';
     $('nTodo').textContent = ' ' + n;
     $('nAll').textContent = ' ' + L.length;
@@ -140,13 +162,22 @@
     renderDone();
     renderAll();
 
-    $('foot').innerHTML = 'Checks every ticket early every morning. Lines it can\'t check keep their last price and never show as a change. ' +
+    statusLine();
+    $('foot').innerHTML = 'Checks every ticket early every morning on GitHub, or whenever you tap Check on this phone. Lines it can\'t check keep their last price and never show as a change. ' +
       'Ticks are saved on this device. <a href="' + RUNS + '" target="_blank" rel="noopener">Runs on GitHub</a>' +
       (token() ? ' &middot; <a href="#" data-forget>Remove saved GitHub token</a>' : '');
     $('main').hidden = false;
     showTab(load(TAB_KEY, 'todo'));
   }
 
+  function londonDay(isoStamp) {
+    try {
+      var p = {};
+      new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' })
+        .formatToParts(new Date(isoStamp)).forEach(function (x) { p[x.type] = x.value; });
+      return p.year + '-' + p.month + '-' + p.day;
+    } catch (e) { return String(isoStamp).slice(0, 10); }
+  }
   function time(isoStamp) {
     try { return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(isoStamp)); } catch (e) { return ''; }
   }
@@ -338,17 +369,7 @@
     var was = running;
     lastRun = run;
     running = !!run && run.status !== 'completed';
-    var bar = $('runBar'), s = $('runStatus');
-    bar.classList.toggle('is-running', running);
-    $('runNow').disabled = running;
-    $('runLabel').textContent = running ? 'Checking' : 'Check now';
-    if (running) {
-      var start = new Date(run.run_started_at || run.created_at), done = new Date(start.getTime() + 125 * 60000);
-      s.innerHTML = '<span class="ct-dot"></span><b>Checking now</b>, started ' + esc(clock(start)) + '. ' +
-        (run.status === 'queued' ? 'Waiting to start.' : 'Should be done about ' + esc(clock(done)) + '.');
-    } else {
-      s.innerHTML = 'Checks every night at 3am. Run a fresh one any time.';
-    }
+    statusLine();
     clearTimeout(pollTimer);
     if (running) pollTimer = setTimeout(function () { if (!document.hidden) runStatus(); else pollTimer = 0; }, 60000);
     // a check just finished: pull in the new prices (GitHub's copy can lag a few minutes)
@@ -390,7 +411,7 @@
   $('foot').addEventListener('click', function (e) {
     if (!e.target.closest('[data-forget]')) return;
     e.preventDefault();
-    if (!window.confirm('Remove the GitHub token from this phone? Check now will open GitHub instead until you add one again.')) return;
+    if (!window.confirm('Remove the GitHub token from this phone? Check on GitHub will open GitHub instead until you add one again.')) return;
     try { localStorage.removeItem(TOKEN_KEY); } catch (x) { /* nothing saved */ }
     toast('Token removed from this phone');
     render();
@@ -400,11 +421,11 @@
     var wrap = document.createElement('div');
     wrap.className = 'sc-sheet ct-sheet';
     wrap.innerHTML = '<div class="sc-sheet-card" role="dialog" aria-modal="true" aria-labelledby="ctSheetH">' +
-      '<h2 id="ctSheetH">Check now</h2>' +
+      '<h2 id="ctSheetH">Check on GitHub</h2>' +
       '<p>Starts a full check of all ' + (L.length || 69) + ' tickets straight away. It runs on GitHub and takes about 2 hours.</p>' +
       '<a class="btn" href="' + RUNS + '" target="_blank" rel="noopener">Open on GitHub, then tap Run workflow</a>' +
       '<hr><h2>Make it one tap</h2>' +
-      '<p>Save a GitHub token on this phone once, and this button starts the check itself. It stays on this phone and can only run Toolbox checks.</p>' +
+      '<p>Save a GitHub token on this phone once, and the Check on GitHub button starts it itself. It stays on this phone and can only run Toolbox checks.</p>' +
       '<ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Make a new fine-grained token</a> on GitHub.</li>' +
       '<li>Expiration: the longest it allows. <b>Repository access</b>: Only select repositories, then <b>Toolbox</b>.</li>' +
       '<li><b>Permissions</b>: Actions, <b>Read and write</b>. Nothing else.</li>' +
@@ -431,6 +452,150 @@
       });
     });
   }
+
+  /* the line above the two buttons: what's going on right now */
+  function statusLine() {
+    var bar = $('runBar'), s = $('runStatus'), gh = running && lastRun;
+    bar.classList.toggle('is-running', !!gh);
+    $('runNow').disabled = !!gh;
+    $('runLabel').textContent = gh ? 'GitHub checking' : 'Check on GitHub';
+    if (gh) {
+      var start = new Date(lastRun.run_started_at || lastRun.created_at), done = new Date(start.getTime() + 125 * 60000);
+      s.innerHTML = '<span class="ct-dot"></span><b>GitHub is checking</b>, started ' + esc(clock(start)) + '. ' +
+        (lastRun.status === 'queued' ? 'Waiting to start.' : 'Should be done about ' + esc(clock(done)) + '.');
+    } else {
+      s.innerHTML = 'GitHub checks every night at 3am. <b>Check on this phone</b> takes a few minutes with this page open.';
+    }
+    var r = phone ? null : savedRun();
+    $('phoneLabel').textContent = !r ? 'Check on this phone' : r.retry ? 'Retry the ' + r.codes.length + ' missed' : 'Carry on (' + r.codes.length + ' left)';
+    $('phoneFresh').hidden = !r;
+    $('phoneFresh').textContent = r && r.retry ? 'Check all ' + (L.length || 69) + ' again instead' : 'Start again from the first ticket';
+  }
+
+  /* ---------- check on this phone: reads every ticket's price through the same relays as Price Tickets ----------
+   * Runs in this page, one ticket at a time, while the page stays open. The screen is kept awake if the phone
+   * allows it. If the phone locks or the page gets closed part way, the next tap carries on where it stopped. */
+
+  var SL = window.ScrewfixLookup, phone = null, wakeLock = null;
+  var PHONE_GAP = 1500;                                    // extra breather between tickets, on top of the relay spacing
+
+  function savedRun() {
+    var r = load(PHONE_RUN_KEY, null);
+    if (!r || !Array.isArray(r.codes) || !r.codes.length || Date.now() - Date.parse(r.started) > 12 * 3600000) return null;
+    return r;
+  }
+  function pounds(v) { if (v == null || v === '') return null; var n = Number(String(v).replace(/[£,\s]/g, '')); return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null; }
+
+  function keepAwake() {
+    if (!phone || !navigator.wakeLock || !navigator.wakeLock.request) return;
+    navigator.wakeLock.request('screen').then(function (l) { wakeLock = l; }, function () { wakeLock = null; });
+  }
+  function letSleep() { if (wakeLock) { try { wakeLock.release(); } catch (e) { /* already gone */ } } wakeLock = null; }
+
+  function progress() {
+    if (!phone) return;
+    var n = phone.total, d = phone.total - phone.queue.length, left = phone.queue.length;
+    $('progText').textContent = (phone.retry ? 'Retrying ' : 'Checking ') + Math.min(d + 1, n) + ' of ' + n;
+    $('progBar').style.width = Math.round(d / n * 100) + '%';
+    var mins = Math.max(1, Math.round(left * 4 / 60));
+    $('progNote').innerHTML = (phone.current ? '<b>' + esc(phone.current) + '</b> &middot; ' : '') + phone.got + ' found' +
+      (phone.fails ? ', ' + phone.fails + " couldn't be read" : '') + '. About ' + mins + ' min left. Keep this page open and the screen on.';
+  }
+
+  function startPhone(fresh) {
+    if (phone || !src) return;
+    if (!SL || !SL.lookup) { toast("The price reader didn't load. Refresh the page."); return; }
+    var r = fresh ? null : savedRun();
+    var codes = r ? r.codes : L.map(function (l) { return l.code; });
+    var run = r || { started: new Date().toISOString(), total: codes.length, got: 0, fails: 0, codes: codes };
+    phone = { queue: codes.slice(), total: run.total, got: run.got || 0, fails: run.fails || 0, failed: (r && r.failed) || [],
+              started: run.started, retry: !!(r && r.retry), streak: 0, current: '' };
+    saveRun();
+    $('runBtns').hidden = true;
+    $('runStatus').hidden = true;
+    $('prog').hidden = false;
+    keepAwake();
+    progress();
+    nextPhone();
+  }
+
+  function saveRun() {
+    store(PHONE_RUN_KEY, { started: phone.started, total: phone.total, got: phone.got, fails: phone.fails, failed: phone.failed,
+                           retry: phone.retry, codes: phone.queue });
+  }
+
+  function nextPhone() {
+    if (!phone) return;
+    if (!phone.queue.length) { finishPhone('done'); return; }
+    var me = phone, code = phone.queue[0];
+    phone.current = code;
+    progress();
+    SL.lookup(code).then(function (r) {
+      if (phone !== me) return;                           // stopped while this one was being read
+      var price = r && (r.status === 'found' || r.status === 'partial') && !r.unsure ? pounds(r.price) : null;
+      if (price != null) {
+        var ph = phonePrices(), was = pounds(r.was), before = L.filter(function (l) { return l.code === code; })[0];
+        var moved = before && before.price != null && !same(before.price, price);
+        ph[code] = { price: price, name: r.name || (before && before.name) || null, was: was != null && was > price ? was : null,
+                     at: new Date().toISOString(), since: moved || !before ? london().date : before.since || london().date };
+        store(PHONE_KEY, ph);
+        phone.got++;
+        phone.streak = 0;
+      } else {
+        phone.fails++;
+        phone.failed.push(code);
+        phone.streak++;
+      }
+    }, function () { if (phone === me) { phone.fails++; phone.failed.push(code); phone.streak++; } }).then(function () {
+      if (phone !== me) return;
+      phone.queue.shift();
+      if (phone.streak >= 6) {
+        // nothing's getting through: put those six back so Carry on tries them again
+        phone.queue = phone.failed.splice(-6, 6).concat(phone.queue);
+        phone.fails -= 6;
+        saveRun();
+        finishPhone('blocked');
+        return;
+      }
+      saveRun();
+      if (src) render();
+      progress();
+      setTimeout(nextPhone, PHONE_GAP);
+    });
+  }
+
+  function finishPhone(why) {
+    var p = phone;
+    phone = null;
+    letSleep();
+    $('prog').hidden = true;
+    $('runBtns').hidden = false;
+    $('runStatus').hidden = false;
+    if (why === 'done') {
+      var last = phoneLast(), total = L.length || p.total;
+      var done = p.retry && last ? Math.min(total, last.done + p.got) : p.got;
+      store(PHONE_LAST_KEY, { at: new Date().toISOString(), total: total, done: done, failed: p.failed });
+      // any it couldn't read: the button offers to retry just those
+      if (p.failed.length) store(PHONE_RUN_KEY, { started: new Date().toISOString(), total: p.failed.length, got: 0, fails: 0, failed: [], retry: true, codes: p.failed });
+      else { try { localStorage.removeItem(PHONE_RUN_KEY); } catch (e) { /* fine */ } }
+      p.summary = done + ' of ' + total;
+    }
+    if (src) render();
+    if (why === 'done') toast('Checked ' + p.summary + ' on this phone' + (todo.length ? ', ' + todo.length + ' to update' : ', all up to date'));
+    else if (why === 'stopped') toast('Stopped. Tap Carry on to finish the other ' + p.queue.length + '.');
+    else toast("Couldn't read 6 in a row, so it stopped. The relays may be busy or this wifi blocks them. Try again in a bit, or on mobile data.");
+  }
+
+  $('phoneRun').addEventListener('click', function () { startPhone(false); });
+  $('phoneFresh').addEventListener('click', function () {
+    try { localStorage.removeItem(PHONE_RUN_KEY); } catch (e) { /* fine */ }
+    startPhone(true);
+  });
+  $('phoneStop').addEventListener('click', function () { if (phone) finishPhone('stopped'); });
+  // the screen-awake lock drops when the page is hidden: take it again on the way back
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && phone) keepAwake(); });
+  // don't lose a check part way by accident
+  window.addEventListener('beforeunload', function (e) { if (phone) { e.preventDefault(); e.returnValue = ''; } });
 
   /* ---------- start ---------- */
 
