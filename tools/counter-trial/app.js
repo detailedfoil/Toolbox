@@ -1,5 +1,5 @@
 /* A25 Behind counter trial: the tickets whose screwfix.com price no longer matches the shelf.
- * The check runs on GitHub every night (.github/workflows/counter-trial.yml) and saves
+ * The GitHub check (.github/workflows/counter-trial.yml, by hand only for now) saves
  * counter-trial/data/prices.json; the ticket list, with the price printed on each, is
  * counter-trial/data/plan.json.
  *
@@ -143,7 +143,7 @@
       var miss = ph.total - ph.done;
       if (miss > 0) alerts.push('The check on this device got ' + ph.done + ' of ' + ph.total + '. ' +
         (miss === 1 ? 'The other one keeps its last price. Tap <b>Retry</b> to try it again, or type its price in under <b>Couldn\'t be read</b>.' : 'The other ' + miss + ' keep their last price. Tap <b>Retry</b> to try just those, or type the prices in under <b>Couldn\'t be read</b>.'));
-    } else if (pr.checked && pr.checked < now.date && now.hour >= 9) {
+    } else if (false) {                                    // nightly GitHub runs are off for now, so nothing is overdue
       alerts.push("Today's check hasn't come in yet, so these prices are from " + esc(day(pr.checked)) + '. <a href="' + RUNS + '" target="_blank" rel="noopener">See the runs on GitHub</a>');
     } else if (pr.checked && !checkedOk) {
       var left = run.unchecked || 0;
@@ -171,7 +171,7 @@
     renderAll();
 
     statusLine();
-    $('foot').innerHTML = 'Checks every ticket early every morning on GitHub, or whenever you tap Check on this device. Lines it can\'t check keep their last price and never show as a change. ' +
+    $('foot').innerHTML = 'Checks every ticket whenever you tap Check on this device or Check on GitHub. Lines it can\'t check keep their last price and never show as a change. ' +
       'Ticks are saved on this device. <a href="' + RUNS + '" target="_blank" rel="noopener">Runs on GitHub</a>' +
       (token() ? ' &middot; <a href="#" data-forget>Remove saved GitHub token</a>' : '');
     $('main').hidden = false;
@@ -219,7 +219,7 @@
     $('todoEmpty').hidden = !!n;
     $('todoEmpty').innerHTML = src.prices.checked
       ? '<strong>All tickets up to date</strong>Every price behind the counter matches screwfix.com.'
-      : '<strong>Waiting for the first check</strong>It runs a few minutes after setup, then early every morning.';
+      : '<strong>Waiting for the first check</strong>Tap Check on this device to read every ticket.';
     $('todoHint').innerHTML = n ? 'Oldest first. Swap ' + (n === 1 ? 'this ticket' : 'these ' + n + ' tickets') + ', then tick ' + (n === 1 ? 'it' : 'each one') + ' off.' : '';
   }
 
@@ -525,7 +525,7 @@
       s.innerHTML = '<span class="ct-dot"></span><b>GitHub is checking</b>, started ' + esc(clock(start)) + '. ' +
         (lastRun.status === 'queued' ? 'Waiting to start.' : 'Should be done about ' + esc(clock(done)) + '.');
     } else {
-      s.innerHTML = 'GitHub checks every night at 3am. <b>Check on this device</b> takes a few minutes with this page open.';
+      s.innerHTML = '<b>Check on this device</b> takes a few minutes with this page open. The nightly GitHub check is off for now.';
     }
     var r = phone ? null : savedRun();
     $('phoneLabel').textContent = !r ? 'Check on this device' : r.retry ? 'Retry the ' + r.codes.length + ' missed' : 'Carry on (' + r.codes.length + ' left)';

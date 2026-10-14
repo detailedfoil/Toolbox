@@ -1,6 +1,6 @@
 # Daily Screwfix price check for the Toolbox "A25 Behind counter trial" page.
 #
-# Every night: checks each code on the trial's ticket list against screwfix.com, one at a time and
+# When started by hand (nightly runs are off for now): checks each code on the trial's ticket list against screwfix.com, one at a time and
 # very slowly (about one every 100 seconds, so roughly 2 hours), and saves the results to
 # tools/counter-trial/data/prices.json. The later runs only finish off lines the first run couldn't
 # check, and do nothing once the day is done.
@@ -13,18 +13,13 @@
 name: Counter trial price check
 
 on:
-  schedule:
-    # GitHub reads these as UTC: 02:07 UTC is 03:07 in summer (BST) and 02:07 in winter (GMT)
-    - cron: '7 2 * * *'
-    - cron: '37 5 * * *'
-    - cron: '37 9 * * *'
-  push:
-    branches: [main]
-    paths:
-      - 'tools/counter-trial/data/plan.json'
-      - 'tools/price-tickets/lookup.js'
-      - '.github/counter-trial/**'
-      - '.github/workflows/counter-trial.yml'
+  # Automatic runs are switched off for now (detailedfoil, 14 Oct 2026): Screwfix kept blocking GitHub
+  # part way through. It only runs when started by hand: the page's Check on GitHub button, or
+  # Actions > Counter trial price check > Run workflow. To switch the nightly run back on, restore:
+  #   schedule:
+  #     - cron: '7 2 * * *'
+  #     - cron: '37 5 * * *'
+  #     - cron: '37 9 * * *'
   workflow_dispatch:
     inputs:
       mode:
