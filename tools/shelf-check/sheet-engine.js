@@ -767,7 +767,7 @@
     var avail1 = TOP - HEAD - introH - BOTTOM, avail = TOP - HEAD - BOTTOM;
     var segs = [];
     // displays that aren't shelving bays are listed at the end instead of drawn (detailedfoil, 15 Oct)
-    var LISTED = /^(dump bins|dump stacks|till points|behind the counter|weather reactive|contingencies)/i;
+    var LISTED = /^(dump stacks|till points|behind the counter|weather reactive|contingencies)/i;
     bays.forEach(function (b, bi) {
       if (LISTED.test(b.name)) return;
       var mine = spots.filter(function (s) { return s.bi === bi; });
