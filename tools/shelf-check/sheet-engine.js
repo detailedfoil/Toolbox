@@ -984,6 +984,11 @@
       var base = chg ? bot + h - 3.3 * MM : bot + h / 2 - 3;
       lg.text('CB', 8.5, 0, x + (chg ? 5 : 2.5), base, win(s.code));
       var nx = x + (chg ? 5 : 2.5) + width('CB', 8.5, s.code) + 4;
+      if (s.pos) {                                           // the brief's slot label, e.g. 1A_2
+        var ps = win(s.pos);
+        lg.text('HB', 6, 0.35, nx, base + 0.5, ps);
+        nx += width('HB', 6, ps) + 4;
+      }
       if (isNew[s.code]) {
         var nw = width('HB', 5.5, 'NEW') + 3;
         lg.rect(nx, base - 1.2, nw, 6.5, BLACK);
