@@ -1,0 +1,29 @@
+# One-off test on the diag-ct branch only (deleted afterwards): why some counter trial codes can't be read.
+name: Counter trial diagnosis
+on:
+  push:
+    branches: [diag-ct]
+    paths: ['.github/workflows/diag-ct.yml', '.github/counter-trial/diag.mjs']
+permissions:
+  contents: write
+jobs:
+  diag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install the page reader
+        working-directory: .github/counter-trial
+        run: npm ci --no-audit --no-fund
+      - name: Look at the pages
+        run: node .github/counter-trial/diag.mjs
+      - name: Save
+        if: always()
+        run: |
+          git add -f diag/out.json || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "diag output [skip ci]" && git push -q
