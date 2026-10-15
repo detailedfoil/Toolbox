@@ -244,7 +244,7 @@
     return {
       checked: prices.checked, previous_checked: prices.previous_checked, run: prices.run || {},
       complete: codes.every(isDone),
-      plan: { name: plan.name, short: plan.short, store: plan.store, changes: plan.changes }, bays: plan.bays, products: products,
+      plan: { name: plan.name, short: plan.short, store: plan.store, brief: plan.brief, changes: plan.changes }, bays: plan.bays, products: products,
       codes: codes, spots: spots, changed: changed,
       swaps: spots.filter(function (s) { return changed.indexOf(s.code) >= 0; }),
       up: changed.filter(function (c) { return products[c].price > products[c].prev; }).length,

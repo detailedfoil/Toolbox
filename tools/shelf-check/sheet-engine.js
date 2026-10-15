@@ -742,26 +742,8 @@
     var W = LW - 2 * LM, TOP = LH - LM, BOTTOM = LM + 5 * MM, HEAD = 8 * MM;
 
     // page 1 summary: counts, key, and what the newest brief changed
-    var intro = [];
-    intro.push(new Para(S('H', 9, 11.5), [
-      { t: String(changed.length), b: 1 }, { t: ' price change' + (changed.length === 1 ? '' : 's') + ' (' }, { t: String(up), b: 1 }, { t: ' up, ' }, { t: String(changed.length - up), b: 1 }, { t: ' down)  |  ' },
-      { t: String(notFound), b: 1 }, { t: ' not found online  |  ' }, { t: String(notChecked), b: 1 }, { t: ' not checked yet  |  ' + (codes.length - notChecked) + ' of ' + codes.length + ' lines checked' +
-        (data.previous_checked ? ', compared with ' + nice(data.previous_checked) : '') }]));
-    intro.push(new Para(S('H', 8, 10, GREY), 'Each bay as on the brief: top shelf first, left to right. Grey slot with a heavy border and an arrow = new price, swap the ticket (old price struck through underneath). NEW = new line from the latest brief. * = not rechecked this week.'));
-    if (pc) {
-      var runs = [{ t: 'Plan changes, brief ' + (pc.brief || '') + ':  ', b: 1 }];
-      if (pc.added.length) {
-        runs.push({ t: 'Added ', b: 1 });
-        pc.added.forEach(function (a, i) { runs.push({ t: (i ? ';  ' : '') }, { t: a.code, b: 1 }, { t: ' ' + a.where }); });
-      }
-      if (pc.removed.length) {
-        runs.push({ t: (pc.added.length ? '.   ' : '') }, { t: 'Removed ', b: 1 });
-        pc.removed.forEach(function (r, i) { runs.push({ t: (i ? ';  ' : '') }, { t: r.code, b: 1 }, { t: ' (was ' + r.where + ')' }); });
-      }
-      runs.push({ t: '.' });
-      intro.push(new Para(S('H', 8, 10), runs));
-    }
-    var introH = intro.reduce(function (t, p) { return t + p.wrap(W) + 1.5 * MM; }, 0) + 1 * MM;
+    var intro = [];                                     // no summary text on the full list (detailedfoil, 16 Oct)
+    var introH = 0;
 
     // each bay -> segments no taller than a page
     var avail1 = TOP - HEAD - introH - BOTTOM, avail = TOP - HEAD - BOTTOM;
@@ -822,9 +804,8 @@
       g.w = LW; g.h = LH;
       g.text('HB', 15, 0, LM, TOP - 13, win('Shelf Price Check'));
       var hx = LM + width('HB', 15, 'Shelf Price Check') + 8;
-      g.text('H', 9.5, GREY, hx, TOP - 13, win(planName + '  |  screwfix.com prices inc VAT, ' + when));
+      g.text('H', 9.5, GREY, hx, TOP - 13, win((plan.brief || planName) + '  |  Prices correct as of ' + (checked ? nice(checked) : nice(ukToday()))));
       g.line(LM, TOP - HEAD + 3, LM + W, TOP - HEAD + 3, 1.2, BLACK);
-      g.text('H', 8, GREY, LM, LM, win(store + '  |  ' + shortName + ' shelf price check  |  ' + when));
       return g;
     }
     var out = pages.map(function (pgObj, pi) {
@@ -833,9 +814,8 @@
       // header and footer
       g.text('HB', 15, 0, LM, TOP - 13, win('Shelf Price Check'));
       var hx = LM + width('HB', 15, 'Shelf Price Check') + 8;
-      g.text('H', 9.5, GREY, hx, TOP - 13, win(planName + '  |  screwfix.com prices inc VAT, ' + when));
+      g.text('H', 9.5, GREY, hx, TOP - 13, win((plan.brief || planName) + '  |  Prices correct as of ' + (checked ? nice(checked) : nice(ukToday()))));
       g.line(LM, TOP - HEAD + 3, LM + W, TOP - HEAD + 3, 1.2, BLACK);
-      g.text('H', 8, GREY, LM, LM, win(store + '  |  ' + shortName + ' shelf price check  |  ' + when));
       var y0 = TOP - HEAD;
       if (pi === 0) intro.forEach(function (p) { y0 -= 1 * MM; p.drawOn(g, LM, y0 - p.h); y0 -= p.h + 0.5 * MM; });
       y0 -= 1 * MM;
