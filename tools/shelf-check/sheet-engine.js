@@ -771,8 +771,10 @@
     bays.forEach(function (b, bi) {
       if (LISTED.test(b.name)) return;
       var mine = spots.filter(function (s) { return s.bi === bi; });
-      var shelves = [];
+      var shelves = [], hidden = {};
+      shelvesOf(b).forEach(function (sh, si) { if (sh.hide) hidden[si] = 1; });         // e.g. the other glove sizes: checked, not drawn
       mine.forEach(function (s) {
+        if (hidden[s.si]) return;
         var sh = shelves[shelves.length - 1];
         if (!sh || sh.si !== s.si) shelves.push(sh = { si: s.si, label: s.shelf, spots: [] });
         sh.spots.push(s);

@@ -1081,17 +1081,27 @@
    "name": "AOV 1",
    "shelves": [
     {
-     "label": "Shelf A (top)",
+     "label": "All 3 shelves: large glove, one per column",
      "codes": [
       "762RR",
+      "971YW",
+      "535EN"
+     ],
+     "pos": [
+      "1A_1",
+      "1A_2",
+      "1A_3"
+     ]
+    },
+    {
+     "label": "Other sizes (not drawn on the PDF)",
+     "codes": [
       "862YW",
       "721YW",
       "917YW",
-      "971YW",
       "395YW",
       "502YW",
       "788YW",
-      "535EN",
       "566EN",
       "542EN",
       "550EN"
@@ -1100,28 +1110,26 @@
       "1A_1",
       "1A_1",
       "1A_1",
-      "1A_1",
       "1A_2",
       "1A_2",
       "1A_2",
-      "1A_2",
-      "1A_3",
       "1A_3",
       "1A_3",
       "1A_3"
-     ]
+     ],
+     "hide": true
     }
    ],
    "codes": [
     "762RR",
+    "971YW",
+    "535EN",
     "862YW",
     "721YW",
     "917YW",
-    "971YW",
     "395YW",
     "502YW",
     "788YW",
-    "535EN",
     "566EN",
     "542EN",
     "550EN"
