@@ -767,7 +767,7 @@
     var avail1 = TOP - HEAD - introH - BOTTOM, avail = TOP - HEAD - BOTTOM;
     var segs = [];
     // displays that aren't shelving bays are listed at the end instead of drawn (detailedfoil, 15 Oct)
-    var LISTED = /^(dump bins|dump stacks|aovs?\b|till points|behind the counter|weather reactive|contingencies)/i;
+    var LISTED = /^(dump bins|dump stacks|till points|behind the counter|weather reactive|contingencies)/i;
     bays.forEach(function (b, bi) {
       if (LISTED.test(b.name)) return;
       var mine = spots.filter(function (s) { return s.bi === bi; });
@@ -778,6 +778,14 @@
         sh.spots.push(s);
       });
       var cols = Math.max(2, Math.min(PG.maxCols, shelves.reduce(function (m, sh) { return Math.max(m, sh.spots.length); }, 0)));
+      // a long shelf of equal-sized slot groups (e.g. four glove sizes per slot) breaks line by group
+      shelves.forEach(function (sh) {
+        if (sh.spots.length <= PG.maxCols) return;
+        var runs = [], run = 0;
+        sh.spots.forEach(function (x, i) { if (i && x.pos === sh.spots[i - 1].pos && x.pos) run++; else { if (run) runs.push(run); run = 1; } });
+        runs.push(run);
+        if (runs.length > 1 && runs.every(function (r) { return r === runs[0]; }) && runs[0] >= 2 && runs[0] <= PG.maxCols) cols = runs[0];
+      });
       var lim = Math.min(avail1, avail), cur = null;
       shelves.forEach(function (sh) {
         var lines = Math.ceil(sh.spots.length / cols), h = PG.strip + lines * PG.cellH;
