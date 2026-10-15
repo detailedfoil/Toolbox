@@ -111,6 +111,7 @@
         price: price, since: phone ? q.since : p.since || null, status: status, was: phone ? q.was : p.was, moves: phone ? [] : p.moves || [],
         phone: phone, manual: !!(phone && q.manual),
         missed: devNewer ? !!missedSet[l.code] && !(q && Date.parse(q.at) > lastAt) : status === 'unchecked' || price == null,
+        seen: devNewer && last.seen && last.seen[l.code] != null ? last.seen[l.code] : null,
         todo: price != null && status !== 'not_found' && !same(price, shelf)
       };
     });
@@ -232,9 +233,11 @@
       return '<li class="sc-row ct-miss" data-code="' + esc(l.code) + '"><div>' +
         '<a class="sc-code ct-sfx" href="https://www.screwfix.com/p/product/' + esc(l.code.toLowerCase()) + '" target="_blank" rel="noopener">' + esc(l.code) + ' &#8599;</a>' +
         '<span class="sc-name">' + esc(l.name) + '</span>' +
-        '<span class="ct-when">' + (l.price != null ? 'Last price ' + money(l.price) : 'No price yet') + ' &middot; ticket ' + money(l.shelf) + '</span></div>' +
+        '<span class="ct-when">' + (l.seen != null ? 'Screwfix showed <b>' + money(l.seen) + '</b> but it couldn\'t be confirmed. Check it, then Save'
+                                   : l.price != null ? 'Last price ' + money(l.price) : 'No price yet') + ' &middot; ticket ' + money(l.shelf) + '</span></div>' +
         '<form class="ct-enter" novalidate><label class="ct-pound"><span aria-hidden="true">£</span>' +
-        '<input type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Price on screwfix.com for ' + esc(l.code) + '"></label>' +
+        '<input type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"' + (l.seen != null ? ' value="' + Number(l.seen).toFixed(2) + '"' : '') +
+        ' aria-label="Price on screwfix.com for ' + esc(l.code) + '"></label>' +
         '<button class="btn" type="submit">Save</button></form></li>';
     }).join('');
   }
@@ -538,7 +541,7 @@
    * allows it. If the phone locks or the page gets closed part way, the next tap carries on where it stopped. */
 
   var SL = window.ScrewfixLookup, phone = null, wakeLock = null;
-  var PHONE_GAP = 1500;                                    // extra breather between tickets, on top of the relay spacing
+  var PHONE_GAP = 3000;                                    // breather between tickets: keeps under jina's 20 a minute
 
   function savedRun() {
     var r = load(PHONE_RUN_KEY, null);
@@ -568,7 +571,7 @@
     var n = phone.total, d = phone.total - phone.queue.length, left = phone.queue.length;
     $('progText').textContent = (phone.retry ? 'Retrying ' : 'Checking ') + Math.min(d + 1, n) + ' of ' + n;
     $('progBar').style.width = Math.round(d / n * 100) + '%';
-    var mins = Math.max(1, Math.round(left * 4 / 60));
+    var mins = Math.max(1, Math.round(left * 5 / 60));
     $('progNote').innerHTML = (phone.current ? '<b>' + esc(phone.current) + '</b> &middot; ' : '') + phone.got + ' found' +
       (phone.fails ? ', ' + phone.fails + " couldn't be read" : '') + '. About ' + mins + ' min left. Keep this page open and the screen on.';
   }
@@ -580,7 +583,7 @@
     var codes = r ? r.codes : L.map(function (l) { return l.code; });
     var run = r || { started: new Date().toISOString(), total: codes.length, got: 0, fails: 0, codes: codes };
     phone = { queue: codes.slice(), total: run.total, got: run.got || 0, fails: run.fails || 0, failed: (r && r.failed) || [],
-              started: run.started, retry: !!(r && r.retry), streak: 0, current: '' };
+              seen: (r && r.seen) || {}, started: run.started, retry: !!(r && r.retry), streak: 0, current: '' };
     saveRun();
     $('runBtns').hidden = true;
     $('runStatus').hidden = true;
@@ -592,7 +595,7 @@
 
   function saveRun() {
     store(PHONE_RUN_KEY, { started: phone.started, total: phone.total, got: phone.got, fails: phone.fails, failed: phone.failed,
-                           retry: phone.retry, codes: phone.queue });
+                           seen: phone.seen, retry: phone.retry, codes: phone.queue });
   }
 
   function nextPhone() {
@@ -601,10 +604,15 @@
     var me = phone, code = phone.queue[0];
     phone.current = code;
     progress();
-    SL.lookup(code).then(function (r) {
+    // full: the whole page, with the product data that confirms a new price (as text only, a change can't be trusted)
+    SL.lookup(code, { full: true }).then(function (r) {
       if (phone !== me) return;                           // stopped while this one was being read
       var before = L.filter(function (l) { return l.code === code; })[0];
-      var price = r && (r.status === 'found' || r.status === 'partial') && !r.unsure ? readPrice(r, before) : null;
+      var read = r && (r.status === 'found' || r.status === 'partial') && !r.unsure;
+      var price = read ? readPrice(r, before) : null;
+      delete phone.seen[code];
+      // read but not confirmed: keep what Screwfix showed, so the Couldn't be read list can offer it
+      if (price == null && read && pounds(r.price) != null) phone.seen[code] = pounds(r.price);
       if (price != null) {
         var ph = phonePrices(), was = same(pounds(r.price), price) ? pounds(r.was) : null;
         var moved = before && before.price != null && !same(before.price, price);
@@ -646,7 +654,9 @@
     if (why === 'done') {
       var last = phoneLast(), total = L.length || p.total;
       var done = p.retry && last ? Math.min(total, last.done + p.got) : p.got;
-      store(PHONE_LAST_KEY, { at: new Date().toISOString(), total: total, done: done, failed: p.failed });
+      var seen = {};
+      p.failed.forEach(function (c) { if (p.seen[c] != null) seen[c] = p.seen[c]; });
+      store(PHONE_LAST_KEY, { at: new Date().toISOString(), total: total, done: done, failed: p.failed, seen: seen });
       // any it couldn't read: the button offers to retry just those
       if (p.failed.length) store(PHONE_RUN_KEY, { started: new Date().toISOString(), total: p.failed.length, got: 0, fails: 0, failed: [], retry: true, codes: p.failed });
       else { try { localStorage.removeItem(PHONE_RUN_KEY); } catch (e) { /* fine */ } }

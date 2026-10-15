@@ -16,7 +16,10 @@
     { id: 'codetabs',   build: function (u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
     { id: 'cors.lol',   build: function (u) { return 'https://api.cors.lol/?url=' + encodeURIComponent(u); } },
     { id: 'allorigins', build: function (u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); } },
-    { id: 'jina',       build: function (u) { return 'https://r.jina.ai/' + u; } },
+    // jina sends the page as text by default, which leaves out the product data (JSON-LD) that confirms a new
+    // price. lookup(code, {full: true}) asks it for the page itself instead (counter trial device check).
+    { id: 'jina',       build: function (u) { return 'https://r.jina.ai/' + u; },
+                        full: { 'X-Return-Format': 'html', 'X-No-Cache': 'true' } },
     { id: 'corsproxy',  build: function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); } }
   ];
   var ORDER_KEY = 'pt-proxy-order-v1';
@@ -66,11 +69,13 @@
   }
 
   /* -> {status, text}; rejects with {kind: 'timeout' | 'network'} when no answer came back */
-  function fetchText(url) {
+  function fetchText(url, headers) {
     var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var timedOut = false;
     var timer = setTimeout(function () { timedOut = true; if (ctrl) ctrl.abort(); }, TIMEOUT);
-    return fetch(url, { signal: ctrl ? ctrl.signal : undefined, cache: 'no-store', credentials: 'omit' })
+    var init = { signal: ctrl ? ctrl.signal : undefined, cache: 'no-store', credentials: 'omit' };
+    if (headers) init.headers = headers;
+    return fetch(url, init)
       .then(function (res) {
         return res.text().then(function (text) { return { status: res.status, text: text }; });
       })
@@ -308,11 +313,11 @@
   /* One relay, one go -> {via, outcome, ms, http, result}. outcome: found | partial | notfound | network (no answer:
      blocked by the network, offline or the relay is down) | timeout | limited | denied (Screwfix turned it away) |
      http-NNN (the relay answered with an error) | relay-error | other (something that isn't the product page) */
-  function tryRelay(proxy, code) {
+  function tryRelay(proxy, code, full) {
     var t0 = now();
     return slot().then(function () {
       t0 = now();
-      return fetchText(proxy.build(productUrl(code)));
+      return fetchText(proxy.build(productUrl(code)), full && proxy.full);
     }).then(function (res) {
       var r;
       try { r = interpret(res, code); } catch (e) { r = { status: 'blocked', why: 'other' }; }
@@ -334,7 +339,8 @@
      (was: the old price when it's on offer, for sale tickets and posters; images: the product photo ids on the
       page, main one first, for posters only. reason, when blocked: 'network' if no relay could be reached at all,
       otherwise 'relays'. trace: every attempt, for working out why.)
-     opts.onRetry(round): called before each extra round when every relay failed. */
+     opts.onRetry(round): called before each extra round when every relay failed.
+     opts.full: ask relays that can for the whole page, so the product data (ld, ldSure) comes back too. */
   function lookup(code, opts) {
     opts = opts || {};
     code = String(code || '').toUpperCase();
@@ -362,7 +368,7 @@
           return finish({ status: 'blocked', reason: everyone ? 'network' : 'relays' });
         }
         var proxy = order[i++];
-        return tryRelay(proxy, code).then(function (t) {
+        return tryRelay(proxy, code, !!opts.full).then(function (t) {
           t.round = n;
           trace.push(t);
           var r = t.result;
