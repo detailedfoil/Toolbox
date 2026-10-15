@@ -766,7 +766,10 @@
     // each bay -> segments no taller than a page
     var avail1 = TOP - HEAD - introH - BOTTOM, avail = TOP - HEAD - BOTTOM;
     var segs = [];
+    // displays that aren't shelving bays are listed at the end instead of drawn (detailedfoil, 15 Oct)
+    var LISTED = /^(dump bins|dump stacks|aovs?\b|till points|behind the counter|weather reactive|contingencies)/i;
     bays.forEach(function (b, bi) {
+      if (LISTED.test(b.name)) return;
       var mine = spots.filter(function (s) { return s.bi === bi; });
       var shelves = [];
       mine.forEach(function (s) {
@@ -804,6 +807,16 @@
       col = { segs: [sg], cols: sg.cols, h: sg.h }; page.cols.push(col);
     });
 
+    function frame() {
+      var g = new Page();
+      g.w = LW; g.h = LH;
+      g.text('HB', 15, 0, LM, TOP - 13, win('Shelf Price Check'));
+      var hx = LM + width('HB', 15, 'Shelf Price Check') + 8;
+      g.text('H', 9.5, GREY, hx, TOP - 13, win(planName + '  |  screwfix.com prices inc VAT, ' + when));
+      g.line(LM, TOP - HEAD + 3, LM + W, TOP - HEAD + 3, 1.2, BLACK);
+      g.text('H', 8, GREY, LM, LM, win(store + '  |  ' + shortName + ' shelf price check  |  ' + when));
+      return g;
+    }
     var out = pages.map(function (pgObj, pi) {
       var g = new Page();
       g.w = LW; g.h = LH;
@@ -813,8 +826,6 @@
       g.text('H', 9.5, GREY, hx, TOP - 13, win(planName + '  |  screwfix.com prices inc VAT, ' + when));
       g.line(LM, TOP - HEAD + 3, LM + W, TOP - HEAD + 3, 1.2, BLACK);
       g.text('H', 8, GREY, LM, LM, win(store + '  |  ' + shortName + ' shelf price check  |  ' + when));
-      var pg = 'Page ' + (pi + 1) + ' of ' + pages.length;
-      g.text('H', 8, GREY, LM + W - width('H', 8, pg), LM, pg);
       var y0 = TOP - HEAD;
       if (pi === 0) intro.forEach(function (p) { y0 -= 1 * MM; p.drawOn(g, LM, y0 - p.h); y0 -= p.h + 0.5 * MM; });
       y0 -= 1 * MM;
@@ -908,6 +919,104 @@
       else g.raw('0.4 w ' + num(GRID) + ' G ' + num(x) + ' ' + num(y) + ' ' + num(w) + ' ' + num(h) + ' re S');
       g.raw('Q');
     }
+
+
+    /* ---------- the end list: dump bins, AOVs, till points, behind the counter, weather, contingencies ---------- */
+    var LC = 4, LCG = 4 * MM, LCW = (W - (LC - 1) * LCG) / LC;
+    var LR = { row: 5.6 * MM, chg: 8.4 * MM, head: 6.5 * MM, sub: 4.2 * MM };
+    var items = [];
+    bays.forEach(function (b, bi) {
+      if (!LISTED.test(b.name)) return;
+      var mine = spots.filter(function (s) { return s.bi === bi; });
+      if (!mine.length) return;
+      items.push({ kind: 'head', bay: b, h: LR.head });
+      var named = shelvesOf(b).length > 1, last = -1;
+      mine.forEach(function (s) {
+        if (named && s.si !== last && s.shelf && s.shelf.toLowerCase() !== b.name.toLowerCase()) items.push({ kind: 'sub', label: s.shelf, bay: b, h: LR.sub });
+        last = s.si;
+        items.push({ kind: 'row', spot: s, bay: b, h: isChange(s.code) ? LR.chg : LR.row });
+      });
+    });
+    if (items.length) {
+      var lg = null, ci = LC, ly = 0, curBay = null, curSub = null, firstLg = null;
+      var listTop = function () { return TOP - HEAD - 2 * MM - (lg === firstLg ? 7 * MM : 0); };
+      var nextCol = function () {
+        ci++;
+        if (ci >= LC) { lg = frame(); out.push(lg); ci = 0; if (!firstLg) firstLg = lg; }
+        ly = listTop();
+      };
+      var lx = function () { return LM + ci * (LCW + LCG); };
+      nextCol();
+      // the heading on the first list page
+      lg.text('HB', 12, 0, LM, TOP - HEAD - 2 * MM - 11, win('Other displays'));
+      items.forEach(function (it, k) {
+        // keep a heading with its next two lines, and a shelf label with its first line
+        var need = it.h + (it.kind === 'head' ? (items[k + 1] ? items[k + 1].h : 0) + (items[k + 2] ? items[k + 2].h : 0) : it.kind === 'sub' ? (items[k + 1] ? items[k + 1].h : 0) : 0);
+        if (ly - need < BOTTOM) {
+          nextCol();
+          if (it.kind !== 'head' && curBay) { drawHead(curBay, true); if (it.kind === 'row' && curSub) drawSub(curSub, true); }
+        }
+        if (it.kind === 'head') { curBay = it.bay; curSub = null; drawHead(it.bay, false); }
+        else if (it.kind === 'sub') { curSub = it.label; drawSub(it.label, false); }
+        else drawRow(it.spot);
+      });
+    }
+    function drawHead(b, cont) {
+      var x = lx();
+      ly -= cont || ly >= listTop() - 0.5 ? 0 : 1.5 * MM;
+      lg.rect(x, ly - LR.head, LCW, LR.head, BLACK);
+      var tag = 'p' + b.page, tagW = width('H', 7, tag) + 6;
+      var ft = fitText('HB', 8.5, 6, LCW - 8 - tagW, (b.name + (cont ? ' (cont.)' : '')).toUpperCase());
+      lg.text('HB', ft.size, WHITE, x + 3, ly - LR.head / 2 - ft.size * 0.35, ft.s);
+      lg.text('H', 7, WHITE, x + LCW - tagW + 2, ly - LR.head / 2 - 2.4, tag);
+      ly -= LR.head;
+    }
+    function drawSub(label, cont) {
+      var x = lx();
+      lg.rect(x, ly - LR.sub, LCW, LR.sub, 0.3);
+      var fl = fitText('HB', 6.5, 5, LCW - 6, (label + (cont ? ' (cont.)' : '')).toUpperCase());
+      lg.text('HB', fl.size, WHITE, x + 3, ly - LR.sub / 2 - 2.3, fl.s);
+      ly -= LR.sub;
+    }
+    function drawRow(s) {
+      var x = lx(), p = prod(s.code), chg = isChange(s.code), h = chg ? LR.chg : LR.row, bot = ly - h;
+      if (chg) lg.rect(x, bot, LCW, h, CHG);
+      var base = chg ? bot + h - 3.3 * MM : bot + h / 2 - 3;
+      lg.text('CB', 8.5, 0, x + (chg ? 5 : 2.5), base, win(s.code));
+      var nx = x + (chg ? 5 : 2.5) + width('CB', 8.5, s.code) + 4;
+      if (isNew[s.code]) {
+        var nw = width('HB', 5.5, 'NEW') + 3;
+        lg.rect(nx, base - 1.2, nw, 6.5, BLACK);
+        lg.text('HB', 5.5, WHITE, nx + 1.5, base + 0.7, 'NEW');
+        nx += nw + 3;
+      }
+      // price on the right
+      var pr, prFont = 'HB', prSize = chg ? 10 : 9.5, prGray = 0;
+      if (p.status === 'not_found') { pr = 'not online'; prFont = 'HO'; prSize = 7.5; prGray = GREY; }
+      else if (p.price == null) { pr = 'not checked'; prFont = 'HO'; prSize = 7.5; prGray = GREY; }
+      else pr = money(p.price) + (p.status !== 'ok' && !chg ? '*' : '');
+      pr = win(pr);
+      var pw = width(prFont, prSize, pr), prx = x + LCW - 2.5 - pw;
+      lg.text(prFont, prSize, prGray, prx, base, pr);
+      var nameRight = prx - 4;
+      if (chg) { tri(lg, prx - 5, base + prSize * 0.35, p.price > p.prev, 2.5, 0); nameRight = prx - 10; }
+      var nm = fitText('H', 7, 7, Math.max(10, nameRight - nx), p.name || '');
+      if (nm.s && nm.s !== '...') lg.text('H', nm.size, 0.15, nx, base + 0.4, nm.s);
+      if (chg) {
+        var was = win('was ' + money(p.prev)), ww = width('H', 6.5, was), wx = x + LCW - 2.5 - ww, wy = bot + 2.2;
+        lg.text('H', 6.5, 0, wx, wy, was);
+        lg.line(wx + width('H', 6.5, 'was '), wy + 2.2, wx + ww, wy + 2.2, 0.6, BLACK);
+        lg.raw('q 1 J 1 j'); lg.line(x + 1.5, bot + 0.5, x + 1.5, ly - 0.5, 3, BLACK); lg.raw('Q');
+      }
+      lg.line(x, bot, x + LCW, bot, 0.3, GRID);
+      ly = bot;
+    }
+
+    // page numbers on every page
+    out.forEach(function (g, i) {
+      var pg = 'Page ' + (i + 1) + ' of ' + out.length;
+      g.text('H', 8, GREY, LM + W - width('H', 8, pg), LM, pg);
+    });
 
     return { pages: out, changes: changed.length };
   }
