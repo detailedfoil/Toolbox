@@ -1,0 +1,460 @@
+{
+ "at": "2026-10-15T08:39:20.332Z",
+ "codes": {
+  "842CF": {
+   "direct": {
+    "http": 200,
+    "finalUrl": "https://www.screwfix.com/p/westland-resolva-xtra-fast-weedkiller-50m-5ltr/842cf",
+    "len": 256601,
+    "ms": 999,
+    "ld": [
+     "{\"@context\":\"https://schema.org/\",\"@type\":\"Product\",\"@id\":\"https://www.screwfix.com/p/westland-resolva-xtra-fast-weedkiller-50m-5ltr/842cf\",\"image\":[\"https://media.screwfix.com/is/image/ae235/842CF_P\",\"https://media.screwfix.com/is/image/ae235/842CF_A1\",\"https://media.screwfix.com/is/image/ae235/842CF_A2\"],\"name\":\"Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr\",\"url\":\"https://www.screwfix.com/p/westland-resolva-xtra-fast-weedkiller-50m-5ltr/842cf\",\"description\":\"Non-selective weedkiller that works by contact action. Targets weeds in 3 hours. Biodegrades in the soil which makes it ideal for use in beds and borders. Works on common dandelion, greater plantain, annual meadow grass, deadnettle, common chickweed, creeping thistle and knotgrass.\",\"sku\":\"842CF\",\"brand\":{\"@type\":\"brand\",\"name\":\"Westland\"},\"offers\":[{\"@type\":\"Offer\",\"url\":\"https://www.screwfix.com/p/westland-resolva-xtra-fast-weedkiller-50m-5ltr/842cf\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":25.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@type\":\"Action\",\"url\":\"https://schema.org/BuyAction\"},\"availableDeliveryMethod\":\"https://schema.org/OnSitePickup\",\"availability\":\"https://schema.org/InStock\"},{\"@type\":\"Offer\",\"url\":\"https://www.screwfix.com/p/westland-resolva-xtra-fast-weedkiller-50m-5ltr/842cf\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":25.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@type\":\"Action\",\"url\":\"https://schema.org/BuyAction\"},\"availableDeliveryMethod\":\"https://schema.org/ParcelService\",\"availability\":\"https://schema.org/OutOfStock\"}],\"hasMerchantReturnPolicy\":{\"@type\":\"MerchantReturnPolicy\",\"applicableCountry\":\"GB\",\"returnPolicyCountry\":\"GB\",\"returnPolicyCategory\":\"https://schema.org/MerchantReturnFiniteReturnWindow\",\"merchantReturnDays\":30,\"returnMethod\":\"https://schema.org/ReturnByMail\",\"returnFees\":\"https://schema.org/FreeReturn\",\"url\":\"https://www.screwfix.com/help/returns\"}}",
+     "{\"@context\":\"https://schema.org/\",\"@type\":\"Product\",\"@id\":\"https://www.screwfix.com/p/westland-resolva-xtra-fast-weedkiller-50m-5ltr/842cf\",\"aggregateRating\":{\"@type\":\"AggregateRating\",\"ratingValue\":\"4.4\",\"reviewCount\":59}}",
+     "{\"@context\":\"https://schema.org\",\"@type\":\"BreadcrumbList\",\"itemListElement\":[{\"@type\":\"ListItem\",\"position\":1,\"name\":\"Home\",\"item\":\"https://www.screwfix.com/\"},{\"@type\":\"ListItem\",\"position\":2,\"name\":\"Outdoor &amp; Gardening\",\"item\":\"https://www.screwfix.com/c/outdoor-gardening/cat840458\"},{\"@type\":\"ListItem\",\"position\":3,\"name\":\"Maintenance &amp; Care\",\"item\":\"https://www.screwfix.com/c/outdoor-gardening/maintenance-care/cat840688\"},{\"@type\":\"ListItem\",\"position\":4,\"name\":\"Weed Control\",\"item\":\"https://www.screwfix.com/c/outdoor-gardening/weed-control/cat840530\"},{\"@type\":\"ListItem\",\"position\":5,\"name\":\"Weed Killer\",\"item\":\"https://www.screwfix.com/c/outdoor-gardening/weed-killer/cat17220003\"}]}"
+    ],
+    "result": {
+     "status": "found",
+     "name": "Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr",
+     "price": "£25.99",
+     "age": false,
+     "ld": "£25.99",
+     "ldSure": true
+    },
+    "title": "Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr - Screwfix",
+    "h1": "<span itemProp=\"name\">Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr<!-- --> </span><span class=\"oodeYO\">(<!-- -->842CF<!-- -->)</span>",
+    "nearPrice": " Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr - Screwfix Skip to content Need Help Sign in / Register Show prices excluding VAT INC VAT EX VAT Browse Search Activating the button will move focus to the expanded search input field Search Stores Select a store No items in basket Checkout DEPARTMENTS Tools Heating &amp; Plumbing Electrical &amp; Lighting Bathrooms &amp; Kitchens Outdoor &amp; Gardening Screws, Nails &amp; Fixin",
+    "nearCode": "ith Sprint NEW DEALS THIS OCTOBER. SHOP NOW Back to Home &lt; Back to Outdoor &amp; Gardening &lt; Back to Maintenance &amp; Care &lt; Back to Weed Control &lt; [...] Outdoor &amp; Gardening Maintenance &amp; Care Weed Control &lt; Back to Weed Killer Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr ( 842CF ) Product rating 4.4 stars out of 5 Product rating 4.4 stars out of 5 (59) Ask a Question Non-selective weedkiller that works by contact action. Targets weeds in 3 hours. Biodegrades in the soil which makes it ideal for use in beds and borders. Works on common dandelion, greater plantain, an",
+    "head": "<!DOCTYPE html><html prefix=\"og: https://ogp.me/ns#\" lang=\"en-GB\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" data-next-head=\"\"/><script src=\"https://tags.tiqcdn.com/utag/kingfisher/screwfix-fusionx/prod/utag.js\" async=\"\" data-next-head=\"\"></script><script src=\"https://js.clrt.ai/13645.js\" async=\"\"></script><script src=\"/fusionx/srvinit.js\" async=\"\"></script><meta name=\"optimizely-edge\" content=\"on\" data-next-head=\"\"/><link rel=\"preload\" href=\"/fusionx/fonts/archivonarrow-bold-webfont.woff2\" as=\"font\" type=\"font/woff2\" cros",
+    "priceBits": [
+     ".screwfix.com/p/westland-resolva-xtra-fast-weedkiller-50m-5ltr/842cf\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":25.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@typ",
+     ".screwfix.com/p/westland-resolva-xtra-fast-weedkiller-50m-5ltr/842cf\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":25.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@typ"
+    ],
+    "skuBits": [
+     "842CF"
+    ]
+   },
+   "codetabs": {
+    "http": 522,
+    "finalUrl": "https://api.codetabs.com/v1/proxy?quest=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F842cf",
+    "len": 7247,
+    "ms": 19379,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "relay-error"
+    },
+    "title": "codetabs.com | 522: Connection timed out",
+    "h1": "\n                <span class=\"inline-block\">Connection timed out</span>\n                <span class=\"code-label\">Error code 522</span>\n            ",
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "<!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![endif]-->\n<head>\n\n<title>codetabs.com | 522: Connection timed out</title>\n<meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"viewpor",
+    "priceBits": [],
+    "skuBits": []
+   },
+   "cors.lol": {
+    "http": 403,
+    "finalUrl": "https://api.cors.lol/?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F842cf",
+    "len": 919,
+    "ms": 645,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "other"
+    },
+    "title": "ERROR: The request could not be satisfied",
+    "h1": "403 ERROR",
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">\n<HTML><HEAD><META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=iso-8859-1\">\n<TITLE>ERROR: The request could not be satisfied</TITLE>\n</HEAD><BODY>\n<H1>403 ERROR</H1>\n<H2>The request could not be satisfied.</H2>\n<HR noshade size=\"1px\">\nRequest blocked.\nWe can't connect to the server for this app or website at this time. There might be too much traffic or a configuration error. Try again later, or contact the app or website owner.\n<BR clear=\"all\">\nIf you provide content to customers th"
+   },
+   "allorigins": {
+    "http": 522,
+    "finalUrl": "https://api.allorigins.win/raw?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F842cf",
+    "len": 7259,
+    "ms": 19296,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "relay-error"
+    },
+    "title": "allorigins.win | 522: Connection timed out",
+    "h1": "\n                <span class=\"inline-block\">Connection timed out</span>\n                <span class=\"code-label\">Error code 522</span>\n            ",
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "<!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![endif]-->\n<head>\n\n<title>allorigins.win | 522: Connection timed out</title>\n<meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"viewp"
+   },
+   "jina": {
+    "http": 200,
+    "finalUrl": "https://r.jina.ai/https://www.screwfix.com/p/product/842cf",
+    "len": 116631,
+    "ms": 6098,
+    "ld": [],
+    "result": {
+     "status": "found",
+     "name": "Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr",
+     "price": "£25.99",
+     "age": false
+    },
+    "title": "Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr - Screwfix",
+    "h1": null,
+    "nearPrice": "Title: Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr - Screwfix\n\nURL Source: https://www.screwfix.com/p/product/842cf\n\nMarkdown Content:\n[Skip to content](https://www.screwfix.com/p/product/842cf#container-main)\n\n[Need Help](https://www.screwfix.com/help/helphome)\n\nShow prices excluding VAT- [x] INC VAT EX VAT \n\n[![Image 4: Screwfix Logo](https://media.screwfix.com/is/content/ae235/screwfix-logo-uk)](https://www.screwfix.com/ \"Return to Screwfix.com homepage\")\n\nSearch Activating the button will move focus to the expanded search input field\n\nSearch\n\n[Your Account Sign in / Register](https://",
+    "nearCode": " 15: Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr](https://media.screwfix.com/is/image/ae235/842CF_A2?$fxSharpen$=&wid=46&hei=46&dpr=on)\n\n![Image 16: Westland](https://media.screwfix.com/is/image/ae235/Westland?$fxSharpen$=&wid=107&hei=50&dpr=on)\n\n# Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr(842CF)\n\n(59)\n\nAsk a Question\n\nNon-selective weedkiller that works by contact action. Targets weeds in 3 hours. Biodegrades in the soil which makes it ideal for use in beds and borders. Works on common dandelion, greater plantain, annual meadow grass, deadnettle, common chickweed, creeping thistle a",
+    "head": "Title: Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr - Screwfix\n\nURL Source: https://www.screwfix.com/p/product/842cf\n\nMarkdown Content:\n[Skip to content](https://www.screwfix.com/p/product/842cf#container-main)\n\n[Need Help](https://www.screwfix.com/help/helphome)\n\nShow prices excluding VAT- [x] INC VAT EX VAT \n\n[![Image 4: Screwfix Logo](https://media.screwfix.com/is/content/ae235/screwfix-logo-uk)](https://www.screwfix.com/ \"Return to Screwfix.com homepage\")\n\nSearch Activating the button will move focus to the expanded search input field\n\nSearch\n\n[Your Account Sign in / Register](https://w"
+   },
+   "corsproxy": {
+    "http": 401,
+    "finalUrl": "https://corsproxy.io/?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F842cf",
+    "len": 81,
+    "ms": 47,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "http-401"
+    },
+    "title": null,
+    "h1": null,
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "{\"error\":\"A valid API key is required. Get one at https://console.corsproxy.io/\"}"
+   }
+  },
+  "318FX": {
+   "direct": {
+    "http": 200,
+    "finalUrl": "https://www.screwfix.com/p/erbauer-epr710-710w-1-4-electric-palm-router-220-240v/318fx",
+    "len": 263166,
+    "ms": 1688,
+    "ld": [
+     "{\"@context\":\"https://schema.org/\",\"@type\":\"Product\",\"@id\":\"https://www.screwfix.com/p/erbauer-epr710-710w-1-4-electric-palm-router-220-240v/318fx\",\"image\":[\"https://media.screwfix.com/is/image/ae235/318FX_P\",\"https://media.screwfix.com/is/image/ae235/318FX_A1\",\"https://media.screwfix.com/is/image/ae235/318FX_A2\",\"https://media.screwfix.com/is/image/ae235/318FX_A3\"],\"name\":\"Erbauer EPR710 710W 1/4&quot;  Electric Palm Router 220-240V\",\"url\":\"https://www.screwfix.com/p/erbauer-epr710-710w-1-4-electric-palm-router-220-240v/318fx\",\"description\":\"Precise and versatile palm router. Suitable for various intricate tasks including hinge mortising, slot cutting, light dovetailing, decorative inlays, edge forming and trimming.\",\"sku\":\"318FX\",\"brand\":{\"@type\":\"brand\",\"name\":\"Erbauer\"},\"offers\":[{\"@type\":\"Offer\",\"url\":\"https://www.screwfix.com/p/erbauer-epr710-710w-1-4-electric-palm-router-220-240v/318fx\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":53.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@type\":\"Action\",\"url\":\"https://schema.org/BuyAction\"},\"availableDeliveryMethod\":\"https://schema.org/OnSitePickup\",\"availability\":\"https://schema.org/InStock\"},{\"@type\":\"Offer\",\"url\":\"https://www.screwfix.com/p/erbauer-epr710-710w-1-4-electric-palm-router-220-240v/318fx\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":53.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@type\":\"Action\",\"url\":\"https://schema.org/BuyAction\"},\"availableDeliveryMethod\":\"https://schema.org/ParcelService\",\"availability\":\"https://schema.org/InStock\"}],\"hasMerchantReturnPolicy\":{\"@type\":\"MerchantReturnPolicy\",\"applicableCountry\":\"GB\",\"returnPolicyCountry\":\"GB\",\"returnPolicyCategory\":\"https://schema.org/MerchantReturnFiniteReturnWindow\",\"merchantReturnDays\":30,\"returnMethod\":\"https://schema.org/ReturnByMail\",\"returnFees\":\"https://schema.org/FreeReturn\",\"url\":\"https://www.screwfix.com/help/returns\"}}",
+     "{\"@context\":\"https://schema.org/\",\"@type\":\"Product\",\"@id\":\"https://www.screwfix.com/p/erbauer-epr710-710w-1-4-electric-palm-router-220-240v/318fx\",\"aggregateRating\":{\"@type\":\"AggregateRating\",\"ratingValue\":\"4.6\",\"reviewCount\":107}}",
+     "{\"@context\":\"https://schema.org\",\"@type\":\"BreadcrumbList\",\"itemListElement\":[{\"@type\":\"ListItem\",\"position\":1,\"name\":\"Home\",\"item\":\"https://www.screwfix.com/\"},{\"@type\":\"ListItem\",\"position\":2,\"name\":\"Tools\",\"item\":\"https://www.screwfix.com/c/tools/cat830034\"},{\"@type\":\"ListItem\",\"position\":3,\"name\":\"Power Tools\",\"item\":\"https://www.screwfix.com/c/tools/power-tools/cat830692\"},{\"@type\":\"ListItem\",\"position\":4,\"name\":\"Routers\",\"item\":\"https://www.screwfix.com/c/tools/routers/cat830904\"}]}"
+    ],
+    "result": {
+     "status": "found",
+     "name": "Erbauer EPR710 710W 1/4\" Electric Palm Router 220-240V",
+     "price": "£53.99",
+     "age": false,
+     "ld": "£53.99",
+     "ldSure": true
+    },
+    "title": "Erbauer EPR710 710W 1/4&quot;  Electric Palm Router 220-240V - Screwfix",
+    "h1": "<span itemProp=\"name\">Erbauer EPR710 710W 1/4&quot;  Electric Palm Router 220-240V<!-- --> </span><span class=\"oodeYO\">(<!-- -->318FX<!-- -->)</span>",
+    "nearPrice": " Erbauer EPR710 710W 1/4&quot; Electric Palm Router 220-240V - Screwfix Skip to content Need Help Sign in / Register Show prices excluding VAT INC VAT EX VAT Browse Search Activating the button will move focus to the expanded search input field Search Stores Select a store No items in basket Checkout DEPARTMENTS Tools Heating &amp; Plumbing Electrical &amp; Lighting Bathrooms &amp; Kitchens Outdoor &amp; Gardening Screws, Nails &amp; Fixin",
+    "nearCode": "er week 940 STORES NATIONWIDE find your local store DELIVERY IN AS LITTLE AS 20 MINUTES with Sprint NEW DEALS THIS OCTOBER. SHOP NOW Back to Home &lt; Back to Tools &lt; Back to Power Tools &lt; [...] Tools Power Tools &lt; Back to Routers Erbauer EPR710 710W 1/4&quot; Electric Palm Router 220-240V ( 318FX ) Product rating 4.6 stars out of 5 Product rating 4.6 stars out of 5 (107) Ask a Question Precise and versatile palm router. Suitable for various intricate tasks including hinge mortising, slot cutting, light dovetailing, decorative inlays, edge forming and trimming. Variable Speed Adjustab",
+    "head": "<!DOCTYPE html><html prefix=\"og: https://ogp.me/ns#\" lang=\"en-GB\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" data-next-head=\"\"/><script src=\"https://tags.tiqcdn.com/utag/kingfisher/screwfix-fusionx/prod/utag.js\" async=\"\" data-next-head=\"\"></script><script src=\"https://js.clrt.ai/13645.js\" async=\"\"></script><script src=\"/fusionx/srvinit.js\" async=\"\"></script><meta name=\"optimizely-edge\" content=\"on\" data-next-head=\"\"/><link rel=\"preload\" href=\"/fusionx/fonts/archivonarrow-bold-webfont.woff2\" as=\"font\" type=\"font/woff2\" cros",
+    "priceBits": [
+     "ix.com/p/erbauer-epr710-710w-1-4-electric-palm-router-220-240v/318fx\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":53.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@typ",
+     "ix.com/p/erbauer-epr710-710w-1-4-electric-palm-router-220-240v/318fx\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":53.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@typ"
+    ],
+    "skuBits": [
+     "318FX"
+    ]
+   },
+   "codetabs": {
+    "http": 522,
+    "finalUrl": "https://api.codetabs.com/v1/proxy?quest=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F318fx",
+    "len": 7247,
+    "ms": 19535,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "relay-error"
+    },
+    "title": "codetabs.com | 522: Connection timed out",
+    "h1": "\n                <span class=\"inline-block\">Connection timed out</span>\n                <span class=\"code-label\">Error code 522</span>\n            ",
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "<!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![endif]-->\n<head>\n\n<title>codetabs.com | 522: Connection timed out</title>\n<meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"viewpor",
+    "priceBits": [],
+    "skuBits": []
+   },
+   "cors.lol": {
+    "http": 429,
+    "finalUrl": "https://api.cors.lol/?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F318fx",
+    "len": 20,
+    "ms": 611,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "http-429"
+    },
+    "title": null,
+    "h1": null,
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "Rate limit exceeded\n"
+   },
+   "allorigins": {
+    "http": 522,
+    "finalUrl": "https://api.allorigins.win/raw?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F318fx",
+    "len": 7259,
+    "ms": 19345,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "relay-error"
+    },
+    "title": "allorigins.win | 522: Connection timed out",
+    "h1": "\n                <span class=\"inline-block\">Connection timed out</span>\n                <span class=\"code-label\">Error code 522</span>\n            ",
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "<!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![endif]-->\n<head>\n\n<title>allorigins.win | 522: Connection timed out</title>\n<meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"viewp"
+   },
+   "jina": {
+    "http": 200,
+    "finalUrl": "https://r.jina.ai/https://www.screwfix.com/p/product/318fx",
+    "len": 120777,
+    "ms": 6124,
+    "ld": [],
+    "result": {
+     "status": "found",
+     "name": "Erbauer EPR710 710W 1/4\" Electric Palm Router 220-240V",
+     "price": "£53.99",
+     "age": false
+    },
+    "title": "Erbauer EPR710 710W 1/4\"  Electric Palm Router 220-240V - Screwfix",
+    "h1": null,
+    "nearPrice": "Erbauer EPR710 710W 1/4\"  Electric Palm Router 220-240V - Screwfix\n\nURL Source: https://www.screwfix.com/p/product/318fx\n\nMarkdown Content:\n[Skip to content](https://www.screwfix.com/p/product/318fx#container-main)\n\n[Need Help](https://www.screwfix.com/help/helphome)\n\nShow prices excluding VAT- [x] INC VAT EX VAT \n\n[![Image 9: Screwfix Logo](https://media.screwfix.com/is/content/ae235/screwfix-logo-uk)](https://www.screwfix.com/ \"Return to Screwfix.com homepage\")\n\nSearch Activating the button will move focus to the expanded search input field\n\nSearch\n\n[Your Account Sign in / Register](https://",
+    "nearCode": "EPR710 710W 1/4\"  Electric Palm Router 220-240V](https://media.screwfix.com/is/image/ae235/318FX_A3?$fxSharpen$=&wid=46&hei=46&dpr=on)\n\n![Image 31: Erbauer](https://media.screwfix.com/is/image/ae235/Erbauer?$fxSharpen$=&wid=107&hei=50&dpr=on)\n\n# Erbauer EPR710 710W 1/4\" Electric Palm Router 220-240V(318FX)\n\n(107)\n\nAsk a Question\n\nPrecise and versatile palm router. Suitable for various intricate tasks including hinge mortising, slot cutting, light dovetailing, decorative inlays, edge forming and trimming.\n\n*   Variable Speed\n*   Adjustable Parallel Fence\n*   Without Dust Extraction Facility\n*  ",
+    "head": "Title: Erbauer EPR710 710W 1/4\"  Electric Palm Router 220-240V - Screwfix\n\nURL Source: https://www.screwfix.com/p/product/318fx\n\nMarkdown Content:\n[Skip to content](https://www.screwfix.com/p/product/318fx#container-main)\n\n[Need Help](https://www.screwfix.com/help/helphome)\n\nShow prices excluding VAT- [x] INC VAT EX VAT \n\n[![Image 9: Screwfix Logo](https://media.screwfix.com/is/content/ae235/screwfix-logo-uk)](https://www.screwfix.com/ \"Return to Screwfix.com homepage\")\n\nSearch Activating the button will move focus to the expanded search input field\n\nSearch\n\n[Your Account Sign in / Register](h"
+   },
+   "corsproxy": {
+    "http": 401,
+    "finalUrl": "https://corsproxy.io/?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F318fx",
+    "len": 81,
+    "ms": 29,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "http-401"
+    },
+    "title": null,
+    "h1": null,
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "{\"error\":\"A valid API key is required. Get one at https://console.corsproxy.io/\"}"
+   }
+  },
+  "480PG": {
+   "direct": {
+    "http": 200,
+    "finalUrl": "https://www.screwfix.com/p/erbauer-metal-power-tool-accessories-set-120-pieces/480pg",
+    "len": 257262,
+    "ms": 1823,
+    "ld": [
+     "{\"@context\":\"https://schema.org/\",\"@type\":\"Product\",\"@id\":\"https://www.screwfix.com/p/erbauer-metal-power-tool-accessories-set-120-pieces/480pg\",\"image\":[\"https://media.screwfix.com/is/image/ae235/480PG_P\",\"https://media.screwfix.com/is/image/ae235/480PG_A1\",\"https://media.screwfix.com/is/image/ae235/480PG_A2\"],\"name\":\"Erbauer  Metal Power Tool Accessories Set 120 Pieces\",\"url\":\"https://www.screwfix.com/p/erbauer-metal-power-tool-accessories-set-120-pieces/480pg\",\"description\":\"Easy to use, M35 HSS bit set containing fully-ground, high speed steel drill bits. Features 135° split point for precision drilling and forged tip for greater impact resistance and a longer lifetime. Specially designed for use with impact drivers and compatible with most drill drivers. For high performance applications. Supplied with universal magnetic holder for fast bit changes and a hard case for secured storage and organisation.\",\"sku\":\"480PG\",\"brand\":{\"@type\":\"brand\",\"name\":\"Erbauer\"},\"offers\":[{\"@type\":\"Offer\",\"url\":\"https://www.screwfix.com/p/erbauer-metal-power-tool-accessories-set-120-pieces/480pg\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":24.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@type\":\"Action\",\"url\":\"https://schema.org/BuyAction\"},\"availableDeliveryMethod\":\"https://schema.org/OnSitePickup\",\"availability\":\"https://schema.org/InStock\"},{\"@type\":\"Offer\",\"url\":\"https://www.screwfix.com/p/erbauer-metal-power-tool-accessories-set-120-pieces/480pg\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":24.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@type\":\"Action\",\"url\":\"https://schema.org/BuyAction\"},\"availableDeliveryMethod\":\"https://schema.org/ParcelService\",\"availability\":\"https://schema.org/OutOfStock\"}],\"hasMerchantReturnPolicy\":{\"@type\":\"MerchantReturnPolicy\",\"applicableCountry\":\"GB\",\"returnPolicyCountry\":\"GB\",\"returnPolicyCategory\":\"https://schema.org/MerchantReturnFiniteReturnWindow\",\"merchantReturnDays\":30,\"returnMethod\":\"https://schema.org/ReturnByMail\",\"returnFees\":\"https://schema.org/FreeReturn\",\"url\":\"https://www.screwfix.com/help/returns\"}}",
+     "{\"@context\":\"https://schema.org/\",\"@type\":\"Product\",\"@id\":\"https://www.screwfix.com/p/erbauer-metal-power-tool-accessories-set-120-pieces/480pg\",\"aggregateRating\":{\"@type\":\"AggregateRating\",\"ratingValue\":\"5\",\"reviewCount\":9}}",
+     "{\"@context\":\"https://schema.org\",\"@type\":\"BreadcrumbList\",\"itemListElement\":[{\"@type\":\"ListItem\",\"position\":1,\"name\":\"Home\",\"item\":\"https://www.screwfix.com/\"},{\"@type\":\"ListItem\",\"position\":2,\"name\":\"Tools\",\"item\":\"https://www.screwfix.com/c/tools/cat830034\"},{\"@type\":\"ListItem\",\"position\":3,\"name\":\"Power Tool Accessories\",\"item\":\"https://www.screwfix.com/c/tools/power-tool-accessories/cat830036\"},{\"@type\":\"ListItem\",\"position\":4,\"name\":\"Drilling\",\"item\":\"https://www.screwfix.com/c/tools/drilling/cat5920002\"},{\"@type\":\"ListItem\",\"position\":5,\"name\":\"Drill Bits\",\"item\":\"https://www.screwfix.com/c/tools/drill-bits/cat12140001\"}]}"
+    ],
+    "result": {
+     "status": "found",
+     "name": "Erbauer Metal Power Tool Accessories Set 120 Pieces",
+     "price": "£24.99",
+     "age": false,
+     "ld": "£24.99",
+     "ldSure": true
+    },
+    "title": "Erbauer  Metal Power Tool Accessories Set 120 Pieces - Screwfix",
+    "h1": "<span itemProp=\"name\">Erbauer  Metal Power Tool Accessories Set 120 Pieces<!-- --> </span><span class=\"oodeYO\">(<!-- -->480PG<!-- -->)</span>",
+    "nearPrice": " Erbauer Metal Power Tool Accessories Set 120 Pieces - Screwfix Skip to content Need Help Sign in / Register Show prices excluding VAT INC VAT EX VAT Browse Search Activating the button will move focus to the expanded search input field Search Stores Select a store No items in basket Checkout DEPARTMENTS Tools Heating &amp; Plumbing Electrical &amp; Lighting Bathrooms &amp; Kitchens Outdoor &amp; Gardening Screws, Nails &amp; Fixin",
+    "nearCode": "ore DELIVERY IN AS LITTLE AS 20 MINUTES with Sprint NEW DEALS THIS OCTOBER. SHOP NOW Back to Home &lt; Back to Tools &lt; Back to Power Tool Accessories &lt; Back to Drilling &lt; [...] Tools Power Tool Accessories Drilling &lt; Back to Drill Bits Erbauer Metal Power Tool Accessories Set 120 Pieces ( 480PG ) Product rating 5 stars out of 5 Product rating 5 stars out of 5 (9) Ask a Question Easy to use, M35 HSS bit set containing fully-ground, high speed steel drill bits. Features 135° split point for precision drilling and forged tip for greater impact resistance and a longer lifetime. Special",
+    "head": "<!DOCTYPE html><html prefix=\"og: https://ogp.me/ns#\" lang=\"en-GB\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" data-next-head=\"\"/><script src=\"https://tags.tiqcdn.com/utag/kingfisher/screwfix-fusionx/prod/utag.js\" async=\"\" data-next-head=\"\"></script><script src=\"https://js.clrt.ai/13645.js\" async=\"\"></script><script src=\"/fusionx/srvinit.js\" async=\"\"></script><meta name=\"optimizely-edge\" content=\"on\" data-next-head=\"\"/><link rel=\"preload\" href=\"/fusionx/fonts/archivonarrow-bold-webfont.woff2\" as=\"font\" type=\"font/woff2\" cros",
+    "priceBits": [
+     "wfix.com/p/erbauer-metal-power-tool-accessories-set-120-pieces/480pg\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":24.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@typ",
+     "wfix.com/p/erbauer-metal-power-tool-accessories-set-120-pieces/480pg\",\"itemCondition\":\"https://schema.org/NewCondition\",\"price\":24.99,\"priceCurrency\":\"GBP\",\"potentialAction\":{\"@typ"
+    ],
+    "skuBits": [
+     "480PG"
+    ]
+   },
+   "codetabs": {
+    "http": 522,
+    "finalUrl": "https://api.codetabs.com/v1/proxy?quest=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F480pg",
+    "len": 7247,
+    "ms": 19416,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "relay-error"
+    },
+    "title": "codetabs.com | 522: Connection timed out",
+    "h1": "\n                <span class=\"inline-block\">Connection timed out</span>\n                <span class=\"code-label\">Error code 522</span>\n            ",
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "<!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![endif]-->\n<head>\n\n<title>codetabs.com | 522: Connection timed out</title>\n<meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"viewpor",
+    "priceBits": [],
+    "skuBits": []
+   },
+   "cors.lol": {
+    "http": 429,
+    "finalUrl": "https://api.cors.lol/?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F480pg",
+    "len": 20,
+    "ms": 675,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "http-429"
+    },
+    "title": null,
+    "h1": null,
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "Rate limit exceeded\n"
+   },
+   "allorigins": {
+    "http": 522,
+    "finalUrl": "https://api.allorigins.win/raw?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F480pg",
+    "len": 7259,
+    "ms": 19301,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "relay-error"
+    },
+    "title": "allorigins.win | 522: Connection timed out",
+    "h1": "\n                <span class=\"inline-block\">Connection timed out</span>\n                <span class=\"code-label\">Error code 522</span>\n            ",
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "<!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![endif]-->\n<head>\n\n<title>allorigins.win | 522: Connection timed out</title>\n<meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"viewp"
+   },
+   "jina": {
+    "http": 200,
+    "finalUrl": "https://r.jina.ai/https://www.screwfix.com/p/product/480pg",
+    "len": 122592,
+    "ms": 10193,
+    "ld": [],
+    "result": {
+     "status": "found",
+     "name": "Erbauer Metal Power Tool Accessories Set 120 Pieces",
+     "price": "£24.99",
+     "age": false
+    },
+    "title": "Erbauer  Metal Power Tool Accessories Set 120 Pieces - Screwfix",
+    "h1": null,
+    "nearPrice": "e: Erbauer  Metal Power Tool Accessories Set 120 Pieces - Screwfix\n\nURL Source: https://www.screwfix.com/p/product/480pg\n\nMarkdown Content:\n[Skip to content](https://www.screwfix.com/p/product/480pg#container-main)\n\n[Need Help](https://www.screwfix.com/help/helphome)\n\nShow prices excluding VAT- [x] INC VAT EX VAT \n\n[![Image 1: Screwfix Logo](https://media.screwfix.com/is/content/ae235/screwfix-logo-uk)](https://www.screwfix.com/ \"Return to Screwfix.com homepage\")\n\nSearch Activating the button will move focus to the expanded search input field\n\nSearch\n\n[Your Account Sign in / Register](https://",
+    "nearCode": "bauer  Metal Power Tool Accessories Set 120 Pieces](https://media.screwfix.com/is/image/ae235/480PG_A2?$fxSharpen$=&wid=46&hei=46&dpr=on)\n\n![Image 13: Erbauer](https://media.screwfix.com/is/image/ae235/Erbauer?$fxSharpen$=&wid=107&hei=50&dpr=on)\n\n# Erbauer Metal Power Tool Accessories Set 120 Pieces(480PG)\n\n(9)\n\nAsk a Question\n\nEasy to use, M35 HSS bit set containing fully-ground, high speed steel drill bits. Features 135° split point for precision drilling and forged tip for greater impact resistance and a longer lifetime. Specially designed for use with impact drivers and compatible with mos",
+    "head": "Title: Erbauer  Metal Power Tool Accessories Set 120 Pieces - Screwfix\n\nURL Source: https://www.screwfix.com/p/product/480pg\n\nMarkdown Content:\n[Skip to content](https://www.screwfix.com/p/product/480pg#container-main)\n\n[Need Help](https://www.screwfix.com/help/helphome)\n\nShow prices excluding VAT- [x] INC VAT EX VAT \n\n[![Image 1: Screwfix Logo](https://media.screwfix.com/is/content/ae235/screwfix-logo-uk)](https://www.screwfix.com/ \"Return to Screwfix.com homepage\")\n\nSearch Activating the button will move focus to the expanded search input field\n\nSearch\n\n[Your Account Sign in / Register](http"
+   },
+   "corsproxy": {
+    "http": 401,
+    "finalUrl": "https://corsproxy.io/?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F480pg",
+    "len": 81,
+    "ms": 29,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "http-401"
+    },
+    "title": null,
+    "h1": null,
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "{\"error\":\"A valid API key is required. Get one at https://console.corsproxy.io/\"}"
+   }
+  },
+  "132KH": {
+   "direct": {
+    "http": 202,
+    "finalUrl": "https://www.screwfix.com/p/product/132kh",
+    "len": 2447,
+    "ms": 169,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "other"
+    },
+    "title": null,
+    "h1": "JavaScript is disabled",
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title></title>\n    <style>\n        body {\n            font-family: \"Arial\";\n        }\n    </style>\n    <script type=\"text/javascript\">\n    window.awsWafCookieDomainList = [];\n    window.gokuProps = {\n\"key\":\"AQIDAHjcYu/GjX+QlghicBgQ/7bFaQZ+m5FKCMDnO+vTbNg96AFUT2xVMs/1ekQyHXHWrDW5AAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMLvxUvWjwnfEwpUaNAgEQgDswHYm4dQ8LfcvjEhag42ATAYHZ5aL7knPamWrVdbM6HO/vL+GeTXGFFUQjZAfP2JO3vhHh0lUK5wjgoQ==",
+    "priceBits": [],
+    "skuBits": []
+   },
+   "codetabs": {
+    "http": 503,
+    "finalUrl": "https://api.codetabs.com/v1/proxy?quest=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F132kh",
+    "len": 7108,
+    "ms": 193,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "limited"
+    },
+    "title": "Rate Limited | api.codetabs.com | Cloudflare",
+    "h1": "\n                        <span data-translate=\"error\">Error</span>\n                        <span>1200</span>\n                    ",
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "<!doctype html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!-->\n<html class=\"no-js\" lang=\"en-US\">\n    <!--<![endif]-->\n    <head>\n        <title>Rate Limited | api.codetabs.com | Cloudflare</title>\n        <meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofol",
+    "priceBits": [],
+    "skuBits": []
+   },
+   "cors.lol": {
+    "http": 429,
+    "finalUrl": "https://api.cors.lol/?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F132kh",
+    "len": 20,
+    "ms": 484,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "http-429"
+    },
+    "title": null,
+    "h1": null,
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "Rate limit exceeded\n"
+   },
+   "allorigins": {
+    "http": 522,
+    "finalUrl": "https://api.allorigins.win/raw?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F132kh",
+    "len": 7259,
+    "ms": 19595,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "relay-error"
+    },
+    "title": "allorigins.win | 522: Connection timed out",
+    "h1": "\n                <span class=\"inline-block\">Connection timed out</span>\n                <span class=\"code-label\">Error code 522</span>\n            ",
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "<!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![endif]-->\n<head>\n\n<title>allorigins.win | 522: Connection timed out</title>\n<meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"viewp"
+   },
+   "jina": {
+    "http": 200,
+    "finalUrl": "https://r.jina.ai/https://www.screwfix.com/p/product/132kh",
+    "len": 117917,
+    "ms": 10616,
+    "ld": [],
+    "result": {
+     "status": "found",
+     "name": "Westland Gro-Sure Multipurpose Lawn Seed 120m² 3.6kg",
+     "price": "£31.99",
+     "age": false
+    },
+    "title": "Westland  Gro-Sure Multipurpose Lawn Seed 120m² 3.6kg - Screwfix",
+    "h1": null,
+    "nearPrice": ": Westland  Gro-Sure Multipurpose Lawn Seed 120m² 3.6kg - Screwfix\n\nURL Source: https://www.screwfix.com/p/product/132kh\n\nMarkdown Content:\n[Skip to content](https://www.screwfix.com/p/product/132kh#container-main)\n\n[Need Help](https://www.screwfix.com/help/helphome)\n\nShow prices excluding VAT- [x] INC VAT EX VAT \n\n[![Image 1: Screwfix Logo](https://media.screwfix.com/is/content/ae235/screwfix-logo-uk)](https://www.screwfix.com/ \"Return to Screwfix.com homepage\")\n\nSearch Activating the button will move focus to the expanded search input field\n\nSearch\n\n[Your Account Sign in / Register](https://",
+    "nearCode": "land  Gro-Sure Multipurpose Lawn Seed 120m² 3.6kg](https://media.screwfix.com/is/image/ae235/132KH_P?$fxSharpen$=&wid=46&hei=46&dpr=on)\n\n![Image 5: Westland](https://media.screwfix.com/is/image/ae235/Westland?$fxSharpen$=&wid=107&hei=50&dpr=on)\n\n# Westland Gro-Sure Multipurpose Lawn Seed 120m² 3.6kg(132KH)\n\n(22)\n\nAsk a Question\n\nA blend of quality, hardwearing seed varieties that establish strong root networks. Seed treatment to help deter birds from feeding. Ideal for starting a new lawn, over-seeding worn grass or filling in bare patches.\n\n*   Maintains Colour All Season Long\n*   Coverage Pe",
+    "head": "Title: Westland  Gro-Sure Multipurpose Lawn Seed 120m² 3.6kg - Screwfix\n\nURL Source: https://www.screwfix.com/p/product/132kh\n\nMarkdown Content:\n[Skip to content](https://www.screwfix.com/p/product/132kh#container-main)\n\n[Need Help](https://www.screwfix.com/help/helphome)\n\nShow prices excluding VAT- [x] INC VAT EX VAT \n\n[![Image 1: Screwfix Logo](https://media.screwfix.com/is/content/ae235/screwfix-logo-uk)](https://www.screwfix.com/ \"Return to Screwfix.com homepage\")\n\nSearch Activating the button will move focus to the expanded search input field\n\nSearch\n\n[Your Account Sign in / Register](htt"
+   },
+   "corsproxy": {
+    "http": 401,
+    "finalUrl": "https://corsproxy.io/?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F132kh",
+    "len": 81,
+    "ms": 33,
+    "ld": [],
+    "result": {
+     "status": "blocked",
+     "why": "http-401"
+    },
+    "title": null,
+    "h1": null,
+    "nearPrice": null,
+    "nearCode": null,
+    "head": "{\"error\":\"A valid API key is required. Get one at https://console.corsproxy.io/\"}"
+   }
+  }
+ }
+}
