@@ -788,11 +788,13 @@
         runs.push(run);
         if (runs.length > 1 && runs.every(function (r) { return r === runs[0]; }) && runs[0] >= 2 && runs[0] <= PG.maxCols) cols = runs[0];
       });
+      var fixed = /^AOV/i.test(b.name);                       // AOV bays: same width, same slot size
+      if (fixed) cols = 4;
       var lim = Math.min(avail1, avail), cur = null;
       shelves.forEach(function (sh) {
         var lines = Math.ceil(sh.spots.length / cols), h = PG.strip + lines * PG.cellH;
         if (!cur || (cur.h + h > lim && cur.shelves.length)) {
-          cur = { bay: b, cont: !!cur, cols: cols, h: PG.title, shelves: [], page: b.page };
+          cur = { bay: b, cont: !!cur, fixed: fixed, cols: cols, h: PG.title, shelves: [], page: b.page };
           segs.push(cur);
         }
         cur.shelves.push(sh); cur.h += h;
@@ -869,7 +871,7 @@
         var lines = Math.ceil(sh.spots.length / sg.cols);
         for (var ln = 0; ln < lines; ln++) {
           var row = sh.spots.slice(ln * sg.cols, (ln + 1) * sg.cols);
-          var cw = bw / row.length;                         // the slots share the shelf, like the brief
+          var cw = sg.fixed ? bw / sg.cols : bw / row.length;                         // the slots share the shelf, like the brief
           row.forEach(function (s, k) { drawSlot(g, bx + k * cw, cy - PG.cellH, cw, PG.cellH, s); });
           cy -= PG.cellH;
         }
