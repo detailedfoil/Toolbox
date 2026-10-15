@@ -23,7 +23,7 @@ jobs:
       - name: Save
         if: always()
         run: |
-          git add -f diag/out.json || exit 0
+          git add -f diag/ || exit 0
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           git commit -q -m "diag output [skip ci]" && git push -q
