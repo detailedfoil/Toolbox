@@ -573,6 +573,7 @@
 
   function layout(data, opts) {
     var ONLY = !!(opts && opts.changesOnly);
+    if (!ONLY) return planogram(data);                  // the full list is drawn like the brief's planograms
     var P = data.products || {}, bays = data.bays || [], plan = data.plan || {};
     var spots = places(bays), codes = [], seen = {};
     spots.forEach(function (s) { if (!seen[s.code]) { seen[s.code] = 1; codes.push(s.code); } });
@@ -702,6 +703,215 @@
     return { pages: flow.pages, changes: changed.length };
   }
 
+  /* ---------- the full list drawn like the brief's planograms: A4 landscape, each bay as shelves of slots,
+   * each slot just the SKU and its price. Bays sit side by side in brief order; a tall bay carries on in the
+   * next column. Changed prices: grey slot, heavy border, arrow and the old price struck through. ---------- */
+
+  var LW = 297 * MM, LH = 210 * MM, LM = 8 * MM;
+  var PG = { cellMin: 13.5 * MM, cellMax: 18 * MM, gap: 3 * MM, cellH: 12 * MM, strip: 4.2 * MM, title: 7.5 * MM, maxCols: 8 };
+
+  /* shrink to fit, then cut off with ... */
+  function fitText(font, size, min, maxW, s) {
+    s = win(s);
+    var sz = size;
+    while (sz > min && width(font, sz, s) > maxW) sz -= 0.25;
+    if (width(font, sz, s) <= maxW) return { s: s, size: sz };
+    while (s.length > 1 && width(font, sz, s + '...') > maxW) s = s.slice(0, -1);
+    return { s: s.replace(/\s+$/, '') + '...', size: sz };
+  }
+  function tri(g, cx, cy, up, r, gray) {
+    var p = up ? [cx - r, cy - r * 0.8, cx + r, cy - r * 0.8, cx, cy + r * 0.9] : [cx - r, cy + r * 0.8, cx + r, cy + r * 0.8, cx, cy - r * 0.9];
+    g.raw(num(gray) + ' g ' + num(p[0]) + ' ' + num(p[1]) + ' m ' + num(p[2]) + ' ' + num(p[3]) + ' l ' + num(p[4]) + ' ' + num(p[5]) + ' l h f');
+  }
+
+  function planogram(data) {
+    var P = data.products || {}, bays = data.bays || [], plan = data.plan || {};
+    function prod(c) { return P[c] || { name: null, price: null, prev: null, status: 'unchecked' }; }
+    function isChange(c) { var p = prod(c); return p.status === 'changed' && p.price != null && p.prev != null; }
+    var spots = places(bays), codes = [], seen = {};
+    spots.forEach(function (s) { if (!seen[s.code]) { seen[s.code] = 1; codes.push(s.code); } });
+    var checked = data.checked;
+    var when = checked ? (data.complete === false ? 'partial check, ' : '') + nice(checked) : 'partial check, ' + nice(ukToday());
+    var changed = codes.filter(isChange), up = changed.filter(function (c) { return prod(c).price > prod(c).prev; }).length;
+    var notFound = codes.filter(function (c) { return prod(c).status === 'not_found'; }).length;
+    var notChecked = codes.filter(function (c) { var s = prod(c).status; return s !== 'ok' && s !== 'changed' && s !== 'not_found'; }).length;
+    var store = plan.store || 'Screwfix', planName = plan.name || 'Shop plan', shortName = plan.short || planName;
+    var pc = planChanges(data), isNew = {};
+    if (pc) pc.added.forEach(function (a) { isNew[a.code] = 1; });
+
+    var W = LW - 2 * LM, TOP = LH - LM, BOTTOM = LM + 5 * MM, HEAD = 8 * MM;
+
+    // page 1 summary: counts, key, and what the newest brief changed
+    var intro = [];
+    intro.push(new Para(S('H', 9, 11.5), [
+      { t: String(changed.length), b: 1 }, { t: ' price change' + (changed.length === 1 ? '' : 's') + ' (' }, { t: String(up), b: 1 }, { t: ' up, ' }, { t: String(changed.length - up), b: 1 }, { t: ' down)  |  ' },
+      { t: String(notFound), b: 1 }, { t: ' not found online  |  ' }, { t: String(notChecked), b: 1 }, { t: ' not checked yet  |  ' + (codes.length - notChecked) + ' of ' + codes.length + ' lines checked' +
+        (data.previous_checked ? ', compared with ' + nice(data.previous_checked) : '') }]));
+    intro.push(new Para(S('H', 8, 10, GREY), 'Each bay as on the brief: top shelf first, left to right. Grey slot with a heavy border and an arrow = new price, swap the ticket (old price struck through underneath). NEW = new line from the latest brief. * = not rechecked this week.'));
+    if (pc) {
+      var runs = [{ t: 'Plan changes, brief ' + (pc.brief || '') + ':  ', b: 1 }];
+      if (pc.added.length) {
+        runs.push({ t: 'Added ', b: 1 });
+        pc.added.forEach(function (a, i) { runs.push({ t: (i ? ';  ' : '') }, { t: a.code, b: 1 }, { t: ' ' + a.where }); });
+      }
+      if (pc.removed.length) {
+        runs.push({ t: (pc.added.length ? '.   ' : '') }, { t: 'Removed ', b: 1 });
+        pc.removed.forEach(function (r, i) { runs.push({ t: (i ? ';  ' : '') }, { t: r.code, b: 1 }, { t: ' (was ' + r.where + ')' }); });
+      }
+      runs.push({ t: '.' });
+      intro.push(new Para(S('H', 8, 10), runs));
+    }
+    var introH = intro.reduce(function (t, p) { return t + p.wrap(W) + 1.5 * MM; }, 0) + 1 * MM;
+
+    // each bay -> segments no taller than a page
+    var avail1 = TOP - HEAD - introH - BOTTOM, avail = TOP - HEAD - BOTTOM;
+    var segs = [];
+    bays.forEach(function (b, bi) {
+      var mine = spots.filter(function (s) { return s.bi === bi; });
+      var shelves = [];
+      mine.forEach(function (s) {
+        var sh = shelves[shelves.length - 1];
+        if (!sh || sh.si !== s.si) shelves.push(sh = { si: s.si, label: s.shelf, spots: [] });
+        sh.spots.push(s);
+      });
+      var cols = Math.max(2, Math.min(PG.maxCols, shelves.reduce(function (m, sh) { return Math.max(m, sh.spots.length); }, 0)));
+      var lim = Math.min(avail1, avail), cur = null;
+      shelves.forEach(function (sh) {
+        var lines = Math.ceil(sh.spots.length / cols), h = PG.strip + lines * PG.cellH;
+        if (!cur || (cur.h + h > lim && cur.shelves.length)) {
+          cur = { bay: b, cont: !!cur, cols: cols, h: PG.title, shelves: [], page: b.page };
+          segs.push(cur);
+        }
+        cur.shelves.push(sh); cur.h += h;
+      });
+    });
+
+    // pack segments onto pages: down a column while there's room, then the next column across, then the next page
+    var widthOf = function (cols, n, cell) { return cols * cell + Math.max(0, n - 1) * PG.gap; };
+    var pages = [], page = null, col = null;
+    function pageCols(pg, extra, n) { return { cols: pg.cols.reduce(function (t, c) { return t + c.cols; }, 0) + extra, n: pg.cols.length + n }; }
+    segs.forEach(function (sg) {
+      if (page) {
+        var room = (pages.length === 1 ? avail1 : avail) - col.h - PG.gap;
+        if (sg.h <= room + FUZZ) {
+          var grow = Math.max(0, sg.cols - col.cols), t = pageCols(page, grow, 0);
+          if (widthOf(t.cols, t.n, PG.cellMin) <= W + FUZZ) { col.segs.push(sg); col.cols += grow; col.h += PG.gap + sg.h; return; }
+        }
+        var t2 = pageCols(page, sg.cols, 1);
+        if (widthOf(t2.cols, t2.n, PG.cellMin) <= W + FUZZ) { col = { segs: [sg], cols: sg.cols, h: sg.h }; page.cols.push(col); return; }
+      }
+      page = { cols: [] }; pages.push(page);
+      col = { segs: [sg], cols: sg.cols, h: sg.h }; page.cols.push(col);
+    });
+
+    var out = pages.map(function (pgObj, pi) {
+      var g = new Page();
+      g.w = LW; g.h = LH;
+      // header and footer
+      g.text('HB', 15, 0, LM, TOP - 13, win('Shelf Price Check'));
+      var hx = LM + width('HB', 15, 'Shelf Price Check') + 8;
+      g.text('H', 9.5, GREY, hx, TOP - 13, win(planName + '  |  screwfix.com prices inc VAT, ' + when));
+      g.line(LM, TOP - HEAD + 3, LM + W, TOP - HEAD + 3, 1.2, BLACK);
+      g.text('H', 8, GREY, LM, LM, win(store + '  |  ' + shortName + ' shelf price check  |  ' + when));
+      var pg = 'Page ' + (pi + 1) + ' of ' + pages.length;
+      g.text('H', 8, GREY, LM + W - width('H', 8, pg), LM, pg);
+      var y0 = TOP - HEAD;
+      if (pi === 0) intro.forEach(function (p) { y0 -= 1 * MM; p.drawOn(g, LM, y0 - p.h); y0 -= p.h + 0.5 * MM; });
+      y0 -= 1 * MM;
+
+      var tc = pageCols(pgObj, 0, 0);
+      var cell = Math.min(PG.cellMax, (W - (tc.n - 1) * PG.gap) / tc.cols);
+      var x = LM;
+      pgObj.cols.forEach(function (cl) {
+        var y = y0;
+        cl.segs.forEach(function (sg) { y = drawSeg2(g, x, y, sg, cell) - PG.gap; });
+        x += cl.cols * cell + PG.gap;
+      });
+      return g;
+    });
+
+    function drawSeg2(g, bx, top, sg, cell) {
+      var bw = sg.cols * cell;
+      // bay title band
+      g.rect(bx, top - PG.title, bw, PG.title, BLACK);
+      var name = sg.bay.name + (sg.cont ? ' (cont.)' : '');
+      var tag = 'p' + sg.bay.page, tagW = width('H', 7, tag) + 6;
+      var ft = fitText('HB', 9.5, 6, bw - 8 - tagW, name.toUpperCase());
+      g.text('HB', ft.size, WHITE, bx + 4, top - PG.title / 2 - ft.size * 0.35, ft.s);
+      g.text('H', 7, WHITE, bx + bw - tagW + 2, top - PG.title / 2 - 2.4, tag);
+      var cy = top - PG.title;
+      sg.shelves.forEach(function (sh) {
+        // shelf strip, like the brief's ticket strips
+        g.rect(bx, cy - PG.strip, bw, PG.strip, 0.3);
+        if (sh.label) { var fl = fitText('HB', 6.5, 5, bw - 6, sh.label.toUpperCase()); g.text('HB', fl.size, WHITE, bx + 3, cy - PG.strip / 2 - 2.3, fl.s); }
+        cy -= PG.strip;
+        var lines = Math.ceil(sh.spots.length / sg.cols);
+        for (var ln = 0; ln < lines; ln++) {
+          var row = sh.spots.slice(ln * sg.cols, (ln + 1) * sg.cols);
+          var cw = bw / row.length;                         // the slots share the shelf, like the brief
+          row.forEach(function (s, k) { drawSlot(g, bx + k * cw, cy - PG.cellH, cw, PG.cellH, s); });
+          cy -= PG.cellH;
+        }
+      });
+      g.raw('q 1 J 1 j');
+      g.line(bx, top, bx + bw, top, 0.8, BLACK); g.line(bx, cy, bx + bw, cy, 0.8, BLACK);
+      g.line(bx, cy, bx, top, 0.8, BLACK); g.line(bx + bw, cy, bx + bw, top, 0.8, BLACK);
+      g.raw('Q');
+      return cy;
+    }
+
+    function drawSlot(g, x, y, w, h, s) {
+      var p = prod(s.code), chg = isChange(s.code), cx = x + w / 2, inner = w - (chg ? 7 : 3);
+      if (chg) g.rect(x, y, w, h, CHG);
+      // SKU
+      var sku = fitText('CB', 9.5, 6.5, inner - (isNew[s.code] ? 0 : 0), s.code);
+      var skuY = y + h - 3.2 - sku.size * 0.75;
+      g.text('CB', sku.size, 0, cx - width('CB', sku.size, sku.s) / 2, skuY, sku.s);
+      // price
+      var priceY = y + h * 0.36, small = [];
+      if (p.status === 'not_found') {
+        var nf = fitText('HO', 7.5, 5.5, inner, 'not online');
+        g.text('HO', nf.size, GREY, cx - width('HO', nf.size, nf.s) / 2, priceY + 1, nf.s);
+      } else if (p.price == null) {
+        var nc = fitText('HO', 7.5, 5.5, inner, 'not checked');
+        g.text('HO', nc.size, GREY, cx - width('HO', nc.size, nc.s) / 2, priceY + 1, nc.s);
+      } else {
+        var star = p.status !== 'ok' && !chg ? '*' : '';
+        var pr = fitText('HB', chg ? 11 : 10.5, 6.5, inner - (chg ? 9 : 0), money(p.price) + star);
+        var pw = width('HB', pr.size, pr.s), px = cx - (pw + (chg ? 8 : 0)) / 2;
+        g.text('HB', pr.size, 0, px, priceY, pr.s);
+        if (chg) tri(g, px + pw + 4.5, priceY + pr.size * 0.35, p.price > p.prev, 2.6, 0);
+      }
+      // bottom line: old price struck through, and the hook/peg position
+      var bits = [];
+      if (s.pos) bits.push(s.pos);
+      var by = y + 2.6;
+      if (chg) {
+        var was = win(money(p.prev)), lead = s.pos ? win(s.pos + '  ') : '';
+        var full = fitText('H', 6.5, 5, inner, lead + was);
+        var tw = width('H', full.size, full.s), tx = cx - tw / 2;
+        g.text('H', full.size, 0, tx, by, full.s);
+        var sx = tx + width('H', full.size, lead);
+        g.line(sx, by + full.size * 0.33, tx + tw, by + full.size * 0.33, 0.6, BLACK);
+      } else if (bits.length) {
+        var b2 = fitText('H', 6, 4.5, inner, bits.join('  '));
+        g.text('H', b2.size, GREY, cx - width('H', b2.size, b2.s) / 2, by, b2.s);
+      }
+      if (isNew[s.code]) {
+        var nw = width('HB', 5.5, 'NEW') + 3;
+        g.rect(x + 1.5, y + 1.5, nw, 6.5, BLACK);
+        g.text('HB', 5.5, WHITE, x + 3, y + 3.4, 'NEW');
+      }
+      // slot border: heavy for a changed price
+      g.raw('q 1 J 1 j');
+      if (chg) { g.raw('2 w 0 G ' + num(x + 1) + ' ' + num(y + 1) + ' ' + num(w - 2) + ' ' + num(h - 2) + ' re S'); }
+      else g.raw('0.4 w ' + num(GRID) + ' G ' + num(x) + ' ' + num(y) + ' ' + num(w) + ' ' + num(h) + ' re S');
+      g.raw('Q');
+    }
+
+    return { pages: out, changes: changed.length };
+  }
+
   /* ---------- PDF file ---------- */
 
   function latin1(s) {
@@ -748,7 +958,7 @@
       var fontRes = FONT_ORDER.map(function (k, i) { return '/' + FONTS[k].id + ' ' + (4 + i) + ' 0 R'; }).join(' ');
       res.pages.forEach(function (_, i) {
         var n = first + 2 * i, z = packed[i], body = z || streams[i];
-        obj(n, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + num(PAGE_W) + ' ' + num(PAGE_H) + ']' +
+        obj(n, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + num(res.pages[i].w || PAGE_W) + ' ' + num(res.pages[i].h || PAGE_H) + ']' +
                ' /Resources << /Font << ' + fontRes + ' >> /ProcSet [/PDF /Text] >> /Contents ' + (n + 1) + ' 0 R >>');
         obj(n + 1, '<< /Length ' + body.length + (z ? ' /Filter /FlateDecode' : '') + ' >>', body);
       });
