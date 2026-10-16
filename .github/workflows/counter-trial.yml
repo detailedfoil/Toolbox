@@ -13,13 +13,12 @@
 name: Counter trial price check
 
 on:
-  # Automatic runs are switched off for now (detailedfoil, 14 Oct 2026): Screwfix kept blocking GitHub
-  # part way through. It only runs when started by hand: the page's Check on GitHub button, or
-  # Actions > Counter trial price check > Run workflow. To switch the nightly run back on, restore:
-  #   schedule:
-  #     - cron: '7 2 * * *'
-  #     - cron: '37 5 * * *'
-  #     - cron: '37 9 * * *'
+  schedule:
+    # GitHub reads these as UTC. 02:07 UTC is 03:07 in summer (BST) and 02:07 in winter (GMT); the later ones
+    # only finish off lines the earlier run couldn't reach.
+    - cron: '7 2 * * *'
+    - cron: '37 5 * * *'
+    - cron: '37 9 * * *'
   workflow_dispatch:
     inputs:
       mode:
