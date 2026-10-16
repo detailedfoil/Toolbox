@@ -2,7 +2,7 @@ name: Counter trial diagnosis
 on:
   push:
     branches: [diag-ct3]
-    paths: ['.github/workflows/diag-ct.yml', '.github/counter-trial/diag.mjs']
+    paths: ['.github/workflows/diag-ct.yml', '.github/counter-trial/diag.mjs', '.github/e2e/**']
 permissions:
   contents: write
 jobs:
@@ -14,9 +14,13 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - run: npm ci --no-audit --no-fund
-        working-directory: .github/counter-trial
-      - run: node .github/counter-trial/diag.mjs
+      - run: npm install --no-audit --no-fund
+        working-directory: .github/e2e
+      - name: Live page in real Chrome
+        run: node .github/e2e/e2e.mjs
+        working-directory: .
+        env:
+          NODE_PATH: .github/e2e/node_modules
       - name: Save
         if: always()
         run: |
