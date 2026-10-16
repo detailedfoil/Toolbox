@@ -19,7 +19,7 @@
     // jina sends the page as text by default, which leaves out the product data (JSON-LD) that confirms a new
     // price. lookup(code, {full: true}) asks it for the page itself instead (counter trial device check).
     { id: 'jina',       build: function (u) { return 'https://r.jina.ai/' + u; },
-                        full: { 'X-Return-Format': 'html', 'X-No-Cache': 'true' } },
+                        full: { 'X-Return-Format': 'html' } },   // not X-No-Cache: a forced live fetch gets Screwfix's bot check (tested 16 Oct)
     { id: 'corsproxy',  build: function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); } }
   ];
   var ORDER_KEY = 'pt-proxy-order-v1';
