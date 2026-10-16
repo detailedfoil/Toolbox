@@ -582,7 +582,9 @@
     (trace || []).forEach(function (t) {
       var r = phone.relays[t.via] || (phone.relays[t.via] = { ok: 0, hard: 0 });
       if (t.outcome === 'found' || t.outcome === 'partial' || t.outcome === 'notfound') r.ok++;
-      else if (HARD.test(t.outcome)) r.hard++;
+      // a relay that's down often only shows in the browser as no answer after ~20 s (its error page has no CORS
+      // headers); losing signal fails at once, so only the slow ones count
+      else if (HARD.test(t.outcome) || (/^(network|timeout)$/.test(t.outcome) && t.ms > 8000)) r.hard++;
     });
     // remembered for the next few hours, so the next check doesn't wait on them either
     store(DEAD_KEY, { at: new Date().toISOString(), ids: skipList() });
@@ -840,9 +842,11 @@
       out.push('  ' + it.code + ' ' + hms(it.at) + ' took ' + sec(it.ms) + ' ' + String(it.result).toUpperCase() + (it.price != null ? ' ' + gbp(it.price) : '') +
         ' (last ' + gbp(it.last) + ', ticket ' + gbp(it.ticket) + ')' + (it.why ? ': ' + it.why : ''));
       (it.steps || []).forEach(function (s) {
-        if (good && s.step === 'text') {          // worked: one line is enough
-          var w = (s.trace || []).filter(function (t) { return t.outcome === 'found' || t.outcome === 'partial'; })[0] || {};
-          out.push('    text ok via ' + (s.via || w.via || '?') + ' ' + sec(w.ms) + ' ' + kb(w.len) + ' ' + s.price + ((s.trace || []).length > 1 ? ' after ' + (s.trace.length - 1) + ' failed go(es)' : ''));
+        if (good && s.step === 'text') {          // worked: one line, plus any relays that failed on the way
+          var ok = function (t) { return t.outcome === 'found' || t.outcome === 'partial'; };
+          var w = (s.trace || []).filter(ok)[0] || {};
+          out.push('    text ok via ' + (s.via || w.via || '?') + ' ' + sec(w.ms) + ' ' + kb(w.len) + ' ' + s.price);
+          (s.trace || []).filter(function (t) { return !ok(t); }).forEach(function (t) { out.push(attemptLine('text', t)); });
           return;
         }
         out.push('    ' + s.step + ': ' + s.status + (s.reason ? ' (' + s.reason + ')' : '') + (s.price ? ' ' + s.price : '') +
