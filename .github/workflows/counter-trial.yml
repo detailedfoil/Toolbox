@@ -14,11 +14,11 @@ name: Counter trial price check
 
 on:
   schedule:
-    # GitHub reads these as UTC. 02:07 UTC is 03:07 in summer (BST) and 02:07 in winter (GMT); the later ones
-    # only finish off lines the earlier run couldn't reach.
-    - cron: '7 2 * * *'
-    - cron: '37 5 * * *'
-    - cron: '37 9 * * *'
+    # GitHub reads these as UTC. 00:07 UTC is 01:07 in summer (BST) and 00:07 in winter (GMT), so it's never before
+    # midnight UK time (detailedfoil, 17 Oct 2026). The later ones only finish off lines the first run couldn't reach.
+    - cron: '7 0 * * *'
+    - cron: '37 3 * * *'
+    - cron: '37 7 * * *'
   workflow_dispatch:
     inputs:
       mode:
