@@ -1,0 +1,349 @@
+{
+ "at": "2026-10-16T18:54:39.992Z",
+ "preflight": {
+  "x-engine,x-return-format": {
+   "http": 200,
+   "allowHeaders": "x-engine,x-return-format",
+   "allowOrigin": "https://detailedfoil.github.io",
+   "ms": 208
+  }
+ },
+ "runs": [
+  {
+   "label": "plain #0",
+   "code": "842CF",
+   "http": 200,
+   "len": 116545,
+   "ms": 658,
+   "status": "found",
+   "price": "£25.99"
+  },
+  {
+   "label": "plain #0",
+   "code": "318FX",
+   "http": 200,
+   "len": 122300,
+   "ms": 571,
+   "status": "found",
+   "price": "£53.99"
+  },
+  {
+   "label": "plain #0",
+   "code": "480PG",
+   "http": 200,
+   "len": 122516,
+   "ms": 583,
+   "status": "found",
+   "price": "£24.99"
+  },
+  {
+   "label": "html #0",
+   "code": "842CF",
+   "http": 200,
+   "len": 478352,
+   "ms": 743,
+   "status": "found",
+   "price": "£25.99",
+   "ldSure": true
+  },
+  {
+   "label": "html #0",
+   "code": "318FX",
+   "http": 200,
+   "len": 494703,
+   "ms": 621,
+   "status": "found",
+   "price": "£53.99",
+   "ldSure": true
+  },
+  {
+   "label": "html #0",
+   "code": "480PG",
+   "http": 200,
+   "len": 489752,
+   "ms": 681,
+   "status": "found",
+   "price": "£24.99",
+   "ldSure": true
+  },
+  {
+   "label": "html+nocache #0",
+   "code": "842CF",
+   "http": 200,
+   "len": 2003,
+   "ms": 489,
+   "status": "blocked",
+   "why": "other"
+  },
+  {
+   "label": "html+nocache #0",
+   "code": "318FX",
+   "http": 200,
+   "len": 2003,
+   "ms": 3151,
+   "status": "blocked",
+   "why": "other"
+  },
+  {
+   "label": "html+nocache #0",
+   "code": "480PG",
+   "http": 200,
+   "len": 822,
+   "ms": 372,
+   "status": "blocked",
+   "why": "other"
+  },
+  {
+   "label": "html+browser #0",
+   "code": "842CF",
+   "http": 401,
+   "len": 345,
+   "ms": 237,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+browser #0",
+   "code": "318FX",
+   "http": 401,
+   "len": 345,
+   "ms": 256,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+browser #0",
+   "code": "480PG",
+   "http": 401,
+   "len": 345,
+   "ms": 224,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+browser+nocache #0",
+   "code": "842CF",
+   "http": 401,
+   "len": 345,
+   "ms": 81,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+browser+nocache #0",
+   "code": "318FX",
+   "http": 401,
+   "len": 345,
+   "ms": 238,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+browser+nocache #0",
+   "code": "480PG",
+   "http": 401,
+   "len": 345,
+   "ms": 237,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+direct #0",
+   "code": "842CF",
+   "http": 200,
+   "len": 478352,
+   "ms": 688,
+   "status": "found",
+   "price": "£25.99",
+   "ldSure": true
+  },
+  {
+   "label": "html+direct #0",
+   "code": "318FX",
+   "http": 200,
+   "len": 494703,
+   "ms": 538,
+   "status": "found",
+   "price": "£53.99",
+   "ldSure": true
+  },
+  {
+   "label": "html+direct #0",
+   "code": "480PG",
+   "http": 200,
+   "len": 489752,
+   "ms": 920,
+   "status": "found",
+   "price": "£24.99",
+   "ldSure": true
+  },
+  {
+   "label": "plain #1",
+   "code": "842CF",
+   "http": 200,
+   "len": 116545,
+   "ms": 639,
+   "status": "found",
+   "price": "£25.99"
+  },
+  {
+   "label": "plain #1",
+   "code": "318FX",
+   "http": 200,
+   "len": 122300,
+   "ms": 626,
+   "status": "found",
+   "price": "£53.99"
+  },
+  {
+   "label": "plain #1",
+   "code": "480PG",
+   "http": 200,
+   "len": 122516,
+   "ms": 687,
+   "status": "found",
+   "price": "£24.99"
+  },
+  {
+   "label": "html #1",
+   "code": "842CF",
+   "http": 200,
+   "len": 478352,
+   "ms": 581,
+   "status": "found",
+   "price": "£25.99",
+   "ldSure": true
+  },
+  {
+   "label": "html #1",
+   "code": "318FX",
+   "http": 200,
+   "len": 494703,
+   "ms": 586,
+   "status": "found",
+   "price": "£53.99",
+   "ldSure": true
+  },
+  {
+   "label": "html #1",
+   "code": "480PG",
+   "http": 200,
+   "len": 489752,
+   "ms": 659,
+   "status": "found",
+   "price": "£24.99",
+   "ldSure": true
+  },
+  {
+   "label": "html+nocache #1",
+   "code": "842CF",
+   "http": 200,
+   "len": 2003,
+   "ms": 368,
+   "status": "blocked",
+   "why": "other"
+  },
+  {
+   "label": "html+nocache #1",
+   "code": "318FX",
+   "http": 200,
+   "len": 2003,
+   "ms": 576,
+   "status": "blocked",
+   "why": "other"
+  },
+  {
+   "label": "html+nocache #1",
+   "code": "480PG",
+   "http": 200,
+   "len": 2003,
+   "ms": 517,
+   "status": "blocked",
+   "why": "other"
+  },
+  {
+   "label": "html+browser #1",
+   "code": "842CF",
+   "http": 401,
+   "len": 345,
+   "ms": 81,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+browser #1",
+   "code": "318FX",
+   "http": 401,
+   "len": 345,
+   "ms": 234,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+browser #1",
+   "code": "480PG",
+   "http": 401,
+   "len": 345,
+   "ms": 252,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+browser+nocache #1",
+   "code": "842CF",
+   "http": 401,
+   "len": 345,
+   "ms": 163,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+browser+nocache #1",
+   "code": "318FX",
+   "http": 401,
+   "len": 345,
+   "ms": 224,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+browser+nocache #1",
+   "code": "480PG",
+   "http": 401,
+   "len": 345,
+   "ms": 235,
+   "status": "blocked",
+   "why": "http-401"
+  },
+  {
+   "label": "html+direct #1",
+   "code": "842CF",
+   "http": 200,
+   "len": 478352,
+   "ms": 697,
+   "status": "found",
+   "price": "£25.99",
+   "ldSure": true
+  },
+  {
+   "label": "html+direct #1",
+   "code": "318FX",
+   "http": 200,
+   "len": 494703,
+   "ms": 1601,
+   "status": "found",
+   "price": "£53.99",
+   "ldSure": true
+  },
+  {
+   "label": "html+direct #1",
+   "code": "480PG",
+   "http": 200,
+   "len": 489752,
+   "ms": 1112,
+   "status": "found",
+   "price": "£24.99",
+   "ldSure": true
+  }
+ ]
+}
