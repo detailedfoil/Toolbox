@@ -298,6 +298,9 @@ function finishRun(stop) {
   const t = tally();
   Object.assign(state.run, { finished: new Date().toISOString(), complete: t.unchecked === 0 }, t);
   if (stop) state.run.stopped = stop; else delete state.run.stopped;
+  // why each line still couldn't be read, for the page's error report
+  const why = Object.fromEntries(Object.entries(fails).filter(([c]) => state.products[c] && state.products[c].status === 'unchecked'));
+  if (Object.keys(why).length) state.run.fails = why; else delete state.run.fails;
 }
 
 const fails = {};

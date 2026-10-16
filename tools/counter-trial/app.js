@@ -906,6 +906,11 @@
       p.summary = done + ' of ' + total;
     }
     if (src) render();
+    // missed any: open the error report straight away, while the details are fresh
+    if (why === 'done' && p.failed.length) setTimeout(function () {
+      reportSheet(p.failed.length + (p.failed.length === 1 ? " ticket couldn't be read (" : " tickets couldn't be read (") + p.failed.join(', ') +
+        '). Copy this report and send it to Claude so the cause can be fixed.');
+    }, 600);
     if (why === 'done') toast('Checked ' + p.summary + ' on this device' + (todo.length ? ', ' + todo.length + ' to update' : ', all up to date'));
     else if (why === 'stopped') toast('Stopped. Tap Carry on to finish the other ' + p.queue.length + '.');
     else toast("Couldn't read 6 in a row, so it stopped. Tap Copy an error report and send it to Claude.");
@@ -927,7 +932,7 @@
    * long it took and what the page made of it. The report adds the phone's network, the page and reader versions
    * and the run so far, as text to paste into the chat with Claude. It can be copied at any point, mid-run too. */
 
-  var DIAG_KEY = 'ct-diag-v1', DIAG_KEEP = 30;
+  var DIAG_KEY = 'ct-diag-v1', DIAG_KEEP = 80;           // a whole check (69) fits, so every missed ticket's detail is kept
   function diag() { var v = load(DIAG_KEY, null); return v && Array.isArray(v.items) ? v : { items: [], tests: [] }; }
   function diagAdd(item) { var d = diag(); d.items.push(item); d.items = d.items.slice(-DIAG_KEEP); store(DIAG_KEY, d); }
   function hms(t) {
@@ -942,7 +947,26 @@
   function attemptLine(step, t) {
     return '    ' + step + ' go' + ((t.round || 0) + 1) + ' ' + t.via + (t.mode === 'page' ? '[page]' : '') + ' ' + t.outcome + ' http' + (t.http || 0) +
       (t.len != null ? ' ' + kb(t.len) : '') + ' ' + sec(t.ms) + (t.price ? ' ' + t.price : '') +
-      (t.ld ? ' data=' + t.ld + (t.ldSure ? '' : '(other code)') : '') + (t.err ? ' err="' + t.err + '"' : '') + (t.head ? ' got="' + t.head + '"' : '');
+      (t.ld ? ' data=' + t.ld + (t.ldSure ? '' : '(other code)') : '') + (t.retryAfter != null ? ' wait' + t.retryAfter + 's' : '') +
+      (t.err ? ' err="' + t.err + '"' : '') + (t.head ? ' got="' + (t.outcome === 'limited' ? t.head.slice(0, 60) : t.head) + '"' : '');
+  }
+
+  function itemLines(it, out, full) {
+    var good = it.result === 'same' || it.result === 'changed';
+    out.push('  ' + it.code + ' ' + hms(it.at) + ' took ' + sec(it.ms) + ' ' + String(it.result).toUpperCase() + (it.price != null ? ' ' + gbp(it.price) : '') +
+      ' (last ' + gbp(it.last) + ', ticket ' + gbp(it.ticket) + ')' + (it.why ? ': ' + it.why : ''));
+    (it.steps || []).forEach(function (s) {
+      if (good && s.step === 'text' && !full) {          // worked: one line, plus any relays that failed on the way
+        var ok = function (t) { return t.outcome === 'found' || t.outcome === 'partial'; };
+        var w = (s.trace || []).filter(ok)[0] || {};
+        out.push('    text ok via ' + (s.via || w.via || '?') + ' ' + sec(w.ms) + ' ' + kb(w.len) + ' ' + s.price);
+        (s.trace || []).filter(function (t) { return !ok(t); }).forEach(function (t) { out.push(attemptLine('text', t)); });
+        return;
+      }
+      out.push('    ' + s.step + ': ' + s.status + (s.reason ? ' (' + s.reason + ')' : '') + (s.price ? ' ' + s.price : '') +
+        (s.ld ? ' data=' + s.ld + (s.ldSure ? '' : '(other code)') : '') + (s.unsure ? ' UNSURE' : ''));
+      (s.trace || []).forEach(function (t) { out.push(attemptLine(s.step, t)); });
+    });
   }
 
   function report() {
@@ -975,26 +999,24 @@
       out.push('connection test ' + londonDay(t.at) + ' ' + hms(t.at) + ' with ' + t.code + ':');
       t.rows.forEach(function (r) { out.push(r); });
     });
+    // every ticket the last check missed, in full, wherever it is in the log
+    var missed = phone ? phone.failed : pl && Date.parse(pl.at) > ghFinished() ? pl.failed || [] : [];
+    if (missed.length) {
+      out.push('MISSED in ' + (phone ? 'this check so far' : 'the last device check') + ' (' + missed.length + '), full detail:');
+      missed.forEach(function (code) {
+        var it = d.items.filter(function (x) { return x.code === code; }).pop();
+        if (it) itemLines(it, out, true); else out.push('  ' + code + ': no log kept for it');
+      });
+    }
+    var gf = gr && gr.fails ? Object.keys(gr.fails) : [];
+    if (gf.length) {
+      out.push('MISSED by the github check ' + gr.date + ' (' + gf.length + '):');
+      gf.forEach(function (c) { out.push('  ' + c + ': ' + gr.fails[c]); });
+    }
     var items = d.items.slice(-15).reverse();
     out.push('tickets, newest first (' + items.length + ' of ' + d.items.length + ' logged):');
     if (!items.length) out.push('    none yet');
-    items.forEach(function (it) {
-      var good = it.result === 'same' || it.result === 'changed';
-      out.push('  ' + it.code + ' ' + hms(it.at) + ' took ' + sec(it.ms) + ' ' + String(it.result).toUpperCase() + (it.price != null ? ' ' + gbp(it.price) : '') +
-        ' (last ' + gbp(it.last) + ', ticket ' + gbp(it.ticket) + ')' + (it.why ? ': ' + it.why : ''));
-      (it.steps || []).forEach(function (s) {
-        if (good && s.step === 'text') {          // worked: one line, plus any relays that failed on the way
-          var ok = function (t) { return t.outcome === 'found' || t.outcome === 'partial'; };
-          var w = (s.trace || []).filter(ok)[0] || {};
-          out.push('    text ok via ' + (s.via || w.via || '?') + ' ' + sec(w.ms) + ' ' + kb(w.len) + ' ' + s.price);
-          (s.trace || []).filter(function (t) { return !ok(t); }).forEach(function (t) { out.push(attemptLine('text', t)); });
-          return;
-        }
-        out.push('    ' + s.step + ': ' + s.status + (s.reason ? ' (' + s.reason + ')' : '') + (s.price ? ' ' + s.price : '') +
-          (s.ld ? ' data=' + s.ld + (s.ldSure ? '' : '(other code)') : '') + (s.unsure ? ' UNSURE' : ''));
-        (s.trace || []).forEach(function (t) { out.push(attemptLine(s.step, t)); });
-      });
-    });
+    items.forEach(function (it) { itemLines(it, out); });
     out.push('=== end ===');
     return out.join('\n');
   }
@@ -1042,11 +1064,13 @@
     }
   }
 
-  function reportSheet() {
+  function reportSheet(intro) {
+    if (typeof intro !== 'string') intro = '';
+    if (document.querySelector('.ct-rep-sheet')) return;
     var wrap = document.createElement('div');
-    wrap.className = 'sc-sheet ct-sheet';
+    wrap.className = 'sc-sheet ct-sheet ct-rep-sheet';
     wrap.innerHTML = '<div class="sc-sheet-card" role="dialog" aria-modal="true" aria-labelledby="ctRepH">' +
-      '<h2 id="ctRepH">Error report</h2>' +
+      '<h2 id="ctRepH">Error report</h2>' + (intro ? '<p><b>' + esc(intro) + '</b></p>' : '') +
       '<p>Copy this and paste it into the chat with Claude. It shows what each ticket got back and why, so Claude can see what\'s going wrong.' +
       (phone ? ' The check keeps going while this is open.' : '') + '</p>' +
       '<textarea class="ct-report" id="ctRep" readonly spellcheck="false" aria-label="Error report"></textarea>' +
@@ -1078,8 +1102,9 @@
       });
     });
   }
-  $('progReport').addEventListener('click', reportSheet);
-  $('reportLink').addEventListener('click', reportSheet);
+  $('progReport').addEventListener('click', function () { reportSheet(); });
+  $('reportLink').addEventListener('click', function () { reportSheet(); });
+  $('missReport').addEventListener('click', function () { reportSheet(); });
 
   /* ---------- a newer version of this page: say so, as an old copy left open is easy to miss ---------- */
 

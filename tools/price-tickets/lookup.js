@@ -12,7 +12,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = '2026-10-16d';           // shown in error reports, so a stale copy on a phone is easy to spot
+  var VERSION = '2026-10-17a';           // shown in error reports, so a stale copy on a phone is easy to spot
 
   var PROXIES = [
     { id: 'codetabs',   build: function (u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
@@ -24,7 +24,8 @@
     // and caches it, and the whole-page request then gets that copy. Asked first, jina fetches the page bare,
     // gets Screwfix's bot check and can keep serving that for a while (tested 16 Oct).
     { id: 'jina',       build: function (u) { return 'https://r.jina.ai/' + u; },
-                        full: { 'X-Return-Format': 'html' } },   // not X-No-Cache: a forced live fetch gets Screwfix's bot check (tested 16 Oct)
+                        full: { 'X-Return-Format': 'html' },
+                        every: 3300 },   // jina allows 20 requests a minute without a key: one every 3.3 s keeps under it, however many readers share it   // not X-No-Cache: a forced live fetch gets Screwfix's bot check (tested 16 Oct)
     { id: 'corsproxy',  build: function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); } }
   ];
   var ORDER_KEY = 'pt-proxy-order-v1';
@@ -71,6 +72,21 @@
     var t = now(), at = Math.max(t, nextSlot);
     nextSlot = at + GAP;
     return at > t ? wait(at - t) : Promise.resolve();
+  }
+  /* A relay with its own limit (proxy.every) gets its own queue, shared by every lookup on the page, so several
+     readers at once (the counter trial reads 3) can't go over it together. hold() pushes it back after a 429. */
+  var relayNext = {};
+  function relaySlot(proxy) {
+    if (!proxy.every) return Promise.resolve();
+    var t = now(), at = Math.max(t, relayNext[proxy.id] || 0);
+    relayNext[proxy.id] = at + proxy.every;
+    return at > t ? wait(at - t) : Promise.resolve();
+  }
+  function hold(id, ms) { relayNext[id] = Math.max(relayNext[id] || 0, now() + ms); }
+  // seconds to wait from a 429 answer: jina sends {"retryAfter": 2, ...}
+  function retryAfterOf(text) {
+    var m = /"retryAfter"\s*:\s*(\d+(?:\.\d+)?)/.exec(String(text || '').slice(0, 600));
+    return m ? Math.min(Number(m[1]), 60) : 0;
   }
 
   /* -> {status, text}; rejects with {kind: 'timeout' | 'network'} when no answer came back */
@@ -320,16 +336,17 @@
      http-NNN (the relay answered with an error) | relay-error | other (something that isn't the product page) */
   function tryRelay(proxy, code, full) {
     var t0 = now();
-    return slot().then(function () {
+    return relaySlot(proxy).then(slot).then(function () {
       t0 = now();
       return fetchText(proxy.build(productUrl(code)), full && proxy.full);
     }).then(function (res) {
       var r;
       try { r = interpret(res, code); } catch (e) { r = { status: 'blocked', why: 'other' }; }
       var outcome = r.status === 'blocked' ? (r.why || (res.status >= 400 ? 'http-' + res.status : 'other')) : r.status;
-      if (outcome === 'http-429') outcome = 'limited';
+      if (outcome === 'http-429' || res.status === 429) outcome = 'limited';
       var t = { via: proxy.id, outcome: outcome, ms: now() - t0, http: res.status, result: r, len: (res.text || '').length, mode: full && proxy.full ? 'page' : 'text' };
       // what came back instead of the product page, for error reports
+      if (outcome === 'limited') t.retryAfter = retryAfterOf(res.text);
       if (r.status !== 'found') t.head = squash(String(res.text || '').replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ')).slice(0, 140);
       return t;
     }, function (e) {
@@ -342,6 +359,7 @@
     var r = t.result || {};
     var b = { via: t.via, outcome: t.outcome, ms: t.ms, http: t.http, round: t.round, price: r.price || '', name: r.name || '', mode: t.mode, len: t.len };
     if (t.head) b.head = t.head;
+    if (t.retryAfter != null) b.retryAfter = t.retryAfter;
     if (t.err) b.err = t.err;
     if (r.ld) { b.ld = r.ld; b.ldSure = !!r.ldSure; }
     return b;
@@ -370,7 +388,7 @@
         var kept = order.filter(function (p) { return opts.skip.indexOf(p.id) < 0; });
         if (kept.length) order = kept;
       }
-      var i = 0, partial = null, notFound = 0;
+      var i = 0, partial = null, notFound = 0, waits = {};
       function next() {
         if (i >= order.length || notFound >= 2) {
           if (partial) return finish(partial);
@@ -397,6 +415,14 @@
           var r = t.result;
           r.via = proxy.id;
           if (r.status === 'found') { promote(proxy.id); return finish(r); }
+          // rate limited (429): that's "not yet", not "broken". Wait as long as it asks (the wait is shared, so the
+          // other readers hold off too) and ask the same relay again, up to 3 times, before counting it as failed.
+          if (t.outcome === 'limited' && (waits[proxy.id] || 0) < 3) {
+            waits[proxy.id] = (waits[proxy.id] || 0) + 1;
+            hold(proxy.id, Math.max(t.retryAfter || 0, 2) * 1000 + 600 * waits[proxy.id]);
+            i--;
+            return next();
+          }
           if (r.status === 'notfound') { notFound++; if (notFound === 1) promote(proxy.id); }
           else if (r.status === 'partial') { if (!partial) partial = r; }
           // a whole-page request that fails says nothing about the relay's normal text reads, unless it's down or limited
