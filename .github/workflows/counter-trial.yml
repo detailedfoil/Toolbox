@@ -1,7 +1,7 @@
 # Daily Screwfix price check for the Toolbox "A25 Behind counter trial" page.
 #
-# When started by hand (nightly runs are off for now): checks each code on the trial's ticket list against screwfix.com, one at a time and
-# very slowly (about one every 100 seconds, so roughly 2 hours), and saves the results to
+# Runs every night and when started by hand: checks each code on the trial's ticket list against screwfix.com through
+# jina (r.jina.ai, which gets past Screwfix's bot check), one every 6 seconds or so (about 10 minutes), and saves the results to
 # tools/counter-trial/data/prices.json. The later runs only finish off lines the first run couldn't
 # check, and do nothing once the day is done.
 # Changing the ticket list (tools/counter-trial/data/plan.json) checks any new codes.
@@ -53,7 +53,7 @@ jobs:
         timeout-minutes: 180
         env:
           MODE: ${{ inputs.mode || 'auto' }}
-          GAP_MS: '100000'      # one product every 100 s or so: about 2 hours for all 69
+          GAP_MS: '6000'        # one product every 6 s or so through jina (20 requests a minute): about 15 min for all 69
         run: node .github/counter-trial/check.mjs
 
       - name: Save the results

@@ -574,7 +574,7 @@
   }
 
   function started() {
-    toast('Check started. It takes about 2 hours.');
+    toast('Check started. It takes about 10 minutes.');
     showRun({ status: 'queued', created_at: new Date().toISOString() });
     setTimeout(runStatus, 6000);
   }
@@ -583,7 +583,7 @@
     if (running) return;
     var t = token();
     if (!t) { setupSheet(); return; }
-    if (!window.confirm('Start a full check of all ' + (L.length || 69) + ' tickets now?\n\nIt runs on GitHub and takes about 2 hours.')) return;
+    if (!window.confirm('Start a full check of all ' + (L.length || 69) + ' tickets now?\n\nIt runs on GitHub and takes about 10 minutes.')) return;
     var btn = this;
     btn.classList.add('is-busy');
     dispatch(t).then(function (err) {
@@ -610,7 +610,7 @@
       (forSync ? '<h2 id="ctSheetH">Sync ticks across devices</h2>' +
       '<p>Save a GitHub token on this device once, and every tick you make is saved to GitHub, so all your devices show the same shelf prices. Do this once on each device. The token stays on that device and can only reach Toolbox.</p>'
       : '<h2 id="ctSheetH">Check on GitHub</h2>' +
-      '<p>Starts a full check of all ' + (L.length || 69) + ' tickets straight away. It runs on GitHub and takes about 2 hours.</p>' +
+      '<p>Starts a full check of all ' + (L.length || 69) + ' tickets straight away. It runs on GitHub and takes about 10 minutes.</p>' +
       '<a class="btn" href="' + RUNS + '" target="_blank" rel="noopener">Open on GitHub, then tap Run workflow</a>' +
       '<hr><h2>Make it one tap</h2>' +
       '<p>Save a GitHub token on this device once, and the Check on GitHub button starts it itself, and your ticks sync across devices. It stays on this device and can only reach Toolbox.</p>') +
@@ -669,7 +669,7 @@
       s.innerHTML = '<span class="ct-dot"></span><b>GitHub is checking</b>, started ' + esc(clock(start)) + '. ' +
         (lastRun.status === 'queued' ? 'Waiting to start.' : 'Should be done about ' + esc(clock(done)) + '.');
     } else {
-      s.innerHTML = '<b>Check on this device</b> takes about 15 minutes with this page open. The nightly GitHub check is off for now.';
+      s.innerHTML = '<b>Check on this device</b> takes about 15 minutes with this page open. GitHub also checks every night.';
     }
     var r = phone ? null : savedRun();
     $('phoneLabel').textContent = !r ? 'Check on this device' : r.retry ? 'Retry the ' + r.codes.length + ' missed' : 'Carry on (' + r.codes.length + ' left)';
