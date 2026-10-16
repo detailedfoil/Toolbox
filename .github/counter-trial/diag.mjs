@@ -38,4 +38,5 @@ for (const [label, headers] of [['full (what the device check sends now)', { 'X-
     await sleep(3000);
   }
 }
+fs.mkdirSync('diag', { recursive: true });
 fs.writeFileSync('diag/out3.json', JSON.stringify(out, null, 1));
