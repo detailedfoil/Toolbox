@@ -1,0 +1,193 @@
+{
+ "at": "2026-10-16T18:52:42.402Z",
+ "preflight": {
+  "x-no-cache,x-return-format": {
+   "http": 200,
+   "allowHeaders": "x-no-cache,x-return-format",
+   "allowOrigin": "https://detailedfoil.github.io",
+   "ms": 698
+  },
+  "x-return-format": {
+   "http": 200,
+   "allowHeaders": "x-return-format",
+   "allowOrigin": "https://detailedfoil.github.io",
+   "ms": 78
+  },
+  "x-no-cache": {
+   "http": 200,
+   "allowHeaders": "x-no-cache",
+   "allowOrigin": "https://detailedfoil.github.io",
+   "ms": 83
+  }
+ },
+ "runs": [
+  {
+   "label": "full (what the device check sends now)",
+   "code": "842CF",
+   "http": 200,
+   "len": 2003,
+   "ms": 568,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "head": "<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title></title>\n    <style>\n        body {\n            font-family: \"Ari"
+  },
+  {
+   "label": "full (what the device check sends now)",
+   "code": "318FX",
+   "http": 200,
+   "len": 2003,
+   "ms": 1482,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "head": "<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title></title>\n    <style>\n        body {\n            font-family: \"Ari"
+  },
+  {
+   "label": "full (what the device check sends now)",
+   "code": "480PG",
+   "http": 200,
+   "len": 2003,
+   "ms": 466,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "head": "<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title></title>\n    <style>\n        body {\n            font-family: \"Ari"
+  },
+  {
+   "label": "full (what the device check sends now)",
+   "code": "132KH",
+   "http": 200,
+   "len": 2003,
+   "ms": 249,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "head": "<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title></title>\n    <style>\n        body {\n            font-family: \"Ari"
+  },
+  {
+   "label": "full (what the device check sends now)",
+   "code": "843PG",
+   "http": 200,
+   "len": 2003,
+   "ms": 512,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "head": "<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title></title>\n    <style>\n        body {\n            font-family: \"Ari"
+  },
+  {
+   "label": "full (what the device check sends now)",
+   "code": "872RE",
+   "http": 200,
+   "len": 2003,
+   "ms": 658,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "head": "<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title></title>\n    <style>\n        body {\n            font-family: \"Ari"
+  },
+  {
+   "label": "full (what the device check sends now)",
+   "code": "100AB",
+   "http": 200,
+   "len": 2003,
+   "ms": 499,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "head": "<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title></title>\n    <style>\n        body {\n            font-family: \"Ari"
+  },
+  {
+   "label": "full (what the device check sends now)",
+   "code": "200CD",
+   "http": 200,
+   "len": 2003,
+   "ms": 531,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "head": "<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title></title>\n    <style>\n        body {\n            font-family: \"Ari"
+  },
+  {
+   "label": "plain (what Price Tickets sends)",
+   "code": "842CF",
+   "http": 200,
+   "len": 116545,
+   "ms": 558,
+   "remaining": "19",
+   "status": "found",
+   "price": "£25.99"
+  },
+  {
+   "label": "plain (what Price Tickets sends)",
+   "code": "318FX",
+   "http": 200,
+   "len": 122300,
+   "ms": 756,
+   "remaining": "19",
+   "status": "found",
+   "price": "£53.99"
+  },
+  {
+   "label": "plain (what Price Tickets sends)",
+   "code": "480PG",
+   "http": 200,
+   "len": 122516,
+   "ms": 413,
+   "remaining": "19",
+   "status": "found",
+   "price": "£24.99"
+  },
+  {
+   "label": "plain (what Price Tickets sends)",
+   "code": "132KH",
+   "http": 200,
+   "len": 117831,
+   "ms": 449,
+   "remaining": "19",
+   "status": "found",
+   "price": "£31.99"
+  },
+  {
+   "label": "plain (what Price Tickets sends)",
+   "code": "843PG",
+   "http": 200,
+   "len": 124675,
+   "ms": 671,
+   "remaining": "19",
+   "status": "found",
+   "price": "£28.99"
+  },
+  {
+   "label": "plain (what Price Tickets sends)",
+   "code": "872RE",
+   "http": 200,
+   "len": 104829,
+   "ms": 602,
+   "remaining": "19",
+   "status": "found",
+   "price": "£28.99"
+  },
+  {
+   "label": "plain (what Price Tickets sends)",
+   "code": "100AB",
+   "http": 200,
+   "len": 90260,
+   "ms": 720,
+   "remaining": "19",
+   "status": "notfound",
+   "head": "Title: 404 | Screwfix\n\nURL Source: https://www.screwfix.com/p/product/100ab\n\nWarning: Target URL returned error 404: Not Found\n\nMarkdown Content:\n[Skip to content](https://www.screwfix.com/p/product/1"
+  },
+  {
+   "label": "plain (what Price Tickets sends)",
+   "code": "200CD",
+   "http": 200,
+   "len": 90260,
+   "ms": 888,
+   "remaining": "19",
+   "status": "notfound",
+   "head": "Title: 404 | Screwfix\n\nURL Source: https://www.screwfix.com/p/product/200cd\n\nWarning: Target URL returned error 404: Not Found\n\nMarkdown Content:\n[Skip to content](https://www.screwfix.com/p/product/2"
+  }
+ ]
+}
