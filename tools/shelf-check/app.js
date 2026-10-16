@@ -575,8 +575,11 @@
    * were deliberately ignored) counts. A check that stopped part way doesn't, so the next one still compares with
    * the last good one. Each reading remembers the price it was compared with (base) and which check it came from. */
 
-  var SL = window.ScrewfixLookup, phone = null, wakeLock = null, sinceBuild = 0;
-  var PHONE_GAP = 1000, PER_LINE = 4;                      // ms between lines on top of the relay spacing; rough seconds per line
+  var SL = window.ScrewfixLookup, phone = null, wakeLock = null, sinceBuild = 0, tickTimer = 0;
+  var PHONE_GAP = 2500, PER_LINE = 8;                      // ms between lines (keeps under jina's 20 a minute); rough seconds per line
+  // this copy's version (from the ?v= it was loaded with), when it was opened, and a newer one if the site has it
+  var APP_V = (function () { var m = /[?&]v=([^&#]+)/.exec((document.currentScript && document.currentScript.src) || ''); return m ? m[1] : ''; })();
+  var OPENED = Date.now(), newerV = '';
 
   /* the search in hand: a saved update-area one (kept 3 days), or this page's just-for-you one */
   var memRun = null;
@@ -792,9 +795,15 @@
     var n = phone.passTotal, d = n - phone.queue.length;
     $('progText').textContent = (phone.again ? 'Retrying ' : 'Checking ') + Math.min(d + 1, n) + ' of ' + n;
     $('progBar').style.width = Math.round(d / n * 100) + '%';
-    $('progNote').innerHTML = (phone.current ? '<b>' + esc(phone.current) + '</b> &middot; ' : '') + phone.got + ' read' +
-      (phone.moved ? ', <b>' + phone.moved + '</b> changed' : '') + (phone.failed.length ? ', ' + phone.failed.length + " couldn't be read" : '') +
-      '. About ' + mins(phone.queue.length) + ' left. Keep this page open' + (ios ? ' and the screen on.' : '.');
+    var left = phone.doneN ? Math.max(1, Math.round(phone.queue.length * (phone.spent / phone.doneN + PHONE_GAP) / 60000)) : 0;
+    $('progNote').innerHTML = (phone.current ? '<b>' + esc(phone.current) + '</b> ' + esc(phone.attempt || '') + ' &middot; ' + Math.round((Date.now() - phone.t0) / 1000) + 's<br>' : '') +
+      phone.got + ' read' + (phone.moved ? ', <b>' + phone.moved + '</b> changed' : '') + (phone.failed.length ? ', ' + phone.failed.length + " couldn't be read" : '') +
+      '. About ' + (left ? (left >= 60 ? Math.floor(left / 60) + ' h ' + (left % 60) + ' min' : left + ' min') : mins(phone.queue.length)) + ' left. Keep this page open' + (ios ? ' and the screen on.' : '.');
+    // early warning: say so as soon as it looks wrong, rather than after it gives up
+    var warn = phone.failed.length >= 2 && (phone.got === 0 || phone.streak >= 3);
+    $('progWarn').hidden = !warn;
+    if (warn) $('progWarnText').textContent = (phone.got === 0 ? 'Nothing read yet (' + phone.failed.length + ' missed).' : phone.streak + " in a row couldn't be read.") +
+      ' Tap Error report, copy it and send it to Claude.';
   }
 
   function newRun(codes, session) {
@@ -807,10 +816,17 @@
     $('share').open = true;
     $('share').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-  function startPhone(fresh, session) {
+  function startPhone(fresh, session, justUpdated) {
     if (phone || !data) return;
     if (!SL || !SL.lookup) { toast("The price reader didn't load. Refresh the page."); return; }
     if (!session && !token()) { needToken('update the area'); return; }
+    // a newer version of this page is out: load it first, then carry on with the search by itself
+    if (newerV && !justUpdated) {
+      try { sessionStorage.setItem('sc-autostart', JSON.stringify({ fresh: !!fresh, session: !!session })); } catch (e) { /* it just won't start by itself */ }
+      toast('Getting the latest version first');
+      setTimeout(function () { location.reload(); }, 400);
+      return;
+    }
     var r = fresh ? null : curRun();
     if (r && (!r.queue.length || !!r.session !== !!session)) r = null;
     if (!r) r = newRun(everything.codes.slice(), session);
@@ -818,7 +834,12 @@
   }
   function beginRun(r) {
     phone = r;
-    phone.current = ''; phone.streak = 0; phone.again = r.passTotal < r.total;
+    phone.current = ''; phone.attempt = ''; phone.t0 = Date.now(); phone.streak = 0; phone.again = r.passTotal < r.total;
+    phone.relays = {}; phone.spent = 0; phone.doneN = 0;
+    deadBefore().forEach(function (id) { phone.relays[id] = { ok: 0, hard: 2 }; });
+    clearInterval(tickTimer);
+    tickTimer = setInterval(progress, 1000);
+    $('reportLink').hidden = true;
     saveRun(r);
     // show this search as if from scratch: earlier changes are hidden until the page is refreshed
     if (!r.partial && (!live || live.id !== r.id)) live = { id: r.id, session: !!r.session, baseDay: r.baseDay, mem: {}, failed: {} };
@@ -833,23 +854,54 @@
     nextPhone();
   }
 
+  function stepOf(name, r) {
+    r = r || {};
+    return { step: name, status: r.status || '?', reason: r.reason || r.why || '', price: r.price || '', ld: r.ld || '', ldSure: !!r.ldSure,
+             unsure: !!r.unsure, via: r.via || '', trace: r.trace || [] };
+  }
+
+  /* One line. 1: a normal text read through the relays (jina renders the page in a browser, which gets past
+   * Screwfix's bot check). An unchanged price is fine as it is. 2: a different price is confirmed from the product
+   * data in the whole page, which jina now has cached from step 1 (asked for first, the whole page gets the bot
+   * check). If that can't be had, it's "New price couldn't be confirmed" as before. Everything is logged. */
   function nextPhone() {
     if (!phone) return;
     if (!phone.queue.length) { finishPhone('done'); return; }
-    var me = phone, code = phone.queue[0];
+    var me = phone, code = phone.queue[0], t0 = Date.now(), ref = refFor(code);
+    var item = { code: code, at: new Date(t0).toISOString(), ref: ref, steps: [] };
     phone.current = code;
+    phone.t0 = t0;
+    phone.attempt = '';
     progress();
-    SL.lookup(code).then(function (r) {
-      if (phone !== me) return;                           // stopped while this one was being read
-      var price = r && (r.status === 'found' || r.status === 'partial') && !r.unsure ? pounds(r.price) : null, ref = refFor(code);
-      // a price read only off the page's text (some relays send no product data) can confirm an unchanged price
-      // but never make a change: it could be another size or product on the page
-      var unconfirmed = price != null && !(r.ld && r.ldSure) && ref != null && Math.abs(ref - price) > 0.001;
-      if (unconfirmed) price = null;
+    var onAttempt = function (a) {
+      if (phone !== me) return;
+      phone.attempt = (a.mode === 'page' ? 'confirming the new price on ' : 'trying ') + a.via + (a.round ? ' (go ' + (a.round + 1) + ')' : '');
+      progress();
+    };
+    SL.lookup(code, { skip: skipList(), maxMs: 30000, onAttempt: onAttempt }).then(function (r) {
+      if (phone !== me) return null;
+      noteRelays(r.trace);
+      item.steps.push(stepOf('text', r));
+      var price = (r.status === 'found' || r.status === 'partial') && !r.unsure ? pounds(r.price) : null;
+      if (price == null) return { r: r, price: null, why: whyNot(r) };
+      if (r.ld && r.ldSure) return { r: r, price: pounds(r.ld) };
+      if (ref == null || Math.abs(ref - price) <= 0.001) return { r: r, price: price };
+      return SL.lookup(code, { full: true, only: ['jina'], retries: 0, onAttempt: onAttempt }).then(function (r2) {
+        if (phone !== me) return null;
+        item.steps.push(stepOf('page', r2));
+        var ok = r2.ld && r2.ldSure ? pounds(r2.ld) : null;
+        if (ok != null) return { r: r, price: ok };
+        return { r: r, price: null, why: WHY.unconfirmed, detail: 'new price ' + money(price) + " couldn't be confirmed (" +
+          (r2.ld ? 'the product data on the page is for another code' : 'the whole page came back ' + (r2.status === 'blocked' ? 'blocked' : r2.status)) + ')' };
+      });
+    }).then(function (res) {
+      if (phone !== me || !res) return;
+      var r = res.r, price = res.price;
       if (price != null) {
         var before = everything.products[code];
         if (ref != null && Math.abs(ref - price) > 0.001) { me.moved++; me.changes.push(code + ' ' + money(ref) + ' to ' + money(price)); }
-        var was = pounds(r.was), reading = { price: price, name: r.name || (before && before.name) || null, was: was != null && was > price ? was : null, at: new Date().toISOString(), base: ref, run: me.id };
+        var was = same2(pounds(r.price), price) ? pounds(r.was) : null;
+        var reading = { price: price, name: r.name || (before && before.name) || null, was: was != null && was > price ? was : null, at: new Date().toISOString(), base: ref, run: me.id };
         if (live && live.id === me.id) delete live.failed[code];
         if (me.partial) reading.part = 1;
         if (me.session) { if (me.partial) memManual[code] = reading; else if (live && live.id === me.id) live.mem[code] = reading; }
@@ -862,14 +914,29 @@
         if (ref != null && Math.abs(ref - price) > 0.001) me.fresh = true;     // a change: show it straight away
         me.got++;
         me.streak = 0;
+        item.result = ref != null && Math.abs(ref - price) > 0.001 ? 'changed' : 'same';
+        item.price = price;
       } else {
         // a failed read is never a price change: the line keeps its last price
-        me.failed.push({ c: code, why: unconfirmed ? WHY.unconfirmed : whyNot(r), pick: 'retry' });
+        me.failed.push({ c: code, why: res.why, pick: 'retry' });
         if (live && live.id === me.id) live.failed[code] = 1;
         me.streak++;
+        item.result = res.why === WHY.unconfirmed ? 'unconfirmed' : 'missed';
+        item.price = res.why === WHY.unconfirmed ? pounds(r.price) : null;
+        item.why = res.detail || res.why + (r && r.reason ? ' (' + r.reason + ')' : '');
       }
-    }, function () { if (phone === me) { me.failed.push({ c: code, why: WHY.blocked, pick: 'retry' }); if (live && live.id === me.id) live.failed[code] = 1; me.streak++; } }).then(function () {
+    }).catch(function (e) {
+      // a fault in this page rather than a relay: log it word for word
+      item.result = 'error';
+      item.why = String((e && (e.stack || e.message)) || e).split('\n').slice(0, 3).join(' | ').slice(0, 300);
+      if (phone === me) { me.failed.push({ c: code, why: WHY.blocked, pick: 'retry' }); if (live && live.id === me.id) live.failed[code] = 1; me.streak++; }
+    }).then(function () {
+      item.ms = Date.now() - t0;
+      if (!item.result) item.result = 'stopped';
+      diagAdd(item);
       if (phone !== me) return;
+      me.spent = (me.spent || 0) + item.ms;
+      me.doneN = (me.doneN || 0) + 1;
       me.queue.shift();
       if (me.streak >= 6) {
         // nothing's getting through: put those six back so Carry on tries them again
@@ -881,10 +948,12 @@
       saveRun(me);
       if (me.fresh || ++sinceBuild >= 5) { sinceBuild = 0; me.fresh = false; build(); }   // the lists fill in as it goes
       if (!me.session && me.unshared >= 100) { me.unshared = 0; share(true); }
+      me.current = '';
       progress();
       setTimeout(nextPhone, PHONE_GAP);
     });
   }
+  function same2(a, b) { return a != null && b != null && Math.abs(a - b) < 0.001; }
 
   /* every line read, or its failure deliberately ignored: this check is now the last successful update */
   function completeRun(r) {
@@ -899,6 +968,11 @@
   function finishPhone(why) {
     var r = phone;
     phone = null;
+    clearInterval(tickTimer);
+    $('reportLink').hidden = false;
+    $('progWarn').hidden = true;
+    // working fields, not part of the saved search
+    ['relays', 'spent', 'doneN', 't0', 'attempt'].forEach(function (k) { delete r[k]; });
     letSleep();
     fastTimers(false);
     $('runBar').classList.remove('is-running');
@@ -916,7 +990,7 @@
     if (why === 'done' && !r.failed.length) toast('Read ' + r.got + ' of ' + r.total + (r.moved ? ', ' + plural(r.moved, 'price change') : ', no price changes') + '.' + kept);
     else if (why === 'done') toast(plural(r.failed.length, 'line') + " couldn't be read. Choose which to retry or ignore.");
     else if (why === 'stopped') toast('Stopped. Tap Carry on to finish the other ' + r.queue.length + '.');
-    else toast("Couldn't read 6 in a row, so it stopped. The relays may be busy or this wifi blocks them. Try again in a bit, or on mobile data.");
+    else toast("Couldn't read 6 in a row, so it stopped. Tap Copy an error report and send it to Claude.");
   }
 
   /* ---------- sharing: readings go into the repo (tools/shelf-check/data/phone.json) so every store sees them ----------
@@ -984,6 +1058,200 @@
   });
   tokenUI();
 
+  /* ---------- error report ----------
+   * Every line the device search reads is logged on this device (the last 40): what each relay sent back, how long
+   * it took and what the page made of it. The report adds the phone's network, the page and reader versions and the
+   * search so far, as text to paste into the chat with Claude. It can be copied at any point, mid-search too. */
+
+  var DIAG_KEY = 'sc-diag-v1', DIAG_KEEP = 40;
+  function diag() { var v = load(DIAG_KEY, null); return v && Array.isArray(v.items) ? v : { items: [], tests: [] }; }
+  function diagAdd(item) { var d = diag(); d.items.push(item); d.items = d.items.slice(-DIAG_KEEP); store(DIAG_KEY, d); }
+  function hms(t) {
+    try { return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(new Date(t)); }
+    catch (e) { return String(t); }
+  }
+  function sec(ms) { return ms == null ? '?' : (ms / 1000).toFixed(1) + 's'; }
+  function kb(n) { return n == null ? '' : n < 1024 ? n + 'B' : Math.round(n / 1024) + 'KB'; }
+  function gbp(v) { return v == null ? '-' : money(v); }
+  function storageOk() { try { localStorage.setItem('sc-probe', '1'); localStorage.removeItem('sc-probe'); return true; } catch (e) { return false; } }
+
+  /* relays that only ever fail hard in this search (need a key, can't reach Screwfix, no answer after ~20 s) get left
+   * out after two goes, so a line that won't read doesn't wait on them. The relay that last worked is never left out. */
+  var HARD = /^http-40[13]$|^relay-error$/, DEAD_KEY = 'sc-relays-out-v1';
+  function skipList() {
+    if (!phone || !phone.relays) return [];
+    var front = (load('pt-proxy-order-v1', []) || [])[0];
+    return Object.keys(phone.relays).filter(function (id) { var r = phone.relays[id]; return id !== front && !r.ok && r.hard >= 2; });
+  }
+  function noteRelays(trace) {
+    if (!phone.relays) phone.relays = {};
+    (trace || []).forEach(function (t) {
+      var r = phone.relays[t.via] || (phone.relays[t.via] = { ok: 0, hard: 0 });
+      if (t.outcome === 'found' || t.outcome === 'partial' || t.outcome === 'notfound') r.ok++;
+      else if (HARD.test(t.outcome) || (/^(network|timeout)$/.test(t.outcome) && t.ms > 8000)) r.hard++;
+    });
+    store(DEAD_KEY, { at: new Date().toISOString(), ids: skipList() });
+  }
+  function deadBefore() {
+    var d = load(DEAD_KEY, null);
+    return d && Array.isArray(d.ids) && Date.now() - Date.parse(d.at) < 6 * 3600000 ? d.ids : [];
+  }
+
+  function attemptLine(step, t) {
+    return '    ' + step + ' go' + ((t.round || 0) + 1) + ' ' + t.via + (t.mode === 'page' ? '[page]' : '') + ' ' + t.outcome + ' http' + (t.http || 0) +
+      (t.len != null ? ' ' + kb(t.len) : '') + ' ' + sec(t.ms) + (t.price ? ' ' + t.price : '') +
+      (t.ld ? ' data=' + t.ld + (t.ldSure ? '' : '(other code)') : '') + (t.err ? ' err="' + t.err + '"' : '') + (t.head ? ' got="' + t.head + '"' : '');
+  }
+
+  function report() {
+    var out = [], c = navigator.connection || {}, st = SL && SL.state ? SL.state() : null, d = diag(), now = Date.now();
+    out.push('=== Monday price check error report ===');
+    out.push('time ' + hms(now) + ' ' + day(londonDay(new Date(now).toISOString())) + ' (' + new Date(now).toISOString() + ')');
+    out.push('versions app ' + (APP_V || '?') + ', reader ' + ((SL && SL.version) || 'OLD, no version') +
+      (newerV ? ', SITE HAS NEWER app ' + newerV + ' (this page is out of date)' : '') + ', page opened ' + hms(OPENED));
+    out.push('device ' + navigator.userAgent);
+    out.push('network ' + (navigator.onLine ? 'online' : 'OFFLINE') + (c.type ? ' ' + c.type : '') + (c.effectiveType ? ' ' + c.effectiveType : '') +
+      (c.downlink != null ? ' ' + c.downlink + 'Mbps' : '') + (c.rtt != null ? ' rtt' + c.rtt + 'ms' : '') + (c.saveData ? ' DATA-SAVER-ON' : '') +
+      ', screen ' + (document.hidden ? 'HIDDEN' : 'on') + ', wake lock ' + (wakeLock ? 'held' : navigator.wakeLock ? 'not held' : 'unsupported') +
+      ', storage ' + (storageOk() ? 'ok' : 'BLOCKED') + ', github token ' + (token() ? 'saved' : 'none'));
+    if (st) out.push('relays ' + st.order.join(' > ') + (Object.keys(st.resting).length ? ', resting ' + Object.keys(st.resting).map(function (k) { return k + ' ' + st.resting[k] + 's'; }).join(', ') : ''));
+    var lines = everything ? everything.codes.length : 0;
+    if (phone) {
+      out.push('search RUNNING' + (phone.session ? ' (just for this device)' : ' (updates the area)') + (phone.partial ? ' (retry of missing lines)' : '') + (phone.again ? ' (retry pass)' : '') +
+        ', started ' + hms(phone.started) + ', ' + (phone.passTotal - phone.queue.length) + ' of ' + phone.passTotal + ' this pass, ' + phone.got + ' read, ' +
+        phone.moved + ' changed, ' + phone.failed.length + ' missed, ' + phone.streak + ' missed in a row' +
+        (phone.current ? ', now ' + phone.current + ' for ' + sec(now - phone.t0) + (phone.attempt ? ' (' + phone.attempt + ')' : '') : ', between lines') +
+        (skipList().length ? ', leaving out ' + skipList().join(' ') : ''));
+    } else {
+      var r = curRun();
+      out.push('search not running' + (r ? ', saved ' + (r.session ? 'device-only ' : '') + 'search: ' + r.got + ' of ' + r.total + ' read, ' + r.queue.length + ' left, ' + r.failed.length + ' missed' +
+        (r.failed.length ? ' (' + r.failed.slice(0, 20).map(function (f) { return f.c + ' ' + f.why; }).join('; ') + (r.failed.length > 20 ? ' ...' : '') + ')' : '') : ''));
+    }
+    out.push('plan ' + lines + ' lines' + (data ? ', ' + data.codes.length + ' on this shop floor' : ''));
+    var gr = src && src.prices && src.prices.run;
+    if (gr) out.push('github check ' + (src.prices.checked || '?') + ', ' + (gr.complete ? 'complete' : 'not complete') + (gr.checked != null ? ', ' + gr.checked + ' checked' : '') +
+      (gr.unchecked ? ', ' + gr.unchecked + ' unchecked' : '') + (gr.stopped ? ', stopped: ' + gr.stopped : ''));
+    (d.tests || []).slice(-1).forEach(function (t) {
+      out.push('connection test ' + londonDay(t.at) + ' ' + hms(t.at) + ' with ' + t.code + ':');
+      t.rows.forEach(function (row) { out.push(row); });
+    });
+    var items = d.items.slice(-15).reverse();
+    out.push('lines, newest first (' + items.length + ' of ' + d.items.length + ' logged):');
+    if (!items.length) out.push('    none yet');
+    items.forEach(function (it) {
+      var good = it.result === 'same' || it.result === 'changed';
+      out.push('  ' + it.code + ' ' + hms(it.at) + ' took ' + sec(it.ms) + ' ' + String(it.result).toUpperCase() + (it.price != null ? ' ' + gbp(it.price) : '') +
+        ' (compared with ' + gbp(it.ref) + ')' + (it.why ? ': ' + it.why : ''));
+      (it.steps || []).forEach(function (s) {
+        if (good && s.step === 'text') {
+          var ok = function (t) { return t.outcome === 'found' || t.outcome === 'partial'; };
+          var w = (s.trace || []).filter(ok)[0] || {};
+          out.push('    text ok via ' + (s.via || w.via || '?') + ' ' + sec(w.ms) + ' ' + kb(w.len) + ' ' + s.price);
+          (s.trace || []).filter(function (t) { return !ok(t); }).forEach(function (t) { out.push(attemptLine('text', t)); });
+          return;
+        }
+        out.push('    ' + s.step + ': ' + s.status + (s.reason ? ' (' + s.reason + ')' : '') + (s.price ? ' ' + s.price : '') +
+          (s.ld ? ' data=' + s.ld + (s.ldSure ? '' : '(other code)') : '') + (s.unsure ? ' UNSURE' : ''));
+        (s.trace || []).forEach(function (t) { out.push(attemptLine(s.step, t)); });
+      });
+    });
+    out.push('=== end ===');
+    return out.join('\n');
+  }
+
+  /* Test the connection: one code through each relay, text and whole page, plus a plain fetch from GitHub. */
+  function connTest(note) {
+    var d = diag(), lastBad = d.items.slice().reverse().filter(function (it) { return it.result !== 'same' && it.result !== 'changed'; })[0];
+    var code = (lastBad && lastBad.code) || (everything && everything.codes[0]) || '480PG', rows = [], t0 = Date.now();
+    var steps = [{ label: 'jina text', opts: { only: ['jina'] } }, { label: 'jina whole page', opts: { only: ['jina'], full: true } }]
+      .concat(SL.relays.filter(function (id) { return id !== 'jina'; }).map(function (id) { return { label: id, opts: { only: [id] } }; }));
+    note('Testing the connection: GitHub');
+    return fetch(RAW + 'plan.json?t=' + Date.now(), { cache: 'no-store', credentials: 'omit' }).then(function (r) {
+      rows.push('    github fetch http' + r.status + ' ' + sec(Date.now() - t0));
+    }, function (e) {
+      rows.push('    github fetch FAILED ' + sec(Date.now() - t0) + ' err="' + String(e && e.message || e).slice(0, 80) + '"');
+    }).then(function () {
+      return steps.reduce(function (p, s, i) {
+        return p.then(function () {
+          note('Testing the connection: ' + s.label + ' (' + (i + 1) + ' of ' + steps.length + ')');
+          var o = { retries: 0 };
+          Object.keys(s.opts).forEach(function (k) { o[k] = s.opts[k]; });
+          return SL.lookup(code, o).then(function (r) {
+            rows.push('    ' + s.label + ': ' + r.status + (r.reason ? ' (' + r.reason + ')' : '') + (r.price ? ' ' + r.price : '') + (r.ld ? ' data=' + r.ld + (r.ldSure ? '' : '(other code)') : ''));
+            (r.trace || []).forEach(function (t) { rows.push(attemptLine('test', t)); });
+          }, function (e) { rows.push('    ' + s.label + ': threw ' + String(e && e.message || e).slice(0, 120)); });
+        });
+      }, Promise.resolve());
+    }).then(function () {
+      var dd = diag();
+      dd.tests = (dd.tests || []).concat([{ at: new Date().toISOString(), code: code, rows: rows }]).slice(-2);
+      store(DIAG_KEY, dd);
+    });
+  }
+
+  function copyText(text, ok) {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback);
+    else fallback();
+    function fallback() {
+      var t = document.createElement('textarea');
+      t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); ok(); } catch (x) { toast("Couldn't copy here. Press and hold the report, Select all, then Copy."); }
+      t.remove();
+    }
+  }
+
+  function reportSheet() {
+    var wrap = document.createElement('div');
+    wrap.className = 'sc-sheet sc-rep-sheet';
+    wrap.innerHTML = '<div class="sc-sheet-card" role="dialog" aria-modal="true" aria-labelledby="scRepH">' +
+      '<h2 id="scRepH">Error report</h2>' +
+      '<p>Copy this and paste it into the chat with Claude. It shows what each line got back and why, so Claude can see what\'s going wrong.' +
+      (phone ? ' The search keeps going while this is open.' : '') + '</p>' +
+      '<textarea class="sc-report" id="scRep" readonly spellcheck="false" aria-label="Error report"></textarea>' +
+      '<button class="btn btn-primary" id="scRepCopy" type="button">Copy error report</button>' +
+      '<button class="btn" id="scRepTest" type="button">Test the connection first (about a minute)</button>' +
+      '<p class="sc-rep-n" id="scRepNote" hidden></p>' +
+      '<button class="sc-run-link" id="scRepClose" type="button">Close</button></div>';
+    function shut() { wrap.remove(); }
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) shut(); });
+    document.body.appendChild(wrap);
+    var ta = wrap.querySelector('#scRep'), test = wrap.querySelector('#scRepTest'), note = wrap.querySelector('#scRepNote');
+    function fill() { ta.value = report(); }
+    fill();
+    if (phone) { test.disabled = true; test.textContent = 'Stop the search to test the connection'; }
+    wrap.querySelector('#scRepClose').addEventListener('click', shut);
+    wrap.querySelector('#scRepCopy').addEventListener('click', function () {
+      fill();
+      copyText(ta.value, function () { toast('Error report copied. Paste it into the chat with Claude.'); });
+    });
+    test.addEventListener('click', function () {
+      if (phone || test.disabled) return;
+      test.disabled = true;
+      note.hidden = false;
+      connTest(function (msg) { note.textContent = msg; }).then(function () {
+        fill();
+        note.textContent = 'Test done and added to the report. Tap Copy error report.';
+        test.disabled = false;
+        test.textContent = 'Test the connection again';
+      });
+    });
+  }
+  $('progReport').addEventListener('click', reportSheet);
+  $('reportLink').addEventListener('click', reportSheet);
+
+  /* ---------- a newer version of this page: say so, as an old copy left open is easy to miss ---------- */
+
+  function checkVersion() {
+    return fetch('shelf-check.html?t=' + Date.now(), { cache: 'no-store', credentials: 'omit' })
+      .then(function (r) { return r.ok ? r.text() : ''; })
+      .then(function (h) {
+        var m = /shelf-check\/app\.js\?v=([^"'&\s>]+)/.exec(h || '');
+        if (m && APP_V && m[1] !== APP_V) { newerV = m[1]; $('update').hidden = false; }
+      }, function () { /* offline: try again later */ });
+  }
+  $('updateNow').addEventListener('click', function () { if (!phone) location.reload(); else toast('Stop the search first, then refresh'); });
+
   /* ---------- GitHub search: starts the weekly check on GitHub now (mode full) ---------- */
 
   var ghRun = null, ghTimer = 0, ghSince = 0;
@@ -1047,7 +1315,14 @@
 
   /* ---------- start ---------- */
 
-  refresh();
+  refresh().then(function () {
+    // carry on with a search that was waiting for the latest version of the page
+    var a = null;
+    try { a = JSON.parse(sessionStorage.getItem('sc-autostart') || 'null'); sessionStorage.removeItem('sc-autostart'); } catch (e) { /* none */ }
+    if (a && data) startPhone(a.fresh, a.session, true);
+  });
+  checkVersion();
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && !phone) checkVersion(); });
   // back on the page after a while (say on Monday morning): fetch the latest check again
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden && Date.now() - loadedAt > 15 * 60000) refresh();

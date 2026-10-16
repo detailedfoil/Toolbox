@@ -9,7 +9,7 @@
 <title>Monday Price Check</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
-<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261014a">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261016c">
 <script src="../auth-data.js?v=202610120756"></script>
 <script src="../auth.js?v=202610120755"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -46,6 +46,9 @@
     </div>
   </details>
 
+  <div class="sc-alert sc-update" id="update" role="status" hidden>
+    <div>A newer version of this page is out. <button class="sc-inline" id="updateNow" type="button">Refresh now</button></div>
+  </div>
   <div class="sc-run" id="runBar" hidden>
     <p class="sc-run-s" id="runStatus"></p>
     <div class="sc-fail" id="failBox" hidden>
@@ -66,10 +69,13 @@
       <span class="sc-go-t"><span>GitHub search</span><small id="ghSub">Updates the area · runs on GitHub</small></span>
     </button>
     <button class="sc-run-link" id="phoneFresh" type="button" hidden>Start again from the first line</button>
+    <button class="sc-run-link" id="reportLink" type="button">Something not working? Copy an error report</button>
     <div class="sc-prog" id="prog" hidden>
-      <div class="sc-prog-top"><b id="progText">Checking</b><button class="btn sc-stop" id="phoneStop" type="button">Stop</button></div>
+      <div class="sc-prog-top"><b id="progText">Checking</b>
+        <span class="sc-prog-btns"><button class="btn sc-stop" id="progReport" type="button">Error report</button><button class="btn sc-stop" id="phoneStop" type="button">Stop</button></span></div>
       <div class="sc-pbar" aria-hidden="true"><span id="progBar"></span></div>
-      <p class="sc-prog-n" id="progNote"></p>
+      <p class="sc-prog-n" id="progNote" aria-live="polite"></p>
+      <p class="sc-warn" id="progWarn" role="alert" hidden><span id="progWarnText"></span></p>
     </div>
   </div>
 
@@ -139,7 +145,7 @@
 <div class="sc-toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="shelf-check/sheet-engine.js?v=20261016b"></script>
-<script src="price-tickets/lookup.js?v=20261013y"></script>
-<script src="shelf-check/app.js?v=20261016a"></script>
+<script src="price-tickets/lookup.js?v=20261016d"></script>
+<script src="shelf-check/app.js?v=20261016c"></script>
 </body>
 </html>

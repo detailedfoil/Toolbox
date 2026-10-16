@@ -249,3 +249,14 @@
 .sc-ent-p { color: var(--muted); font-weight: 650; }
 .sc-ent-in { width: 6.5em; min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--field); color: var(--text); font-size: 1rem; }
 .sc-ent .btn { flex: 1 1 8em; min-width: 0; min-height: 40px; white-space: normal; font-size: .86rem; }
+
+/* error report: buttons, early warning, the report itself, newer-version notice */
+.sc-prog-btns { display: flex; gap: 8px; flex: none; }
+.sc-warn { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; font-size: .86rem; line-height: 1.4;
+  background: rgba(255, 176, 32, .12); border: 1px solid rgba(255, 176, 32, .45); color: var(--text); }
+.sc-report { display: block; width: 100%; min-height: 200px; max-height: 40vh; margin: 0 0 10px; padding: 10px; resize: vertical;
+  border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  font: 11.5px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre; overflow: auto; }
+.sc-rep-sheet .sc-sheet-card { max-height: 92vh; overflow-y: auto; }
+.sc-rep-n { margin: 2px 2px 8px !important; }
+.sc-inline { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
