@@ -1,0 +1,29 @@
+# one-off test of the counter trial checker reading through jina from GitHub's servers (17 Oct 2026). Safe to delete.
+name: diag jina
+on:
+  push:
+    branches: [diag-jina]
+permissions:
+  contents: write
+jobs:
+  t:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - working-directory: .github/counter-trial
+        run: npm ci --no-audit --no-fund
+      - name: test run through jina
+        env:
+          MODE: test
+          GAP_MS: '6000'
+        run: node .github/counter-trial/check.mjs 2>&1 | tee diag/jina-run.txt || true
+      - if: always()
+        run: |
+          git add -f diag/jina-run.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "diag result" && git push -q origin HEAD:diag-jina

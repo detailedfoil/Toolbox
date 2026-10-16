@@ -53,7 +53,7 @@ jobs:
         timeout-minutes: 180
         env:
           MODE: ${{ inputs.mode || 'auto' }}
-          GAP_MS: '100000'      # one product every 100 s or so: about 2 hours for all 69
+          GAP_MS: '6000'        # one product every 6 s or so through jina (20 requests a minute): about 15 min for all 69
         run: node .github/counter-trial/check.mjs
 
       - name: Save the results
