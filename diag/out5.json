@@ -1,0 +1,212 @@
+{
+ "at": "2026-10-16T19:25:04.310Z",
+ "runs": [
+  {
+   "code": "455HH",
+   "mode": "html",
+   "http": 200,
+   "len": 2003,
+   "ms": 614,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "name": "",
+   "head": "<html lang=\"en\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> <title></title> <style> body { font-family: \"Arial\"; } </style> <script "
+  },
+  {
+   "code": "455HH",
+   "mode": "plain",
+   "http": 200,
+   "len": 125320,
+   "ms": 12122,
+   "remaining": "19",
+   "status": "found",
+   "price": "£26.99",
+   "name": "Masterplug IP54 Weatherproof Outdoor Box"
+  },
+  {
+   "code": "455HH",
+   "mode": "html",
+   "http": 200,
+   "len": 2003,
+   "ms": 479,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "name": "",
+   "head": "<html lang=\"en\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> <title></title> <style> body { font-family: \"Arial\"; } </style> <script "
+  },
+  {
+   "code": "67928",
+   "mode": "html",
+   "http": 200,
+   "len": 2003,
+   "ms": 398,
+   "remaining": "19",
+   "status": "blocked",
+   "why": "other",
+   "name": "",
+   "head": "<html lang=\"en\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> <title></title> <style> body { font-family: \"Arial\"; } </style> <script "
+  },
+  {
+   "code": "67928",
+   "mode": "plain",
+   "http": 200,
+   "len": 127760,
+   "ms": 5317,
+   "remaining": "19",
+   "status": "found",
+   "price": "£9.99",
+   "name": "British General IP66 13A 2-Gang SP Weath"
+  },
+  {
+   "code": "67928",
+   "mode": "html",
+   "http": 200,
+   "len": 510365,
+   "ms": 697,
+   "remaining": "19",
+   "status": "found",
+   "price": "£9.99",
+   "ldSure": true,
+   "name": "British General IP66 13A 2-Gang SP Weath"
+  },
+  {
+   "code": "950CH",
+   "mode": "html",
+   "http": 503,
+   "len": 95,
+   "ms": 19152,
+   "remaining": null,
+   "status": "blocked",
+   "why": "other",
+   "name": "",
+   "head": "upstream connect error or disconnect/reset before headers. reset reason: connection termination"
+  },
+  {
+   "code": "950CH",
+   "mode": "plain",
+   "http": 200,
+   "len": 126699,
+   "ms": 16027,
+   "remaining": "19",
+   "status": "found",
+   "price": "£14.99",
+   "name": "British General IP66 13A 2-Gang SP Weath"
+  },
+  {
+   "code": "950CH",
+   "mode": "html",
+   "http": 200,
+   "len": 498365,
+   "ms": 587,
+   "remaining": "19",
+   "status": "found",
+   "price": "£14.99",
+   "ldSure": true,
+   "name": "British General IP66 13A 2-Gang SP Weath"
+  },
+  {
+   "code": "44241",
+   "mode": "plain",
+   "http": 200,
+   "len": 118609,
+   "ms": 7018,
+   "remaining": "19",
+   "status": "found",
+   "price": "£4.99",
+   "name": "Masterplug TCM24-XD Mechanical Plug-In &"
+  },
+  {
+   "code": "44241",
+   "mode": "html",
+   "http": 200,
+   "len": 483880,
+   "ms": 642,
+   "remaining": "19",
+   "status": "found",
+   "price": "£4.99",
+   "ldSure": true,
+   "name": "Masterplug TCM24-XD Mechanical Plug-In &"
+  },
+  {
+   "code": "44241",
+   "mode": "plain",
+   "http": 200,
+   "len": 118609,
+   "ms": 622,
+   "remaining": "19",
+   "status": "found",
+   "price": "£4.99",
+   "name": "Masterplug TCM24-XD Mechanical Plug-In &"
+  },
+  {
+   "code": "636LF",
+   "mode": "plain",
+   "http": 200,
+   "len": 131727,
+   "ms": 6364,
+   "remaining": "19",
+   "status": "found",
+   "price": "£35.99",
+   "name": "1000 LED Indoor & Outdoor Very Warm Whit"
+  },
+  {
+   "code": "636LF",
+   "mode": "html",
+   "http": 200,
+   "len": 532173,
+   "ms": 601,
+   "remaining": "19",
+   "status": "found",
+   "price": "£35.99",
+   "ldSure": true,
+   "name": "1000 LED Indoor & Outdoor Very Warm Whit"
+  },
+  {
+   "code": "636LF",
+   "mode": "plain",
+   "http": 200,
+   "len": 131727,
+   "ms": 629,
+   "remaining": "19",
+   "status": "found",
+   "price": "£35.99",
+   "name": "1000 LED Indoor & Outdoor Very Warm Whit"
+  },
+  {
+   "code": "614LF",
+   "mode": "plain",
+   "http": 200,
+   "len": 131069,
+   "ms": 6000,
+   "remaining": "19",
+   "status": "found",
+   "price": "£27.99",
+   "name": "750 LED Indoor & Outdoor Very Warm White"
+  },
+  {
+   "code": "614LF",
+   "mode": "html",
+   "http": 200,
+   "len": 548087,
+   "ms": 823,
+   "remaining": "19",
+   "status": "found",
+   "price": "£27.99",
+   "ldSure": true,
+   "name": "750 LED Indoor & Outdoor Very Warm White"
+  },
+  {
+   "code": "614LF",
+   "mode": "plain",
+   "http": 200,
+   "len": 131069,
+   "ms": 366,
+   "remaining": "19",
+   "status": "found",
+   "price": "£27.99",
+   "name": "750 LED Indoor & Outdoor Very Warm White"
+  }
+ ]
+}
