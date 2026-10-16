@@ -545,7 +545,8 @@
    * allows it. If the phone locks or the page gets closed part way, the next tap carries on where it stopped. */
 
   var SL = window.ScrewfixLookup, phone = null, wakeLock = null;
-  var PHONE_GAP = 3000;                                    // breather between tickets: keeps under jina's 20 a minute
+  var PHONE_GAP = 3000;                                    // breather between one worker's tickets
+  var PHONE_WORKERS = 3;                                   // tickets read at once; 3 at ~10 s each stays under jina's 20 a minute
 
   function savedRun() {
     var r = load(PHONE_RUN_KEY, null);
@@ -600,9 +601,10 @@
     var n = phone.total, d = phone.total - phone.queue.length, left = phone.queue.length;
     $('progText').textContent = (phone.retry ? 'Retrying ' : 'Checking ') + Math.min(d + 1, n) + ' of ' + n;
     $('progBar').style.width = Math.round(d / n * 100) + '%';
-    var per = phone.doneN ? phone.spent / phone.doneN : 10000, mins = Math.max(1, Math.round(left * (per + PHONE_GAP) / 60000));
-    $('progNote').innerHTML = (phone.current ? '<b>' + esc(phone.current) + '</b> ' + esc(phone.attempt || '') + ' &middot; ' +
-      Math.round((Date.now() - phone.t0) / 1000) + 's<br>' : '') + phone.got + ' found' +
+    var per = phone.doneN ? phone.spent / phone.doneN : 10000, mins = Math.max(1, Math.round(left * (per + PHONE_GAP) / PHONE_WORKERS / 60000));
+    var lv = Object.keys(phone.live), l0 = lv.length ? phone.live[lv[0]] : null;
+    $('progNote').innerHTML = (l0 ? '<b>' + esc(lv[0]) + '</b> ' + esc(l0.attempt || '') + ' &middot; ' +
+      Math.round((Date.now() - l0.t0) / 1000) + 's' + (lv.length > 1 ? ' (+' + (lv.length - 1) + ' more at once)' : '') + '<br>' : '') + phone.got + ' found' +
       (phone.fails ? ', ' + phone.fails + " couldn't be read" : '') + '. About ' + mins + ' min left. Keep this page open and the screen on.';
     // early warning: say so as soon as it looks wrong, rather than after it gives up
     var warn = phone.fails >= 2 && (phone.got === 0 || phone.streak >= 3);
@@ -626,7 +628,7 @@
     var run = r || { started: new Date().toISOString(), total: codes.length, got: 0, fails: 0, codes: codes };
     phone = { queue: codes.slice(), total: run.total, got: run.got || 0, fails: run.fails || 0, failed: (r && r.failed) || [],
               seen: (r && r.seen) || {}, started: run.started, retry: !!(r && r.retry), streak: 0, current: '', attempt: '',
-              t0: Date.now(), relays: {}, spent: 0, doneN: 0 };
+              t0: Date.now(), relays: {}, spent: 0, doneN: 0, live: {} };
     deadBefore().forEach(function (id) { phone.relays[id] = { ok: 0, hard: 2 }; });
     phone.tick = setInterval(progress, 1000);
     saveRun();
@@ -636,7 +638,8 @@
     $('reportLink').hidden = true;
     keepAwake();
     progress();
-    nextPhone();
+    // a few readers at once, started a moment apart so they don't hit the relay in one burst
+    for (var w = 0; w < PHONE_WORKERS; w++) setTimeout(nextPhone, w * 1500);
   }
 
   function saveRun() {
@@ -664,16 +667,16 @@
   function nextPhone() {
     if (!phone) return;
     if (!phone.queue.length) { finishPhone('done'); return; }
-    var me = phone, code = phone.queue[0], t0 = Date.now();
+    var me = phone, t0 = Date.now(), code = null;
+    for (var qi = 0; qi < phone.queue.length; qi++) if (!phone.live[phone.queue[qi]]) { code = phone.queue[qi]; break; }
+    if (!code) return;                                   // the rest are being read by the other readers
     var before = L.filter(function (l) { return l.code === code; })[0];
     var item = { code: code, at: new Date(t0).toISOString(), last: before ? before.price : null, ticket: before ? before.shelf : null, steps: [] };
-    phone.current = code;
-    phone.t0 = t0;
-    phone.attempt = '';
+    var live = phone.live[code] = { t0: t0, attempt: '' };
     progress();
     var onAttempt = function (a) {
       if (phone !== me) return;
-      phone.attempt = (a.mode === 'page' ? 'confirming the new price on ' : 'trying ') + a.via + (a.round ? ' (go ' + (a.round + 1) + ')' : '');
+      live.attempt = (a.mode === 'page' ? 'confirming the new price on ' : 'trying ') + a.via + (a.round ? ' (go ' + (a.round + 1) + ')' : '');
       progress();
     };
     SL.lookup(code, { skip: skipList(), maxMs: 30000, onAttempt: onAttempt }).then(function (r) {
@@ -727,7 +730,9 @@
       if (phone !== me) return;
       phone.spent += item.ms;
       phone.doneN++;
-      phone.queue.shift();
+      delete phone.live[code];
+      var qx = phone.queue.indexOf(code);
+      if (qx >= 0) phone.queue.splice(qx, 1);
       if (phone.streak >= 6) {
         // nothing's getting through: put those six back so Carry on tries them again
         phone.queue = phone.failed.splice(-6, 6).concat(phone.queue);
@@ -738,7 +743,6 @@
       }
       saveRun();
       if (src) render();
-      phone.current = '';
       progress();
       setTimeout(nextPhone, PHONE_GAP);
     });
@@ -819,7 +823,7 @@
     if (phone) {
       out.push('run RUNNING' + (phone.retry ? ' (retry)' : '') + ', started ' + hms(phone.started) + ', ' + (phone.total - phone.queue.length) + ' of ' + phone.total +
         ' done, ' + phone.got + ' found, ' + phone.fails + ' missed, ' + phone.streak + ' missed in a row' +
-        (phone.current ? ', now ' + phone.current + ' for ' + sec(now - phone.t0) + (phone.attempt ? ' (' + phone.attempt + ')' : '') : ', between tickets') +
+        (Object.keys(phone.live).length ? ', now ' + Object.keys(phone.live).map(function (k) { return k + ' for ' + sec(now - phone.live[k].t0) + (phone.live[k].attempt ? ' (' + phone.live[k].attempt + ')' : ''); }).join('; ') : ', between tickets') + ', ' + PHONE_WORKERS + ' at once' +
         (skipList().length ? ', leaving out ' + skipList().join(' ') : ''));
     } else {
       var sr = savedRun();
