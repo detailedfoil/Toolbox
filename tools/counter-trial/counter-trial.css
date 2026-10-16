@@ -94,3 +94,6 @@
 .ct-rep-n { margin: 10px 2px 0; color: var(--muted); font-size: .84rem; }
 .ct-update { align-items: center; }
 .ct-inline { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+.ct-sync{margin:.5rem 0 .75rem}
+.ct-sync.is-bad{color:var(--sc-warn,#b45309)}

@@ -66,7 +66,7 @@
 
   function refresh() {
     loadedAt = Date.now();
-    return Promise.all([from('counter-trial/data/'), from(RAW)]).then(function (res) {
+    return Promise.all([from('counter-trial/data/'), from(RAW), pullTicks()]).then(function (res) {
       var got = res.filter(function (r) { return r && r.plan && r.plan.lines && r.prices; })
                    .sort(function (a, b) { return stamp(b.prices) - stamp(a.prices); })[0];
       if (!got) throw new Error('no data');
@@ -314,8 +314,9 @@
     var l = L.filter(function (x) { return x.code === code; })[0];
     if (!l || l.price == null) return;
     var mine = confirmed(), before = mine[code] || null, at = String(Date.now());
-    mine[code] = { price: l.price, on: london().date };
+    mine[code] = { price: l.price, on: london().date, at: Date.now() };
     store(SHELF_KEY, mine);
+    ticksChanged();
     var log = load(LOG_KEY, []);
     if (!Array.isArray(log)) log = [];
     log.push({ code: code, from: l.shelf, to: l.price, on: london().date, at: at, before: before });
@@ -329,13 +330,129 @@
     for (var j = log.length - 1; j >= 0; j--) if (log[j].code === code && (!at || log[j].at === at)) { idx = j; break; }
     if (idx < 0) return;
     var e = log.splice(idx, 1)[0], mine = confirmed();
-    if (e.before) mine[code] = e.before; else delete mine[code];
+    // the change is written as a new entry, so it wins over the tick on other devices
+    mine[code] = e.before && e.before.price != null ? { price: e.before.price, on: e.before.on, at: Date.now() } : { removed: true, at: Date.now() };
     store(SHELF_KEY, mine);
+    ticksChanged();
     store(LOG_KEY, log);
     hideToast();
     render();
   }
 
+
+  /* ---------- ticks shared across devices ----------
+   * A tick is kept in this browser (ct-shelf-v1) and also written to tools/counter-trial/data/ticks.json in the repo, so every
+   * device ends up with the same shelf prices. Reading needs nothing; writing needs the GitHub token saved on the device
+   * (Contents: Read and write). Each entry has a time `at`; the newest wins. Undo and removal are written as new entries
+   * ({removed: true}) so they win over an older tick elsewhere. Without a token, or if the write fails, the tick stays on this
+   * device, is marked waiting (ct-ticks-dirty-v1), and goes up the next time the page opens with a working token. */
+
+  var TICKS_URL = 'https://api.github.com/repos/detailedfoil/Toolbox/contents/tools/counter-trial/data/ticks.json';
+  var DIRTY_KEY = 'ct-ticks-dirty-v1';
+  var syncState = { kind: '', msg: '' }, pushing = null, pushAgain = false;
+
+  function dirty() { return !!load(DIRTY_KEY, false); }
+  function mergeTicks(a, b) {
+    var out = {};
+    [a, b].forEach(function (m) {
+      Object.keys(m || {}).forEach(function (c) {
+        var e = m[c];
+        if (!e || typeof e !== 'object') return;
+        if (!out[c] || (+e.at || 0) >= (+out[c].at || 0)) out[c] = e;
+      });
+    });
+    return out;
+  }
+  function same_(a, b) { return JSON.stringify(a || {}) === JSON.stringify(b || {}); }
+  function ticksCount() { var m = confirmed(); return Object.keys(m).filter(function (c) { return m[c] && m[c].price != null; }).length; }
+
+  function syncShow(kind, msg) {
+    syncState = { kind: kind, msg: msg || '' };
+    var el = $('syncNote');
+    if (!el) return;
+    var h = '';
+    if (kind === 'ok') h = 'Ticks are saved to GitHub, so every device you use shows the same ones.';
+    else if (kind === 'none') h = 'Ticks made here only save on this device. You still see ticks made on your other devices. <button class="ct-inline" data-sync="1" type="button">Turn on syncing</button>';
+    else if (kind === 'wait') h = 'Saving ticks to GitHub…';
+    else if (kind === 'bad') h = esc(msg) + ' Ticks are kept on this device meanwhile. <button class="ct-inline" data-sync="1" type="button">Fix syncing</button>';
+    el.innerHTML = h;
+    el.className = 'sc-hint ct-sync' + (kind === 'bad' ? ' is-bad' : '');
+    el.hidden = !h;
+  }
+  function syncIdle() { syncShow(!token() ? 'none' : dirty() ? 'bad' : 'ok', dirty() ? 'Some ticks are waiting to be saved to GitHub.' : ''); }
+
+  function ticksChanged() {
+    store(DIRTY_KEY, true);
+    if (!token()) { syncShow('none'); return; }
+    pushTicks();
+  }
+
+  /* write the merged ticks to the repo; resolves to '' on success or a sentence saying what went wrong */
+  function pushTicks(tries) {
+    if (pushing) { pushAgain = true; return pushing; }
+    var t = token();
+    if (!t) { syncShow('none'); return Promise.resolve('no token'); }
+    syncShow('wait');
+    var n = tries || 0;
+    pushing = fetch(TICKS_URL + '?ref=main&t=' + Date.now(), { headers: ghHeaders(t), cache: 'no-store' }).then(function (r) {
+      if (r.status === 404) return { sha: null, ticks: {} };
+      if (r.status === 401) throw new Error("GitHub didn't accept the token.");
+      if (!r.ok) throw new Error('GitHub said no (HTTP ' + r.status + ').');
+      return r.json().then(function (j) {
+        var cur = {};
+        try { cur = (JSON.parse(atob(String(j.content || '').replace(/\s/g, ''))) || {}).ticks || {}; } catch (e) { /* unreadable: replace it */ }
+        return { sha: j.sha, ticks: cur };
+      });
+    }).then(function (remote) {
+      var merged = mergeTicks(confirmed(), remote.ticks);
+      store(SHELF_KEY, merged);
+      var body = { message: 'Ticks updated [skip ci]', branch: 'main', content: btoa(JSON.stringify({ updated: new Date().toISOString(), ticks: merged }, null, 1) + '\n') };
+      if (remote.sha) body.sha = remote.sha;
+      return fetch(TICKS_URL, { method: 'PUT', headers: ghHeaders(t), cache: 'no-store', body: JSON.stringify(body) }).then(function (r) {
+        if (r.status === 200 || r.status === 201) return '';
+        if (r.status === 409 || r.status === 422) return 'retry';
+        if (r.status === 401) return "GitHub didn't accept the token. It may have expired.";
+        if (r.status === 403 || r.status === 404) return "The token isn't allowed to save files. It needs Contents: Read and write on the Toolbox repo.";
+        return 'GitHub said no (HTTP ' + r.status + ').';
+      });
+    }).then(function (res) {
+      if (res === 'retry' && n < 3) { pushing = null; return pushTicks(n + 1); }
+      if (res === 'retry') res = 'Two devices saved at once. It will try again next time.';
+      return res;
+    }, function (e) {
+      return e && /token|GitHub said/.test(e.message) ? e.message : "Couldn't reach GitHub.";
+    }).then(function (res) {
+      pushing = null;
+      if (!res) { try { localStorage.removeItem(DIRTY_KEY); } catch (e) { /* fine */ } }
+      var again = pushAgain; pushAgain = false;
+      if (again && !res) return pushTicks();
+      syncShow(res ? 'bad' : 'ok', res);
+      if (src) render();
+      return res;
+    });
+    return pushing;
+  }
+
+  /* pull the shared ticks into this device (called with every refresh) */
+  function pullTicks() {
+    var one = function (u) { return getJSON(u).then(function (j) { return j && j.ticks ? j : null; }, function () { return null; }); };
+    return Promise.all([one('counter-trial/data/ticks.json'), one(RAW + 'ticks.json')]).then(function (rs) {
+      var best = rs.filter(Boolean).sort(function (a, b) { return Date.parse(b.updated || 0) - Date.parse(a.updated || 0); })[0];
+      var local = confirmed(), remote = best ? best.ticks : {};
+      var merged = mergeTicks(local, remote);
+      if (!same_(merged, local)) store(SHELF_KEY, merged);
+      // anything here that GitHub doesn't have yet (older ticks from before syncing, or ones made offline) is sent up
+      if (!same_(merged, remote) && Object.keys(merged).length) store(DIRTY_KEY, true);
+    }, function () { /* offline: use what's on the device */ }).then(function () {
+      if (dirty() && token()) return pushTicks();
+      syncIdle();
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-sync]');
+    if (b) setupSheet(syncState.kind === 'bad' ? syncState.msg : '', true);
+  });
   $('todoList').addEventListener('change', function (e) {
     var row = e.target.closest('[data-code]');
     if (!row || !e.target.checked) return;
@@ -482,25 +599,28 @@
     if (!window.confirm('Remove the GitHub token from this device? Check on GitHub will open GitHub instead until you add one again.')) return;
     try { localStorage.removeItem(TOKEN_KEY); } catch (x) { /* nothing saved */ }
     toast('Token removed from this device');
+    syncIdle();
     render();
   });
 
-  function setupSheet(err) {
+  function setupSheet(err, forSync) {
     var wrap = document.createElement('div');
     wrap.className = 'sc-sheet ct-sheet';
     wrap.innerHTML = '<div class="sc-sheet-card" role="dialog" aria-modal="true" aria-labelledby="ctSheetH">' +
-      '<h2 id="ctSheetH">Check on GitHub</h2>' +
+      (forSync ? '<h2 id="ctSheetH">Sync ticks across devices</h2>' +
+      '<p>Save a GitHub token on this device once, and every tick you make is saved to GitHub, so all your devices show the same shelf prices. Do this once on each device. The token stays on that device and can only reach Toolbox.</p>'
+      : '<h2 id="ctSheetH">Check on GitHub</h2>' +
       '<p>Starts a full check of all ' + (L.length || 69) + ' tickets straight away. It runs on GitHub and takes about 2 hours.</p>' +
       '<a class="btn" href="' + RUNS + '" target="_blank" rel="noopener">Open on GitHub, then tap Run workflow</a>' +
       '<hr><h2>Make it one tap</h2>' +
-      '<p>Save a GitHub token on this device once, and the Check on GitHub button starts it itself. It stays on this device and can only run Toolbox checks.</p>' +
+      '<p>Save a GitHub token on this device once, and the Check on GitHub button starts it itself, and your ticks sync across devices. It stays on this device and can only reach Toolbox.</p>') +
       '<ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Make a new fine-grained token</a> on GitHub.</li>' +
       '<li>Expiration: the longest it allows. <b>Repository access</b>: Only select repositories, then <b>Toolbox</b>.</li>' +
-      '<li><b>Permissions</b>: Actions, <b>Read and write</b>. Nothing else.</li>' +
+      '<li><b>Permissions</b>: Actions, <b>Read and write</b>, and Contents, <b>Read and write</b>. Nothing else.</li>' +
       '<li>Generate it, copy it, and paste it here.</li></ol>' +
       '<input id="ctTok" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_..." aria-label="GitHub token">' +
       '<p class="ct-err" id="ctErr"' + (err ? '' : ' hidden') + '>' + esc(err || '') + '</p>' +
-      '<button class="btn btn-primary" id="ctSave" type="button">Save and check now</button>' +
+      '<button class="btn btn-primary" id="ctSave" type="button">' + (forSync ? 'Save and sync' : 'Save and check now') + '</button>' +
       '<button class="ct-link" id="ctClose" type="button">Cancel</button></div>';
     function shut() { wrap.remove(); }
     wrap.addEventListener('click', function (e) { if (e.target === wrap) shut(); });
@@ -510,6 +630,23 @@
       var t = wrap.querySelector('#ctTok').value.trim(), e = wrap.querySelector('#ctErr'), btn = this;
       if (!t) { e.hidden = false; e.textContent = 'Paste the token first.'; return; }
       btn.classList.add('is-busy');
+      if (forSync) {
+        // keep the token only if it can really save a file
+        var old = token();
+        try { localStorage.setItem(TOKEN_KEY, t); } catch (x) { /* private mode */ }
+        store(DIRTY_KEY, true);
+        pushTicks().then(function (res) {
+          btn.classList.remove('is-busy');
+          if (res) {
+            try { if (old) localStorage.setItem(TOKEN_KEY, old); else localStorage.removeItem(TOKEN_KEY); } catch (x) { /* fine */ }
+            syncIdle();
+            e.hidden = false; e.textContent = res; return;
+          }
+          shut();
+          toast('Syncing is on');
+        });
+        return;
+      }
       dispatch(t).then(function (msg) {
         btn.classList.remove('is-busy');
         if (msg) { e.hidden = false; e.textContent = msg; return; }
