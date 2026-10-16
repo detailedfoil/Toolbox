@@ -12,12 +12,17 @@
 (function (root) {
   'use strict';
 
+  var VERSION = '2026-10-16d';           // shown in error reports, so a stale copy on a phone is easy to spot
+
   var PROXIES = [
     { id: 'codetabs',   build: function (u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
     { id: 'cors.lol',   build: function (u) { return 'https://api.cors.lol/?url=' + encodeURIComponent(u); } },
     { id: 'allorigins', build: function (u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); } },
     // jina sends the page as text by default, which leaves out the product data (JSON-LD) that confirms a new
-    // price. lookup(code, {full: true}) asks it for the page itself instead (counter trial device check).
+    // price. lookup(code, {full: true}) asks it for the page itself instead (counter trial device check). Only
+    // ask for that AFTER a normal text read of the same code: the text read renders the page in jina's browser
+    // and caches it, and the whole-page request then gets that copy. Asked first, jina fetches the page bare,
+    // gets Screwfix's bot check and can keep serving that for a while (tested 16 Oct).
     { id: 'jina',       build: function (u) { return 'https://r.jina.ai/' + u; },
                         full: { 'X-Return-Format': 'html' } },   // not X-No-Cache: a forced live fetch gets Screwfix's bot check (tested 16 Oct)
     { id: 'corsproxy',  build: function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); } }
@@ -79,7 +84,7 @@
       .then(function (res) {
         return res.text().then(function (text) { return { status: res.status, text: text }; });
       })
-      .catch(function () { throw { kind: timedOut ? 'timeout' : 'network' }; })
+      .catch(function (e) { throw { kind: timedOut ? 'timeout' : 'network', msg: String((e && (e.message || e.name)) || e || '').slice(0, 80) }; })
       .finally(function () { clearTimeout(timer); });
   }
 
@@ -323,15 +328,23 @@
       try { r = interpret(res, code); } catch (e) { r = { status: 'blocked', why: 'other' }; }
       var outcome = r.status === 'blocked' ? (r.why || (res.status >= 400 ? 'http-' + res.status : 'other')) : r.status;
       if (outcome === 'http-429') outcome = 'limited';
-      return { via: proxy.id, outcome: outcome, ms: now() - t0, http: res.status, result: r };
+      var t = { via: proxy.id, outcome: outcome, ms: now() - t0, http: res.status, result: r, len: (res.text || '').length, mode: full && proxy.full ? 'page' : 'text' };
+      // what came back instead of the product page, for error reports
+      if (r.status !== 'found') t.head = squash(String(res.text || '').replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ')).slice(0, 140);
+      return t;
     }, function (e) {
-      return { via: proxy.id, outcome: e && e.kind === 'timeout' ? 'timeout' : 'network', ms: now() - t0, http: 0, result: { status: 'blocked' } };
+      return { via: proxy.id, outcome: e && e.kind === 'timeout' ? 'timeout' : 'network', ms: now() - t0, http: 0, result: { status: 'blocked' },
+               err: (e && e.msg) || '', mode: full && proxy.full ? 'page' : 'text' };
     });
   }
 
   function brief(t) {
     var r = t.result || {};
-    return { via: t.via, outcome: t.outcome, ms: t.ms, http: t.http, round: t.round, price: r.price || '', name: r.name || '' };
+    var b = { via: t.via, outcome: t.outcome, ms: t.ms, http: t.http, round: t.round, price: r.price || '', name: r.name || '', mode: t.mode, len: t.len };
+    if (t.head) b.head = t.head;
+    if (t.err) b.err = t.err;
+    if (r.ld) { b.ld = r.ld; b.ldSure = !!r.ldSure; }
+    return b;
   }
 
   /* -> Promise<{status: 'found'|'partial'|'notfound'|'blocked', name, price, age (Challenge 25), unsure, was, images, via,
@@ -340,14 +353,23 @@
       page, main one first, for posters only. reason, when blocked: 'network' if no relay could be reached at all,
       otherwise 'relays'. trace: every attempt, for working out why.)
      opts.onRetry(round): called before each extra round when every relay failed.
-     opts.full: ask relays that can for the whole page, so the product data (ld, ldSure) comes back too. */
+     opts.full: ask relays that can for the whole page, so the product data (ld, ldSure) comes back too.
+     opts.only / opts.skip: relay ids to use / leave out (skip never leaves none). opts.retries: extra rounds when
+     everything fails (default 2). opts.maxMs: no new round after this long (default 70 s).
+     opts.onAttempt({via, round, mode}): called as each relay is tried, for showing progress. */
   function lookup(code, opts) {
     opts = opts || {};
     code = String(code || '').toUpperCase();
     var trace = [], started = now();
     function finish(r) { r.trace = trace.map(brief); return r; }
+    var rounds = opts.retries != null ? Math.min(opts.retries, RETRY_AFTER.length) : RETRY_AFTER.length;
+    var maxMs = opts.maxMs || 70000;
     function round(n, only) {
-      var order = proxyOrder().filter(function (p) { return !only || only.indexOf(p.id) >= 0; });
+      var order = proxyOrder().filter(function (p) { return (!only || only.indexOf(p.id) >= 0) && (!opts.only || opts.only.indexOf(p.id) >= 0); });
+      if (opts.skip && opts.skip.length) {
+        var kept = order.filter(function (p) { return opts.skip.indexOf(p.id) < 0; });
+        if (kept.length) order = kept;
+      }
       var i = 0, partial = null, notFound = 0;
       function next() {
         if (i >= order.length || notFound >= 2) {
@@ -360,7 +382,7 @@
           var again = mine.filter(function (t) { return t.outcome !== 'network' && !/^http-4(0[0-4]|10)$/.test(t.outcome); })
                           .map(function (t) { return t.via; });
           if (noAnswer && n === 0) again = mine.map(function (t) { return t.via; });
-          if (n < RETRY_AFTER.length && again.length && now() - started < 70000) {
+          if (n < rounds && again.length && now() - started < maxMs) {
             if (opts.onRetry) { try { opts.onRetry(n + 1); } catch (e) { /* display only */ } }
             return wait(RETRY_AFTER[n]).then(function () { return round(n + 1, again); });
           }
@@ -368,6 +390,7 @@
           return finish({ status: 'blocked', reason: everyone ? 'network' : 'relays' });
         }
         var proxy = order[i++];
+        if (opts.onAttempt) { try { opts.onAttempt({ via: proxy.id, round: n, mode: opts.full && proxy.full ? 'page' : 'text' }); } catch (e) { /* display only */ } }
         return tryRelay(proxy, code, !!opts.full).then(function (t) {
           t.round = n;
           trace.push(t);
@@ -376,7 +399,8 @@
           if (r.status === 'found') { promote(proxy.id); return finish(r); }
           if (r.status === 'notfound') { notFound++; if (notFound === 1) promote(proxy.id); }
           else if (r.status === 'partial') { if (!partial) partial = r; }
-          else coolDown(proxy.id, t.outcome);
+          // a whole-page request that fails says nothing about the relay's normal text reads, unless it's down or limited
+          else if (!opts.full || /^(network|timeout|limited)$/.test(t.outcome)) coolDown(proxy.id, t.outcome);
           return next();
         });
       }
@@ -421,7 +445,14 @@
     }, Promise.resolve()).then(function () { return out; });
   }
 
+  /* For error reports: the relay order this browser has learned, and which are resting after a failure. */
+  function state() {
+    var t = now(), resting = {};
+    Object.keys(cool).forEach(function (id) { if (cool[id] > t) resting[id] = Math.round((cool[id] - t) / 1000); });
+    return { order: proxyOrder().map(function (p) { return p.id; }), resting: resting };
+  }
+
   root.ScrewfixLookup = { lookup: lookup, diagnose: diagnose, fromCopiedPage: fromCopiedPage, slot: slot,
-                          productUrl: productUrl, interpret: interpret, normPrice: normPrice,
+                          productUrl: productUrl, interpret: interpret, normPrice: normPrice, state: state, version: VERSION,
                           relays: PROXIES.map(function (p) { return p.id; }) };
 })(this);

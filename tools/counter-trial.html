@@ -10,7 +10,7 @@
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=20261011a">
 <link rel="stylesheet" href="shelf-check/shelf-check.css?v=20261011d">
-<link rel="stylesheet" href="counter-trial/counter-trial.css?v=20261014a">
+<link rel="stylesheet" href="counter-trial/counter-trial.css?v=20261016d">
 <script src="../auth-data.js?v=202610120756"></script>
 <script src="../auth.js?v=202610120755"></script>
 <script src="../analytics.js?v=20261011d"></script>
@@ -22,6 +22,9 @@
   <p class="sc-sub" id="sub">Behind counter tickets, checked against screwfix.com. A change stays here until you tick it off.</p>
 
   <p class="sc-meta" id="meta">Loading the latest check</p>
+  <div class="sc-alert ct-update" id="update" role="status" hidden>
+    <div>A newer version of this page is out. <button class="ct-inline" id="updateNow" type="button">Refresh now</button></div>
+  </div>
   <div class="ct-run" id="runBar">
     <p class="ct-run-s" id="runStatus">The nightly GitHub check is off for now.</p>
     <div class="ct-run-btns" id="runBtns">
@@ -35,10 +38,13 @@
       </button>
     </div>
     <button class="ct-link ct-fresh" id="phoneFresh" type="button" hidden>Start again from the first ticket</button>
+    <button class="ct-link ct-fresh" id="reportLink" type="button">Something not working? Copy an error report</button>
     <div class="ct-prog" id="prog" hidden>
-      <div class="ct-prog-top"><b id="progText">Checking</b><button class="btn ct-stop" id="phoneStop" type="button">Stop</button></div>
+      <div class="ct-prog-top"><b id="progText">Checking</b>
+        <span class="ct-prog-btns"><button class="btn ct-stop" id="progReport" type="button">Error report</button><button class="btn ct-stop" id="phoneStop" type="button">Stop</button></span></div>
       <div class="ct-bar" aria-hidden="true"><span id="progBar"></span></div>
-      <p class="ct-prog-n" id="progNote"></p>
+      <p class="ct-prog-n" id="progNote" aria-live="polite"></p>
+      <p class="ct-warn" id="progWarn" role="alert" hidden><span id="progWarnText"></span></p>
     </div>
   </div>
   <p class="sc-error" id="error" role="alert" hidden></p>
@@ -88,7 +94,7 @@
 </div>
 <div class="sc-toast ct-toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastUndo" hidden>Undo</button></div>
 
-<script src="price-tickets/lookup.js?v=20261016a"></script>
-<script src="counter-trial/app.js?v=20261015a"></script>
+<script src="price-tickets/lookup.js?v=20261016d"></script>
+<script src="counter-trial/app.js?v=20261016d"></script>
 </body>
 </html>

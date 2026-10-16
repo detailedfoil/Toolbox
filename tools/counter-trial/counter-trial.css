@@ -81,3 +81,16 @@
 .ct-pound input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--text); font: inherit; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .ct-pound:has(input[aria-invalid="true"]) { border-color: #e5484d; }
 .ct-enter .btn { min-height: 44px; padding: 0 18px; }
+
+/* error report: buttons, early warning, the report itself */
+.ct-prog-btns { display: flex; gap: 8px; flex: none; }
+.ct-warn { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; font-size: .86rem; line-height: 1.4;
+  background: rgba(255, 176, 32, .12); border: 1px solid rgba(255, 176, 32, .45); color: var(--text); }
+.ct-report { display: block; width: 100%; min-height: 200px; max-height: 40vh; margin: 0 0 10px; padding: 10px; resize: vertical;
+  border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  font: 11.5px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre; overflow: auto; }
+.ct-sheet .btn + .btn { margin-top: 8px; }
+.ct-sheet .btn { width: 100%; }
+.ct-rep-n { margin: 10px 2px 0; color: var(--muted); font-size: .84rem; }
+.ct-update { align-items: center; }
+.ct-inline { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
