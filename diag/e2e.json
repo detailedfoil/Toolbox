@@ -1,0 +1,58 @@
+{
+ "at": "2026-10-16T19:42:32.431Z",
+ "codes": [
+  "842CF",
+  "318FX",
+  "480PG",
+  "455HH",
+  "950CH",
+  "404RR",
+  "1402X",
+  "813AW"
+ ],
+ "events": [
+  "requestfailed https://api.codetabs.com/v1/proxy?quest=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F842 net::ERR_FAILED",
+  "requestfailed https://api.cors.lol/?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F842cf net::ERR_FAILED",
+  "requestfailed https://api.allorigins.win/raw?url=https%3A%2F%2Fwww.screwfix.com%2Fp%2Fproduct%2F842cf net::ERR_FAILED"
+ ],
+ "live": true,
+ "button": "Retry the 8 missed",
+ "notes": [
+  "3s Retrying 1 of 8 | 842CF trying codetabs · 3s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "6s Retrying 1 of 8 | 842CF trying codetabs · 6s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "9s Retrying 1 of 8 | 842CF trying codetabs · 9s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "12s Retrying 1 of 8 | 842CF trying codetabs · 12s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "15s Retrying 1 of 8 | 842CF trying codetabs · 15s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "18s Retrying 1 of 8 | 842CF trying codetabs · 18s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "21s Retrying 1 of 8 | 842CF trying allorigins · 21s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "24s Retrying 1 of 8 | 842CF trying allorigins · 24s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "27s Retrying 1 of 8 | 842CF trying allorigins · 27s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "30s Retrying 1 of 8 | 842CF trying allorigins · 30s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "33s Retrying 1 of 8 | 842CF trying allorigins · 33s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "36s Retrying 1 of 8 | 842CF trying allorigins · 36s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "39s Retrying 1 of 8 | 842CF trying allorigins · 39s / 0 found. About 2 min left. Keep this page open and the screen on.",
+  "42s Retrying 2 of 8 | 1 found. About 5 min left. Keep this page open and the screen on.",
+  "45s Retrying 2 of 8 | 318FX trying jina · 0s / 1 found. About 5 min left. Keep this page open and the screen on.",
+  "48s Retrying 3 of 8 | 2 found. About 2 min left. Keep this page open and the screen on.",
+  "51s Retrying 4 of 8 | 3 found. About 1 min left. Keep this page open and the screen on.",
+  "54s Retrying 4 of 8 | 455HH trying jina · 0s / 3 found. About 1 min left. Keep this page open and the screen on.",
+  "57s Retrying 5 of 8 | 4 found. About 1 min left. Keep this page open and the screen on.",
+  "60s Retrying 6 of 8 | 5 found. About 1 min left. Keep this page open and the screen on.",
+  "63s Retrying 6 of 8 | 404RR trying jina · 1s / 5 found. About 1 min left. Keep this page open and the screen on.",
+  "66s Retrying 6 of 8 | 404RR trying jina · 4s / 5 found. About 1 min left. Keep this page open and the screen on.",
+  "69s Retrying 6 of 8 | 404RR trying jina · 7s / 5 found. About 1 min left. Keep this page open and the screen on.",
+  "72s Retrying 7 of 8 | 6 found. About 1 min left. Keep this page open and the screen on.",
+  "75s Retrying 7 of 8 | 1402X trying jina · 3s / 6 found. About 1 min left. Keep this page open and the screen on.",
+  "78s Retrying 8 of 8 | 7 found. About 1 min left. Keep this page open and the screen on.",
+  "81s Retrying 8 of 8 | 813AW trying jina · 0s / 7 found. About 1 min left. Keep this page open and the screen on.",
+  "84s Retrying 8 of 8 | 813AW trying jina · 3s / 7 found. About 1 min left. Keep this page open and the screen on.",
+  "87s Retrying 8 of 8 | 8 found. About 1 min left. Keep this page open and the screen on."
+ ],
+ "toast": "Checked 8 of 69 on this device, 3 to update",
+ "todo": [
+  "842CF Westland Resolva Xtra Fast Weedkiller 50m² 5Ltr Changed today £25.99 ticket £31.99 DOWN",
+  "318FX Erbauer EPR710 710W 1/4\" Electric Palm Router 220-240V Changed today £53.99 ticket £59.99 DOWN",
+  "480PG Erbauer Metal Power Tool Accessories Set 120 Pieces Changed today £24.99 ticket £22.99 UP"
+ ],
+ "missed": []
+}
