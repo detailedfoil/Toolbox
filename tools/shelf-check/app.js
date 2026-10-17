@@ -1258,7 +1258,7 @@
   function ghLine() {
     var busy = ghRun && ghRun.status !== 'completed';
     $('ghSub').textContent = busy ? 'Running on GitHub since ' + new Date(ghRun.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · the page updates when it finishes'
-      : token() ? 'Updates the area · runs on GitHub, about 50 min' : 'Updates the area · needs a GitHub token first';
+      : token() ? 'Updates the area · runs on GitHub, about 75 min' : 'Updates the area · needs a GitHub token first';
     $('ghRun').classList.toggle('is-busy', !!busy);
   }
   function ghStatus() {
@@ -1285,10 +1285,10 @@
     if (ghRun && ghRun.status !== 'completed') { toast('GitHub is already searching. The page updates when it finishes.'); return; }
     var t = token();
     if (!t) { needToken('run the GitHub search'); return; }
-    if (!window.confirm('Start a GitHub search of all ' + everything.codes.length + ' lines now?\n\nIt runs on GitHub (about 50 min) and updates the area when it finishes.')) return;
+    if (!window.confirm('Start a GitHub search of all ' + everything.codes.length + ' lines now?\n\nIt runs on GitHub (about 75 min) and updates the area when it finishes.')) return;
     fetch(DISPATCH + '/dispatches', { method: 'POST', headers: ghHeaders(t), body: JSON.stringify({ ref: 'main', inputs: { mode: 'full' } }) }).then(function (r) {
       if (r.status === 204) {
-        toast('GitHub search started. About 50 min; the page updates when it finishes.');
+        toast('GitHub search started. About 75 min; the page updates when it finishes.');
         ghRun = { status: 'queued', created_at: new Date().toISOString() };
         ghSince = Date.now();
         ghLine();

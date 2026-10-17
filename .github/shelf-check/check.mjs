@@ -7,7 +7,9 @@
 // and the price is cross-checked against the product data built into the page.
 //
 // Rules:
-//  - never more than one request at a time, GAP_MS between them; on HTTP 429 pause, then go slower
+//  - pages are read through jina (r.jina.ai), which gets past Screwfix's bot check; straight to screwfix.com only
+//    if jina fails (see viaJina below)
+//  - never more than one line at a time, GAP_MS between them; on HTTP 429 from jina wait as asked and go slower
 //  - a failed lookup is never a price change: the line keeps its last price, marked "unchecked"
 //  - "not_found" only when Screwfix itself answers 404 / 410 for the product page
 //  - a code's first price is its starting point; after that any difference is a change
@@ -127,8 +129,71 @@ function dataPrice(html, code) {
   return mine ? { price: mine.price, sure: true } : found[0] ? { price: found[0].price, sure: false } : null;
 }
 
+/* ---------- reading through jina (since 17 Oct 2026) ----------
+ * Since 13 Oct Screwfix answers GitHub's servers with its bot check (HTTP 202) instead of the product page (seen on
+ * the A25 counter trial). jina (r.jina.ai) opens the page in a real browser and sends it back, which gets past that;
+ * it's what the page's Device search uses, and the A25 GitHub check read 69 of 69 this way on 16 Oct. Same order:
+ * a normal text read first (that renders the page and jina keeps a copy). An unchanged price is fine as it is. A
+ * different one is confirmed from the product data in the whole page (X-Return-Format: html), which jina serves from
+ * that copy. Never ask for the whole page first or with X-No-Cache: jina then fetches it bare and gets the bot check.
+ * jina allows 20 requests a minute without a key: one line every 5 s plus a confirm for changes stays under it. */
+const JINA = process.env.JINA_URL || 'https://r.jina.ai/';
+async function jinaGet(code, whole) {
+  const headers = whole ? { 'X-Return-Format': 'html' } : {};
+  try {
+    const res = await fetch(JINA + SL.productUrl(code), { headers, signal: AbortSignal.timeout(60000) });
+    return { http: res.status, text: await res.text() };
+  } catch (e) {
+    return { http: 0, text: '', err: errText(e) };
+  }
+}
+function readOf(got, code) {
+  if (got.http === 429) {
+    const m = /"retryAfter"\s*:\s*(\d+)/.exec(got.text.slice(0, 600));
+    return { limited: true, wait: Math.min(Math.max(m ? Number(m[1]) : 0, 5), 60) * 1000 };
+  }
+  if (!got.http) return { why: 'jina: no answer (' + got.err + ')' };
+  let r;
+  try { r = JSON.parse(JSON.stringify(SL.interpret({ status: got.http, text: got.text }, code))); } catch (e) { return { why: 'jina: page could not be read (' + errText(e) + ')' }; }
+  return { r };
+}
+const same = (a, b) => a != null && b != null && Math.abs(a - b) < 0.005;
+
+// -> {kind: 'found', name, price, was, via} | {kind: 'missing'} | {kind: 'limited', pause} | {kind: 'fail', why, relay?}
+async function viaJina(code, before) {
+  const a = readOf(await jinaGet(code, false), code);
+  if (a.limited) return { kind: 'limited', pause: a.wait };
+  if (a.why) return { kind: 'fail', why: a.why, relay: true };
+  const r = a.r;
+  if (r.status === 'notfound') return { kind: 'missing' };
+  const shown = pounds(r.price);
+  if (!(r.status === 'found' || r.status === 'partial') || r.unsure || shown == null || !(shown > 0)) {
+    return { kind: 'fail', why: 'jina: ' + (r.unsure ? "page doesn't mention the code" : 'page: ' + r.status + (r.why ? ' (' + r.why + ')' : '')), relay: r.status === 'blocked' };
+  }
+  const found = (price, how) => ({ kind: 'found', name: r.name || null, price: Math.round(price * 100) / 100, was: same(price, shown) ? pounds(r.was) : null, via: 'jina ' + how });
+  if (r.ld && r.ldSure) return found(pounds(r.ld), 'text + product data');
+  if (same(shown, before)) return found(shown, 'text, unchanged');
+  // a new price (or the first reading): confirm it from the product data in the whole page
+  await sleep(3500);
+  let b = readOf(await jinaGet(code, true), code);
+  if (b.limited) { await sleep(b.wait); b = readOf(await jinaGet(code, true), code); }
+  if (b.r && b.r.ld && b.r.ldSure) return found(pounds(b.r.ld), 'confirmed from the whole page');
+  return { kind: 'fail', why: `jina showed £${shown.toFixed(2)} but it couldn't be confirmed (whole page: ${b.limited ? 'HTTP 429' : b.why || (b.r.ld ? 'product data for another code' : b.r.status)})` };
+}
+
+async function lookup(code, before) {
+  const j = await viaJina(code, before);
+  if (!j.relay) return j;
+  // jina itself failed: try Screwfix directly, though it has been sending GitHub its bot check since 13 Oct
+  const d = await direct(code);
+  if (d.kind === 'limited') return { kind: 'fail', why: j.why + '; direct: Screwfix said slow down (HTTP 429)' };
+  if (d.kind === 'fail') return { kind: 'fail', why: j.why + '; direct: ' + d.why };
+  return { ...d, via: 'direct' };
+}
+
+// straight to screwfix.com (the only way until 17 Oct)
 // -> {kind: 'found', name, price, was} | {kind: 'missing'} | {kind: 'limited', retryAfter} | {kind: 'fail', why}
-async function lookup(code) {
+async function direct(code) {
   let res, html;
   try {
     res = await fetch(SL.productUrl(code), { headers: HEADERS, redirect: 'follow', signal: AbortSignal.timeout(30000) });
@@ -141,6 +206,7 @@ async function lookup(code) {
     // Screwfix's own "404 | Screwfix" page: the product page doesn't exist
     return /screwfix/i.test(html) ? { kind: 'missing' } : { kind: 'fail', why: `HTTP ${res.status} that isn't a Screwfix page` };
   }
+  if (res.status === 202) return { kind: 'fail', why: "Screwfix's bot check (HTTP 202)" };
   if (res.status !== 200) return { kind: 'fail', why: `HTTP ${res.status}` };
 
   let r;
@@ -278,14 +344,14 @@ for (let pass = 1; pass <= 3 && queue.length && !stop; pass++) {
     const code = todo[i];
     if (Date.now() - started > BUDGET_MS) { stop = 'out of time'; queue.push(...todo.slice(i)); break; }
     await polite();
-    const r = await lookup(code);
+    const r = await lookup(code, state.products[code].price);
     if (r.kind === 'limited') {
+      // jina's limit (20 a minute): wait as asked, go a bit slower, and stop if it keeps happening
       limited++;
-      if (limited >= 2) { stop = 'Screwfix rate limit (HTTP 429)'; queue.push(...todo.slice(i)); log(`429 again: stopping, the rest are left for the next run.`); break; }
-      const pause = Math.min(Math.max(r.retryAfter * 1000, 15 * 60000), 30 * 60000);
-      gap = Math.min(gap * 2, 20000);
-      log(`429 from Screwfix: pausing ${Math.round(pause / 60000)} min, then one every ${gap / 1000}s.`);
-      await sleep(pause);
+      if (limited >= 6) { stop = 'jina kept saying slow down (HTTP 429)'; queue.push(...todo.slice(i)); log(`429 again: stopping, the rest are left for the next run.`); break; }
+      gap = Math.min(Math.round(gap * 1.5), 20000);
+      log(`429 from jina: pausing ${Math.round(r.pause / 1000)} s, then one every ${gap / 1000}s.`);
+      await sleep(r.pause);
       i--;
       continue;
     }
@@ -298,7 +364,7 @@ for (let pass = 1; pass <= 3 && queue.length && !stop; pass++) {
       if (mode !== 'smoke') moved = apply(code, r);
     }
     const p = state.products[code];
-    log(`[${String(done).padStart(3)}] ${code}  ${r.kind === 'found' ? '£' + r.price.toFixed(2) + (moved ? `  CHANGED from £${p.prev.toFixed(2)}` : '') : r.kind === 'missing' ? 'not found (404)' : 'could not check: ' + r.why}`);
+    log(`[${String(done).padStart(3)}] ${code}  ${r.kind === 'found' ? '£' + r.price.toFixed(2) + (moved ? `  CHANGED from £${p.prev.toFixed(2)}` : '') + `  (${r.via})` : r.kind === 'missing' ? 'not found (404)' : 'could not check: ' + r.why}`);
     if (saving && done % 25 === 0) { finishRun('still running'); writePrices(state); }
   }
 }
