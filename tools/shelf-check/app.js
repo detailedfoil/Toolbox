@@ -577,9 +577,11 @@
 
   var SL = window.ScrewfixLookup, phone = null, wakeLock = null, sinceBuild = 0, tickTimer = 0;
   var PHONE_GAP = 2500, PER_LINE = 8;                      // ms between lines (keeps under jina's 20 a minute); rough seconds per line
-  // this copy's version (from the ?v= it was loaded with), when it was opened, and a newer one if the site has it
+  // this copy's version (from the ?v= it was loaded with), when it was opened, and what's newer if the site has it
   var APP_V = (function () { var m = /[?&]v=([^&#]+)/.exec((document.currentScript && document.currentScript.src) || ''); return m ? m[1] : ''; })();
   var OPENED = Date.now(), newerV = '';
+  // every file this page loaded, with its ?v= stamp (.github/stamp.mjs sets them from the files' contents)
+  var STAMPS = Array.prototype.map.call(document.querySelectorAll('script[src*="?v="], link[href*="?v="]'), function (el) { return el.getAttribute('src') || el.getAttribute('href'); });
 
   /* the search in hand: a saved update-area one (kept 3 days), or this page's just-for-you one */
   var memRun = null;
@@ -1100,7 +1102,8 @@
   function attemptLine(step, t) {
     return '    ' + step + ' go' + ((t.round || 0) + 1) + ' ' + t.via + (t.mode === 'page' ? '[page]' : '') + ' ' + t.outcome + ' http' + (t.http || 0) +
       (t.len != null ? ' ' + kb(t.len) : '') + ' ' + sec(t.ms) + (t.price ? ' ' + t.price : '') +
-      (t.ld ? ' data=' + t.ld + (t.ldSure ? '' : '(other code)') : '') + (t.err ? ' err="' + t.err + '"' : '') + (t.head ? ' got="' + t.head + '"' : '');
+      (t.ld ? ' data=' + t.ld + (t.ldSure ? '' : '(other code)') : '') + (t.retryAfter != null ? ' wait' + t.retryAfter + 's' : '') +
+      (t.err ? ' err="' + t.err + '"' : '') + (t.head ? ' got="' + (t.outcome === 'limited' ? t.head.slice(0, 60) : t.head) + '"' : '');
   }
 
   function report() {
@@ -1108,7 +1111,7 @@
     out.push('=== Monday price check error report ===');
     out.push('time ' + hms(now) + ' ' + day(londonDay(new Date(now).toISOString())) + ' (' + new Date(now).toISOString() + ')');
     out.push('versions app ' + (APP_V || '?') + ', reader ' + ((SL && SL.version) || 'OLD, no version') +
-      (newerV ? ', SITE HAS NEWER app ' + newerV + ' (this page is out of date)' : '') + ', page opened ' + hms(OPENED));
+      (newerV ? ', SITE HAS NEWER ' + newerV + ' (this page is out of date)' : '') + ', page opened ' + hms(OPENED));
     out.push('device ' + navigator.userAgent);
     out.push('network ' + (navigator.onLine ? 'online' : 'OFFLINE') + (c.type ? ' ' + c.type : '') + (c.effectiveType ? ' ' + c.effectiveType : '') +
       (c.downlink != null ? ' ' + c.downlink + 'Mbps' : '') + (c.rtt != null ? ' rtt' + c.rtt + 'ms' : '') + (c.saveData ? ' DATA-SAVER-ON' : '') +
@@ -1242,12 +1245,17 @@
 
   /* ---------- a newer version of this page: say so, as an old copy left open is easy to miss ---------- */
 
+  // newer when the site's copy of this page loads any file with a different stamp (a change to lookup.js counts too)
   function checkVersion() {
     return fetch('shelf-check.html?t=' + Date.now(), { cache: 'no-store', credentials: 'omit' })
       .then(function (r) { return r.ok ? r.text() : ''; })
       .then(function (h) {
-        var m = /shelf-check\/app\.js\?v=([^"'&\s>]+)/.exec(h || '');
-        if (m && APP_V && m[1] !== APP_V) { newerV = m[1]; $('update').hidden = false; }
+        var site = (h.match(/(?:src|href)="[^"]*\?v=[^"]*"/g) || []).map(function (a) { return a.slice(a.indexOf('"') + 1, -1); });
+        var newer = site.filter(function (s) { return STAMPS.indexOf(s) < 0; });
+        if (STAMPS.length && /shelf-check\/app\.js\?v=/.test(h) && newer.length) {
+          newerV = newer.map(function (s) { return s.split('?')[0].replace(/^\.\.\//, ''); }).join(', ');
+          $('update').hidden = false;
+        }
       }, function () { /* offline: try again later */ });
   }
   $('updateNow').addEventListener('click', function () { if (!phone) location.reload(); else toast('Stop the search first, then refresh'); });

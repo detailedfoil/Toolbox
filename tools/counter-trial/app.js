@@ -1,5 +1,5 @@
 /* A25 Behind counter trial: the tickets whose screwfix.com price no longer matches the shelf.
- * The GitHub check (.github/workflows/counter-trial.yml, by hand only for now) saves
+ * The GitHub check (.github/workflows/counter-trial.yml, every night and by hand) saves
  * counter-trial/data/prices.json; the ticket list, with the price printed on each, is
  * counter-trial/data/plan.json.
  *
@@ -16,9 +16,11 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var src = null, loadedAt = 0;
-  // this copy's version (from the ?v= it was loaded with), when it was opened, and a newer one if the site has it
+  // this copy's version (from the ?v= it was loaded with), when it was opened, and what's newer if the site has it
   var APP_V = (function () { var m = /[?&]v=([^&#]+)/.exec((document.currentScript && document.currentScript.src) || ''); return m ? m[1] : ''; })();
   var OPENED = Date.now(), newerV = '';
+  // every file this page loaded, with its ?v= stamp (.github/stamp.mjs sets them from the files' contents)
+  var STAMPS = Array.prototype.map.call(document.querySelectorAll('script[src*="?v="], link[href*="?v="]'), function (el) { return el.getAttribute('src') || el.getAttribute('href'); });
 
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: keep going */ } }
@@ -147,11 +149,10 @@
       var miss = ph.total - ph.done;
       if (miss > 0) alerts.push('The check on this device got ' + ph.done + ' of ' + ph.total + '. ' +
         (miss === 1 ? 'The other one keeps its last price. Tap <b>Retry</b> to try it again, or type its price in under <b>Couldn\'t be read</b>.' : 'The other ' + miss + ' keep their last price. Tap <b>Retry</b> to try just those, or type the prices in under <b>Couldn\'t be read</b>.'));
-    } else if (false) {                                    // nightly GitHub runs are off for now, so nothing is overdue
+    } else if (pr.checked && pr.checked < now.date && now.hour >= 9) {   // the nightly runs (the last one about 8am) should be in by 9
       alerts.push("Today's check hasn't come in yet, so these prices are from " + esc(day(pr.checked)) + '. <a href="' + RUNS + '" target="_blank" rel="noopener">See the runs on GitHub</a>');
     } else if (pr.checked && !checkedOk) {
       var left = run.unchecked || 0;
-      // nightly GitHub runs are off for now, so nothing gets tried again by itself
       alerts.push('The GitHub check got ' + (run.checked || 0) + ' of ' + (run.total || L.length) + '. ' +
         (left === 1 ? 'The other one keeps its last price' : 'The other ' + left + ' keep their last price') +
         (/slow down|429|202/.test(run.stopped || '') ? ' (Screwfix turned it away)' : '') + '. Tap <b>Check on this device</b> to read ' + (left === 1 ? 'it' : 'them') + '.');
@@ -665,7 +666,7 @@
     $('runNow').disabled = !!gh;
     $('runLabel').textContent = gh ? 'GitHub checking' : 'Check on GitHub';
     if (gh) {
-      var start = new Date(lastRun.run_started_at || lastRun.created_at), done = new Date(start.getTime() + 125 * 60000);
+      var start = new Date(lastRun.run_started_at || lastRun.created_at), done = new Date(start.getTime() + 10 * 60000);
       s.innerHTML = '<span class="ct-dot"></span><b>GitHub is checking</b>, started ' + esc(clock(start)) + '. ' +
         (lastRun.status === 'queued' ? 'Waiting to start.' : 'Should be done about ' + esc(clock(done)) + '.');
     } else {
@@ -974,7 +975,7 @@
     out.push('=== A25 counter trial error report ===');
     out.push('time ' + hms(now) + ' ' + day(london().date) + ' (' + new Date(now).toISOString() + ')');
     out.push('versions app ' + (APP_V || '?') + ', reader ' + ((SL && SL.version) || 'OLD, no version') +
-      (newerV ? ', SITE HAS NEWER app ' + newerV + ' (this page is out of date)' : '') + ', page opened ' + hms(OPENED));
+      (newerV ? ', SITE HAS NEWER ' + newerV + ' (this page is out of date)' : '') + ', page opened ' + hms(OPENED));
     out.push('device ' + navigator.userAgent);
     out.push('network ' + (navigator.onLine ? 'online' : 'OFFLINE') + (c.type ? ' ' + c.type : '') + (c.effectiveType ? ' ' + c.effectiveType : '') +
       (c.downlink != null ? ' ' + c.downlink + 'Mbps' : '') + (c.rtt != null ? ' rtt' + c.rtt + 'ms' : '') + (c.saveData ? ' DATA-SAVER-ON' : '') +
@@ -1108,12 +1109,17 @@
 
   /* ---------- a newer version of this page: say so, as an old copy left open is easy to miss ---------- */
 
+  // newer when the site's copy of this page loads any file with a different stamp (a change to lookup.js counts too)
   function checkVersion() {
     return fetch('counter-trial.html?t=' + Date.now(), { cache: 'no-store', credentials: 'omit' })
       .then(function (r) { return r.ok ? r.text() : ''; })
       .then(function (h) {
-        var m = /counter-trial\/app\.js\?v=([^"'&\s>]+)/.exec(h || '');
-        if (m && APP_V && m[1] !== APP_V) { newerV = m[1]; $('update').hidden = false; }
+        var site = (h.match(/(?:src|href)="[^"]*\?v=[^"]*"/g) || []).map(function (a) { return a.slice(a.indexOf('"') + 1, -1); });
+        var newer = site.filter(function (s) { return STAMPS.indexOf(s) < 0; });
+        if (STAMPS.length && /counter-trial\/app\.js\?v=/.test(h) && newer.length) {
+          newerV = newer.map(function (s) { return s.split('?')[0].replace(/^\.\.\//, ''); }).join(', ');
+          $('update').hidden = false;
+        }
       }, function () { /* offline: try again later */ });
   }
   $('updateNow').addEventListener('click', function () { if (!phone) location.reload(); else toast('Stop the check first, then refresh'); });

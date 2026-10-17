@@ -25,6 +25,8 @@ on:
       - 'tools/shelf-check/data/plan.json'
       - 'tools/price-tickets/lookup.js'
       - '.github/shelf-check/**'
+      - '.github/lib/**'
+      - '.github/package-lock.json'
       - '.github/workflows/shelf-check.yml'
   workflow_dispatch:
     inputs:
@@ -53,7 +55,7 @@ jobs:
           node-version: 22
 
       - name: Install the page reader
-        working-directory: .github/shelf-check
+        working-directory: .github
         run: npm ci --no-audit --no-fund
 
       - name: Check prices on screwfix.com

@@ -1,8 +1,0 @@
-{
-  "name": "shelf-check",
-  "private": true,
-  "description": "Weekly Screwfix shelf price check for the Toolbox Shelf Check page",
-  "dependencies": {
-    "jsdom": "26.1.0"
-  }
-}

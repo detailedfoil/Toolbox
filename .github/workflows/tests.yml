@@ -1,0 +1,35 @@
+# Runs the tests in .github/tests whenever code changes, so a mistake shows up as a red cross on GitHub
+# (and an email) rather than as a wrong price on the shop floor. Nothing here touches screwfix.com: the
+# price checks are tested against a pretend copy of the site.
+#
+# To run them yourself first:  cd .github && npm ci && npm test
+name: Tests
+
+on:
+  push:
+    paths-ignore:
+      - 'tools/*/data/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install
+        working-directory: .github
+        run: npm ci --no-audit --no-fund
+
+      - name: Test
+        working-directory: .github
+        run: npm test

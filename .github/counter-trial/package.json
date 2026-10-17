@@ -1,8 +1,0 @@
-{
-  "name": "counter-trial",
-  "private": true,
-  "description": "Daily price check for the Toolbox A25 Behind counter trial page",
-  "dependencies": {
-    "jsdom": "26.1.0"
-  }
-}
