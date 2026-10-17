@@ -149,7 +149,7 @@
       var miss = ph.total - ph.done;
       if (miss > 0) alerts.push('The check on this device got ' + ph.done + ' of ' + ph.total + '. ' +
         (miss === 1 ? 'The other one keeps its last price. Tap <b>Retry</b> to try it again, or type its price in under <b>Couldn\'t be read</b>.' : 'The other ' + miss + ' keep their last price. Tap <b>Retry</b> to try just those, or type the prices in under <b>Couldn\'t be read</b>.'));
-    } else if (false) {                                    // the "overdue" warning, switched off on 14 Oct while the nightly runs were paused (they're back on)
+    } else if (pr.checked && pr.checked < now.date && now.hour >= 9) {   // the nightly runs (the last one about 8am) should be in by 9
       alerts.push("Today's check hasn't come in yet, so these prices are from " + esc(day(pr.checked)) + '. <a href="' + RUNS + '" target="_blank" rel="noopener">See the runs on GitHub</a>');
     } else if (pr.checked && !checkedOk) {
       var left = run.unchecked || 0;
