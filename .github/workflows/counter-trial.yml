@@ -4,7 +4,8 @@
 # jina (r.jina.ai, which gets past Screwfix's bot check), one every 6 seconds or so (about 10 minutes), and saves the results to
 # tools/counter-trial/data/prices.json. The later runs only finish off lines the first run couldn't
 # check, and do nothing once the day is done.
-# Changing the ticket list (tools/counter-trial/data/plan.json) checks any new codes.
+# Changing the ticket list (tools/counter-trial/data/plan.json) checks any new codes. Changing the code that reads
+# the prices runs a quick smoke test (five lines, saves nothing), so a mistake shows up straight away, not overnight.
 #
 # To run it by hand: Actions tab > Counter trial price check > Run workflow.
 #   auto  the normal daily run (does nothing if today is already done)
@@ -19,6 +20,15 @@ on:
     - cron: '7 0 * * *'
     - cron: '37 3 * * *'
     - cron: '37 7 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/counter-trial/data/plan.json'
+      - 'tools/price-tickets/lookup.js'
+      - '.github/counter-trial/**'
+      - '.github/lib/**'
+      - '.github/package-lock.json'
+      - '.github/workflows/counter-trial.yml'
   workflow_dispatch:
     inputs:
       mode:
@@ -46,7 +56,7 @@ jobs:
           node-version: 22
 
       - name: Install the page reader
-        working-directory: .github/counter-trial
+        working-directory: .github
         run: npm ci --no-audit --no-fund
 
       - name: Check prices on screwfix.com
