@@ -660,6 +660,18 @@
   }
 
   /* the line above the two buttons: what's going on right now */
+  /* The next automatic GitHub check: the nightly run starts at 00:07 UTC (`7 0 * * *` in counter-trial.yml; keep these in
+   * step). GitHub is often a few minutes late, hence "about". The later runs that day only finish off missed tickets. */
+  var NIGHTLY_UTC = { h: 0, m: 7 };
+  function nextNightly() {
+    var n = new Date(), c = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), NIGHTLY_UTC.h, NIGHTLY_UTC.m));
+    if (c <= n) c = new Date(c.getTime() + 864e5);
+    var mins = Math.round((c - n) / 60000), iso = c.toISOString();
+    var inTxt = mins < 60 ? 'in ' + mins + ' min' : 'in ' + Math.floor(mins / 60) + ' h ' + (mins % 60 ? (mins % 60) + ' min' : '').trim();
+    var hr = +time(iso).slice(0, 2), when = hr < 6 && london().hour >= 12 ? 'tonight, ' + day(londonDay(iso)) : day(londonDay(iso));
+    return 'Next GitHub check: <b>' + esc(when) + ' at about ' + esc(time(iso)) + '</b> (' + inTxt.trim() + ').';
+  }
+
   function statusLine() {
     var bar = $('runBar'), s = $('runStatus'), gh = running && lastRun;
     bar.classList.toggle('is-running', !!gh);
@@ -670,13 +682,15 @@
       s.innerHTML = '<span class="ct-dot"></span><b>GitHub is checking</b>, started ' + esc(clock(start)) + '. ' +
         (lastRun.status === 'queued' ? 'Waiting to start.' : 'Should be done about ' + esc(clock(done)) + '.');
     } else {
-      s.innerHTML = '<b>Check on this device</b> takes about 15 minutes with this page open. GitHub also checks every night.';
+      s.innerHTML = '<b>Check on this device</b> takes about 5 minutes with this page open.<br>' + nextNightly();
     }
     var r = phone ? null : savedRun();
     $('phoneLabel').textContent = !r ? 'Check on this device' : r.retry ? 'Retry the ' + r.codes.length + ' missed' : 'Carry on (' + r.codes.length + ' left)';
     $('phoneFresh').hidden = !r;
     $('phoneFresh').textContent = r && r.retry ? 'Check all ' + (L.length || 69) + ' again instead' : 'Start again from the first ticket';
   }
+
+  setInterval(function () { if (!running && !phone) statusLine(); }, 60000);   // keeps "in 3 h 20 min" fresh
 
   /* ---------- check on this device: reads every ticket's price through the same relays as Price Tickets ----------
    * Runs in this page, one ticket at a time, while the page stays open. The screen is kept awake if the phone
