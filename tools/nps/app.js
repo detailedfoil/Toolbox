@@ -236,9 +236,9 @@
             '<button class="step" type="button" data-step="0.1" aria-label="Raise the target by 0.1">+</button>' +
           "</div>" +
           '<div class="chips">' +
-            '<button class="chip" type="button" data-target="85.7">85.7%<span>amber</span></button>' +
-            '<button class="chip" type="button" data-target="87.7">87.7%<span>green</span></button>' +
-            '<button class="chip" type="button" data-target="90">90%<span>great</span></button>' +
+            '<button class="chip" type="button" data-target="85.7">85.7%<span>Amber</span></button>' +
+            '<button class="chip" type="button" data-target="87.7">87.7%<span>Green</span></button>' +
+            '<button class="chip" type="button" data-target="90">90%<span>Great</span></button>' +
           "</div>" +
           '<div class="answer" id="answer" aria-live="polite"></div>' +
         "</section>" +
