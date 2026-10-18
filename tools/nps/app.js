@@ -380,39 +380,31 @@
   function renderOverview() {
     const d = state.data, el = $("tab-overview");
     if (!d) return;
-    const ov = NPS.overview(d, NPS.ON_TARGET), a = ov.area, cn = ov.counts;
-    const G = tgtText(NPS.ON_TARGET), A = tgtText(NPS.AMBER);
+    const ov = NPS.overview(d, state.target), a = ov.area, tgt = tgtText(state.target);
 
-    const areaNeed = !a.total ? "" : a.band === "green"
-      ? "The area is green with <b>" + plural(a.detractorsToSpare, "detractor") + "</b> to spare."
+    const areaNeed = !a.total ? "" : a.onTarget
+      ? "The area is on target with <b>" + plural(a.detractorsToSpare, "detractor") + "</b> to spare."
       : a.toTarget === Infinity ? "100% can't be reached once a passive or detractor is in."
-      : a.band === "amber"
-        ? "The area needs <b>" + plural(a.toTarget, "more promoter") + "</b> to go green, about <b>" + n(a.perStore) + "</b> per store."
-        : "The area needs <b>" + plural(a.toAmber, "more promoter") + "</b> to reach amber and <b>" + n(a.toTarget) + "</b> to go green.";
+      : "The area needs <b>" + plural(a.toTarget, "more promoter") + "</b> to reach " + tgt + ", about <b>" + n(a.perStore) + "</b> per store.";
 
-    const heads = { green: G + " and above", amber: A + " to " + tgtText(Math.round((NPS.ON_TARGET - 0.1) * 10) / 10), red: "Under " + A };
-    let list = "", last = "";
+    let list = "", lineDone = false;
     ov.rows.forEach((r, i) => {
-      const k = r.band || "none";
-      if (k !== last && heads[k]) {
-        list += '<li class="tline b-' + k + '" aria-hidden="true">' + BAND[k] + ", " + heads[k] + "</li>";
+      if (!lineDone && !r.onTarget) {
+        list += '<li class="tline" aria-hidden="true">Target ' + tgt + "</li>";
+        lineDone = true;
       }
-      last = k;
       list += storeRow(r, i);
     });
+    if (!lineDone) list += '<li class="tline" aria-hidden="true">Target ' + tgt + "</li>";
 
     el.innerHTML =
       '<div class="card area">' +
         '<div class="area-head">' +
           '<div><span class="area-num b-' + a.band + '">' + pct(a.nps) + '</span><span class="area-lbl">Area NPS from ' + n(a.total) + " responses</span></div>" +
-          '<div class="area-count">' + cn.green + " of " + d.stores.length + "<small>stores green</small></div>" +
+          '<div class="area-count">' + ov.onTargetCount + " of " + d.stores.length + "<small>stores on target</small></div>" +
         "</div>" +
         '<p class="area-need">' + areaNeed + "</p>" +
-        '<div class="band-sum">' +
-          '<span class="pill b-green">' + cn.green + " green</span>" +
-          '<span class="pill b-amber">' + cn.amber + " amber</span>" +
-          '<span class="pill b-red">' + cn.red + " red</span>" +
-        "</div>" +
+        '<p class="area-target"><span>Measured against your ' + tgt + ' target</span><button class="link" type="button" data-goto-target>Change</button></p>' +
       "</div>" +
       '<h2 class="sec">Stores, best first<small>Tap a store to see its numbers.</small></h2>' +
       '<ol class="list">' + list + "</ol>";
@@ -424,9 +416,8 @@
     const open = state.open.has(r.name);
     let st;
     if (!r.total) st = '<span class="st">No responses yet</span>';
-    else if (r.band === "green") st = '<span class="st b-green">' + ICON.ok + (r.detractorsToSpare > 0 ? plural(r.detractorsToSpare, "detractor") + " to spare" : "Green, none to spare") + "</span>";
-    else if (r.band === "amber") st = '<span class="st b-amber">' + ICON.mid + (r.toTarget === Infinity ? "Can't reach 100%" : "Needs " + plural(r.toTarget, "more promoter") + " for green") + "</span>";
-    else st = '<span class="st b-red">' + ICON.no + (r.toAmber === Infinity ? "Can't reach 100%" : "Needs " + plural(r.toAmber, "more promoter") + " for amber") + "</span>";
+    else if (r.onTarget) st = '<span class="st ok">' + ICON.ok + (r.detractorsToSpare > 0 ? plural(r.detractorsToSpare, "detractor") + " to spare" : "On target, none to spare") + "</span>";
+    else st = '<span class="st no">' + ICON.no + (r.toTarget === Infinity ? "Can't reach 100%" : "Needs " + plural(r.toTarget, "more promoter")) + "</span>";
 
     const fact = (k, v) => '<div class="r"><span class="k">' + k + '</span><span class="v">' + v + "</span></div>";
     const proms = (k) => (k === Infinity ? "Not possible" : n(k) + " <span>" + (k === 1 ? "promoter" : "promoters") + "</span>");
@@ -442,8 +433,7 @@
         '<div class="facts">' +
           fact("To reach 1st", r.rank === 1 ? "Already 1st" : proms(r.toTop)) +
           (r.nextUp ? fact("To move up to " + ord(r.nextUp.rank), proms(r.nextUp.promoters)) : "") +
-          (r.band === "green" ? fact("Passives to spare", n(r.passivesToSpare)) : "") +
-          (r.band === "red" ? fact("To go green", proms(r.toTarget)) : "") +
+          (r.onTarget ? fact("Passives to spare", n(r.passivesToSpare)) : "") +
           fact("Win back a detractor", proms(r.offsetDetractor)) +
           fact("Win back a passive", proms(r.offsetPassive)) +
         "</div>";
