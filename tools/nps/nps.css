@@ -6,6 +6,7 @@
   --m-p: #1faa63;           /* marks: promoters / passives / detractors */
   --m-pa: #6b7484;
   --m-d: #e66767;
+  --amber: #f0b429;
   --field: #12151b;
   --line: #242a35;
   --panel: color-mix(in srgb, var(--accent) 10%, var(--card));
@@ -15,6 +16,7 @@
   .nps, .admin {
     --good: #11804a; --bad: #c62828;
     --m-p: #11804a; --m-pa: #8a93a3; --m-d: #d03b3b;
+    --amber: #9a6700;
     --field: #f7f9fc; --line: #e8ecf3;
     --panel: color-mix(in srgb, var(--accent) 7%, var(--card));
   }
@@ -209,3 +211,19 @@
 .admin-status { min-height: 1.3em; margin: 12px 2px 0; font-size: .88rem; color: var(--good); }
 .admin-status.bad { color: var(--bad); }
 .admin input, .admin button { font-family: inherit; }
+
+/* ---------- green / amber / red ---------- */
+.b-green { --band: var(--good); } .b-amber { --band: var(--amber); } .b-red { --band: var(--bad); } .b-none { --band: var(--muted); }
+.now-num.b-green, .now-num.b-amber, .now-num.b-red, .area-num.b-green, .area-num.b-amber, .area-num.b-red, .sc.b-green, .sc.b-amber, .sc.b-red { color: var(--band); }
+.dot.b-green { background: var(--good); } .dot.b-amber { background: var(--amber); } .dot.b-red { background: var(--bad); }
+.pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: .8rem; font-weight: 700; color: var(--band); background: color-mix(in srgb, var(--band) 16%, transparent); border: 1px solid color-mix(in srgb, var(--band) 40%, transparent); }
+.pill-row { margin: 0 0 12px; }
+.band-sum { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.st.b-green, .st.b-amber, .st.b-red { color: var(--band); }
+.rk.b-green, .rk.b-amber, .rk.b-red { color: var(--band); font-weight: 750; }
+.tline.b-green, .tline.b-amber, .tline.b-red { color: var(--band); }
+.tline.b-green::before, .tline.b-green::after, .tline.b-amber::before, .tline.b-amber::after, .tline.b-red::before, .tline.b-red::after { border-top: 1.5px solid color-mix(in srgb, var(--band) 55%, transparent); }
+.tline { font-size: .76rem; white-space: nowrap; }
+.r .k small { display: block; color: var(--muted); font-size: .8rem; font-weight: 400; margin-top: 1px; }
+.r .v b.need, .r .v b.room { font-size: 1.1rem; }
+.sec.first { margin-top: 20px; }

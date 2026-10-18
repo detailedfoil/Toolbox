@@ -27,9 +27,20 @@
     return m ? { base: m[1], code: m[2] } : { base: name, code: "" };
   }
 
+  const BAND = { green: "Green", amber: "Amber", red: "Red" };
+  const bandRows = (c) => c.ladder.map((l) => {
+    const name = l.key === "green" ? "Green" : "Amber";
+    const range = l.key === "green" ? tgtText(l.pct) + " and above" : tgtText(l.pct) + " to " + tgtText(Math.round((NPS.ON_TARGET - 0.1) * 10) / 10);
+    let v;
+    if (!l.met) v = l.needed === Infinity ? "Not possible" : '<b class="need">' + n(l.needed) + "</b> <span>more " + (l.needed === 1 ? "promoter" : "promoters") + "</span>";
+    else v = '<b class="room">' + n(l.detractorsToSpare) + "</b> <span>" + (l.detractorsToSpare === 1 ? "detractor" : "detractors") + " to spare</span>";
+    return '<div class="r"><span class="k"><i class="dot b-' + l.key + '"></i><span>' + name + '<small>' + range + "</small></span></span><span class=\"v\">" + v + "</span></div>";
+  }).join("");
+
   const ICON = {
     ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="m8 12.4 2.7 2.7 5.4-5.6"/></svg>',
     no: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 16.5v-9M8.4 11 12 7.4l3.6 3.6"/></svg>',
+    mid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12h8"/></svg>',
     chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>'
   };
 
@@ -214,15 +225,19 @@
         '<div id="now"></div>' +
       "</div>" +
       '<div id="calcBody">' +
+        '<h2 class="sec first">Green, amber or red<small>Green is ' + tgtText(NPS.ON_TARGET) + ' and above, amber is ' + tgtText(NPS.AMBER) + ' and above, red is under that.</small></h2>' +
+        '<div class="card rows" id="bands"></div>' +
+        '<h2 class="sec">Or set your own target</h2>' +
         '<section class="target" aria-labelledby="tgtLbl">' +
-          '<div class="target-top"><label class="lbl" id="tgtLbl" for="target">Your target</label></div>' +
+          '<div class="target-top"><label class="lbl" id="tgtLbl" for="target">Target</label></div>' +
           '<div class="stepper">' +
             '<button class="step" type="button" data-step="-0.1" aria-label="Lower the target by 0.1">&minus;</button>' +
             '<div class="target-field"><input id="target" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" value="' + tgtText(state.target).replace("%", "") + '"><span aria-hidden="true">%</span></div>' +
             '<button class="step" type="button" data-step="0.1" aria-label="Raise the target by 0.1">+</button>' +
           "</div>" +
           '<div class="chips">' +
-            '<button class="chip" type="button" data-target="87.7">87.7%<span>on target</span></button>' +
+            '<button class="chip" type="button" data-target="85.7">85.7%<span>amber</span></button>' +
+            '<button class="chip" type="button" data-target="87.7">87.7%<span>green</span></button>' +
             '<button class="chip" type="button" data-target="90">90%<span>great</span></button>' +
           "</div>" +
           '<div class="answer" id="answer" aria-live="polite"></div>' +
@@ -305,11 +320,14 @@
     }
     now.innerHTML =
       '<div class="now">' +
-        '<div class="now-head"><div><span class="now-num">' + pct(c.score) + '</span><span class="now-lbl">' + (isArea ? "Area NPS" : "NPS") + " from " + n(c.total) + " responses</span></div>" + rankHtml + "</div>" +
+        '<p class="pill-row"><span class="pill b-' + c.band + '">' + BAND[c.band] + "</span></p>" +
+        '<div class="now-head"><div><span class="now-num b-' + c.band + '">' + pct(c.score) + '</span><span class="now-lbl">' + (isArea ? "Area NPS" : "NPS") + " from " + n(c.total) + " responses</span></div>" + rankHtml + "</div>" +
         '<div class="mix" role="img" aria-label="' + plural(x.p, "promoter") + ", " + plural(x.pa, "passive") + ", " + plural(x.d, "detractor") + '">' + seg(x.p, "p") + seg(x.pa, "pa") + seg(x.d, "d") + "</div>" +
         '<ul class="mix-key">' + key("p", "Promoters", x.p, c.pPct) + key("pa", "Passives", x.pa, c.paPct) + key("d", "Detractors", x.d, c.dPct) + "</ul>" +
         upHtml +
       "</div>";
+
+    $("bands").innerHTML = bandRows(c);
 
     // the answer
     const ans = $("answer");
@@ -362,44 +380,53 @@
   function renderOverview() {
     const d = state.data, el = $("tab-overview");
     if (!d) return;
-    const ov = NPS.overview(d, state.target), a = ov.area, tgt = tgtText(state.target);
+    const ov = NPS.overview(d, NPS.ON_TARGET), a = ov.area, cn = ov.counts;
+    const G = tgtText(NPS.ON_TARGET), A = tgtText(NPS.AMBER);
 
-    const areaNeed = !a.total ? "" : a.onTarget
-      ? "The area is on target with <b>" + plural(a.detractorsToSpare, "detractor") + "</b> to spare."
+    const areaNeed = !a.total ? "" : a.band === "green"
+      ? "The area is green with <b>" + plural(a.detractorsToSpare, "detractor") + "</b> to spare."
       : a.toTarget === Infinity ? "100% can't be reached once a passive or detractor is in."
-      : "The area needs <b>" + plural(a.toTarget, "more promoter") + "</b> to reach " + tgt + ", about <b>" + n(a.perStore) + "</b> per store.";
+      : a.band === "amber"
+        ? "The area needs <b>" + plural(a.toTarget, "more promoter") + "</b> to go green, about <b>" + n(a.perStore) + "</b> per store."
+        : "The area needs <b>" + plural(a.toAmber, "more promoter") + "</b> to reach amber and <b>" + n(a.toTarget) + "</b> to go green.";
 
-    let list = "", lineDone = false;
+    const heads = { green: G + " and above", amber: A + " to " + tgtText(Math.round((NPS.ON_TARGET - 0.1) * 10) / 10), red: "Under " + A };
+    let list = "", last = "";
     ov.rows.forEach((r, i) => {
-      if (!lineDone && !r.onTarget) {
-        list += '<li class="tline" aria-hidden="true">Target ' + tgt + "</li>";
-        lineDone = true;
+      const k = r.band || "none";
+      if (k !== last && heads[k]) {
+        list += '<li class="tline b-' + k + '" aria-hidden="true">' + BAND[k] + ", " + heads[k] + "</li>";
       }
-      list += storeRow(r, i, tgt);
+      last = k;
+      list += storeRow(r, i);
     });
-    if (!lineDone) list += '<li class="tline" aria-hidden="true">Target ' + tgt + "</li>";
 
     el.innerHTML =
       '<div class="card area">' +
         '<div class="area-head">' +
-          '<div><span class="area-num">' + pct(a.nps) + '</span><span class="area-lbl">Area NPS from ' + n(a.total) + " responses</span></div>" +
-          '<div class="area-count">' + ov.onTargetCount + " of " + d.stores.length + "<small>stores on target</small></div>" +
+          '<div><span class="area-num b-' + a.band + '">' + pct(a.nps) + '</span><span class="area-lbl">Area NPS from ' + n(a.total) + " responses</span></div>" +
+          '<div class="area-count">' + cn.green + " of " + d.stores.length + "<small>stores green</small></div>" +
         "</div>" +
         '<p class="area-need">' + areaNeed + "</p>" +
-        '<p class="area-target"><span>Measured against your ' + tgt + ' target</span><button class="link" type="button" data-goto-target>Change</button></p>' +
+        '<div class="band-sum">' +
+          '<span class="pill b-green">' + cn.green + " green</span>" +
+          '<span class="pill b-amber">' + cn.amber + " amber</span>" +
+          '<span class="pill b-red">' + cn.red + " red</span>" +
+        "</div>" +
       "</div>" +
       '<h2 class="sec">Stores, best first<small>Tap a store to see its numbers.</small></h2>' +
       '<ol class="list">' + list + "</ol>";
   }
 
-  function storeRow(r, i, tgt) {
+  function storeRow(r, i) {
     const nm = splitName(r.name);
     const picked = r.name === state.store;
     const open = state.open.has(r.name);
     let st;
     if (!r.total) st = '<span class="st">No responses yet</span>';
-    else if (r.onTarget) st = '<span class="st ok">' + ICON.ok + (r.detractorsToSpare > 0 ? plural(r.detractorsToSpare, "detractor") + " to spare" : "On target, none to spare") + "</span>";
-    else st = '<span class="st no">' + ICON.no + (r.toTarget === Infinity ? "Can't reach 100%" : "Needs " + plural(r.toTarget, "more promoter")) + "</span>";
+    else if (r.band === "green") st = '<span class="st b-green">' + ICON.ok + (r.detractorsToSpare > 0 ? plural(r.detractorsToSpare, "detractor") + " to spare" : "Green, none to spare") + "</span>";
+    else if (r.band === "amber") st = '<span class="st b-amber">' + ICON.mid + (r.toTarget === Infinity ? "Can't reach 100%" : "Needs " + plural(r.toTarget, "more promoter") + " for green") + "</span>";
+    else st = '<span class="st b-red">' + ICON.no + (r.toAmber === Infinity ? "Can't reach 100%" : "Needs " + plural(r.toAmber, "more promoter") + " for amber") + "</span>";
 
     const fact = (k, v) => '<div class="r"><span class="k">' + k + '</span><span class="v">' + v + "</span></div>";
     const proms = (k) => (k === Infinity ? "Not possible" : n(k) + " <span>" + (k === 1 ? "promoter" : "promoters") + "</span>");
@@ -415,7 +442,8 @@
         '<div class="facts">' +
           fact("To reach 1st", r.rank === 1 ? "Already 1st" : proms(r.toTop)) +
           (r.nextUp ? fact("To move up to " + ord(r.nextUp.rank), proms(r.nextUp.promoters)) : "") +
-          (r.onTarget ? fact("Passives to spare", n(r.passivesToSpare)) : "") +
+          (r.band === "green" ? fact("Passives to spare", n(r.passivesToSpare)) : "") +
+          (r.band === "red" ? fact("To go green", proms(r.toTarget)) : "") +
           fact("Win back a detractor", proms(r.offsetDetractor)) +
           fact("Win back a passive", proms(r.offsetPassive)) +
         "</div>";
@@ -424,10 +452,10 @@
 
     return '<li class="store' + (open ? " open" : "") + (picked ? " is-picked" : "") + '" data-name="' + esc(r.name) + '">' +
       '<button class="store-btn" type="button" aria-expanded="' + open + '" aria-controls="det-' + i + '">' +
-        '<span class="rk">' + (r.rank || "-") + "</span>" +
+        '<span class="rk b-' + (r.band || "none") + '">' + (r.rank || "-") + "</span>" +
         '<span class="nm"><b>' + esc(nm.base) + "</b>" + (nm.code ? '<span class="code">' + esc(nm.code) + "</span>" : "") +
           (picked ? '<span class="tag">In calculator</span>' : "") + st + "</span>" +
-        '<span class="sc">' + pct(r.nps) + "</span>" + ICON.chev +
+        '<span class="sc b-' + (r.band || "none") + '">' + pct(r.nps) + "</span>" + ICON.chev +
       "</button>" +
       '<div class="detail" id="det-' + i + '"' + (open ? "" : " hidden") + ">" + detail + "</div>" +
     "</li>";

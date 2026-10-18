@@ -7,7 +7,8 @@
   "use strict";
 
   var SCALE = 10000;          // targets are held in hundredths of a percent: 87.7% -> 8770
-  var ON_TARGET = 87.7;       // the workbook's "On Target" line (%)
+  var ON_TARGET = 87.7;       // the workbook's "On Target" line (%): green at or above this
+  var AMBER = 85.7;           // amber from here up to just under green; red below this (%)
   var GREAT = 90;             // the workbook's "Great" line (%)
 
   function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
@@ -112,12 +113,28 @@
     return { rank: rankAmong(stores, nps(best)), score: nps(best), name: best.name, promoters: promotersToFrac(x, frac(best)) };
   }
 
+  // Green / amber / red for a set of counts, worked out exactly (null with no responses).
+  function band(x) {
+    if (!total(x)) return null;
+    var d = x.p - x.d, N = total(x), g = targetFrac(ON_TARGET), a = targetFrac(AMBER);
+    return d * g.b >= g.a * N ? "green" : d * a.b >= a.a * N ? "amber" : "red";
+  }
+
+  // The two lines a store is measured against: how far off, or how much room to spare.
+  function ladder(x) {
+    return [["green", ON_TARGET], ["amber", AMBER]].map(function (l) {
+      var f = targetFrac(l[1]), N = total(x);
+      var met = N ? (x.p - x.d) * f.b >= f.a * N : false;
+      return { key: l[0], pct: l[1], met: met, needed: promotersToFrac(x, f), detractorsToSpare: detractorsToSpareFrac(x, f) };
+    });
+  }
+
   // Everything the calculator shows for one set of counts against a target (in %).
   // stores: the area's stores to rank against, or null for the whole area.
   function calculate(x, targetPct, stores) {
     var N = total(x), s = nps(x), f = targetFrac(targetPct);
     var out = {
-      total: N, score: s,
+      total: N, score: s, band: band(x), ladder: ladder(x),
       pPct: N ? x.p / N : 0, paPct: N ? x.pa / N : 0, dPct: N ? x.d / N : 0,
       afterPromoter: N ? (x.p + 1 - x.d) / (N + 1) : null,
       afterPassive: N ? (x.p - x.d) / (N + 1) : null,
@@ -143,10 +160,11 @@
 
     function line(s) {
       var N = total(s), n = nps(s);
-      var r = { name: s.name, p: s.p, pa: s.pa, d: s.d, total: N, nps: n };
+      var r = { name: s.name, p: s.p, pa: s.pa, d: s.d, total: N, nps: n, band: band(s) };
       if (!N) return r;
       r.onTarget = (s.p - s.d) * f.b >= f.a * N;
       r.toTarget = promotersToFrac(s, f);
+      r.toAmber = promotersToFrac(s, targetFrac(AMBER));
       r.detractorsToSpare = detractorsToSpareFrac(s, f);
       r.passivesToSpare = passivesToSpareFrac(s, f);
       r.toTop = promotersToFrac(s, frac(leader));
@@ -164,14 +182,15 @@
     var area = line(data.area);
     area.perStore = typeof area.toTarget === "number" && isFinite(area.toTarget) && area.toTarget > 0
       ? exactCeil(area.toTarget, stores.length) : 0;
-    return { rows: rows, area: area, onTargetCount: rows.filter(function (r) { return r.onTarget; }).length };
+    var count = function (k) { return rows.filter(function (r) { return r.band === k; }).length; };
+    return { rows: rows, area: area, onTargetCount: count("green"), counts: { green: count("green"), amber: count("amber"), red: count("red") } };
   }
 
   // Share of a total spread over the stores, rounded up (workbook "per store")
   function perStore(n, storeCount) { return typeof n === "number" && isFinite(n) && n > 0 ? exactCeil(n, storeCount) : 0; }
 
   var api = {
-    ON_TARGET: ON_TARGET, GREAT: GREAT,
+    ON_TARGET: ON_TARGET, AMBER: AMBER, GREAT: GREAT, band: band, ladder: ladder,
     parseWorkbook: parseWorkbook, total: total, nps: nps,
     calculate: calculate, overview: overview, rankAmong: rankAmong, perStore: perStore
   };
