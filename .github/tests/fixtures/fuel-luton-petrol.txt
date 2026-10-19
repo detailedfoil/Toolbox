@@ -1,0 +1,1443 @@
+Title: Petrol Prices Map – Find Cheap Petrol & Diesel Near You
+
+URL Source: https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5
+
+Markdown Content:
+## Settings
+
+✕
+
+[NEW!**RETRO TV MODE!**](https://www.petrolprices.co.uk/fuel-guide.php "Fuel Guide - browse live prices as an on-screen guide")
+
+### Display
+
+Font Size
+
+A A A A
+
+Adjusts app text. Zoom the map to enlarge street names.
+
+Show prices per gallon- [x]  
+
+Display fuel prices in pence per gallon instead of pence per litre.
+
+Pulsing location marker- [x]  
+
+Highlights your position on the map when location is active.
+
+Show all prices on map- [x]  
+
+Shows every station as a full price card instead of a dot. Cards may overlap.
+
+### Customise Buttons
+
+Turn off the buttons you don't use. The ones left get bigger and easier to tap. Choices are shared with the home page and saved on this device only.
+
+Shortcuts
+
+Loyalty Cards- [x]  
+
+Favourites- [x]  
+
+Journey- [x]  
+
+Price data
+
+Fuel Prices Live- [x]  
+
+Price Charts- [x]  
+
+ Reset to default
+
+[🎁 Free Samples Over **100+ free samples & competitions** available today. FreeSamples.co.uk →](https://www.freesamples.co.uk/)
+
+[🎁 Free £35 Amazon Voucher Join Toluna & earn **£35 in Amazon vouchers** for surveys! Claim Mine Now →](https://www.freesamples.co.uk/go-earn-rewards-with-toluna/)
+
+[![Image 1: PetrolPrices logo](https://www.petrolprices.co.uk/pp-logo-circular-300x300-transparent.png) # Fuel Price Map](https://www.petrolprices.co.uk/map.php)
+
+◐Switch to Dark Mode
+
+## Good afternoon!
+
+Find the cheapest or nearest petrol stations
+
+As seen in The Times&Which? · 8,000+ Fuel Stations Tracked
+
+As seen in The Times&Which? · 8,000+ Fuel Stations Tracked
+
+[![Image 2: Free Davines Shampoo](https://www.freesamples.co.uk/wp-content/uploads/2026/10/Free-Davines-Shampoo-768x855.png)Free Davines Shampoo on FreeSamples.co.uk →](https://www.freesamples.co.uk/)
+
+[![Image 3](https://www.petrolprices.co.uk/assets/nordpass.png)Get NordPass Premium at 52% off Keep your passwords secure across all your devices.Get NordPass](https://petrolprices.co.uk/nordpass.php)
+
+Location 
+
+Official UK Gov fuel data Official UK Gov Fuel Finder API · Updates every 15 minutes
+
+Filter
+
+ Show Prices on Map 
+
+[Loyalty](https://www.petrolprices.co.uk/loyalty.php)[Favourites](https://www.petrolprices.co.uk/favourites.php)[Journey](https://www.petrolprices.co.uk/journey.php)
+
+[Fuel Prices Live](https://www.petrolprices.co.uk/uk-fuel-prices-live.php)[Price Charts](https://www.petrolprices.co.uk/fuel-prices.php)
+
+ Not seeing your new location? Clear location cache. 
+
+Official UK government fuel data
+
+Synced just now · 19 Oct at 12:26
+
+## Sort By:
+
+Switch the list order instantly
+
+Price Distance Freshness
+
+Show prices:
+
+All Last 3 days Last 24 hrs
+
+[Plan a journey](https://www.petrolprices.co.uk/journey.php "Plan a multi-stop journey and find the cheapest fuel along your route")
+
+Show all
+
+×
+### Show prices
+
+Filters stations by how recently their price was last reported:
+
+*   **All** — every station, any price age
+*   **Last 3 days** — prices reported in the last 3 days
+*   **Last 24 hrs** — prices reported today
+
+Can't see a station you expected? Some retailers — supermarkets especially — update less often, so they can fall outside the shorter windows. Tap **All** to show everything.
+
+Each card also shows a 🟢 fresh / 🟡 aging / 🔴 stale dot with the date, so you always know how current a price is.
+
+## Latest Prices for this area:
+
+Cheapest
+
+166.9p
+
+Average
+
+173.8p
+
+Expensive
+
+179.9p
+
+Prices within 2 miles vary by 5.0p — £2.75 on a 55-litre fill
+
+💷Save £3.81 per tank by filling up at the cheapest station Save £3.81 per tank
+
+×
+### 💷 Save Per Tank
+
+This shows how much you could save on a full tank by filling up at the **cheapest** station instead of the **average-priced** station in your search area.
+
+**How it's calculated:**  
+(Average price − Cheapest price) × Your tank size
+
+Based on your selected vehicle's tank size (Car: 55L, Motorbike: 15L, Van: 80L). Switch vehicle in the Filter panel to update.
+
+📊£3.81 potential savings found across 1 search£3.81 savings · 1 search
+
+Reset
+
+[![Image 4: No10.co.uk](https://www.petrolprices.co.uk/no10-banner-pm.jpg)Just saved on your fuel? Buying our _No10.co.uk_ game helps keep petrolprices.co.uk free.Play free for 3 days with code: CAR](https://no10.co.uk/redeem.php)
+
+×
+### 📊 Map Savings Tracker
+
+Each time you search on the map, we calculate the potential saving between the cheapest and average station. This running total shows your **cumulative potential savings** from map searches this year.
+
+🔒 **100% private:** This data is saved in your browser's local storage on your device only. We cannot see it, we don't collect it, and it never leaves your phone or computer.
+
+This tracker is separate from the one on the main list page — each page tracks its own searches independently.
+
+This is an estimate based on your searches, not a guarantee of actual savings.
+
+Enable location permissions to find your current location or enter an address. If you're outside the UK, location detection won't work, but you can still use the search feature.
+
+![Image 5: Esso](https://www.petrolprices.co.uk/assets/logos/esso.png)ESSO
+
+175.9p
+
+£96.75 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+→ No change vs 7 days ago
+
+33 DUNSTABLE ROAD, LUTON
+
+⭐#11 most expensive of 27
+
+🔵 Around average
+
+ 24hr AdBlue
+
+ Allstar UK Fuels Keyfuels Esso Card BP Plus
+
+£1.14 above avg
+
+EG On the Move (1.3 mi) is 1.0p cheaper Only if the 28 Sept price is still right
+
+≈ £19.99 per 100 miles at 40 mpg
+
+0.6 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 28 Sept
+
+Price last reported 20 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 6: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)SHELL
+
+175.9p
+
+£96.75 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+→ No change vs 7 days ago
+
+LEAGRAVE RD, LUTON
+
+⭐#10 most expensive of 27
+
+🔵 Around average
+
+ 24hr Car Wash AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels Shell Card fuelGenie+
+
+£1.14 above avg
+
+EG On the Move (1.3 mi) is 1.0p cheaper Only if the 6 Oct price is still right
+
+≈ £19.99 per 100 miles at 40 mpg
+
+0.6 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 6 Oct
+
+Price last reported 12 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+[🎉 Drivers Club New **free samples & competitions added daily**. FreeSamples.co.uk →](https://www.freesamples.co.uk/)
+
+![Image 7: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)SHELL
+
+175.9p
+
+£96.75 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+Kingsway Service Station, 391-393 Dunstable Road, Luton
+
+⭐#9 most expensive of 27
+
+🔵 Around average
+
+ 24hr AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels Shell Card fuelGenie+
+
+£1.14 above avg
+
+EG On the Move (1.3 mi) is 1.0p cheaper Only if the 30 Sept price is still right
+
+≈ £19.99 per 100 miles at 40 mpg
+
+0.9 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 30 Sept
+
+Price last reported 19 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 8: Gulf](https://www.petrolprices.co.uk/assets/logos/gulf.png)GULF
+
+174.9p
+
+£96.19 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+2, TRINITY ROAD, LUTON, LU3 1TP, LUTON
+
+⭐#13 cheapest of 27
+
+🔵 Around average
+
+ AdBlue Air
+
+ Allstar UK Fuels Keyfuels BP Plus
+
+ Open now Mon 06:00 – 23:00
+
+£0.59 above avg
+
+≈ £19.88 per 100 miles at 40 mpg
+
+1 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 2 Oct
+
+Price last reported 17 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 9: Esso](https://www.petrolprices.co.uk/assets/logos/esso.png)ESSO
+
+175.9p
+
+£96.75 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+518 DUNSTABLE ROAD, LUTON
+
+⭐#8 most expensive of 27
+
+🔵 Around average
+
+ 24hr AdBlue
+
+ Allstar UK Fuels Keyfuels Esso Card BP Plus
+
+£1.14 above avg
+
+EG On the Move (1.3 mi) is 1.0p cheaper Only if the 28 Sept price is still right
+
+≈ £19.99 per 100 miles at 40 mpg
+
+1.2 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 28 Sept
+
+Price last reported 20 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 10: EG On the Move](https://www.petrolprices.co.uk/assets/logos/eg-on-the-move.png)EG ON THE MOVE
+
+174.9p
+
+£96.19 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+157-159 CASTLE STREET, LUTON
+
+⭐#14 cheapest of 27
+
+🔵 Around average
+
+ 24hr AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels
+
+£0.59 above avg
+
+Nearest up-to-date station
+
+≈ £19.88 per 100 miles at 40 mpg
+
+1.3 miles away
+
+Last checked: 19 Oct 12:26
+
+🟢 Fresh price · 19 Oct
+
+Price last reported 1 hour ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+[🎮 Earn £500+ Per Month Get paid for **playing games & taking surveys** from home! Claim Mine Now →](https://www.freesamples.co.uk/earn-500-per-month-playing-games-taking-surveys/)
+
+![Image 11: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)SHELL
+
+179.9p
+
+£98.94 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+HITCHIN ROAD, LUTON
+
+⭐#2 most expensive of 27
+
+🔴 Higher price
+
+ 24hr Car Wash Toilets AdBlue Air Water LPG
+
+ Allstar UK Fuels Keyfuels Shell Card fuelGenie+
+
+£3.34 above avg
+
+EG On the Move (1.3 mi) is cheaper and nearer
+
+≈ £20.45 per 100 miles at 40 mpg
+
+1.4 miles away
+
+Last checked: 19 Oct 12:26
+
+🟡 Aging price · 16 Oct
+
+Price last reported 2 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 12: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)BP
+
+175.9p
+
+£96.75 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+1 LEYHILL DRIVE, LUTON
+
+⭐#7 most expensive of 27
+
+🔵 Around average
+
+ Toilets AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels BP Plus
+
+ Open now Mon 06:00 – 22:00
+
+£1.14 above avg
+
+EG On the Move (1.3 mi) is cheaper and nearer Only if the 14 Oct price is still right
+
+≈ £19.99 per 100 miles at 40 mpg
+
+1.7 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 14 Oct
+
+Price last reported 4 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+[🎮 Earn Up To £72 Playing Games Play Games & Test Apps ✅ Play games✅ Test apps✅ Gift cards or PayPal✅ £45M+ paid Start Earning →](https://www.freesamples.co.uk/claim-free-cash-for-playing-games/)
+
+Ad.
+
+![Image 13: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)SHELL
+
+179.9p
+
+£98.94 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+EATON GREEN ROAD, LUTON
+
+⭐Most expensive of 27
+
+🔴 Higher price
+
+ 24hr Car Wash Toilets AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels Shell Card fuelGenie+
+
+£3.34 above avg
+
+EG On the Move (1.3 mi) is cheaper and nearer
+
+≈ £20.45 per 100 miles at 40 mpg
+
+1.7 miles away
+
+Last checked: 19 Oct 12:26
+
+🟡 Aging price · 16 Oct
+
+Price last reported 2 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 14: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)BP
+
+175.9p
+
+£96.75 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+MOUNT PLEASANT ROAD, LUTON
+
+⭐#6 most expensive of 27
+
+🔴 Higher price
+
+ 24hr Toilets AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels BP Plus
+
+£1.14 above avg
+
+EG On the Move (1.3 mi) is cheaper and nearer Only if the 13 Oct price is still right
+
+≈ £19.99 per 100 miles at 40 mpg
+
+1.8 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 13 Oct
+
+Price last reported 5 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+[💷 Free £2 Bonus + Earn £150 Rewards Kingdom: **free £2 welcome bonus**& earn £150+ from home! Claim Mine Now →](https://www.freesamples.co.uk/go-earn-up-to-150-per-task/)
+
+![Image 15: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)BP
+
+175.9p
+
+£96.75 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+BARTON ROAD, LUTON
+
+⭐#5 most expensive of 27
+
+🔴 Higher price
+
+ 24hr Toilets AdBlue Air
+
+ Allstar UK Fuels Keyfuels BP Plus
+
+£1.14 above avg
+
+EG On the Move (1.3 mi) is cheaper and nearer
+
+≈ £19.99 per 100 miles at 40 mpg
+
+1.8 miles away
+
+Last checked: 19 Oct 12:26
+
+🟡 Aging price · 15 Oct
+
+Price last reported 3 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 16: Valero](https://www.petrolprices.co.uk/assets/logos/valero.png)VALERO
+
+174.9p
+
+£96.19 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+TEXACO LTD, BARTON ROAD FILLING STATION, 132, BARTON ROAD, LUTON, LU3 2BD, LUTON
+
+⭐#13 most expensive of 27
+
+🔵 Around average
+
+ Car Wash AdBlue Air Water
+
+ UK Fuels Keyfuels
+
+ Open now Mon 05:00 – 22:00
+
+£0.59 above avg
+
+≈ £19.88 per 100 miles at 40 mpg
+
+1.9 miles away
+
+Last checked: 19 Oct 12:26
+
+🟡 Aging price · 16 Oct
+
+Price last reported 3 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 17: Esso](https://www.petrolprices.co.uk/assets/logos/esso.png)ESSO
+
+175.9p
+
+£96.75 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+645 DUNSTABLE ROAD, LUTON
+
+⭐#4 most expensive of 27
+
+🔴 Higher price
+
+ 24hr AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels Esso Card BP Plus
+
+£1.14 above avg
+
+EG On the Move (1.3 mi) is cheaper and nearer Only if the 28 Sept price is still right
+
+≈ £19.99 per 100 miles at 40 mpg
+
+1.9 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 28 Sept
+
+Price last reported 20 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 18: Asda](https://www.petrolprices.co.uk/assets/logos/asda.png)ASDA
+
+170.9p
+
+£94.00 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+WIGMORE HALL SHOPPING CENTRE, WIGMORE LANE, STOPSLEY, LUTON
+
+⭐#6 cheapest of 27
+
+🔵 Around average
+
+ 24hr Toilets AdBlue
+
+ Allstar UK Fuels Keyfuels
+
+£1.61 cheaper than avg
+
+Worth the drive: saves £1.89 vs EG On the Move (1.3 mi)after 1.6 extra miles there and back at 40 mpg
+
+≈ £19.42 per 100 miles at 40 mpg
+
+2.1 miles away
+
+Last checked: 19 Oct 12:26
+
+🟢 Fresh price · 18 Oct
+
+Price last reported 22 hours ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 19: Sainsburys](https://www.petrolprices.co.uk/assets/logos/sainsburys.png)SAINSBURYS
+
+170.9p
+
+£94.00 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+QUANTOCK RISE, LUTON
+
+⭐#7 cheapest of 27
+
+🔵 Around average
+
+ AdBlue Air
+
+ Allstar UK Fuels Keyfuels fuelGenie
+
+ Open now Mon 06:00 – 22:00
+
+£1.61 cheaper than avg
+
+Worth the drive: saves £1.89 vs EG On the Move (1.3 mi)after 1.6 extra miles there and back at 40 mpg
+
+≈ £19.42 per 100 miles at 40 mpg
+
+2.1 miles away
+
+Last checked: 19 Oct 12:26
+
+🟡 Aging price · 18 Oct
+
+Price last reported 1 day ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 20: JET](https://www.petrolprices.co.uk/assets/logos/jet.png)JET
+
+175.9p
+
+£96.75 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+102 LEAGRAVE HIGH STREET, LUTON
+
+⭐#3 most expensive of 27
+
+🔴 Higher price
+
+ 24hr Car Wash AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels
+
+£1.14 above avg
+
+EG On the Move (1.3 mi) is cheaper and nearer
+
+≈ £19.99 per 100 miles at 40 mpg
+
+2.1 miles away
+
+Last checked: 19 Oct 12:26
+
+🟡 Aging price · 16 Oct
+
+Price last reported 2 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 21: Tesco](https://www.petrolprices.co.uk/assets/logos/tesco.png)TESCO
+
+167.9p
+
+£92.34 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+SKIMPOT RD, DUNSTABLE
+
+⭐#2 cheapest of 27
+
+⭐ Top 5 cheapest
+
+ 24hr Car Wash Toilets AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels fuelGenie
+
+£3.26 cheaper than avg
+
+Worth the drive: saves £3.35 vs EG On the Move (1.3 mi)after 2.6 extra miles there and back at 40 mpg Only if the 21 Sept price is still right
+
+≈ £19.08 per 100 miles at 40 mpg
+
+2.6 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 21 Sept
+
+Price last reported 27 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 22: Essar](https://www.petrolprices.co.uk/assets/logos/essar.png)ESSAR
+
+173.9p
+
+£95.64 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+ESSAR PETROL STATION, 166, SUNDON PARK ROAD, LUTON, LU3 3AH, LUTON
+
+⭐#11 cheapest of 27
+
+🔵 Around average
+
+ Car Wash AdBlue Air Water
+
+ Open now Mon 06:00 – 22:00
+
+Barely worth it: saves only £0.04 vs EG On the Move (1.3 mi)after 2.6 extra miles there and back at 40 mpg
+
+≈ £19.76 per 100 miles at 40 mpg
+
+2.6 miles away
+
+Last checked: 19 Oct 12:26
+
+🟡 Aging price · 15 Oct
+
+Price last reported 3 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 23: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)BP
+
+172.9p
+
+£95.09 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+LUTON ROAD, DUNSTABLE
+
+⭐#8 cheapest of 27
+
+🔵 Around average
+
+ 24hr Toilets AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels BP Plus
+
+£0.51 cheaper than avg
+
+Barely worth it: saves only £0.31 vs EG On the Move (1.3 mi)after 4.0 extra miles there and back at 40 mpg Only if the 14 Oct price is still right
+
+≈ £19.65 per 100 miles at 40 mpg
+
+3.3 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 14 Oct
+
+Price last reported 4 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 24: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)SHELL
+
+173.9p
+
+£95.64 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+POYNTERS ROAD, DUNSTABLE
+
+⭐#12 cheapest of 27
+
+🔵 Around average
+
+ 24hr Toilets AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels Shell Card fuelGenie+
+
+Not worth the drive: the £0.55 saving is used up by 4.0 extra miles vs EG On the Move (1.3 mi), there and back at 40 mpg Only if the 13 Oct price is still right
+
+≈ £19.76 per 100 miles at 40 mpg
+
+3.3 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 13 Oct
+
+Price last reported 5 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 25: Sainsburys](https://www.petrolprices.co.uk/assets/logos/sainsburys.png)SAINSBURYS
+
+166.9p
+
+£91.80 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+2-8 LUTON ROAD, DUNSTABLE
+
+⭐Cheapest of 27 stations
+
+💚 Best price
+
+ Car Wash AdBlue
+
+ Allstar UK Fuels Keyfuels fuelGenie
+
+ Open now Mon 06:00 – 23:00
+
+£3.81 cheaper than avg
+
+Worth the drive: saves £3.49 vs EG On the Move (1.3 mi)after 4.8 extra miles there and back at 40 mpg Only if the 20 Sept price is still right
+
+≈ £18.97 per 100 miles at 40 mpg
+
+3.7 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 20 Sept
+
+Price last reported 29 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 26: Texaco](https://www.petrolprices.co.uk/assets/logos/texaco.png)TEXACO
+
+168.9p
+
+£92.89 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+PACKHORSE SERVICE STATION, WATLING STREET, KENSWORTH, DUNSTABLE
+
+⭐#3 cheapest of 27
+
+⭐ Top 5 cheapest
+
+ 24hr Car Wash AdBlue Air
+
+ Allstar UK Fuels Keyfuels Texaco Fastfuel BP Plus
+
+£2.71 cheaper than avg
+
+Worth the drive: saves £2.38 vs EG On the Move (1.3 mi)after 4.8 extra miles there and back at 40 mpg Only if the 5 Oct price is still right
+
+≈ £19.20 per 100 miles at 40 mpg
+
+3.7 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 5 Oct
+
+Price last reported 13 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 27: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)BP
+
+172.9p
+
+£95.09 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+PRIORY SERVICE STATION, 142, HIGH STREET SOUTH, DUNSTABLE
+
+⭐#9 cheapest of 27
+
+🔵 Around average
+
+ 24hr Toilets AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels BP Plus
+
+£0.51 cheaper than avg
+
+Barely worth it: saves only £0.04 vs EG On the Move (1.3 mi)after 5.4 extra miles there and back at 40 mpg Only if the 6 Oct price is still right
+
+≈ £19.65 per 100 miles at 40 mpg
+
+4 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 6 Oct
+
+Price last reported 13 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 28: Esso](https://www.petrolprices.co.uk/assets/logos/esso.png)ESSO
+
+172.9p
+
+£95.09 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+7 THE GREEN, HOUGHTON REGIS
+
+⭐#10 cheapest of 27
+
+🔵 Around average
+
+ Car Wash AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels Esso Card BP Plus
+
+ Open now Mon 07:00 – 23:00
+
+£0.51 cheaper than avg
+
+Not worth the drive: the £1.10 saving is used up by 5.6 extra miles vs EG On the Move (1.3 mi), there and back at 40 mpg Only if the 30 Sept price is still right
+
+≈ £19.65 per 100 miles at 40 mpg
+
+4.1 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 30 Sept
+
+Price last reported 18 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 29: JET](https://www.petrolprices.co.uk/assets/logos/jet.png)JET
+
+169.9p
+
+£93.44 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+GEORGINA SERVICE STATION, 22-36, HIGH STREET, HOUGHTON REGIS, DUNSTABLE
+
+⭐#5 cheapest of 27
+
+⭐ Top 5 cheapest
+
+ Car Wash Toilets AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels
+
+ Open now Mon 05:00 – 23:59
+
+£2.16 cheaper than avg
+
+Worth the drive: saves £1.55 vs EG On the Move (1.3 mi)after 6.2 extra miles there and back at 40 mpg Only if the 27 Sept price is still right
+
+≈ £19.31 per 100 miles at 40 mpg
+
+4.4 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 27 Sept
+
+Price last reported 21 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 30: EG On the Move](https://www.petrolprices.co.uk/assets/logos/eg-on-the-move.png)EG ON THE MOVE
+
+168.9p
+
+£92.89 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+FLAMSTEAD FILLING STATION, LONDON ROAD, FLAMSTEAD, ST. ALBANS, AL3 8HS, ST. ALBANS
+
+⭐#4 cheapest of 27
+
+⭐ Top 5 cheapest
+
+ 24hr AdBlue
+
+ Allstar UK Fuels Keyfuels
+
+£2.71 cheaper than avg
+
+Worth the drive: saves £1.99 vs EG On the Move (1.3 mi)after 6.8 extra miles there and back at 40 mpg Only if the 7 Oct price is still right
+
+≈ £19.20 per 100 miles at 40 mpg
+
+4.7 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 7 Oct
+
+Price last reported 12 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+![Image 31: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)BP
+
+174.9p
+
+£96.19 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Change tank size and MPG")
+
+3 TRING ROAD, DUNSTABLE
+
+⭐#12 most expensive of 27
+
+🔵 Around average
+
+ AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels BP Plus
+
+ Open now Mon 06:00 – 22:00
+
+£0.59 above avg
+
+≈ £19.88 per 100 miles at 40 mpg
+
+4.9 miles away
+
+Last checked: 19 Oct 12:26
+
+🔴 Stale price · 14 Oct
+
+Price last reported 4 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Get directions")Favourite + 
+
+## Map FAQs
+
+Can I choose Google Maps or Apple Maps for directions?
+Yes. Open the **Filters** popup and scroll down to the **MAPS** section, where you can pick which app the **Directions** and **Navigate** buttons open:
+
+*   **Auto** — uses Apple Maps on iPhone, iPad and Mac, and Google Maps everywhere else
+*   **Google** — always opens Google Maps, even on an iPhone
+*   **Apple** — always opens Apple Maps
+
+So if you're on an iPhone but prefer Google Maps, just set this to **Google** and your choice is remembered on your device.
+
+How do I find the cheapest petrol station near me?
+Allow location access or enter your **postcode, town or city** in the search box. The map will show every station within your search radius, and you can sort by **cheapest**, **nearest** or **most recently updated**. Tap any station marker to see its live prices, address and amenities.
+
+Is the map free to use?
+Yes — PetrolPrices.co.uk is **completely free** to use, with no sign-up or account required. All features, including the map, sorting, filtering, station details and live prices, are available at no charge.
+
+How accurate are the fuel prices on the map?
+Fuel prices come from the **UK government's mandatory fuel price transparency scheme**, which requires retailers to publish forecourt prices within 30 minutes of any change. We sync this feed every **15 minutes**, so prices shown are at most around 15 minutes old.
+
+What do the green, amber and red badges mean?
+These are our **price freshness badges**, which show how recently each station last reported its prices:
+
+*   🟢 **Green** — updated in the last few hours
+*   🟡 **Amber** — updated within the last day or so
+*   🔴 **Red** — older than that, treat with caution
+
+We surface this so you can judge whether a "cheap" price is genuinely current or potentially out of date.
+
+Can I save my favourite stations?
+Yes — tap the **heart icon** on any station card or popup to save it. Your favourites are stored on your device and shown on the [Favourites page](https://www.petrolprices.co.uk/favourites.php), where you can also see **price change badges** and opt in to **push notifications** when your saved stations change price.
+
+How do I sort or filter stations on the map?
+Use the **sort buttons** at the top of the results to switch between **Distance**, **Cheapest** and **Recently Updated**. You can also choose your **fuel type** (Unleaded, Diesel, Super Unleaded, Premium Diesel) and adjust the **search radius** to widen or narrow your results.
+
+Why don't I see prices for some stations?
+We only show prices that come directly from the UK government's official fuel price feed. If a station appears **without a price**, it means that retailer hasn't reported one — usually because they're a smaller independent who isn't yet part of the scheme, or because their feed has temporarily dropped out. Major brands (BP, Shell, Esso, Tesco, Sainsbury's, Asda, Morrisons, etc.) are all reliably covered.
+
+[See all FAQs](https://www.petrolprices.co.uk/faq.php)
+Last updated: 12 June 2026
+
+[Switch to Standard List View](https://www.petrolprices.co.uk/index.php)
+
+Share this Site 
+
+[Get printable QR code](https://www.petrolprices.co.uk/qr.php)
+
+[News](https://www.petrolprices.co.uk/news.php)·[About](https://www.petrolprices.co.uk/about-us.php)·[FAQ](https://www.petrolprices.co.uk/faq.php)·[Feedback](https://www.petrolprices.co.uk/contact-us.php)·[Premier League](https://www.petrolprices.co.uk/premier-league.php)
+
+[Privacy](https://www.petrolprices.co.uk/privacy-policy.php)•[Terms](https://www.petrolprices.co.uk/terms-and-conditions-of-use.php)
+
+Location
+
+◐Official UK Gov fuel data
+
+ Distance Price Freshness Unleaded Super Unleaded Diesel Premium Diesel Brands More
+
+![Image 32](https://a.tile.openstreetmap.org/12/2042/1354.png)![Image 33](https://b.tile.openstreetmap.org/12/2043/1354.png)![Image 34](https://b.tile.openstreetmap.org/12/2042/1355.png)![Image 35](https://c.tile.openstreetmap.org/12/2043/1355.png)![Image 36](https://c.tile.openstreetmap.org/12/2042/1353.png)![Image 37](https://a.tile.openstreetmap.org/12/2043/1353.png)![Image 38](https://c.tile.openstreetmap.org/12/2041/1354.png)![Image 39](https://c.tile.openstreetmap.org/12/2044/1354.png)![Image 40](https://a.tile.openstreetmap.org/12/2041/1355.png)![Image 41](https://a.tile.openstreetmap.org/12/2044/1355.png)![Image 42](https://c.tile.openstreetmap.org/12/2042/1356.png)![Image 43](https://a.tile.openstreetmap.org/12/2043/1356.png)![Image 44](https://b.tile.openstreetmap.org/12/2041/1353.png)![Image 45](https://b.tile.openstreetmap.org/12/2044/1353.png)![Image 46](https://b.tile.openstreetmap.org/12/2041/1356.png)![Image 47](https://b.tile.openstreetmap.org/12/2044/1356.png)![Image 48](https://b.tile.openstreetmap.org/12/2042/1352.png)![Image 49](https://c.tile.openstreetmap.org/12/2043/1352.png)![Image 50](https://a.tile.openstreetmap.org/12/2042/1357.png)![Image 51](https://b.tile.openstreetmap.org/12/2043/1357.png)![Image 52](https://a.tile.openstreetmap.org/12/2041/1352.png)![Image 53](https://a.tile.openstreetmap.org/12/2044/1352.png)![Image 54](https://c.tile.openstreetmap.org/12/2041/1357.png)![Image 55](https://c.tile.openstreetmap.org/12/2044/1357.png)
+
+![Image 56: Esso](https://www.petrolprices.co.uk/assets/logos/esso.png)175.9p
+
+![Image 57: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)175.9p
+
+![Image 58: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)175.9p
+
+![Image 59: Gulf](https://www.petrolprices.co.uk/assets/logos/gulf.png)174.9p
+
+![Image 60: Esso](https://www.petrolprices.co.uk/assets/logos/esso.png)175.9p
+
+![Image 61: EG On the Move](https://www.petrolprices.co.uk/assets/logos/eg-on-the-move.png)174.9p
+
+![Image 62: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)179.9p
+
+![Image 63: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)175.9p
+
+![Image 64: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)179.9p
+
+![Image 65: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)175.9p
+
+![Image 66: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)175.9p
+
+![Image 67: Valero](https://www.petrolprices.co.uk/assets/logos/valero.png)174.9p
+
+![Image 68: Esso](https://www.petrolprices.co.uk/assets/logos/esso.png)175.9p
+
+![Image 69: Asda](https://www.petrolprices.co.uk/assets/logos/asda.png)170.9p
+
+![Image 70: Sainsburys](https://www.petrolprices.co.uk/assets/logos/sainsburys.png)170.9p
+
+![Image 71: JET](https://www.petrolprices.co.uk/assets/logos/jet.png)175.9p
+
+![Image 72: Tesco](https://www.petrolprices.co.uk/assets/logos/tesco.png)167.9p
+
+![Image 73: Essar](https://www.petrolprices.co.uk/assets/logos/essar.png)173.9p
+
+![Image 74: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)172.9p
+
+![Image 75: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)173.9p
+
+![Image 76: Sainsburys](https://www.petrolprices.co.uk/assets/logos/sainsburys.png)166.9p
+
+![Image 77: Texaco](https://www.petrolprices.co.uk/assets/logos/texaco.png)168.9p
+
+![Image 78: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)172.9p
+
+![Image 79: Esso](https://www.petrolprices.co.uk/assets/logos/esso.png)172.9p
+
+![Image 80: JET](https://www.petrolprices.co.uk/assets/logos/jet.png)169.9p
+
+![Image 81: EG On the Move](https://www.petrolprices.co.uk/assets/logos/eg-on-the-move.png)168.9p
+
+![Image 82: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)174.9p
+
+[+](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Zoom in")[−](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5# "Zoom out")
+
+[Leaflet](https://leafletjs.com/ "A JavaScript library for interactive maps")| © OpenStreetMap
+
+My location
+
+View Map Filter
+
+## Filter your search
+
+×
+
+### Show prices for i
+
+ Pick a car and prices use its fuel type and show the cost to fill its tank. Choose Default for standard prices. 
+
+Save
+
+Saved ✓
+
+### Show prices for your car
+
+Set up a vehicle on the home page to see prices in its fuel type and the cost to fill its tank. Tap below, then add your MOT and fuel info to switch it on.
+
+[Add a vehicle](https://www.petrolprices.co.uk/index.php#add-vehicle)
+
+### Fuel Type
+
+Unleaded Super Unleaded Diesel Premium Diesel
+
+### Fuel Brands
+
+All![Image 83: Applegreen UK](https://www.petrolprices.co.uk/assets/logos/applegreen.png)Applegreen![Image 84: Asda](https://www.petrolprices.co.uk/assets/logos/asda.png)Asda![Image 85: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)BP![Image 86: Central Convenience](https://www.petrolprices.co.uk/assets/logos/central-convenience.png)Central Convenience![Image 87: Circle K](https://www.petrolprices.co.uk/assets/logos/circlek.png)Circle K![Image 88: Co-op](https://www.petrolprices.co.uk/assets/logos/coop.png)Co-op![Image 89: Costco](https://www.petrolprices.co.uk/assets/logos/costco.png)Costco![Image 90: EG On the Move](https://www.petrolprices.co.uk/assets/logos/eg-on-the-move.png)EG On the Move![Image 91: Emo](https://www.petrolprices.co.uk/assets/logos/emo.png)Emo![Image 92: Essar](https://www.petrolprices.co.uk/assets/logos/essar.png)Essar![Image 93: Esso](https://www.petrolprices.co.uk/assets/logos/esso.png)Esso![Image 94: Gleaner](https://www.petrolprices.co.uk/assets/logos/gleaner.png)Gleaner![Image 95: Go](https://www.petrolprices.co.uk/assets/logos/go.png)Go![Image 96: Gulf](https://www.petrolprices.co.uk/assets/logos/gulf.png)Gulf![Image 97: Harvest Energy](https://www.petrolprices.co.uk/assets/logos/harvest-energy.png)Harvest Energy![Image 98: Highland Fuels](https://www.petrolprices.co.uk/assets/logos/highland.png)Highland Fuels![Image 99: Independent](https://www.petrolprices.co.uk/assets/logos/independent.png)Independent![Image 100: JET](https://www.petrolprices.co.uk/assets/logos/jet.png)JET![Image 101: Maxol](https://www.petrolprices.co.uk/assets/logos/maxol.png)Maxol![Image 102: Morrisons](https://www.petrolprices.co.uk/assets/logos/morrisons.png)Morrisons![Image 103: Murco](https://www.petrolprices.co.uk/assets/logos/murco.png)Murco![Image 104: Pace](https://www.petrolprices.co.uk/assets/logos/pace.png)Pace![Image 105: Sainsburys](https://www.petrolprices.co.uk/assets/logos/sainsburys.png)Sainsburys![Image 106: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)Shell![Image 107: Solo](https://www.petrolprices.co.uk/assets/logos/solo.png)Solo![Image 108: Spar](https://www.petrolprices.co.uk/assets/logos/spar.png)Spar![Image 109: Tesco](https://www.petrolprices.co.uk/assets/logos/tesco.png)Tesco![Image 110: Texaco](https://www.petrolprices.co.uk/assets/logos/texaco.png)Texaco![Image 111: Total](https://www.petrolprices.co.uk/assets/logos/total.png)Total![Image 112: Valero](https://www.petrolprices.co.uk/assets/logos/valero.png)Valero![Image 113: Welcome Break](https://www.petrolprices.co.uk/assets/logos/welcomebreak.png)Welcome Break
+
+### Fuel Cards
+
+All Allstar UK Fuels Keyfuels fuelGenie fuelGenie+BP Plus Shell Card Esso Card Texaco Fastfuel
+
+### Distance
+
+5 miles
+
+### Vehicle
+
+Quick defaults by vehicle type — if you've saved a car under **"Show prices for your car"** above, its exact tank size and mpg are used instead.
+
+🚗Car🏍️Motorbike🚐Van
+
+Efficiency 
+
+−40 MPG+
+
+Tank Size 
+
+−55 L+
+
+### Amenities
+
+24 Hour Open Now Car Wash Toilets AdBlue
+
+### MAPS
+
+Auto Google Apple
+
+ Apply Filters 
+
+×
+### How to Use the Fuel Map
+
+#### 1. Enter a Location
+
+Type a postcode, town, or city into the search box. Then click "Get Prices" for a list or "Find Nearest" to see results on a map.
+
+#### 2. Tap 📍 to Find Stations Near You
+
+Tap the  location button to instantly find the cheapest fuel stations near you. Your browser will ask for permission to use your location.
+
+#### 3. Filter Your Results
+
+Use the filter pills (Distance, Price, fuel type) to sort and refine the stations shown. Tap "Brands" or "More" for additional filtering options.
+
+#### 4. View Station Details
+
+Tap any price marker on the map to see station details, or tap "View List" to see all results in a scrollable list.
+
+Dots are dearer stations hidden behind cheaper ones — zoom in or tap to see. To show every station as a full price card, switch on "Show all prices on map" in Settings.
+
+#### 5. Save Your Favourite Stations
+
+Tap the  star icon on any station to save it as a favourite. Visit your [Favourites](https://www.petrolprices.co.uk/favourites.php) page to track prices and get notified when they change.
+
+×
+### Add Loyalty Card
+
+Brand:
+
+Upload a clear image of your loyalty card barcode or QR code
+
+Drag & drop your barcode image here, or click to browse
+
+Supports JPG, PNG, GIF (max 2MB)
+
+![Image 114: Barcode preview](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5)
+
+Save Card Cancel
+
+**Privacy:** Your loyalty card image is stored securely in your browser's local storage only. It never leaves your device or gets uploaded to our servers. 
+
+×
+
+### Your Loyalty Card
+
+Show this barcode to the cashier
+
+![Image 115: Loyalty card barcode](https://www.petrolprices.co.uk/map.php?location=Luton&fuel_type=E10&radius=5)
+
+Edit Card Delete Card
+
+For best results, turn up your screen brightness.
+
+Stored securely in your browser

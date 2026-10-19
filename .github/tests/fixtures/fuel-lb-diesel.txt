@@ -1,0 +1,551 @@
+Title: Petrol Prices Map – Find Cheap Petrol & Diesel Near You
+
+URL Source: https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5
+
+Markdown Content:
+## Settings
+
+✕
+
+[NEW!**RETRO TV MODE!**](https://www.petrolprices.co.uk/fuel-guide.php "Fuel Guide - browse live prices as an on-screen guide")
+
+### Display
+
+Font Size
+
+A A A A
+
+Adjusts app text. Zoom the map to enlarge street names.
+
+Show prices per gallon- [x]  
+
+Display fuel prices in pence per gallon instead of pence per litre.
+
+Pulsing location marker- [x]  
+
+Highlights your position on the map when location is active.
+
+Show all prices on map- [x]  
+
+Shows every station as a full price card instead of a dot. Cards may overlap.
+
+### Customise Buttons
+
+Turn off the buttons you don't use. The ones left get bigger and easier to tap. Choices are shared with the home page and saved on this device only.
+
+Shortcuts
+
+Loyalty Cards- [x]  
+
+Favourites- [x]  
+
+Journey- [x]  
+
+Price data
+
+Fuel Prices Live- [x]  
+
+Price Charts- [x]  
+
+ Reset to default
+
+[🎁 Free Samples Over **100+ free samples & competitions** available today. FreeSamples.co.uk →](https://www.freesamples.co.uk/)
+
+[🎁 Free £35 Amazon Voucher Join Toluna & earn **£35 in Amazon vouchers** for surveys! Claim Mine Now →](https://www.freesamples.co.uk/go-earn-rewards-with-toluna/)
+
+[![Image 1: PetrolPrices logo](https://www.petrolprices.co.uk/pp-logo-circular-300x300-transparent.png) # Fuel Price Map](https://www.petrolprices.co.uk/map.php)
+
+◐Switch to Dark Mode
+
+## Good afternoon!
+
+Find the cheapest or nearest petrol stations
+
+As seen in The Times&Which? · 8,000+ Fuel Stations Tracked
+
+As seen in The Times&Which? · 8,000+ Fuel Stations Tracked
+
+[![Image 2: Free Davines Shampoo](https://www.freesamples.co.uk/wp-content/uploads/2026/10/Free-Davines-Shampoo-768x855.png)Free Davines Shampoo on FreeSamples.co.uk →](https://www.freesamples.co.uk/)
+
+[![Image 3](https://www.petrolprices.co.uk/assets/nordpass.png)Get NordPass Premium at 52% off Keep your passwords secure across all your devices.Get NordPass](https://petrolprices.co.uk/nordpass.php)
+
+Location 
+
+Official UK Gov fuel data Official UK Gov Fuel Finder API · Updates every 15 minutes
+
+Filter
+
+ Show Prices on Map 
+
+[Loyalty](https://www.petrolprices.co.uk/loyalty.php)[Favourites](https://www.petrolprices.co.uk/favourites.php)[Journey](https://www.petrolprices.co.uk/journey.php)
+
+[Fuel Prices Live](https://www.petrolprices.co.uk/uk-fuel-prices-live.php)[Price Charts](https://www.petrolprices.co.uk/fuel-prices.php)
+
+ Not seeing your new location? Clear location cache. 
+
+Official UK government fuel data
+
+Synced just now · 19 Oct at 12:39
+
+## Sort By:
+
+Switch the list order instantly
+
+Price Distance Freshness
+
+Show prices:
+
+All Last 3 days Last 24 hrs
+
+[Plan a journey](https://www.petrolprices.co.uk/journey.php "Plan a multi-stop journey and find the cheapest fuel along your route")
+
+Show all
+
+×
+### Show prices
+
+Filters stations by how recently their price was last reported:
+
+*   **All** — every station, any price age
+*   **Last 3 days** — prices reported in the last 3 days
+*   **Last 24 hrs** — prices reported today
+
+Can't see a station you expected? Some retailers — supermarkets especially — update less often, so they can fall outside the shorter windows. Tap **All** to show everything.
+
+Each card also shows a 🟢 fresh / 🟡 aging / 🔴 stale dot with the date, so you always know how current a price is.
+
+## Latest Prices for this area:
+
+Cheapest
+
+193.9p
+
+Average
+
+197.0p
+
+Expensive
+
+201.9p
+
+Prices within 2 miles vary by 8.0p — £4.40 on a 55-litre fill
+
+💷Save £1.72 per tank by filling up at the cheapest station Save £1.72 per tank
+
+×
+### 💷 Save Per Tank
+
+This shows how much you could save on a full tank by filling up at the **cheapest** station instead of the **average-priced** station in your search area.
+
+**How it's calculated:**  
+(Average price − Cheapest price) × Your tank size
+
+Based on your selected vehicle's tank size (Car: 55L, Motorbike: 15L, Van: 80L). Switch vehicle in the Filter panel to update.
+
+📊£1.72 potential savings found across 1 search£1.72 savings · 1 search
+
+Reset
+
+[![Image 4: No10.co.uk](https://www.petrolprices.co.uk/no10-banner-pm.jpg)Just saved on your fuel? Buying our _No10.co.uk_ game helps keep petrolprices.co.uk free.Play free for 3 days with code: CAR](https://no10.co.uk/redeem.php)
+
+×
+### 📊 Map Savings Tracker
+
+Each time you search on the map, we calculate the potential saving between the cheapest and average station. This running total shows your **cumulative potential savings** from map searches this year.
+
+🔒 **100% private:** This data is saved in your browser's local storage on your device only. We cannot see it, we don't collect it, and it never leaves your phone or computer.
+
+This tracker is separate from the one on the main list page — each page tracks its own searches independently.
+
+This is an estimate based on your searches, not a guarantee of actual savings.
+
+Enable location permissions to find your current location or enter an address. If you're outside the UK, location detection won't work, but you can still use the search feature.
+
+![Image 5: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)BP
+
+194.7p
+
+£107.08 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Change tank size and MPG")
+
+↓ 3.0p vs 7 days ago
+
+45 Lake Street Leighton buzzard Bedfordshire, Bedfordshire
+
+⭐#2 cheapest of 5
+
+⭐ Top 5 cheapest
+
+ AdBlue Air
+
+ Allstar UK Fuels Keyfuels BP Plus
+
+ Open now Mon 06:00 – 21:00
+
+£1.28 cheaper than avg
+
+Nearest up-to-date station
+
+≈ £22.13 per 100 miles at 40 mpg
+
+0.2 miles away
+
+Last checked: 19 Oct 12:39
+
+🟢 Fresh price · 19 Oct
+
+Price last reported 6 hours ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Get directions")Favourite + 
+
+![Image 6: Tesco](https://www.petrolprices.co.uk/assets/logos/tesco.png)TESCO
+
+193.9p
+
+£106.64 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Change tank size and MPG")
+
+↓ 5.0p vs 7 days ago
+
+TESCO STORES LTD, VIMY ROAD, LEIGHTON BUZZARD
+
+⭐Cheapest of 5 stations
+
+💚 Best price
+
+ 24hr Toilets AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels fuelGenie
+
+£1.72 cheaper than avg
+
+Barely worth it: saves only £0.40 vs BP (0.2 mi)after 0.2 extra miles there and back at 40 mpg
+
+≈ £22.04 per 100 miles at 40 mpg
+
+0.3 miles away
+
+Last checked: 19 Oct 12:39
+
+🟡 Aging price · 15 Oct
+
+Price last reported 3 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Get directions")Favourite + 
+
+[🎁 Drivers Club Over **100+ free samples, giveaways & competitions** available today. FreeSamples.co.uk →](https://www.freesamples.co.uk/)
+
+![Image 7: Morrisons](https://www.petrolprices.co.uk/assets/logos/morrisons.png)MORRISONS
+
+194.7p
+
+£107.08 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Change tank size and MPG")
+
+LAKE STREET, LEIGHTON BUZZARD
+
+⭐#3 cheapest of 5
+
+⭐ Top 5 cheapest
+
+ Car Wash Toilets AdBlue Air
+
+ Allstar UK Fuels Keyfuels fuelGenie Texaco Fastfuel
+
+ Open now Mon 06:00 – 23:00
+
+£1.28 cheaper than avg
+
+≈ £22.13 per 100 miles at 40 mpg
+
+0.3 miles away
+
+Last checked: 19 Oct 12:39
+
+🔴 Stale price · 14 Oct
+
+Price last reported 4 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Get directions")Favourite + 
+
+![Image 8: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)SHELL
+
+199.9p
+
+£109.94 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Change tank size and MPG")
+
+LEIGHTON ROAD, LEIGHTON BUZZARD, LUTON
+
+⭐#4 cheapest of 5
+
+⭐ Top 5 cheapest
+
+ 24hr Car Wash Toilets AdBlue Air Water
+
+ Allstar UK Fuels Keyfuels Shell Card fuelGenie+
+
+£1.58 above avg
+
+BP (0.2 mi) is cheaper and nearer
+
+≈ £22.72 per 100 miles at 40 mpg
+
+0.3 miles away
+
+Last checked: 19 Oct 12:39
+
+🟡 Aging price · 16 Oct
+
+Price last reported 3 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Get directions")Favourite + 
+
+![Image 9: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)SHELL
+
+201.9p
+
+£111.05 to fill (55L)
+
+[Edit vehicle settings](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Change tank size and MPG")
+
+BILLINGTON ROAD, LEIGHTON BUZZARD
+
+⭐#5 cheapest of 5
+
+⭐ Top 5 cheapest
+
+ 24hr Car Wash Toilets AdBlue Air Water LPG
+
+ Allstar UK Fuels Keyfuels Shell Card fuelGenie+
+
+£2.68 above avg
+
+BP (0.2 mi) is cheaper and nearer Only if the 13 Oct price is still right
+
+≈ £22.95 per 100 miles at 40 mpg
+
+1.2 miles away
+
+Last checked: 19 Oct 12:39
+
+🔴 Stale price · 13 Oct
+
+Price last reported 5 days ago
+
+ Price History (30 days)
+
+ Loading price history…
+
+[Directions](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Get directions")Favourite + 
+
+## Map FAQs
+
+Can I choose Google Maps or Apple Maps for directions?
+Yes. Open the **Filters** popup and scroll down to the **MAPS** section, where you can pick which app the **Directions** and **Navigate** buttons open:
+
+*   **Auto** — uses Apple Maps on iPhone, iPad and Mac, and Google Maps everywhere else
+*   **Google** — always opens Google Maps, even on an iPhone
+*   **Apple** — always opens Apple Maps
+
+So if you're on an iPhone but prefer Google Maps, just set this to **Google** and your choice is remembered on your device.
+
+How do I find the cheapest petrol station near me?
+Allow location access or enter your **postcode, town or city** in the search box. The map will show every station within your search radius, and you can sort by **cheapest**, **nearest** or **most recently updated**. Tap any station marker to see its live prices, address and amenities.
+
+Is the map free to use?
+Yes — PetrolPrices.co.uk is **completely free** to use, with no sign-up or account required. All features, including the map, sorting, filtering, station details and live prices, are available at no charge.
+
+How accurate are the fuel prices on the map?
+Fuel prices come from the **UK government's mandatory fuel price transparency scheme**, which requires retailers to publish forecourt prices within 30 minutes of any change. We sync this feed every **15 minutes**, so prices shown are at most around 15 minutes old.
+
+What do the green, amber and red badges mean?
+These are our **price freshness badges**, which show how recently each station last reported its prices:
+
+*   🟢 **Green** — updated in the last few hours
+*   🟡 **Amber** — updated within the last day or so
+*   🔴 **Red** — older than that, treat with caution
+
+We surface this so you can judge whether a "cheap" price is genuinely current or potentially out of date.
+
+Can I save my favourite stations?
+Yes — tap the **heart icon** on any station card or popup to save it. Your favourites are stored on your device and shown on the [Favourites page](https://www.petrolprices.co.uk/favourites.php), where you can also see **price change badges** and opt in to **push notifications** when your saved stations change price.
+
+How do I sort or filter stations on the map?
+Use the **sort buttons** at the top of the results to switch between **Distance**, **Cheapest** and **Recently Updated**. You can also choose your **fuel type** (Unleaded, Diesel, Super Unleaded, Premium Diesel) and adjust the **search radius** to widen or narrow your results.
+
+Why don't I see prices for some stations?
+We only show prices that come directly from the UK government's official fuel price feed. If a station appears **without a price**, it means that retailer hasn't reported one — usually because they're a smaller independent who isn't yet part of the scheme, or because their feed has temporarily dropped out. Major brands (BP, Shell, Esso, Tesco, Sainsbury's, Asda, Morrisons, etc.) are all reliably covered.
+
+[See all FAQs](https://www.petrolprices.co.uk/faq.php)
+Last updated: 12 June 2026
+
+[Switch to Standard List View](https://www.petrolprices.co.uk/index.php)
+
+Share this Site 
+
+[Get printable QR code](https://www.petrolprices.co.uk/qr.php)
+
+[News](https://www.petrolprices.co.uk/news.php)·[About](https://www.petrolprices.co.uk/about-us.php)·[FAQ](https://www.petrolprices.co.uk/faq.php)·[Feedback](https://www.petrolprices.co.uk/contact-us.php)·[Premier League](https://www.petrolprices.co.uk/premier-league.php)
+
+[Privacy](https://www.petrolprices.co.uk/privacy-policy.php)•[Terms](https://www.petrolprices.co.uk/terms-and-conditions-of-use.php)
+
+Location
+
+◐Official UK Gov fuel data
+
+ Distance Price Freshness Unleaded Super Unleaded Diesel Premium Diesel Brands More
+
+![Image 10](https://c.tile.openstreetmap.org/13/4080/2708.png)![Image 11](https://a.tile.openstreetmap.org/13/4081/2708.png)![Image 12](https://a.tile.openstreetmap.org/13/4080/2709.png)![Image 13](https://b.tile.openstreetmap.org/13/4081/2709.png)![Image 14](https://b.tile.openstreetmap.org/13/4080/2707.png)![Image 15](https://c.tile.openstreetmap.org/13/4081/2707.png)![Image 16](https://b.tile.openstreetmap.org/13/4079/2708.png)![Image 17](https://b.tile.openstreetmap.org/13/4082/2708.png)![Image 18](https://c.tile.openstreetmap.org/13/4079/2709.png)![Image 19](https://c.tile.openstreetmap.org/13/4082/2709.png)![Image 20](https://b.tile.openstreetmap.org/13/4080/2710.png)![Image 21](https://c.tile.openstreetmap.org/13/4081/2710.png)![Image 22](https://a.tile.openstreetmap.org/13/4079/2707.png)![Image 23](https://a.tile.openstreetmap.org/13/4082/2707.png)![Image 24](https://a.tile.openstreetmap.org/13/4079/2710.png)![Image 25](https://a.tile.openstreetmap.org/13/4082/2710.png)![Image 26](https://a.tile.openstreetmap.org/13/4080/2706.png)![Image 27](https://b.tile.openstreetmap.org/13/4081/2706.png)![Image 28](https://c.tile.openstreetmap.org/13/4080/2711.png)![Image 29](https://a.tile.openstreetmap.org/13/4081/2711.png)![Image 30](https://c.tile.openstreetmap.org/13/4079/2706.png)![Image 31](https://c.tile.openstreetmap.org/13/4082/2706.png)![Image 32](https://b.tile.openstreetmap.org/13/4079/2711.png)![Image 33](https://b.tile.openstreetmap.org/13/4082/2711.png)
+
+![Image 34: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)194.7p
+
+![Image 35: Tesco](https://www.petrolprices.co.uk/assets/logos/tesco.png)193.9p
+
+![Image 36: Morrisons](https://www.petrolprices.co.uk/assets/logos/morrisons.png)194.7p
+
+![Image 37: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)199.9p
+
+![Image 38: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)201.9p
+
+[+](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Zoom in")[−](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5# "Zoom out")
+
+[Leaflet](https://leafletjs.com/ "A JavaScript library for interactive maps")| © OpenStreetMap
+
+My location
+
+View Map Filter
+
+## Filter your search
+
+×
+
+### Show prices for i
+
+ Pick a car and prices use its fuel type and show the cost to fill its tank. Choose Default for standard prices. 
+
+Save
+
+Saved ✓
+
+### Show prices for your car
+
+Set up a vehicle on the home page to see prices in its fuel type and the cost to fill its tank. Tap below, then add your MOT and fuel info to switch it on.
+
+[Add a vehicle](https://www.petrolprices.co.uk/index.php#add-vehicle)
+
+### Fuel Type
+
+Unleaded Super Unleaded Diesel Premium Diesel
+
+### Fuel Brands
+
+All![Image 39: Applegreen UK](https://www.petrolprices.co.uk/assets/logos/applegreen.png)Applegreen![Image 40: Asda](https://www.petrolprices.co.uk/assets/logos/asda.png)Asda![Image 41: BP](https://www.petrolprices.co.uk/assets/logos/bp.png)BP![Image 42: Central Convenience](https://www.petrolprices.co.uk/assets/logos/central-convenience.png)Central Convenience![Image 43: Circle K](https://www.petrolprices.co.uk/assets/logos/circlek.png)Circle K![Image 44: Co-op](https://www.petrolprices.co.uk/assets/logos/coop.png)Co-op![Image 45: Costco](https://www.petrolprices.co.uk/assets/logos/costco.png)Costco![Image 46: EG On the Move](https://www.petrolprices.co.uk/assets/logos/eg-on-the-move.png)EG On the Move![Image 47: Emo](https://www.petrolprices.co.uk/assets/logos/emo.png)Emo![Image 48: Essar](https://www.petrolprices.co.uk/assets/logos/essar.png)Essar![Image 49: Esso](https://www.petrolprices.co.uk/assets/logos/esso.png)Esso![Image 50: Gleaner](https://www.petrolprices.co.uk/assets/logos/gleaner.png)Gleaner![Image 51: Go](https://www.petrolprices.co.uk/assets/logos/go.png)Go![Image 52: Gulf](https://www.petrolprices.co.uk/assets/logos/gulf.png)Gulf![Image 53: Harvest Energy](https://www.petrolprices.co.uk/assets/logos/harvest-energy.png)Harvest Energy![Image 54: Highland Fuels](https://www.petrolprices.co.uk/assets/logos/highland.png)Highland Fuels![Image 55: Independent](https://www.petrolprices.co.uk/assets/logos/independent.png)Independent![Image 56: JET](https://www.petrolprices.co.uk/assets/logos/jet.png)JET![Image 57: Maxol](https://www.petrolprices.co.uk/assets/logos/maxol.png)Maxol![Image 58: Morrisons](https://www.petrolprices.co.uk/assets/logos/morrisons.png)Morrisons![Image 59: Murco](https://www.petrolprices.co.uk/assets/logos/murco.png)Murco![Image 60: Pace](https://www.petrolprices.co.uk/assets/logos/pace.png)Pace![Image 61: Sainsburys](https://www.petrolprices.co.uk/assets/logos/sainsburys.png)Sainsburys![Image 62: Shell](https://www.petrolprices.co.uk/assets/logos/shell.png)Shell![Image 63: Solo](https://www.petrolprices.co.uk/assets/logos/solo.png)Solo![Image 64: Spar](https://www.petrolprices.co.uk/assets/logos/spar.png)Spar![Image 65: Tesco](https://www.petrolprices.co.uk/assets/logos/tesco.png)Tesco![Image 66: Texaco](https://www.petrolprices.co.uk/assets/logos/texaco.png)Texaco![Image 67: Total](https://www.petrolprices.co.uk/assets/logos/total.png)Total![Image 68: Valero](https://www.petrolprices.co.uk/assets/logos/valero.png)Valero![Image 69: Welcome Break](https://www.petrolprices.co.uk/assets/logos/welcomebreak.png)Welcome Break
+
+### Fuel Cards
+
+All Allstar UK Fuels Keyfuels fuelGenie fuelGenie+BP Plus Shell Card Esso Card Texaco Fastfuel
+
+### Distance
+
+5 miles
+
+### Vehicle
+
+Quick defaults by vehicle type — if you've saved a car under **"Show prices for your car"** above, its exact tank size and mpg are used instead.
+
+🚗Car🏍️Motorbike🚐Van
+
+Efficiency 
+
+−40 MPG+
+
+Tank Size 
+
+−55 L+
+
+### Amenities
+
+24 Hour Open Now Car Wash Toilets AdBlue
+
+### MAPS
+
+Auto Google Apple
+
+ Apply Filters 
+
+×
+### How to Use the Fuel Map
+
+#### 1. Enter a Location
+
+Type a postcode, town, or city into the search box. Then click "Get Prices" for a list or "Find Nearest" to see results on a map.
+
+#### 2. Tap 📍 to Find Stations Near You
+
+Tap the  location button to instantly find the cheapest fuel stations near you. Your browser will ask for permission to use your location.
+
+#### 3. Filter Your Results
+
+Use the filter pills (Distance, Price, fuel type) to sort and refine the stations shown. Tap "Brands" or "More" for additional filtering options.
+
+#### 4. View Station Details
+
+Tap any price marker on the map to see station details, or tap "View List" to see all results in a scrollable list.
+
+Dots are dearer stations hidden behind cheaper ones — zoom in or tap to see. To show every station as a full price card, switch on "Show all prices on map" in Settings.
+
+#### 5. Save Your Favourite Stations
+
+Tap the  star icon on any station to save it as a favourite. Visit your [Favourites](https://www.petrolprices.co.uk/favourites.php) page to track prices and get notified when they change.
+
+×
+### Add Loyalty Card
+
+Brand:
+
+Upload a clear image of your loyalty card barcode or QR code
+
+Drag & drop your barcode image here, or click to browse
+
+Supports JPG, PNG, GIF (max 2MB)
+
+![Image 70: Barcode preview](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5)
+
+Save Card Cancel
+
+**Privacy:** Your loyalty card image is stored securely in your browser's local storage only. It never leaves your device or gets uploaded to our servers. 
+
+×
+
+### Your Loyalty Card
+
+Show this barcode to the cashier
+
+![Image 71: Loyalty card barcode](https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5)
+
+Edit Card Delete Card
+
+For best results, turn up your screen brightness.
+
+Stored securely in your browser

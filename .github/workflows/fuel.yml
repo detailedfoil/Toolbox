@@ -1,16 +1,16 @@
-# Hourly fuel price check for the Toolbox "Fuel Prices" page (Leighton Buzzard forecourts).
+# Fuel price backup for the Toolbox "Fuel Prices" page: Leighton Buzzard only (detailedfoil, 19 Oct 2026).
 #
-# Reads PetrolPrices.co.uk's public Leighton Buzzard page (the UK Government Fuel Finder feed) once an hour from
-# about 6am to 10pm UK time and saves tools/fuel/data/prices.json when anything changes. One page read per run,
-# done in seconds. The page also checks for itself whenever it's opened, so this is the backup and the history.
+# Every store's page checks its prices live when it's opened. For Leighton Buzzard this also reads them every
+# 3 hours from about 6am to 9pm UK time and saves tools/fuel/data/prices.json when anything changes, as a fallback
+# and a history of what moved. Two page reads through jina per run (petrol and diesel), done in seconds.
 #
 # To run it by hand: Actions tab > Fuel prices > Run workflow. To switch it off: delete the schedule: block.
 name: Fuel prices
 
 on:
   schedule:
-    # GitHub reads these as UTC: 05:23 to 21:23 UTC is 06:23 to 22:23 in summer (BST), 05:23 to 21:23 in winter (GMT).
-    - cron: '23 5-21 * * *'
+    # GitHub reads these as UTC: 05:23, 08:23 ... 20:23 UTC is 06:23 to 21:23 in summer (BST), an hour earlier in winter.
+    - cron: '23 5-20/3 * * *'
   push:
     branches: [main]
     paths:

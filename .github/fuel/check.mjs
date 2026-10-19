@@ -1,16 +1,16 @@
-// Hourly fuel price check for the Toolbox "Fuel Prices" page (Leighton Buzzard).
+// Fuel price backup for the Toolbox "Fuel Prices" page, Leighton Buzzard only (every 3 hours, see fuel.yml).
 //
-// Reads PetrolPrices.co.uk's public Leighton Buzzard page, which shows the UK Government Fuel Finder feed (every
-// forecourt has to report a price change within 30 minutes). The government's own feed blocks GitHub's servers,
-// so this page is the way in. If GitHub can't read it directly it tries once through jina (r.jina.ai).
-// Saves tools/fuel/data/prices.json when a price changes, a forecourt comes or goes, or the saved copy is 3 hours
-// old (so the page can say when GitHub last looked). Reading the page uses tools/fuel/parse.js, the same file
-// the page itself uses, so both always read it the same way.
+// Every store's page reads its prices live when it's opened. This saves Leighton Buzzard's to
+// tools/fuel/data/prices.json as a fallback and a history of what changed. It reads PetrolPrices.co.uk's fuel
+// map for Leighton Buzzard (the UK Government Fuel Finder feed) through jina (r.jina.ai), which runs the map's
+// page and hands back its text: once for petrol (E10) and once for diesel (B7). The government's own feed blocks
+// GitHub's servers, and the map needs a browser to fill in its list, hence jina. Reading the text uses
+// tools/fuel/parse.js, the same file the page uses.
 //
-// A failed read only fails the run (a red cross and an email) once the saved prices are more than a day old, so a
-// short outage on their side doesn't send an email every hour.
+// Saves when a price changes, a forecourt comes or goes, or the saved copy is over 5 hours old. A failed read
+// only fails the run (a red cross and an email) once the saved prices are more than a day old.
 //
-// Test hooks: FUEL_URL (the page to read), JINA_URL (the jina relay), FUEL_NOW (pretend time), FUEL_DIR (data folder).
+// Test hooks: JINA_URL (the jina relay), FUEL_NOW (pretend time), FUEL_DIR (data folder), GAP_MS (pause).
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -20,11 +20,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 vm.runInThisContext(fs.readFileSync(path.join(ROOT, 'tools/fuel/parse.js'), 'utf8'), { filename: 'tools/fuel/parse.js' });
 const F = globalThis.FuelParse;
 
+const PLACE = 'Leighton Buzzard';
 const DIR = process.env.FUEL_DIR || path.join(process.cwd(), 'tools/fuel/data');
 const FILE = path.join(DIR, 'prices.json');
-const PAGE = process.env.FUEL_URL || F.URL;
 const JINA = process.env.JINA_URL || 'https://r.jina.ai/';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+const GAP = Number(process.env.GAP_MS || 4000);
 const now = process.env.FUEL_NOW ? new Date(process.env.FUEL_NOW) : new Date();
 const NOW = now.toISOString();
 const TEMP = process.env.RUNNER_TEMP || '';
@@ -33,60 +33,53 @@ const hours = (iso) => (iso ? (now - new Date(iso)) / 3600000 : Infinity);
 
 let saved = null;
 try { saved = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch { /* first run */ }
-const known = saved && saved.stations ? saved.stations : {};
+if (saved && saved.place !== PLACE) saved = null; // an older layout of the file
 
-async function get(url, headers) {
-  try {
-    const r = await fetch(url, { headers: { 'user-agent': UA, ...headers }, signal: AbortSignal.timeout(40000) });
-    const body = await r.text();
-    return r.ok ? { body } : { why: 'HTTP ' + r.status };
-  } catch (e) {
-    return { why: String(e.cause?.code || e.name || e.message) };
-  }
-}
-
-/* -> {res} or {why}: the page read directly (twice, 20 s apart), then through jina */
-async function read() {
+/* one fuel -> {res} or {why}; two tries, 20 s apart */
+async function read(fuel) {
   const whys = [];
-  for (const [how, url, headers, wait] of [
-    ['direct', PAGE, { accept: 'text/html' }, 0],
-    ['direct', PAGE, { accept: 'text/html' }, 20000],
-    ['jina', JINA + PAGE, { accept: 'text/plain' }, 3000]
-  ]) {
-    if (wait) await sleep(wait);
-    const g = await get(url, headers);
-    if (g.why) { whys.push(how + ': ' + g.why); continue; }
-    const res = F.parse(g.body, { now, known });
-    const bad = F.ok(res);
-    if (!bad) { res.how = how; return { res }; }
-    whys.push(how + ': ' + bad);
+  for (let i = 0; i < 2; i++) {
+    if (i) await sleep(GAP * 5);
+    try {
+      const r = await fetch(JINA + F.mapURL(PLACE, fuel), { headers: { accept: 'text/plain', 'x-timeout': '20' }, signal: AbortSignal.timeout(60000) });
+      if (!r.ok) { whys.push('HTTP ' + r.status); continue; }
+      const res = F.parse(await r.text(), { now });
+      const bad = F.ok(res);
+      if (!bad) return { res };
+      whys.push(bad);
+    } catch (e) {
+      whys.push(String(e.cause?.code || e.name || e.message));
+    }
   }
-  return { why: whys.join('; ') };
+  return { why: fuel + ': ' + whys.join(', ') };
 }
 
 function summary(lines) {
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
 }
 
-const { res, why } = await read();
-if (!res) {
+const petrol = await read('petrol');
+await sleep(GAP);
+const diesel = await read('diesel');
+if (!petrol.res || !diesel.res) {
   const age = hours(saved && saved.checked);
-  const msg = `Couldn't read the fuel prices (${why}). Saved prices are ${isFinite(age) ? Math.round(age) + ' hours' : 'not there'} old.`;
+  const msg = `Couldn't read the fuel prices (${[petrol.why, diesel.why].filter(Boolean).join('; ')}). Saved prices are ${isFinite(age) ? Math.round(age) + ' hours' : 'not there'} old.`;
   console.log((age > 24 ? '::error::' : '::warning::') + msg);
   summary(['### Fuel prices', '', msg]);
   process.exit(age > 24 ? 1 : 0);
 }
 
-const { data, changes, changed } = F.merge(saved, res, NOW);
-const stale = hours(saved && saved.checked) >= 3;
-const rank = (f) => Object.values(data.stations).filter((s) => s[f].p !== null).sort((a, b) => a[f].p - b[f].p);
-const table = (f) => rank(f).map((s, i) => `| ${i + 1} | ${s.name} | ${s[f].p.toFixed(1)}p |`);
-summary(['### Leighton Buzzard fuel', '', `Read ${res.how}, ${res.stations.length} forecourts, reported ${res.reported || 'at an unknown time'}.`,
+const list = F.combine(petrol.res, diesel.res);
+const synced = [petrol.res.synced, diesel.res.synced].filter(Boolean).sort().pop() || null;
+const { data, changes, changed } = F.merge(saved, list, synced, NOW, PLACE);
+const rank = (f) => list.filter((s) => s[f]).sort((a, b) => a[f].p - b[f].p);
+const table = (f) => rank(f).map((s, i) => `| ${i + 1} | ${s.brand}, ${s.address} | ${s[f].p.toFixed(1)}p | ${s[f].date || ''} |`);
+summary(['### Leighton Buzzard fuel', '', `${list.length} forecourts within ${F.RADIUS} miles, site synced ${synced || 'at an unknown time'}.`,
   changes.length ? '\nChanges: ' + changes.join('; ') : '\nNo price changes.', '',
-  '| | Petrol (E10) | |', '|---|---|---|', ...table('petrol'), '', '| | Diesel (B7) | |', '|---|---|---|', ...table('diesel')]);
-console.log(`Read ${res.how}: ${res.stations.length} forecourts, reported ${res.reported}. ${changes.length ? changes.join('; ') : 'No changes.'}`);
+  '| | Petrol (E10) | | Reported |', '|---|---|---|---|', ...table('petrol'), '', '| | Diesel (B7) | | Reported |', '|---|---|---|---|', ...table('diesel')]);
+console.log(`${list.length} forecourts, synced ${synced}. ${changes.length ? changes.join('; ') : 'No changes.'}`);
 
-if (changed || stale || !saved) {
+if (changed || !saved || hours(saved.checked) >= 5) {
   fs.mkdirSync(DIR, { recursive: true });
   fs.writeFileSync(FILE, JSON.stringify(data, null, 1) + '\n');
   const title = changes.length ? 'Fuel prices: ' + changes.slice(0, 3).join(', ') + (changes.length > 3 ? ' and ' + (changes.length - 3) + ' more' : '') : 'Fuel prices checked, no changes';

@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#0f1115">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Toolbox">
-<title>Leighton Buzzard fuel</title>
+<title>Fuel prices</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=69c2c88d80">
-<link rel="stylesheet" href="fuel/fuel.css?v=ce8e4af2fa">
+<link rel="stylesheet" href="fuel/fuel.css?v=ca9312c914">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -17,8 +17,14 @@
 <body>
 <div class="wrap fu">
   <a class="back" href="../index.html">&larr; Toolbox</a>
-  <h1>Leighton Buzzard fuel</h1>
-  <p class="fu-sub">Every forecourt in town, cheapest first.</p>
+  <h1>Fuel near <span id="town">your store</span></h1>
+  <p class="fu-sub" id="sub">Forecourts near your store, cheapest first.</p>
+
+  <label class="fu-store">
+    <span>Your store</span>
+    <select id="store" aria-label="Your store"></select>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  </label>
 
   <div class="fu-switch" role="tablist" aria-label="Fuel">
     <button type="button" role="tab" id="tab-petrol" data-fuel="petrol" aria-selected="true"><i class="fu-dot" aria-hidden="true"></i>Petrol<small>E10</small></button>
@@ -38,11 +44,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
       Check again
     </button>
-    <p>Tap a forecourt for directions. GitHub also checks every hour from 6am to 10pm, and this page checks again each time you open it.</p>
-    <p>Prices are what each forecourt has reported to the UK Government Fuel Finder scheme (they must report a change within 30 minutes), read from <a href="https://www.petrolprices.co.uk/towns/leighton-buzzard.php" target="_blank" rel="noopener">PetrolPrices.co.uk</a>. Contains public sector information licensed under the Open Government Licence v3.0. Always check the price on the pump.</p>
+    <p>Tap a forecourt for directions. Prices are checked live each time you open this page. A price in amber hasn't been reported for over 3 days, so it may have changed.</p>
+    <p>Prices are what each forecourt has reported to the UK Government Fuel Finder scheme (they must report a change within 30 minutes), read from <a href="https://www.petrolprices.co.uk/map.php" target="_blank" rel="noopener">PetrolPrices.co.uk</a>. Contains public sector information licensed under the Open Government Licence v3.0. Always check the price on the pump.</p>
   </div>
 </div>
-<script src="fuel/parse.js?v=20223aa077"></script>
-<script src="fuel/app.js?v=77b8ee9b77"></script>
+<script src="fuel/parse.js?v=43d78e20f2"></script>
+<script src="fuel/app.js?v=029a6a29e2"></script>
 </body>
 </html>
