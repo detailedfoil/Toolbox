@@ -1,16 +1,16 @@
 {
- "date": "18.10.2026",
- "fileName": "18.10.2026.xlsx",
+ "date": "19.10.2026",
+ "fileName": "19.10.2026.xlsx",
  "stores": [
   {
    "name": "Hoddesdon (UB4)",
-   "p": 137,
-   "pa": 8,
+   "p": 139,
+   "pa": 9,
    "d": 1
   },
   {
    "name": "Flitwick (JM5)",
-   "p": 162,
+   "p": 164,
    "pa": 7,
    "d": 3
   },
@@ -22,7 +22,7 @@
   },
   {
    "name": "Hertford (IC6)",
-   "p": 143,
+   "p": 145,
    "pa": 7,
    "d": 3
   },
@@ -34,85 +34,85 @@
   },
   {
    "name": "Biggleswade (ED1)",
-   "p": 148,
+   "p": 150,
    "pa": 12,
    "d": 3
   },
   {
-   "name": "Chesham (SB9)",
-   "p": 158,
-   "pa": 7,
-   "d": 6
-  },
-  {
    "name": "Houghton Regis (DB4)",
-   "p": 137,
+   "p": 138,
    "pa": 7,
    "d": 5
   },
   {
    "name": "Luton - Bilton Way (LT2)",
-   "p": 108,
+   "p": 111,
    "pa": 10,
    "d": 2
   },
   {
+   "name": "Chesham (SB9)",
+   "p": 161,
+   "pa": 7,
+   "d": 7
+  },
+  {
    "name": "Saffron Walden (JR8)",
-   "p": 178,
-   "pa": 9,
+   "p": 180,
+   "pa": 10,
    "d": 7
   },
   {
    "name": "Leighton Buzzard (FA2)",
-   "p": 160,
+   "p": 164,
    "pa": 13,
    "d": 5
   },
   {
    "name": "Stevenage (ET3)",
-   "p": 131,
+   "p": 132,
    "pa": 14,
    "d": 3
   },
   {
    "name": "Luton - Windmill (AL2)",
-   "p": 164,
+   "p": 166,
    "pa": 11,
    "d": 7
   },
   {
    "name": "Letchworth (TT8)",
-   "p": 142,
+   "p": 144,
    "pa": 12,
    "d": 5
   },
   {
    "name": "St Albans (OA7)",
-   "p": 150,
+   "p": 152,
    "pa": 20,
    "d": 2
   },
   {
    "name": "Dunstable (LB1)",
-   "p": 127,
+   "p": 130,
    "pa": 10,
    "d": 5
   },
   {
    "name": "Bishops Stortford (VA2)",
-   "p": 120,
+   "p": 122,
    "pa": 14,
    "d": 4
   },
   {
    "name": "Royston (ED6)",
-   "p": 198,
+   "p": 199,
    "pa": 21,
    "d": 8
   },
   {
    "name": "Amersham (XA6)",
-   "p": 162,
+   "p": 163,
    "pa": 15,
    "d": 8
   },
@@ -123,23 +123,23 @@
    "d": 5
   },
   {
+   "name": "Harlow (AT2)",
+   "p": 105,
+   "pa": 6,
+   "d": 10
+  },
+  {
    "name": "Hemel Hempstead (IT9)",
    "p": 122,
    "pa": 9,
    "d": 11
-  },
-  {
-   "name": "Harlow (AT2)",
-   "p": 103,
-   "pa": 6,
-   "d": 10
   }
  ],
  "area": {
   "name": "Area Total",
-  "p": 3166,
-  "pa": 246,
-  "d": 109
+  "p": 3203,
+  "pa": 248,
+  "d": 110
  },
- "published": "2026-10-18T07:52:56.674Z"
+ "published": "2026-10-19T09:31:24.420Z"
 }
