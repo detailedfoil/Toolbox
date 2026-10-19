@@ -75,11 +75,36 @@
       .finally(function () { clearTimeout(timer); });
   }
 
+  /* a loading bar: not a real measure, it eases towards 92% while the prices load, then fills and fades out */
+  var barTimer = 0;
+  function barStart() {
+    var bar = $('bar'), fill = $('barFill');
+    clearTimeout(barTimer);
+    bar.hidden = false;
+    bar.classList.remove('is-out');
+    fill.style.transition = 'none';
+    fill.style.width = '0%';
+    void fill.offsetWidth; // let the reset land before it starts moving
+    fill.style.transition = 'width 12s cubic-bezier(.08,.6,.2,1)';
+    fill.style.width = '92%';
+  }
+  function barDone() {
+    var bar = $('bar'), fill = $('barFill');
+    fill.style.transition = 'width .25s ease-out';
+    fill.style.width = '100%';
+    clearTimeout(barTimer);
+    barTimer = setTimeout(function () {
+      bar.classList.add('is-out');
+      barTimer = setTimeout(function () { bar.hidden = true; }, 500);
+    }, 300);
+  }
+
   function refresh() {
     var store = state.store;
     if (!store) return;
     var run = ++state.run, place = store.place, mine = function () { return run === state.run; };
     state.checking = true;
+    barStart();
     $('again').disabled = true;
     $('error').hidden = true;
     setStatus(state.shown ? 'Checking for newer prices' : 'Getting the latest prices', true);
@@ -110,6 +135,7 @@
     }).finally(function () {
       if (!mine()) return;
       state.checking = false;
+      barDone();
       $('again').disabled = false;
     });
   }
