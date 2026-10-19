@@ -1,0 +1,72 @@
+{
+ "source": "https://www.petrolprices.co.uk/towns/leighton-buzzard.php",
+ "reported": "2026-10-19T12:03:00+01:00",
+ "checked": "2026-10-19T11:20:48.262Z",
+ "stations": {
+  "LU7 1ER": {
+   "name": "Tesco Leighton Buzzard Superstore",
+   "address": "Vimy Road, Leighton Buzzard, LU7 1ER",
+   "postcode": "LU7 1ER",
+   "petrol": {
+    "p": 168.9,
+    "since": "2026-10-19T11:20:48.262Z"
+   },
+   "diesel": {
+    "p": 193.9,
+    "since": "2026-10-19T11:20:48.262Z"
+   }
+  },
+  "LU7 1LA": {
+   "name": "Shell Harvest Energy St Christopher's",
+   "address": "Leighton Road, Leighton Buzzard, LU7 1LA",
+   "postcode": "LU7 1LA",
+   "petrol": {
+    "p": 169.9,
+    "since": "2026-10-19T11:20:48.262Z"
+   },
+   "diesel": {
+    "p": 199.9,
+    "since": "2026-10-19T11:20:48.262Z"
+   }
+  },
+  "LU7 1RS": {
+   "name": "BP Lake Street Service Station",
+   "address": "45 Lake Street, Leighton Buzzard, LU7 1RS",
+   "postcode": "LU7 1RS",
+   "petrol": {
+    "p": 166.7,
+    "since": "2026-10-19T11:20:48.262Z"
+   },
+   "diesel": {
+    "p": 194.7,
+    "since": "2026-10-19T11:20:48.262Z"
+   }
+  },
+  "LU7 1WS": {
+   "name": "Morrisons Leighton Buzzard",
+   "address": "Lake Street, Leighton Buzzard, LU7 1WS",
+   "postcode": "LU7 1WS",
+   "petrol": {
+    "p": 166.7,
+    "since": "2026-10-19T11:20:48.262Z"
+   },
+   "diesel": {
+    "p": 194.7,
+    "since": "2026-10-19T11:20:48.262Z"
+   }
+  },
+  "LU7 9HH": {
+   "name": "Shell Little Waitrose Grovebury",
+   "address": "Billington Road, Leighton Buzzard, LU7 9HH",
+   "postcode": "LU7 9HH",
+   "petrol": {
+    "p": 173.9,
+    "since": "2026-10-19T11:20:48.262Z"
+   },
+   "diesel": {
+    "p": 201.9,
+    "since": "2026-10-19T11:20:48.262Z"
+   }
+  }
+ }
+}
