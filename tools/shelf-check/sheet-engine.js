@@ -771,11 +771,14 @@
         runs.push(run);
         if (runs.length > 1 && runs.every(function (r) { return r === runs[0]; }) && runs[0] >= 2 && runs[0] <= PG.maxCols) cols = runs[0];
       });
+      // a bay whose longest shelf has 9 or 10 lines keeps every shelf on one line (detailedfoil, 19 Oct), narrower slots
+      var longest = shelves.reduce(function (m, sh) { return Math.max(m, sh.spots.length); }, 0);
+      var rowMax = longest > cols && longest <= 10 ? longest : cols;
       var lim = Math.min(avail1, avail), cur = null;
       shelves.forEach(function (sh) {
-        var lines = Math.ceil(sh.spots.length / cols), h = PG.strip + lines * PG.cellH;
+        var lines = Math.ceil(sh.spots.length / rowMax), h = PG.strip + lines * PG.cellH;
         if (!cur || (cur.h + h > lim && cur.shelves.length)) {
-          cur = { bay: b, cont: !!cur, cols: cols, h: PG.title, shelves: [], page: b.page };
+          cur = { bay: b, cont: !!cur, rowMax: rowMax, cols: cols, h: PG.title, shelves: [], page: b.page };
           segs.push(cur);
         }
         cur.shelves.push(sh); cur.h += h;
@@ -847,9 +850,9 @@
         g.rect(bx, cy - PG.strip, bw, PG.strip, 0.3);
         if (sh.label) { var fl = fitText('HB', 6.5, 5, bw - 6, sh.label.toUpperCase()); g.text('HB', fl.size, WHITE, bx + 3, cy - PG.strip / 2 - 2.3, fl.s); }
         cy -= PG.strip;
-        var lines = Math.ceil(sh.spots.length / sg.cols);
+        var lines = Math.ceil(sh.spots.length / sg.rowMax);
         for (var ln = 0; ln < lines; ln++) {
-          var row = sh.spots.slice(ln * sg.cols, (ln + 1) * sg.cols);
+          var row = sh.spots.slice(ln * sg.rowMax, (ln + 1) * sg.rowMax);
           var cw = bw / row.length;                         // the slots share the shelf, like the brief
           row.forEach(function (s, k) { drawSlot(g, bx + k * cw, cy - PG.cellH, cw, PG.cellH, s); });
           cy -= PG.cellH;
