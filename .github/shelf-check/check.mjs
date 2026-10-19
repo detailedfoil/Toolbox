@@ -82,7 +82,7 @@ for (const c of codes) {
 
 const targets = mode === 'smoke' ? codes.slice(0, 5)
   : fresh ? codes
-  : codes.filter((c) => { const p = state.products[c]; return p.price == null || p.status === 'unchecked'; });
+  : codes.filter((c) => { const p = state.products[c]; return p.price == null || p.status === 'unchecked' || p.status === 'not_found'; });   // a "not found" gets another look in catch-ups, in case it was a blip
 
 const label = { auto: fresh ? 'weekly check' : 'catch-up', full: 'full check', test: 'test run (saves nothing)', smoke: 'smoke test (saves nothing)' }[mode];
 log(`Shelf check ${today}: ${label}, ${targets.length} of ${codes.length} lines to check, one every ${GAP / 1000}s. Chrome ${MAJOR} headers.`);
