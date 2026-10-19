@@ -2,7 +2,7 @@
   "plan": "Autumn 2 front of house",
   "checked": "2026-10-19",
   "previous_checked": "2026-10-12",
-  "run": {"week":"2026-10-19","started":"2026-10-19T03:46:29.604Z","finished":"2026-10-19T09:01:09.435Z","trigger":"schedule","complete":true,"total":552,"checked":552,"changed":5,"up":2,"down":3,"not_found":1,"unchecked":0},
+  "run": {"week":"2026-10-19","started":"2026-10-19T03:46:29.604Z","finished":"2026-10-19T09:07:57.644Z","trigger":"schedule","complete":true,"total":552,"checked":552,"changed":5,"up":2,"down":3,"not_found":0,"unchecked":0},
   "products": {
     "10171": {"name":"Essentials Pop-Up Garden Bag 690 x 560mm 170Ltr","price":12.99,"prev":null,"status":"ok","was":null,"on":"2026-10-19"},
     "10955": {"name":"Flomasta Washing Machine Inlet Hose Blue 2.5m x 3/4\"","price":5.99,"prev":null,"status":"ok","was":null,"on":"2026-10-19"},
@@ -520,7 +520,7 @@
     "752RG": {"name":"Hilka Pro-Craft Ice Scraper 90mm","price":3.99,"prev":null,"status":"ok","was":null,"on":"2026-10-19"},
     "947VP": {"name":"STIHL Bypass PG 10 Secateurs 8.6\" (22cm)","price":12.99,"prev":null,"status":"ok","was":null,"on":"2026-10-19"},
     "720VP": {"name":"STIHL ForestPlus Chain Oil 1Ltr","price":8.98,"prev":null,"status":"ok","was":null,"on":"2026-10-19"},
-    "826KH": {"name":"Titan TTB774VAC 1300W 16Ltr Wet & Dry Vacuum 220-240V","price":49.99,"prev":null,"status":"not_found","was":null,"on":"2026-10-19"},
+    "826KH": {"name":"Titan TTB774VAC 1300W 16Ltr Wet & Dry Vacuum 220-240V","price":49.99,"prev":null,"status":"ok","was":null,"on":"2026-10-19"},
     "4118D": {"name":"Essentials 10AX 1-Gang 1-Way Light Switch White","price":0.79,"prev":null,"status":"ok","was":null,"on":"2026-10-19"},
     "3699D": {"name":"Essentials 13A 2-Gang DP Switched Plug Socket White","price":2.69,"prev":null,"status":"ok","was":null,"on":"2026-10-19"},
     "436FE": {"name":"OB41 Silicone Lubricating Spray 400ml","price":5.89,"prev":null,"status":"ok","was":null,"on":"2026-10-19"},
