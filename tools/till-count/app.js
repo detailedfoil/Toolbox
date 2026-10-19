@@ -72,7 +72,7 @@
     cbox.appendChild(el('span', null, 'coins'));
     row.appendChild(cbox);
     var acts = el('div', { class: 'tc-acts' });
-    acts.appendChild(el('button', { type: 'button', class: 'tc-cam', 'data-id': d.id, 'data-act': 'camera' }, CAM + '<span>Take photo</span>'));
+    acts.appendChild(el('button', { type: 'button', class: 'tc-cam', 'data-id': d.id, 'data-act': 'camera' }, CAM + '<span>Count from photo</span>'));
     acts.appendChild(el('button', { type: 'button', class: 'tc-gal', 'data-id': d.id, 'data-act': 'gallery' }, PIC + '<span>Choose photo</span>'));
     row.appendChild(acts);
     row.appendChild(el('p', { class: 'tc-msg', id: 'm-' + d.id, hidden: '' }));

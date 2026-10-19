@@ -3,7 +3,10 @@
 @media (prefers-color-scheme:light){.tc{--check:#a86400;--bad:#c8372b;--added:#2d6df6;--ok:#13874f}}
 .tc [hidden]{display:none!important}
 .tc h1{margin-bottom:4px}
-.tc-sub{margin:0 0 14px;color:var(--muted)}
+.tc-sub{margin:0 0 12px;color:var(--muted)}
+.tc-tip{display:flex;gap:12px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:16px;background:var(--accent-soft);color:var(--text)}
+.tc-tip svg{width:26px;height:26px;flex:none;margin-top:1px;color:var(--accent)}
+.tc-tip p{margin:0;font-size:.9rem;line-height:1.45}
 
 /* the total, always in view */
 .tc-total{position:sticky;top:max(8px,env(safe-area-inset-top));z-index:5;padding:12px 16px 12px;border-radius:20px;background:var(--card);border:1px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.28)}

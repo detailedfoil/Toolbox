@@ -9,7 +9,7 @@
 <title>Till Count</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=69c2c88d80">
-<link rel="stylesheet" href="till-count/till-count.css?v=bf78de9b21">
+<link rel="stylesheet" href="till-count/till-count.css?v=3b0bcb3077">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -18,7 +18,11 @@
 <div class="wrap tc">
   <a class="back" href="../index.html">&larr; Toolbox</a>
   <h1>Till Count</h1>
-  <p class="tc-sub">Type each note and coin as a value or a number, or photograph a pile of one coin and it counts them for you.</p>
+  <p class="tc-sub">Add up a till by note and coin.</p>
+  <div class="tc-tip">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+    <p><b>Photograph a pile of coins and it counts them.</b> In each coin below, tap <b>Count from photo</b>, then take a picture of that coin laid out on a plain surface. Or just type the amount or the number of coins.</p>
+  </div>
 
   <section class="tc-total" id="totalBar" aria-label="Till total">
     <div class="tc-total-top">
@@ -54,6 +58,6 @@
 <input type="file" accept="image/*" id="gallery" hidden>
 <script src="till-count/money.js?v=e01266c5f6"></script>
 <script src="till-count/coins.js?v=8c610217a2"></script>
-<script src="till-count/app.js?v=5ba3e8fb03"></script>
+<script src="till-count/app.js?v=51c0346673"></script>
 </body>
 </html>
