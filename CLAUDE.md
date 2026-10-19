@@ -37,7 +37,7 @@ explain changes in plain English and say what they'll see.
     it (needs `X-Timeout`, or the list hasn't filled in). The government's own feed blocks GitHub's servers. Shared by
     the page (live on every open) and the Leighton Buzzard backup on GitHub. `data/hidden.json` lists forecourts to
     leave out for everyone (closed, say): each is hidden until it reports a price dated after its `hiddenOn`.
-  - `till-count`: Till Count, every store. Notes take a value; coins take a value, a number of coins or a photo
+  - `till-count`: Photo Coin Counter (was Till Count), every store. Notes take a value; coins take a value, a number of coins or a photo
     of a pile of one coin (whichever was changed last wins). A £50 or £75 float (remembered per phone) comes off
     the total. Counts last while the page is open (sessionStorage) and photos only in memory: nothing is sent
     anywhere. `coins.js` is the coin reader, no libraries: edge points vote for circle middles (a first pass at
