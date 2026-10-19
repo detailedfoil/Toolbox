@@ -2,7 +2,7 @@
  "name": "Autumn 2 front of house",
  "short": "Autumn 2 FOH",
  "store": "Screwfix Dunstable",
- "brief": "Autumn 2 UK main campaign brief, updated 06.10.26",
+ "brief": "Autumn 2 UK main campaign brief, updated 09.10.26",
  "order": "Each bay is listed top shelf first, left to right along each shelf.",
  "bays": [
   {
@@ -31,6 +31,7 @@
     {
      "label": "Shelf 3",
      "codes": [
+      "65021",
       "32802",
       "14295",
       "10955",
@@ -69,6 +70,7 @@
     "242PN",
     "69127",
     "67928",
+    "65021",
     "32802",
     "14295",
     "10955",
@@ -409,7 +411,7 @@
      "label": "Shelf 2",
      "codes": [
       "6032H",
-      "67758",
+      "528EA",
       "3301F"
      ]
     },
@@ -445,7 +447,7 @@
     "82791",
     "88987",
     "6032H",
-    "67758",
+    "528EA",
     "3301F",
     "891GT",
     "575PF",
@@ -1046,6 +1048,7 @@
     {
      "label": "Dump stacks",
      "codes": [
+      "718JK",
       "40237",
       "472KJ",
       "64253",
@@ -1062,6 +1065,7 @@
     }
    ],
    "codes": [
+    "718JK",
     "40237",
     "472KJ",
     "64253",
@@ -2316,7 +2320,6 @@
      "label": "For Low level bay 1/3",
      "codes": [
       "82086",
-      "65021",
       "2279H",
       "9881H",
       "6653H",
@@ -2372,7 +2375,7 @@
       "482GT",
       "2948F",
       "90147",
-      "528EA"
+      "191LH"
      ]
     },
     {
@@ -2409,6 +2412,12 @@
      ]
     },
     {
+     "label": "For HLB 4",
+     "codes": [
+      "670CU"
+     ]
+    },
+    {
      "label": "For AOV",
      "codes": [
       "774FR"
@@ -2436,7 +2445,6 @@
     "3699D",
     "436FE",
     "82086",
-    "65021",
     "2279H",
     "9881H",
     "6653H",
@@ -2462,7 +2470,7 @@
     "482GT",
     "2948F",
     "90147",
-    "528EA",
+    "191LH",
     "59707",
     "84584",
     "594RR",
@@ -2476,6 +2484,7 @@
     "445FR",
     "491YW",
     "129RG",
+    "670CU",
     "774FR",
     "320AU",
     "436TM",
@@ -2484,5 +2493,63 @@
     "415AH"
    ]
   }
- ]
+ ],
+ "changes": {
+  "brief": "09.10.26",
+  "since": "06.10.26",
+  "added": [
+   {
+    "code": "65021",
+    "bay": "Low level bay 1: Everyday best sellers",
+    "where": "Low level bay 1, Shelf 3, first",
+    "name": "Flomasta Brass Compression Stop Ends 15mm 2 Pack",
+    "note": "was a contingency line"
+   },
+   {
+    "code": "528EA",
+    "bay": "Low level bay 6: Everyday best sellers",
+    "where": "Low level bay 6, Shelf 2, middle",
+    "name": "Swarfega Heavy Duty Hand Cleanser 1Ltr",
+    "note": "was a contingency line"
+   },
+   {
+    "code": "718JK",
+    "bay": "Dump stacks",
+    "where": "Dump stacks, first",
+    "name": "DEWALT TOUGHSYSTEM 2 STORAGE TOWER 3 PCS"
+   },
+   {
+    "code": "191LH",
+    "bay": "Contingencies",
+    "where": "Contingencies, for Low level bay 6",
+    "name": "Brenner Heavy Duty Degreaser"
+   },
+   {
+    "code": "670CU",
+    "bay": "Contingencies",
+    "where": "Contingencies, for HLB 4",
+    "name": "LAP USB-A to Lightning Charging Cable 1m"
+   }
+  ],
+  "removed": [
+   {
+    "code": "67758",
+    "bay": "Low level bay 6: Everyday best sellers",
+    "where": "Low level bay 6, Shelf 2",
+    "name": "Swarfega Orange Hand Cleaner 450ml",
+    "price": 6.99,
+    "on": "2026-10-12"
+   }
+  ],
+  "check": [
+   {
+    "code": "99915",
+    "why": "the Plumbing POS dispose note now lists it, but it is still on shelf 5 of the planogram"
+   },
+   {
+    "code": "652GT",
+    "why": "its ticket is to be disposed, but it is still on Low level bay 6, shelf 3"
+   }
+  ]
+ }
 }
