@@ -2,7 +2,7 @@
  "name": "Autumn 2 front of house",
  "short": "Autumn 2 FOH",
  "store": "Screwfix Dunstable",
- "brief": "Autumn 2 UK main campaign brief, updated 09.10.26",
+ "brief": "Autumn 2 UK main campaign brief, updated 16.10.26",
  "order": "Each bay is listed top shelf first, left to right along each shelf.",
  "bays": [
   {
@@ -1054,7 +1054,7 @@
       "64253",
       "872RE",
       "748GY",
-      "5892P",
+      "320AU",
       "33680",
       "422PJ",
       "95089",
@@ -1071,7 +1071,7 @@
     "64253",
     "872RE",
     "748GY",
-    "5892P",
+    "320AU",
     "33680",
     "422PJ",
     "95089",
@@ -2208,8 +2208,8 @@
       "821RW",
       "457RW",
       "468PR",
+      "600CJ",
       "482KY",
-      "7748P",
       "639FV"
      ]
     },
@@ -2237,7 +2237,6 @@
       "753HG",
       "2076G",
       "582VE",
-      "690JL",
       "252PA",
       "2381G",
       "760HW",
@@ -2264,8 +2263,8 @@
     "821RW",
     "457RW",
     "468PR",
+    "600CJ",
     "482KY",
-    "7748P",
     "639FV",
     "338PY",
     "296FG",
@@ -2283,7 +2282,6 @@
     "753HG",
     "2076G",
     "582VE",
-    "690JL",
     "252PA",
     "2381G",
     "760HW",
@@ -2424,12 +2422,6 @@
      ]
     },
     {
-     "label": "For Dump stacks",
-     "codes": [
-      "320AU"
-     ]
-    },
-    {
      "label": "For Power Tool Bay",
      "codes": [
       "436TM",
@@ -2486,7 +2478,6 @@
     "129RG",
     "670CU",
     "774FR",
-    "320AU",
     "436TM",
     "625KN",
     "462CH",
@@ -2495,50 +2486,47 @@
   }
  ],
  "changes": {
-  "brief": "09.10.26",
-  "since": "06.10.26",
+  "brief": "16.10.26",
+  "since": "09.10.26",
   "added": [
    {
-    "code": "65021",
-    "bay": "Low level bay 1: Everyday best sellers",
-    "where": "Low level bay 1, Shelf 3, first",
-    "name": "Flomasta Brass Compression Stop Ends 15mm 2 Pack",
-    "note": "was a contingency line"
-   },
-   {
-    "code": "528EA",
-    "bay": "Low level bay 6: Everyday best sellers",
-    "where": "Low level bay 6, Shelf 2, middle",
-    "name": "Swarfega Heavy Duty Hand Cleanser 1Ltr",
-    "note": "was a contingency line"
-   },
-   {
-    "code": "718JK",
+    "code": "320AU",
     "bay": "Dump stacks",
-    "where": "Dump stacks, first",
-    "name": "DEWALT TOUGHSYSTEM 2 STORAGE TOWER 3 PCS"
+    "where": "Dump stacks, replaces 5892P",
+    "name": "Magnusson Aluminium Folding Work Platform",
+    "note": "was a contingency line"
    },
    {
-    "code": "191LH",
-    "bay": "Contingencies",
-    "where": "Contingencies, for Low level bay 6",
-    "name": "Brenner Heavy Duty Degreaser"
-   },
-   {
-    "code": "670CU",
-    "bay": "Contingencies",
-    "where": "Contingencies, for HLB 4",
-    "name": "LAP USB-A to Lightning Charging Cable 1m"
+    "code": "600CJ",
+    "bay": "Weather reactive",
+    "where": "Weather reactive, Heating",
+    "name": "Nilaveli 2000W Electric Portable Fan Heater White"
    }
   ],
   "removed": [
    {
-    "code": "67758",
-    "bay": "Low level bay 6: Everyday best sellers",
-    "where": "Low level bay 6, Shelf 2",
-    "name": "Swarfega Orange Hand Cleaner 450ml",
-    "price": 6.99,
-    "on": "2026-10-12"
+    "code": "5892P",
+    "bay": "Dump stacks",
+    "where": "Dump stacks",
+    "name": "Mac Allister Aluminium 470mm x 0.6m Folding Work Platform",
+    "price": 44.99,
+    "on": "2026-10-19"
+   },
+   {
+    "code": "690JL",
+    "bay": "Weather reactive",
+    "where": "Weather reactive, Misc",
+    "name": "No Nonsense Mould & Mildew Remover 1Ltr",
+    "price": 7.49,
+    "on": "2026-10-19"
+   },
+   {
+    "code": "7748P",
+    "bay": "Weather reactive",
+    "where": "Weather reactive, Heating",
+    "name": "Essentials 1000W Electric Portable Quartz Heater Grey",
+    "price": 16.99,
+    "on": "2026-10-19"
    }
   ],
   "check": [
