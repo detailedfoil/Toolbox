@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Toolbox">
+<title>Till Count</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../style.css?v=69c2c88d80">
+<link rel="stylesheet" href="till-count/till-count.css?v=bf78de9b21">
+<script src="../auth-data.js?v=26c132d57a"></script>
+<script src="../auth.js?v=51f9bae97e"></script>
+<script src="../analytics.js?v=f5e6d397aa"></script>
+</head>
+<body>
+<div class="wrap tc">
+  <a class="back" href="../index.html">&larr; Toolbox</a>
+  <h1>Till Count</h1>
+  <p class="tc-sub">Type each note and coin as a value or a number, or photograph a pile of one coin and it counts them for you.</p>
+
+  <section class="tc-total" id="totalBar" aria-label="Till total">
+    <div class="tc-total-top">
+      <span class="tc-total-k">Total less float</span>
+      <div class="tc-float" role="radiogroup" aria-label="Float to take off">
+        <span>Float</span>
+        <button type="button" role="radio" data-float="5000" aria-checked="false">£50</button>
+        <button type="button" role="radio" data-float="7500" aria-checked="true">£75</button>
+      </div>
+    </div>
+    <output class="tc-net" id="net" aria-live="polite">£0.00</output>
+    <p class="tc-gross" id="grossLine"><b id="gross">£0.00</b> counted, minus <b id="floatTxt">£75.00</b> float</p>
+    <p class="tc-gross" id="emptyLine" hidden>Nothing counted yet. The <b id="floatTxt2">£75.00</b> float comes off as you count.</p>
+  </section>
+
+  <h2 class="tc-h">Notes <span id="notesTotal">£0.00</span></h2>
+  <div class="tc-list" id="notes"></div>
+
+  <h2 class="tc-h">Coins <span id="coinsTotal">£0.00</span></h2>
+  <div class="tc-list" id="coins"></div>
+
+  <div class="tc-foot">
+    <button type="button" class="tc-reset" id="reset">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      Start again
+    </button>
+    <p>Nothing is saved anywhere: your counts stay while this page is open, and Start again clears them all.</p>
+    <p><b>For a good photo:</b> one type of coin at a time, laid flat on a plain surface, spread out so none are on top of each other, taken from straight above with every coin in the shot.</p>
+  </div>
+</div>
+
+<input type="file" accept="image/*" capture="environment" id="camera" hidden>
+<input type="file" accept="image/*" id="gallery" hidden>
+<script src="till-count/money.js?v=e01266c5f6"></script>
+<script src="till-count/coins.js?v=8c610217a2"></script>
+<script src="till-count/app.js?v=5ba3e8fb03"></script>
+</body>
+</html>

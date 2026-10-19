@@ -11,7 +11,7 @@ explain changes in plain English and say what they'll see.
    fingerprint of each file, so phones fetch the new copy and the Monday check and A25 pages show their
    "newer version" banner. Never type a `?v=` by hand. On a merge conflict in a `?v=` line, take either side
    and run the script again.
-2. Run the tests: `cd .github && npm ci` (once per session), then `npm test` (about 15 seconds). They must
+2. Run the tests: `cd .github && npm ci` (once per session), then `npm test` (under a minute). They must
    all pass. If you changed behaviour on purpose, change the test that describes it, and add a test for any
    new awkward case (especially in the page reader, `lookup.js`).
 3. Leave `[skip ci]` off commits that change code, so the tests and the price checks' smoke tests run on
@@ -37,6 +37,14 @@ explain changes in plain English and say what they'll see.
     it (needs `X-Timeout`, or the list hasn't filled in). The government's own feed blocks GitHub's servers. Shared by
     the page (live on every open) and the Leighton Buzzard backup on GitHub. `data/hidden.json` lists forecourts to
     leave out for everyone (closed, say): each is hidden until it reports a price dated after its `hiddenOn`.
+  - `till-count`: Till Count, every store. Notes take a value; coins take a value, a number of coins or a photo
+    of a pile of one coin (whichever was changed last wins). A £50 or £75 float (remembered per phone) comes off
+    the total. Counts last while the page is open (sessionStorage) and photos only in memory: nothing is sent
+    anywhere. `coins.js` is the coin reader, no libraries: edge points vote for circle middles (a first pass at
+    any size finds one coin's size, a second finds every coin of about that size), each checked by how much of
+    its rim shows. Allows for photos taken at a slight angle; amber = counted but worth a look. `money.js` does
+    the sums in whole pence. Tested on two real photos (`.github/tests/fixtures/coins-*.jpg`, 50 10p and 48 20p,
+    receipt blurred): any change to `coins.js` must keep those exact.
   - `nps`, `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
