@@ -16,7 +16,7 @@
   var LITRES = 55, STALE_DAYS = 3;
   var NAMES = { petrol: 'petrol', diesel: 'diesel' };
   var $ = function (id) { return document.getElementById(id); };
-  var state = { fuel: 'petrol', store: null, shown: null, kind: '', run: 0, checking: false, hiddenAt: 0 };
+  var state = { hide: [], fuel: 'petrol', store: null, shown: null, kind: '', run: 0, checking: false, hiddenAt: 0 };
 
   function load(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
@@ -167,7 +167,14 @@
   function render() {
     var data = state.shown;
     if (!data) return;
-    var f = state.fuel, all = Object.keys(data.stations).map(function (k) { var s = data.stations[k]; s.key = k; return s; });
+    var f = state.fuel, every = Object.keys(data.stations).map(function (k) { var s = data.stations[k]; s.key = k; return s; });
+    var held = [], all = every.filter(function (s) {
+      var rule = state.hide.filter(function (r) { return F.isHidden(s, r); })[0];
+      if (rule) held.push(rule);
+      return !rule;
+    });
+    $('held').hidden = !held.length;
+    $('held').innerHTML = held.map(function (r) { return esc(r.name) + ' (' + esc((r.reason || 'hidden').toLowerCase()) + ')'; }).join(', ') + ' hidden until it reports a new price.';
     var priced = all.filter(function (s) { return s[f] && s[f].p != null; })
       .sort(function (a, b) { return a[f].p - b[f].p || (a.miles || 0) - (b.miles || 0); });
     var none = all.filter(function (s) { return !s[f] || s[f].p == null; });
@@ -267,6 +274,11 @@
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) state.hiddenAt = Date.now();
     else if (state.hiddenAt && Date.now() - state.hiddenAt > 10 * 60000 && !state.checking) refresh();
+  });
+
+  // forecourts left out of the lists (closed, say) until they report a new price; the same list for every store
+  getJSON('fuel/data/hidden.json').then(function (d) {
+    if (d && d.stations && d.stations.length) { state.hide = d.stations; render(); }
   });
 
   pickFuel(load('fu-fuel-v1') || 'petrol');

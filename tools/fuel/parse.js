@@ -127,6 +127,13 @@
     return order.map(function (k) { return out[k]; }).sort(function (a, b) { return (a.miles === null ? 99 : a.miles) - (b.miles === null ? 99 : b.miles); });
   }
 
+  /* rule: an entry of data/hidden.json {key, hiddenOn}. A forecourt stays hidden while every price it has reported is
+     dated on or before hiddenOn; a report dated later brings it back. station: {key, petrol: {date}, diesel: {date}} */
+  function isHidden(station, rule) {
+    if (!rule || station.key !== rule.key) return false;
+    return ['petrol', 'diesel'].every(function (f) { var x = station[f]; return !x || !x.date || x.date <= rule.hiddenOn; });
+  }
+
   function fmt(p) { return p == null ? 'no price' : p.toFixed(1) + 'p'; }
 
   /* saved: the data file (or null); list: combine() result; synced / now: ISO */
@@ -152,5 +159,5 @@
     return { data: { place: place || saved.place || null, radius: RADIUS, synced: synced || saved.synced || null, checked: now, stations: stations }, changes: changes, changed: changes.length > 0 };
   }
 
-  root.FuelParse = { STORES: STORES, tidy: tidy, RADIUS: RADIUS, mapURL: mapURL, parse: parse, ok: ok, combine: combine, merge: merge, ukDate: function (d) { return ukParts(d || new Date()).date; } };
+  root.FuelParse = { STORES: STORES, tidy: tidy, RADIUS: RADIUS, mapURL: mapURL, parse: parse, ok: ok, combine: combine, merge: merge, isHidden: isHidden, ukDate: function (d) { return ukParts(d || new Date()).date; } };
 })(typeof window !== 'undefined' ? window : globalThis);

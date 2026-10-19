@@ -94,6 +94,20 @@ test('fuel: a changed price keeps the old one and when it changed; an unchanged 
   assert.deepEqual(plain(gone.changes), ['No longer listed: Shell, Billington Road']);
 });
 
+test('fuel: a hidden forecourt stays out until it reports something newer, and the hide list matches the real page', () => {
+  const rules = JSON.parse(fs.readFileSync(path.join(REPO, 'tools/fuel/data/hidden.json'), 'utf8')).stations;
+  assert.ok(rules.length && rules.every((r) => r.key && r.name && /^\d{4}-\d\d-\d\d$/.test(r.hiddenOn)));
+  const luton = F.parse(LUTON, { now: NOW }).stations;
+  const sains = luton.find((s) => /2-8 Luton Road/.test(s.address));
+  assert.equal(sains.key, rules[0].key, "the hide rule's key is the one the page really produces for Sainsbury's Luton Road");
+  const st = (petrol, diesel) => ({ key: sains.key, petrol: petrol && { date: petrol }, diesel: diesel && { date: diesel } });
+  assert.equal(F.isHidden(st('2026-09-20', '2026-09-20'), rules[0]), true);
+  assert.equal(F.isHidden(st('2026-09-20', null), rules[0]), true, 'a forecourt with only one fuel is still hidden');
+  assert.equal(F.isHidden(st('2026-10-19', '2026-10-19'), rules[0]), true, 'reports from the day it was hidden are the ones already seen');
+  assert.equal(F.isHidden(st('2026-09-20', '2026-10-20'), rules[0]), false, 'a newer report on either fuel brings it back');
+  assert.equal(F.isHidden({ ...st('2026-09-20', null), key: 'SOMEWHERE ELSE' }, rules[0]), false);
+});
+
 /* ---------- the Leighton Buzzard backup, start to finish ---------- */
 
 function jina() {

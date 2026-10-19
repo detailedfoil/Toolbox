@@ -1,0 +1,11 @@
+{
+ "note": "Forecourts to leave out of the Fuel Prices lists, for everyone. A forecourt is hidden while every price it has reported is dated on or before hiddenOn, and comes back by itself as soon as it reports one dated later. key is the forecourt's address as the site writes it, in capitals, with punctuation turned into single spaces.",
+ "stations": [
+  {
+   "key": "2 8 LUTON ROAD DUNSTABLE",
+   "name": "Sainsburys, 2-8 Luton Road, Dunstable",
+   "reason": "Temporarily closed",
+   "hiddenOn": "2026-10-19"
+  }
+ ]
+}

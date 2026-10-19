@@ -35,7 +35,8 @@ explain changes in plain English and say what they'll see.
   - `fuel`: Fuel Prices, every Area 20 store (pick your store; forecourts within 5 miles). `parse.js` holds the
     store list and reads PetrolPrices.co.uk's fuel map (`map.php`, the government Fuel Finder feed) as jina renders
     it (needs `X-Timeout`, or the list hasn't filled in). The government's own feed blocks GitHub's servers. Shared by
-    the page (live on every open) and the Leighton Buzzard backup on GitHub.
+    the page (live on every open) and the Leighton Buzzard backup on GitHub. `data/hidden.json` lists forecourts to
+    leave out for everyone (closed, say): each is hidden until it reports a price dated after its `hiddenOn`.
   - `nps`, `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
