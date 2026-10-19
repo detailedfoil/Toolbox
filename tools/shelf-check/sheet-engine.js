@@ -633,8 +633,9 @@
     flow.para(new Para(ST.meta, ONLY ? (plan.brief || planName) + '  |  Prices correct as of ' + (checked ? nice(checked) : nice(ukToday()))
       : planName + '  |  screwfix.com prices inc VAT, ' + when +
       (prevc ? '  |  compared with ' + nice(prevc) : '') + '  |  ' + done + ' of ' + codes.length + ' lines checked'));
-    flow.spacer(3 * MM);
-    flow.strip([
+    if (!ONLY) {
+      flow.spacer(3 * MM);
+      flow.strip([
       [{ t: String(changed.length), b: 1 }, { t: ' price change' + (changed.length === 1 ? '' : 's') }],
       [{ t: String(up), b: 1 }, { t: ' up  |  ' }, { t: String(changed.length - up), b: 1 }, { t: ' down' }],
       [{ t: String(notFound), b: 1 }, { t: ' not found online  |  ' }, { t: String(notChecked), b: 1 }, { t: ' not checked yet' }]
@@ -644,7 +645,8 @@
       { t: 'Fold down the middle (portrait). Names are small and cut off to fit. Each bay runs top shelf first, left to right along each shelf, down the left half then the right. Check the shelf ticket matches the ' }, { t: 'Price', b: 1 }, { t: ', and tick the box. Rows with a ' },
       { t: 'thick black edge', b: 1 }, { t: ' and an ' }, { t: 'UP', b: 1 }, { t: ' or ' }, { t: 'DOWN', b: 1 },
       { t: ' tag have a new price: swap the ticket.' + (notChecked ? ' A * after a price means it was not rechecked this week.' : '') }]));
-    flow.spacer(ONLY ? 5 * MM : 4 * MM);
+    }
+    flow.spacer(ONLY ? 3 * MM : 4 * MM);
 
     var pc = planChanges(data), newCodes = {};
     if (pc) {
