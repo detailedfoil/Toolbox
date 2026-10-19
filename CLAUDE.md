@@ -32,18 +32,23 @@ explain changes in plain English and say what they'll see.
     shop plan from the brief; a new brief can wait in `data/plan.next.json` until its `effective` date.
   - `counter-trial`: the A25 Behind counter trial page (it also uses `shelf-check/shelf-check.css`).
     `data/plan.json` is the ticket list with the printed prices.
+  - `fuel`: Fuel Prices (Leighton Buzzard forecourts, LB1 only). `parse.js` reads PetrolPrices.co.uk's public
+    Leighton Buzzard page (the government Fuel Finder feed; the government's own feed blocks GitHub's servers) and
+    is shared by the page (which reads it live through jina on every open) and the hourly GitHub check.
   - `nps`, `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.
   A push to `main` that changes the reading code makes each run a five line smoke test.
+  `.github/workflows/fuel.yml` runs `.github/fuel/check.mjs` hourly (about 6am to 10pm UK) and commits
+  `tools/fuel/data/prices.json` when a price changes or the saved copy is 3 hours old.
 - `.github/tests/`: the tests. The checks are run against a pretend jina and Screwfix
   (`mock-screwfix.mjs`, with the made-up products in `scenarios.mjs`), so the tests never touch the real sites.
 
 ## Things that are easy to break
 
 - **Files written by robots.** `tools/shelf-check/data/prices.json`, `phone.json` and
-  `tools/counter-trial/data/prices.json`, `ticks.json` are written by the GitHub checks, or by the pages
+  `tools/counter-trial/data/prices.json`, `ticks.json` and `tools/fuel/data/prices.json` are written by the GitHub checks, or by the pages
   through the GitHub API with a token saved on a phone. Don't edit them by hand, and pull before you push:
   the checks commit to `main` most nights.
 - **The page reader** (`tools/price-tickets/lookup.js`) is behind every price on the site. Bump `VERSION`

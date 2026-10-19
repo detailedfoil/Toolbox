@@ -1,0 +1,72 @@
+/* Fuel Prices page. Colours follow the pumps: green for unleaded, black for diesel. */
+.fu{
+  --petrol:#1fa463;--petrol-ink:#fff;--petrol-soft:rgba(31,164,99,.14);
+  --diesel:#e9ecf2;--diesel-ink:#0f1115;--diesel-soft:rgba(233,236,242,.1);
+  --up:#ff7a6b;--down:#3ccf86;
+}
+@media (prefers-color-scheme:light){
+  .fu{--petrol:#13874f;--petrol-soft:rgba(19,135,79,.1);--diesel:#14171f;--diesel-ink:#fff;--diesel-soft:rgba(20,23,31,.07);--up:#c8372b;--down:#11804a}
+}
+.fu{--fuel:var(--petrol);--fuel-ink:var(--petrol-ink);--fuel-soft:var(--petrol-soft)}
+body[data-fuel="diesel"] .fu{--fuel:var(--diesel);--fuel-ink:var(--diesel-ink);--fuel-soft:var(--diesel-soft)}
+.fu{max-width:620px}
+.fu [hidden]{display:none!important}
+.fu h1{margin-bottom:4px}
+.fu-sub{margin:0 0 18px;color:var(--muted)}
+
+.fu-switch{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;border-radius:16px;background:var(--card);border:1px solid var(--border)}
+.fu-switch button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:0;border-radius:12px;background:transparent;color:var(--muted);font:inherit;font-weight:650;font-size:1.02rem;cursor:pointer;transition:background .15s,color .15s}
+.fu-switch small{font-weight:600;font-size:.72rem;letter-spacing:.04em;opacity:.75}
+.fu-dot{width:10px;height:10px;border-radius:50%;background:var(--petrol);flex:none}
+.fu-switch [data-fuel="diesel"] .fu-dot{background:var(--diesel);box-shadow:0 0 0 1.5px var(--muted)}
+.fu-switch button[aria-selected="true"]{background:var(--fuel);color:var(--fuel-ink)}
+.fu-switch button[aria-selected="true"] .fu-dot{background:var(--fuel-ink);box-shadow:none}
+
+.fu-status{display:flex;align-items:center;gap:8px;min-height:22px;margin:14px 4px 12px;color:var(--muted);font-size:.86rem}
+.fu-pulse{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none;opacity:.5}
+.fu-status.is-live .fu-pulse{background:var(--down);opacity:1}
+.fu-status.is-busy .fu-pulse{background:var(--accent);opacity:1;animation:fu-pulse 1s ease-in-out infinite}
+@keyframes fu-pulse{50%{opacity:.25;transform:scale(.7)}}
+@media (prefers-reduced-motion:reduce){.fu-status.is-busy .fu-pulse{animation:none}}
+
+.fu-best{position:relative;display:flex;flex-direction:column;gap:2px;padding:18px 20px 16px;border-radius:20px;background:var(--fuel);color:var(--fuel-ink);text-decoration:none;margin-bottom:14px;transition:transform .12s}
+.fu-best:active{transform:scale(.985)}
+.fu-best-k{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.85}
+.fu-best-p{font-size:3.4rem;font-weight:800;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums}
+.fu-best-p small{font-size:1.5rem;font-weight:700;margin-left:2px}
+.fu-best-n{font-weight:650;font-size:1.05rem}
+.fu-best-n em{font-style:normal;font-weight:500;opacity:.8}
+.fu-best-s{font-size:.86rem;opacity:.85;margin-top:4px}
+.fu-best-go{position:absolute;top:16px;right:16px;display:inline-flex;align-items:center;gap:4px;font-size:.8rem;font-weight:700;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.18)}
+body[data-fuel="diesel"] .fu-best-go{background:rgba(127,127,127,.18)}
+.fu-best-go svg{width:14px;height:14px}
+
+.fu-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.fu-row{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;padding:13px 14px;border-radius:16px;background:var(--card);border:1px solid var(--border);color:inherit;text-decoration:none;transition:background .12s,border-color .12s}
+.fu-row:hover{background:var(--card-hover);border-color:var(--fuel)}
+.fu-row:active{transform:scale(.99)}
+.fu-rank{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--fuel-soft);font-weight:750;font-variant-numeric:tabular-nums}
+.fu-row.is-best .fu-rank{background:var(--fuel);color:var(--fuel-ink)}
+.fu-who{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fu-who b{font-weight:650;font-size:.98rem;line-height:1.25}
+.fu-who>span{color:var(--muted);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fu-who .fu-moved{white-space:normal;font-size:.78rem;font-weight:600}
+.fu-moved.is-up{color:var(--up)}
+.fu-moved.is-down{color:var(--down)}
+.fu-price{display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right}
+.fu-price b{font-size:1.25rem;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.fu-price span{color:var(--muted);font-size:.78rem;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fu-row.is-best .fu-price span{color:var(--fuel)}
+body[data-fuel="diesel"] .fu-row.is-best .fu-price span{color:var(--text)}
+.fu-row.is-none{opacity:.6}
+.fu-none{padding:20px;text-align:center;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:16px}
+
+.fu-error{margin:12px 0;padding:14px 16px;border-radius:14px;background:rgba(255,122,107,.12);border:1px solid rgba(255,122,107,.35)}
+
+.fu-foot{margin-top:22px;color:var(--muted);font-size:.8rem}
+.fu-foot p{margin:10px 4px 0}
+.fu-foot a{color:inherit}
+.fu-again{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;border-radius:14px;border:1px solid var(--border);background:var(--card);color:var(--text);font:inherit;font-weight:650;cursor:pointer}
+.fu-again:disabled{opacity:.55;cursor:default}
+.fu-again svg{width:18px;height:18px}
+.fu-again:not(:disabled):active svg{transform:rotate(-30deg)}
