@@ -266,7 +266,7 @@
     box.appendChild(ph.view);
     box.appendChild(el('p', { class: 'tc-photo-sum', id: 'ps-' + d.id }));
     box.appendChild(el('ul', { class: 'tc-key', id: 'pk-' + d.id }));
-    box.appendChild(el('p', { class: 'tc-photo-help' }, 'Something wrong? Tap a circle to take it off, or tap a coin it missed to add it.'));
+    box.appendChild(el('p', { class: 'tc-photo-help' }, 'Tap a circle to take it off, or tap a coin it missed to add it.'));
     var acts = el('div', { class: 'tc-photo-acts' });
     acts.appendChild(el('button', { type: 'button', 'data-id': d.id, 'data-act': 'camera' }, CAM + '<span>Retake</span>'));
     acts.appendChild(el('button', { type: 'button', 'data-id': d.id, 'data-act': 'remove' }, 'Remove photo'));
