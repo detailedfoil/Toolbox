@@ -591,7 +591,6 @@
     var store = plan.store || 'Screwfix', planName = plan.name || 'Shop plan', shortName = plan.short || planName;
 
     var flow = new Flow(function (g, pageNo) {
-      g.text('H', 8, GREY, 14 * MM, 9 * MM, win(store + '  |  ' + shortName + ' shelf price check  |  screwfix.com prices inc VAT, ' + when));
       var pg = 'Page ' + pageNo;
       g.text('H', 8, GREY, 196 * MM - width('H', 8, pg), 9 * MM, pg);
     });
@@ -631,7 +630,8 @@
 
     flow.para(new Para(ST.title, ONLY ? 'Price Changes' : 'Shelf Price Check'));
     flow.spacer(1.5 * MM);
-    flow.para(new Para(ST.meta, planName + '  |  screwfix.com prices inc VAT, ' + when +
+    flow.para(new Para(ST.meta, ONLY ? (plan.brief || planName) + '  |  Prices correct as of ' + (checked ? nice(checked) : nice(ukToday()))
+      : planName + '  |  screwfix.com prices inc VAT, ' + when +
       (prevc ? '  |  compared with ' + nice(prevc) : '') + '  |  ' + done + ' of ' + codes.length + ' lines checked'));
     flow.spacer(3 * MM);
     flow.strip([
@@ -640,7 +640,7 @@
       [{ t: String(notFound), b: 1 }, { t: ' not found online  |  ' }, { t: String(notChecked), b: 1 }, { t: ' not checked yet' }]
     ]);
     flow.spacer(3 * MM);
-    flow.para(new Para(ST.info, ONLY ? 'Only lines whose price changed are listed, in shelf order: each bay top shelf first, left to right. A product on more than one shelf has a row for each. Swap each ticket to the new price, then tick the box.' : [
+    if (ONLY) flow.spacer(0); else flow.para(new Para(ST.info, [
       { t: 'Fold down the middle (portrait). Names are small and cut off to fit. Each bay runs top shelf first, left to right along each shelf, down the left half then the right. Check the shelf ticket matches the ' }, { t: 'Price', b: 1 }, { t: ', and tick the box. Rows with a ' },
       { t: 'thick black edge', b: 1 }, { t: ' and an ' }, { t: 'UP', b: 1 }, { t: ' or ' }, { t: 'DOWN', b: 1 },
       { t: ' tag have a new price: swap the ticket.' + (notChecked ? ' A * after a price means it was not rechecked this week.' : '') }]));
@@ -660,7 +660,6 @@
       var prows = pc.added.map(function (x) { return prow('add', x); }).concat(pc.removed.map(function (x) { return prow('rm', x); }));
       flow.table(table(header('Shelf plan changes: new brief ' + pc.brief, pc.added.length + ' added, ' + pc.removed.length + ' removed'), prows));
       flow.spacer(2 * MM);
-      flow.para(new Para(ST.info, 'Added lines need a ticket on the shelf (they show NEW on the full list). Removed lines come off the shelf with their ticket. These stay on the sheets until the next brief.'));
       if (pc.check.length) {
         flow.spacer(1.5 * MM);
         flow.para(new Para(ST.info, [{ t: 'Not sure about: ', b: 1 }].concat(pc.check.map(function (c, i) { return [{ t: (i ? '; ' : '') }, { t: c.code, b: 1 }, { t: ' ' + c.why }]; }).reduce(function (a, b) { return a.concat(b); }, []))));
