@@ -10,8 +10,9 @@ const { JSDOM } = require('jsdom');
 export const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 /* tools/price-tickets/lookup.js in a pretend browser page -> window.ScrewfixLookup */
-export function loadLookup() {
+export function loadLookup(fetchImpl) {
   const dom = new JSDOM('<!doctype html><title>tests</title>', { url: 'https://detailedfoil.github.io/Toolbox/', runScripts: 'outside-only' });
+  if (fetchImpl) dom.window.fetch = fetchImpl;           // a pretend network, to test the relay handling
   dom.window.eval(fs.readFileSync(path.join(REPO, 'tools/price-tickets/lookup.js'), 'utf8'));
   return dom.window.ScrewfixLookup;
 }

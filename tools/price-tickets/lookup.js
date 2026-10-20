@@ -12,7 +12,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = '2026-10-17a';           // shown in error reports, so a stale copy on a phone is easy to spot
+  var VERSION = '2026-10-20a';           // shown in error reports, so a stale copy on a phone is easy to spot
 
   var PROXIES = [
     { id: 'codetabs',   build: function (u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
@@ -25,22 +25,26 @@
     // gets Screwfix's bot check and can keep serving that for a while (tested 16 Oct).
     { id: 'jina',       build: function (u) { return 'https://r.jina.ai/' + u; },
                         full: { 'X-Return-Format': 'html' },
-                        every: 3300 },   // jina allows 20 requests a minute without a key: one every 3.3 s keeps under it, however many readers share it   // not X-No-Cache: a forced live fetch gets Screwfix's bot check (tested 16 Oct)
+                        every: 3300,
+                        timeout: 60000 },   // jina renders the page in a browser: 5-25 s on a slow phone connection, so 25 s cut real answers off (20 Oct)   // jina allows 20 requests a minute without a key: one every 3.3 s keeps under it, however many readers share it   // not X-No-Cache: a forced live fetch gets Screwfix's bot check (tested 16 Oct)
     { id: 'corsproxy',  build: function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); } }
   ];
   var ORDER_KEY = 'pt-proxy-order-v1';
   var TIMEOUT = 25000;                   // Screwfix pages are big: some relays take 10-20 s on a slow network
   var GAP = 400;                         // at least this long between relay requests (bursts get rate-limited)
-  var RETRY_AFTER = [2500, 8000];        // when every relay fails: wait, then try again (twice)
+  var RETRY_AFTER = [2500, 8000, 15000]; // when every relay fails: wait, then try again (twice by default, up to 3 with opts.retries)
 
   function productUrl(code) { return 'https://www.screwfix.com/p/product/' + String(code).toLowerCase(); }
   function now() { return Date.now(); }
   function wait(ms) { return new Promise(function (ok) { setTimeout(ok, ms); }); }
 
   /* Relays that just failed are tried after the others for a while (only the order changes). */
-  var cool = {};
+  var cool = {}, okAt = {};
   var COOL_FOR = { network: 600000, timeout: 60000, limited: 90000, refused: 60000, other: 30000 };
   function coolDown(id, outcome) {
+    // a relay that gave a good answer in the last few minutes is having a blip, not down: leave it first in line.
+    // (Demoting jina for a minute sent every lookup to relays that have been dead for days, 20-60 s each, 20 Oct.)
+    if (okAt[id] && now() - okAt[id] < 300000) return;
     var kind = outcome === 'network' || outcome === 'timeout' ? outcome
              : /^http-429$|^limited$/.test(outcome) ? 'limited'
              : /^http-|^denied$/.test(outcome) ? 'refused' : 'other';
@@ -61,6 +65,7 @@
 
   function promote(id) {
     delete cool[id];
+    okAt[id] = now();
     var ids = proxyOrder().map(function (p) { return p.id; }).filter(function (x) { return x !== id; });
     ids.unshift(id);
     try { localStorage.setItem(ORDER_KEY, JSON.stringify(ids)); } catch (e) { /* private mode */ }
@@ -90,10 +95,10 @@
   }
 
   /* -> {status, text}; rejects with {kind: 'timeout' | 'network'} when no answer came back */
-  function fetchText(url, headers) {
+  function fetchText(url, headers, timeout) {
     var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var timedOut = false;
-    var timer = setTimeout(function () { timedOut = true; if (ctrl) ctrl.abort(); }, TIMEOUT);
+    var timer = setTimeout(function () { timedOut = true; if (ctrl) ctrl.abort(); }, timeout || TIMEOUT);
     var init = { signal: ctrl ? ctrl.signal : undefined, cache: 'no-store', credentials: 'omit' };
     if (headers) init.headers = headers;
     return fetch(url, init)
@@ -338,12 +343,15 @@
     var t0 = now();
     return relaySlot(proxy).then(slot).then(function () {
       t0 = now();
-      return fetchText(proxy.build(productUrl(code)), full && proxy.full);
+      return fetchText(proxy.build(productUrl(code)), full && proxy.full, proxy.timeout);
     }).then(function (res) {
       var r;
       try { r = interpret(res, code); } catch (e) { r = { status: 'blocked', why: 'other' }; }
       var outcome = r.status === 'blocked' ? (r.why || (res.status >= 400 ? 'http-' + res.status : 'other')) : r.status;
       if (outcome === 'http-429' || res.status === 429) outcome = 'limited';
+      // jina answers 200 with "Target URL returned error 502: Bad Gateway" when Screwfix itself hiccups: worth another go
+      // soon, and no reason to demote jina
+      if (r.status === 'blocked' && /Target URL returned error 5\d\d/.test(String(res.text || '').slice(0, 400))) outcome = 'upstream';
       var t = { via: proxy.id, outcome: outcome, ms: now() - t0, http: res.status, result: r, len: (res.text || '').length, mode: full && proxy.full ? 'page' : 'text' };
       // what came back instead of the product page, for error reports
       if (outcome === 'limited') t.retryAfter = retryAfterOf(res.text);
@@ -380,7 +388,7 @@
     code = String(code || '').toUpperCase();
     var trace = [], started = now();
     function finish(r) { r.trace = trace.map(brief); return r; }
-    var rounds = opts.retries != null ? Math.min(opts.retries, RETRY_AFTER.length) : RETRY_AFTER.length;
+    var rounds = opts.retries != null ? Math.min(opts.retries, RETRY_AFTER.length) : 2;
     var maxMs = opts.maxMs || 70000;
     function round(n, only) {
       var order = proxyOrder().filter(function (p) { return (!only || only.indexOf(p.id) >= 0) && (!opts.only || opts.only.indexOf(p.id) >= 0); });
@@ -426,7 +434,7 @@
           if (r.status === 'notfound') { notFound++; if (notFound === 1) promote(proxy.id); }
           else if (r.status === 'partial') { if (!partial) partial = r; }
           // a whole-page request that fails says nothing about the relay's normal text reads, unless it's down or limited
-          else if (!opts.full || /^(network|timeout|limited)$/.test(t.outcome)) coolDown(proxy.id, t.outcome);
+          else if (t.outcome !== 'upstream' && (!opts.full || /^(network|timeout|limited)$/.test(t.outcome))) coolDown(proxy.id, t.outcome);
           return next();
         });
       }

@@ -831,7 +831,11 @@
       live.attempt = (a.mode === 'page' ? 'confirming the new price on ' : 'trying ') + a.via + (a.round ? ' (go ' + (a.round + 1) + ')' : '');
       progress();
     };
-    SL.lookup(code, { skip: skipList(), maxMs: 30000, onAttempt: onAttempt }).then(function (r) {
+    // jina is the only relay that has worked since 16 Oct (the others fail after 20 s each, so asking them first cost a
+    // minute a ticket on 20 Oct). If three tickets in a row can't be read, every relay is tried again in case jina is down.
+    var look = { skip: skipList(), maxMs: 120000, retries: 3, onAttempt: onAttempt };
+    if (!phone.useAll) look.only = ['jina'];
+    SL.lookup(code, look).then(function (r) {
       if (phone !== me) return null;
       noteRelays(r.trace);
       item.steps.push(stepOf('text', r));
@@ -858,6 +862,7 @@
         store(PHONE_KEY, ph);
         phone.got++;
         phone.streak = 0;
+        phone.useAll = false;
         item.result = same(res.price, item.last != null ? item.last : item.ticket) ? 'same' : 'changed';
         item.price = res.price;
       } else {
@@ -866,6 +871,7 @@
         phone.fails++;
         phone.failed.push(code);
         phone.streak++;
+        if (phone.streak >= 3) phone.useAll = true;
         item.result = res.seen != null ? 'unconfirmed' : 'missed';
         item.price = res.seen;
         item.why = res.why;
@@ -874,7 +880,7 @@
       // a fault in this page rather than a relay: log it word for word
       item.result = 'error';
       item.why = String((e && (e.stack || e.message)) || e).split('\n').slice(0, 3).join(' | ').slice(0, 300);
-      if (phone === me) { phone.fails++; phone.failed.push(code); phone.streak++; }
+      if (phone === me) { phone.fails++; phone.failed.push(code); phone.streak++; if (phone.streak >= 3) phone.useAll = true; }
     }).then(function () {
       item.ms = Date.now() - t0;
       if (!item.result) item.result = 'stopped';
@@ -999,7 +1005,7 @@
     if (phone) {
       out.push('run RUNNING' + (phone.retry ? ' (retry)' : '') + ', started ' + hms(phone.started) + ', ' + (phone.total - phone.queue.length) + ' of ' + phone.total +
         ' done, ' + phone.got + ' found, ' + phone.fails + ' missed, ' + phone.streak + ' missed in a row' +
-        (Object.keys(phone.live).length ? ', now ' + Object.keys(phone.live).map(function (k) { return k + ' for ' + sec(now - phone.live[k].t0) + (phone.live[k].attempt ? ' (' + phone.live[k].attempt + ')' : ''); }).join('; ') : ', between tickets') + ', ' + PHONE_WORKERS + ' at once' +
+        (Object.keys(phone.live).length ? ', now ' + Object.keys(phone.live).map(function (k) { return k + ' for ' + sec(now - phone.live[k].t0) + (phone.live[k].attempt ? ' (' + phone.live[k].attempt + ')' : ''); }).join('; ') : ', between tickets') + ', ' + PHONE_WORKERS + ' at once, ' + (phone.useAll ? 'trying every relay (3 in a row failed)' : 'jina only') +
         (skipList().length ? ', leaving out ' + skipList().join(' ') : ''));
     } else {
       var sr = savedRun();

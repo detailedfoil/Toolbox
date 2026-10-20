@@ -90,3 +90,38 @@ test('prices are tidied to £1,234.50 form', () => {
 test('the product link is the one the pages and checks open', () => {
   assert.equal(SL.productUrl('843PG'), 'https://www.screwfix.com/p/product/843pg');
 });
+
+/* ---------- relays: how lookup() behaves when jina has a bad moment (20 Oct 2026) ---------- */
+
+// a pretend fetch that answers each request in turn from a list of [status, body]
+const answers = (list) => { const calls = []; const f = async (url, init) => { calls.push({ url, headers: init && init.headers }); const [status, body] = list[Math.min(calls.length - 1, list.length - 1)]; return { status, text: async () => body }; }; f.calls = calls; return f; };
+const HAMMER = textPage({ code: '843PG', name: 'Stanley Hammer', price: 12.99 });
+const UPSTREAM_502 = 'Title: \n\nURL Source: https://www.screwfix.com/p/product/843pg\n\nWarning: Target URL returned error 502: Bad Gateway\n\nMarkdown Content:\nBad Gateway';
+
+test('Screwfix answering jina with a 502 is tried again, and does not push jina down the order', async () => {
+  const f = answers([[200, UPSTREAM_502], [200, HAMMER]]);
+  const sl = loadLookup(f);
+  const r = await sl.lookup('843PG', { only: ['jina'] });
+  assert.equal(r.status, 'found');
+  assert.equal(r.price, '£12.99');
+  assert.equal(f.calls.length, 2);
+  assert.equal(r.trace[0].outcome, 'upstream');
+  assert.equal(Object.keys(sl.state().resting).length, 0);
+});
+
+test('jina saying slow down (429) is waited out and asked again', async () => {
+  const slow = JSON.stringify({ data: null, retryAfter: 1, code: 429, name: 'RateLimitTriggeredError' });
+  const f = answers([[429, slow], [200, HAMMER]]);
+  const r = await loadLookup(f).lookup('843PG', { only: ['jina'] });
+  assert.equal(r.status, 'found');
+  assert.equal(f.calls.length, 2);
+});
+
+test('a relay that just gave a good answer is not demoted by one bad one', async () => {
+  const f = answers([[200, HAMMER], [503, 'upstream connect error or disconnect/reset before headers']]);
+  const sl = loadLookup(f);
+  assert.equal((await sl.lookup('843PG', { only: ['jina'], retries: 0 })).status, 'found');
+  assert.equal((await sl.lookup('843PG', { only: ['jina'], retries: 0 })).status, 'blocked');
+  assert.equal(Object.keys(sl.state().resting).length, 0);
+  assert.equal(sl.state().order[0], 'jina');
+});
