@@ -19,7 +19,8 @@ function render(filter = "") {
       return '<a class="tile" href="' + t.url + '"' +
         (ext ? ' target="_blank" rel="noopener" data-ext="' + slug + '"' : "") +
         '><div class="icon">' + (t.icon || "🔧") +
-        '</div><div class="name">' + t.name + '</div><div class="desc">' + t.desc + '</div></a>';
+        '</div><div class="name">' + t.name + '</div><div class="desc">' + t.desc + '</div>' +
+        (t.badge ? '<span class="badge">' + t.badge + '</span>' : "") + '</a>';
     }).join("") +
     "</div>").join("");
 }

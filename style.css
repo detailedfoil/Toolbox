@@ -28,3 +28,4 @@ h1{font-size:1.9rem;margin:0;letter-spacing:-.02em}
 .empty{text-align:center;color:var(--muted);padding:40px 0}
 .back{display:inline-block;margin:8px 0 16px;color:var(--accent);text-decoration:none;font-weight:600}
 .panel{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px}
+.tile .badge{align-self:flex-start;margin-top:auto;padding:3px 8px;border-radius:6px;background:repeating-linear-gradient(-45deg,#ffd200 0 8px,#f2c200 8px 16px);color:#111;font-size:.7rem;font-weight:800;letter-spacing:.02em}

@@ -1,0 +1,67 @@
+# Overnight Product Search name check: reads a few hundred product pages a night on screwfix.com (through jina,
+# like the price checks, one every 12 s or so) and saves each product's website name to
+# tools/product-search/data/web-names.json, so Product Search can find products by either name.
+# About 5 weeks to get through the whole list; names already found aren't read again.
+# If Screwfix or jina starts turning it away it stops, the run shows as failed (GitHub emails you), and the next
+# night only tries 10 products before carrying on.
+#
+# A push that changes the check itself runs a small batch of 20, so a mistake shows up straight away.
+# To run it by hand: Actions tab > Product Search names > Run workflow (choose how many).
+name: Product Search names
+
+on:
+  schedule:
+    # 01:23 UTC is 02:23 in summer (BST), 01:23 in winter: after the A25 counter check (00:07) has finished.
+    - cron: '23 1 * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/product-search/check.mjs'
+      - '.github/workflows/product-search-names.yml'
+  workflow_dispatch:
+    inputs:
+      count:
+        description: 'How many products to try (300 is a normal night)'
+        type: number
+        default: 20
+
+permissions:
+  contents: write
+
+concurrency:
+  group: product-search-names
+  cancel-in-progress: false
+
+jobs:
+  names:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install the page reader
+        working-directory: .github
+        run: npm ci --no-audit --no-fund
+
+      - name: Read product names on screwfix.com
+        timeout-minutes: 140
+        env:
+          LIMIT: ${{ github.event_name == 'schedule' && '300' || github.event_name == 'push' && '20' || inputs.count }}
+          GAP_MS: '12000'
+        run: node .github/product-search/check.mjs
+
+      - name: Save the names
+        if: always()
+        run: |
+          [ -f tools/product-search/data/web-names.json ] || exit 0
+          git add tools/product-search/data/web-names.json
+          if git diff --cached --quiet; then echo "Nothing new to save"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          if [ -f "$RUNNER_TEMP/names-commit.txt" ]; then git commit -q -F "$RUNNER_TEMP/names-commit.txt"; else git commit -q -m "Product names (run stopped early) [skip ci]"; fi
+          for i in 1 2 3; do git push -q && exit 0; sleep 5; git pull -q --rebase; done
+          exit 1

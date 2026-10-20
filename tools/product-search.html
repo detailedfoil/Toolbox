@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f4ea1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Toolbox">
+<title>Product Search</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../style.css?v=b86f5823a5">
+<link rel="stylesheet" href="product-search/product-search.css?v=1ca55160b3">
+<script src="../auth-data.js?v=26c132d57a"></script>
+<script src="../auth.js?v=51f9bae97e"></script>
+<script src="../analytics.js?v=f5e6d397aa"></script>
+</head>
+<body class="sx">
+<div class="sx-construction" role="note"><span>Under construction: things may move about or break</span></div>
+
+<header class="sx-head">
+  <div class="sx-head-in">
+    <div class="sx-top">
+      <a class="sx-back" href="../index.html">&larr; Toolbox</a>
+      <span class="sx-parody">A Toolbox parody, not the real shop</span>
+    </div>
+    <div class="sx-brand">
+      <svg class="sx-logo-mark" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="18" fill="#ffd200"/>
+        <circle cx="20" cy="20" r="18" fill="none" stroke="#0b2a66" stroke-width="2.5"/>
+        <path d="M11 20h18M20 11v18" stroke="#0b2a66" stroke-width="4.5" stroke-linecap="round" transform="rotate(20 20 20)"/>
+      </svg>
+      <span class="sx-logo">Scruffix<sup>&trade;</sup></span>
+      <span class="sx-title">Product Search</span>
+    </div>
+    <form class="sx-form" id="form" role="search" autocomplete="off">
+      <input id="q" class="sx-input" type="search" inputmode="search" enterkeyhint="search" autocapitalize="off"
+             autocorrect="off" spellcheck="false" placeholder="Getting the product list ready..." aria-label="Search by product code or name">
+      <button class="sx-go" type="submit" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>
+      </button>
+    </form>
+  </div>
+</header>
+<div class="sx-strip" id="strip">Search &amp; Collect in as little as <b id="stripMs">1 millisecond</b></div>
+
+<main class="sx-main">
+  <p class="sx-status" id="status" role="status">Loading the product list...</p>
+  <p class="sx-note" id="note" hidden></p>
+
+  <section class="sx-welcome" id="welcome">
+    <h2>Over 10,000 products. No crashes. Probably.</h2>
+    <p>Type a product code (or part of one) or a few words from the name. Small spelling mistakes are fine.</p>
+    <div class="sx-try" id="try">
+      <button type="button" data-q="843PG">843PG</button>
+      <button type="button" data-q="isolating valve 15mm">isolating valve 15mm</button>
+      <button type="button" data-q="ptrap">ptrap</button>
+      <button type="button" data-q="milwakee">milwakee</button>
+      <button type="button" data-q="18v combi drill">18v combi drill</button>
+    </div>
+  </section>
+
+  <ol class="sx-results" id="results" aria-label="Results"></ol>
+  <div class="sx-more" id="more" hidden></div>
+
+  <section class="sx-settings" id="settings">
+    <h2>Settings</h2>
+    <label class="sx-switch">
+      <input type="checkbox" id="timings">
+      <span class="sx-knob" aria-hidden="true"></span>
+      <span>Show how fast photos load</span>
+    </label>
+    <label class="sx-switch">
+      <input type="checkbox" id="nophotos">
+      <span class="sx-knob" aria-hidden="true"></span>
+      <span>Don't load photos (saves data)</span>
+    </label>
+    <p class="sx-saved" id="saved">Saved photos on this phone: counting...</p>
+    <button type="button" class="sx-link" id="clearPhotos">Clear saved photos</button>
+    <p class="sx-small" id="about"></p>
+    <p class="sx-small">Scruffix is a joke name and logo for this Toolbox page. The product codes, names and photos are Screwfix's. Product photos come from Screwfix's image server and are saved on this phone once you've seen them, so they still show if that server is down.</p>
+  </section>
+</main>
+
+<div class="sx-timing" id="timingBar" hidden></div>
+<div class="sx-toast" id="toast" role="status" hidden></div>
+
+<script src="product-search/search.js?v=eee99df241"></script>
+<script src="product-search/photos.js?v=cc5c79b571"></script>
+<script src="product-search/app.js?v=4921f12393"></script>
+</body>
+</html>
