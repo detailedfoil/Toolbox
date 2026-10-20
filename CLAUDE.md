@@ -59,8 +59,10 @@ explain changes in plain English and say what they'll see.
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.
   A push to `main` that changes the reading code makes each run a five line smoke test.
-  `.github/workflows/fuel.yml` runs `.github/fuel/check.mjs` every 3 hours for Leighton Buzzard only and commits
-  `tools/fuel/data/prices.json` when a price changes or the saved copy is 5 hours old.
+  `.github/workflows/fuel.yml` runs `.github/fuel/check.mjs` for Leighton Buzzard only and commits
+  `tools/fuel/data/prices.json` when a price changes or the saved copy is 5 hours old. Its 3-hourly schedule was
+  switched off on 21 Oct 2026 (the page reads live fast enough), so it only runs by hand or when its code changes;
+  the saved copy is just a fallback and goes stale.
 - `.github/workflows/product-search-names.yml` runs `.github/product-search/check.mjs` every 6 hours (00:23, 06:23, 12:23,
   18:23 UTC), each run up to 5.5 hours, so it goes round the clock until every product is done, then finds nothing to do.
   Per product: the page through jina (name and age check, text read only), then the photo through the free relay
