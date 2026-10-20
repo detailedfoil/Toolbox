@@ -7,7 +7,7 @@
   var LIST_URL = 'product-search/data/products.json';
   var WEB_URL = 'product-search/data/web-names.json';
   var PAGE = 24;
-  var FLAGS = [[1, 'Hazardous', 'haz'], [2, 'Aerosol', 'aer'], [4, 'Non-trolleyable', 'trl'], [8, 'Sharp or liquid', 'shp']];
+  var FLAGS = [[1, 'Hazardous', 'haz'], [2, 'Aerosol', 'aer'], [4, 'Non-trolleyable', 'trl'], [8, 'Sharp or liquid', 'shp'], [16, 'Age restricted', 'age']];
 
   var $ = function (id) { return document.getElementById(id); };
   var q = $('q'), form = $('form'), statusEl = $('status'), noteEl = $('note'), results = $('results'), more = $('more');
@@ -39,7 +39,7 @@
     var items = list.items.map(function (r) {
       var w = names[r[0]] && names[r[0]].name;
       if (w) named++;
-      return { sku: r[0], name: r[1], flags: r[2] || 0, web: w || '' };
+      return { sku: r[0], name: r[1], flags: (r[2] || 0) | (names[r[0]] && names[r[0]].a ? 16 : 0), web: w || '' };
     });
     var t0 = performance.now();
     searcher = PS.build(items);

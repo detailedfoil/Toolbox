@@ -81,6 +81,7 @@ html:has(body.sx){background:var(--sx-bg,#f4f4f4)}
 .sx-aer{color:#d96a00;background:#fff}
 .sx-trl{color:#0a3a8f;background:#fff}
 .sx-shp{color:#6b3fa0;background:#fff}
+.sx-age{color:#fff;background:#b0124d;border-color:#b0124d}
 .sx-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:auto}
 .sx-code{border:0;background:none;padding:4px 0;font:inherit;color:var(--sx-muted);font-size:.85rem;cursor:pointer;text-align:left}
 .sx-code b{color:var(--sx-text);font-size:1rem;letter-spacing:.03em}

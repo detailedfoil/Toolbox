@@ -215,7 +215,7 @@ test('photo check: a product whose name is already known only needs its photo, a
   codes.forEach((c) => { scen[c] = { image: [{ status: 403, body: 'denied' }] }; });
   const mock = await startMock(scen);
   try {
-    const known = {}; codes.forEach((c) => { known[c] = { name: 'Known ' + c, at: '2026-10-19' }; });
+    const known = {}; codes.forEach((c) => { known[c] = { name: 'Known ' + c, a: 0, at: '2026-10-19' }; });
     const out = await runCheck({ check: 'product-search', mock, files: {
       'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'Known ' + c, 0])),
       'tools/product-search/data/web-names.json': { products: known } } });
@@ -224,4 +224,30 @@ test('photo check: a product whose name is already known only needs its photo, a
     assert.match(names(out).lastRun.stopped, /image server: HTTP 403/);
     assert.ok(mock.hits.every((h) => h.mode === 'image'), 'the names were known, so no page was read');
   } finally { await mock.close(); }
+});
+
+test('age check: a page with Challenge 25 wording is marked a: 1, others a: 0, and already-named products are read once more for it', async () => {
+  const restricted = textPage({ code: '91111', name: 'Craft Knife', price: 3 }) + '\nThis product is Challenge 25. You may be asked for proof of age upon collection.\n';
+  const mock = await startMock({
+    '91111': { text: [restricted], image: [PICTURE] },
+    '92222': page('92222', 'Plain Product'),
+    '93333': page('93333', 'Named Before'),
+  });
+  try {
+    const out = await runCheck({ check: 'product-search', mock, files: {
+      'tools/product-search/data/products.json': listOf([['91111', 'Craft Knife', 8], ['92222', 'Plain', 0], ['93333', 'Named Before', 0]]),
+      'tools/product-search/data/web-names.json': { products: { '93333': { name: 'Named Before', at: '2026-10-19' } } } } });
+    assert.equal(out.code, 0, out.stderr);
+    const n = names(out).products;
+    assert.equal(n['91111'].a, 1);
+    assert.equal(n['92222'].a, 0);
+    assert.equal(n['93333'].a, 0, 'read again to find out');
+    assert.ok(mock.hits.some((h) => h.code === '93333' && h.mode === 'text'));
+  } finally { await mock.close(); }
+});
+
+test('search: age restricted products can be found by "age restricted" or "challenge 25"', () => {
+  const t = PS.build([{ sku: '11111', name: 'Craft Knife', flags: 16 }, { sku: '22222', name: 'Craft Scissors', flags: 0 }]);
+  assert.deepEqual([...t.find('age restricted').list].map((r) => r.item.sku), ['11111']);
+  assert.deepEqual([...t.find('challenge 25').list].map((r) => r.item.sku), ['11111']);
 });

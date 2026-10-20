@@ -38,7 +38,7 @@
     rawlplug: ['plug'], screwdriver: ['driver'], hacksaw: ['hack'], stanley: ['utility'], mole: ['locking'],
     sander: ['sanding'], aerosol: ['spray'], spray: ['aerosol'], hazard: ['hazardous'], paintbrush: ['brush'], extension: ['ext'], ext: ['extension']
   };
-  var FLAG_WORDS = [[1, 'hazardous'], [2, 'aerosol'], [4, 'non trolleyable'], [8, 'sharp liquid']];
+  var FLAG_WORDS = [[1, 'hazardous'], [2, 'aerosol'], [4, 'non trolleyable'], [8, 'sharp liquid'], [16, 'age restricted challenge 25 over 18']];
   var STOP = { x: 1, of: 1, and: 1, with: 1, for: 1, the: 1, to: 1, in: 1, on: 1, each: 1, a: 1 };
   var UNITS = 'mm|cm|m|km|kg|g|mg|ml|cl|l|ltr|litre|litres|v|w|kw|a|ah|mah|lm|k|kva|ft|m2|m3|psi|bar|nm|rpm|db|mtr|metre|metres|meter|meters';
 

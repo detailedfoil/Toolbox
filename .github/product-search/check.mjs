@@ -5,7 +5,8 @@
 //
 // Run by .github/workflows/product-search-names.yml. Reads tools/product-search/data/products.json and adds to
 // tools/product-search/data/web-names.json (one product per line) and tools/product-search/photos/<CODE>.jpg:
-//   {"name": "...", "at": "2026-10-21", "p": 1}       name found; p: 1 = its photo is saved
+//   {"name": "...", "a": 1, "at": "2026-10-21"}       name found; a: 1 = age restricted (Challenge 25 / proof of age wording on the page,
+//                                                    the same reader the poster maker uses), 0 = not
 //   {"missing": true, "at": "..."}                     Screwfix has no page for that code
 //   {"tries": 2, "at": "...", "why": "..."}            name couldn't be read yet (tried again after a week, 3 goes)
 //   {"pn": 1, "pat": "..."}                            no photo yet (404 or refused), tried again after a week, 3 goes
@@ -54,7 +55,8 @@ const photoFile = (code) => path.join(ROOT, PHOTOS, code + '.jpg');
 const needsName = (code) => {
   const p = products[code];
   if (!p) return true;
-  if (p.name || p.missing) return false;
+  if (p.name) return p.a === undefined;      // named before age checking was added: read once more for it
+  if (p.missing) return false;
   return (p.tries || 0) < 3 && (!p.tries || daysSince(p.at) >= 7);
 };
 const needsPhoto = (code) => {
@@ -90,7 +92,7 @@ async function read(code) {
   }
   if (r.status === 'notfound') return { kind: 'missing' };
   if (r.status === 'blocked') return { kind: 'fail', why: 'turned away (' + (r.why || 'blocked') + ', HTTP ' + res.status + ')', blocked: true };
-  if ((r.status === 'found' || r.status === 'partial') && r.name && !r.unsure) return { kind: 'found', name: r.name };
+  if ((r.status === 'found' || r.status === 'partial') && r.name && !r.unsure) return { kind: 'found', name: r.name, age: !!r.age };
   return { kind: 'fail', why: 'page: ' + r.status + (r.unsure ? ", doesn't mention the code" : r.name ? '' : ', no name') };
 }
 
@@ -142,7 +144,7 @@ async function main() {
       if (got.kind === 'limited') got = { kind: 'fail', why: 'jina kept saying slow down (HTTP 429)', blocked: true };
       const before = products[code] || {};
       if (got.kind === 'found') {
-        products[code] = { ...before, name: got.name, at: today };
+        products[code] = { ...before, name: got.name, a: got.age ? 1 : 0, at: today };
         delete products[code].tries; delete products[code].why;
         run.found++; inARow = 0;
         log(`  ${code} ${got.name}`);
