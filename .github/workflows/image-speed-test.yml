@@ -1,0 +1,46 @@
+# One-off test (21 Oct 2026): fetch 40 product photos quickly through wsrv.nl, one every half second, and stop at the
+# first sign of refusal. Nothing is saved. Delete this file once the answer is in.
+name: Image speed test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Fetch photos quickly
+        run: |
+          cat > speed.mjs <<'JS'
+          import fs from 'node:fs';
+          const list = JSON.parse(fs.readFileSync('tools/product-search/data/products.json', 'utf8')).items;
+          const codes = list.slice(6000, 6040).map((r) => r[0]);
+          const media = (c) => `https://media.screwfix.com/is/image/ae235/${c}_P?wid=120&hei=120`;
+          const results = [];
+          let bad = 0, lastBad = '';
+          const t0 = Date.now();
+          for (const c of codes) {
+            const t = Date.now();
+            let line;
+            try {
+              const r = await fetch(`https://wsrv.nl/?url=${encodeURIComponent(media(c))}&output=jpg&q=85`, { signal: AbortSignal.timeout(20000) });
+              const b = Buffer.from(await r.arrayBuffer());
+              const pic = r.ok && /^image\//.test(r.headers.get('content-type') || '') && b.length > 500;
+              line = `${c} ${r.status} ${r.headers.get('content-type')} ${b.length}B ${Date.now() - t}ms ${pic ? 'PICTURE' : 'NOT A PICTURE'}`;
+              bad = pic ? 0 : bad + 1; if (!pic) lastBad = line;
+            } catch (e) { line = `${c} ERROR ${e.message}`; bad++; lastBad = line; }
+            results.push(line);
+            if (bad >= 3) { results.push('STOPPED: 3 refusals in a row'); break; }
+            await new Promise((r) => setTimeout(r, 500));
+          }
+          const ok = results.filter((l) => l.endsWith('PICTURE') && !l.endsWith('NOT A PICTURE')).length;
+          const head = `Image speed test: ${ok} pictures out of ${results.filter((l) => /^\w+ /.test(l) && !l.startsWith('STOPPED')).length} tried in ${((Date.now() - t0) / 1000).toFixed(1)} s`;
+          console.log(head); console.log(results.join('\n'));
+          console.log(`::notice title=Speed test::${head}${lastBad ? ' | last bad: ' + lastBad : ''}`);
+          results.slice(0, 8).forEach((l, i) => console.log(`::notice title=Sample ${i + 1}::${l}`));
+          JS
+          node speed.mjs
