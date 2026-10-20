@@ -46,13 +46,14 @@ explain changes in plain English and say what they'll see.
     the sums in whole pence. Tested on two real photos (`.github/tests/fixtures/coins-*.jpg`, 50 10p and 48 20p,
     receipt blurred): any change to `coins.js` must keep those exact.
   - `product-search`: Product Search, every store (tile badge "Under construction", page banner too: remove both when
-    detailedfoil says). A parody "Scruffix" look on this page only. `search.js` is the search: no network, an index
+    detailedfoil says). A parody "CrashFix" look on this page only (colours from screenshots of the real site). `search.js` is the search: no network, an index
     in memory, typo tolerant; add a test in `.github/tests/product-search.test.mjs` for any search that should work.
     `photos.js` keeps the list and every thumbnail seen on the phone (IndexedDB), and loads photos from
     media.screwfix.com (120 px), saving copies through wsrv.nl when the image server won't let the page read them.
     `data/products.json` is made from detailedfoil's stock export by `.github/product-search/make-list.py` (code, name
     and the four warning flags only: no stock or locations, the repo is public). `data/web-names.json` holds the
-    screwfix.com names, written by the nightly name check.
+    screwfix.com names and `photos/<CODE>.jpg` the 120 px photos, both written by the nightly check (`p: 1` on a
+    product in `web-names.json` means its photo is saved; the page loads that copy before asking Screwfix).
   - `nps`, `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
@@ -61,8 +62,9 @@ explain changes in plain English and say what they'll see.
   `.github/workflows/fuel.yml` runs `.github/fuel/check.mjs` every 3 hours for Leighton Buzzard only and commits
   `tools/fuel/data/prices.json` when a price changes or the saved copy is 5 hours old.
 - `.github/workflows/product-search-names.yml` runs `.github/product-search/check.mjs` every night (01:23 UTC): 300
-  product pages through jina, 12 s apart, text reads only. It stops after 5 refusals in a row (the run fails, so
-  GitHub emails detailedfoil) and then only tries 10 the next night. Screwfix has blocked a nightly check before:
+  product pages through jina (names), text reads only, then each photo straight from media.screwfix.com, 12 s apart.
+  It stops after 5 refusals in a row (the run fails, so GitHub emails detailedfoil) and then only tries 10 the next
+  night. Screwfix has blocked a nightly check before:
   don't speed it up.
 - `.github/tests/`: the tests. The checks are run against a pretend jina and Screwfix
   (`mock-screwfix.mjs`, with the made-up products in `scenarios.mjs`), so the tests never touch the real sites.

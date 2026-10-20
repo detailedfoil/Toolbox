@@ -147,6 +147,23 @@
         urls.set(sku, u);
         return showPlain(img, u).then(function () { return done('saved'); });
       }
+      if (Photos.stored && Photos.stored.has(sku)) {
+        // collected overnight and kept with the Toolbox: no need to ask Screwfix
+        var kept = fetchPicture('product-search/photos/' + encodeURIComponent(sku) + '.jpg').then(function (blob) {
+          thumbs.put(sku, { blob: blob, at: Date.now(), via: 'toolbox' }).then(function () { Photos.onSaved(); });
+          var u = URL.createObjectURL(blob);
+          urls.set(sku, u);
+          return showPlain(img, u).then(function () { return done('toolbox'); });
+        });
+        return kept.catch(function () { return fromScrewfix(); });
+      }
+      return fromScrewfix();
+    }).catch(function () {
+      failed.add(sku);
+      return done('failed');
+    });
+
+    function fromScrewfix() {
       if (failed.has(sku)) throw new Error('Failed earlier');
       var mode = savedMode();
       if (mode === 'img') {
@@ -167,10 +184,7 @@
           return done('web');
         });
       });
-    }).catch(function () {
-      failed.add(sku);
-      return done('failed');
-    });
+    }
   }
 
   var Photos = {
@@ -182,6 +196,7 @@
       return thumbs.clear();
     },
     mode: savedMode,
+    stored: null,                     // codes whose photo is kept with the Toolbox (set by the page)
     onSaved: function () { /* set by the page */ }
   };
   root.ProductPhotos = Photos;

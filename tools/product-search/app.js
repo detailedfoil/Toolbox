@@ -46,15 +46,19 @@
     var ms = Math.round(performance.now() - t0);
     listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');
     q.placeholder = 'Search by code or name';
+    $('welcomeTitle').textContent = 'Search ' + n(items.length) + ' nailed items';
+    var have = new Set();
+    Object.keys(names).forEach(function (k) { if (names[k].p) have.add(k); });
+    Photos.stored = have;
     $('about').textContent = 'Product list from ' + (niceDate(list.version) || 'your stock export') + ': ' + n(items.length) +
-      ' products. Screwfix website names found so far: ' + n(named) + ' (checked a few hundred a night). Search index built in ' + ms + ' ms.' +
+      ' products. Screwfix website names found so far: ' + n(named) + ', photos kept with the Toolbox: ' + n(have.size) + ' (a few hundred more a night). Search index built in ' + ms + ' ms.' +
       (web && web.lastRun ? ' ' + runNote(web.lastRun) : '');
     run();
   }
   function runNote(r) {
     if (!r || !r.date) return '';
-    if (r.stopped) return 'The last overnight name check (' + niceDate(r.date) + ') stopped early: ' + r.stopped + '.';
-    return 'Last overnight name check: ' + niceDate(r.date) + ', ' + n(r.found || 0) + ' names found.';
+    if (r.stopped) return 'The last overnight check (' + niceDate(r.date) + ') stopped early: ' + r.stopped + '.';
+    return 'Last overnight check: ' + niceDate(r.date) + ', ' + n(r.found || 0) + ' names found.';
   }
 
   function fetchText(url) {
@@ -252,10 +256,6 @@
   results.addEventListener('click', function (e) {
     var b = e.target.closest('[data-copy]');
     if (b) copy(b.getAttribute('data-copy'));
-  });
-  $('try').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-q]');
-    if (b) { q.value = b.getAttribute('data-q'); run(); }
   });
   q.addEventListener('input', run);
   form.addEventListener('submit', function (e) { e.preventDefault(); q.blur(); run(); });

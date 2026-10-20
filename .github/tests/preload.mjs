@@ -5,6 +5,7 @@ const site = `http://127.0.0.1:${process.env.MOCK_PORT}/direct/`;
 const realFetch = globalThis.fetch;
 globalThis.fetch = (url, init) => {
   const u = String(url);
+  if (u.startsWith('https://media.screwfix.com/')) return realFetch(`http://127.0.0.1:${process.env.MOCK_PORT}/media/` + u.slice('https://media.screwfix.com/'.length), init);
   return realFetch(u.startsWith('https://www.screwfix.com/') ? site + u.slice('https://www.screwfix.com/'.length) : u, init);
 };
 const realSetTimeout = globalThis.setTimeout;

@@ -111,11 +111,11 @@ test('the real list: builds, and finds by code and by name quickly', () => {
 });
 
 /* ---------- the overnight name check (.github/product-search/check.mjs) against the pretend site ---------- */
-import { startMock, textPage, NOT_FOUND, BOT_CHECK, LIMITED } from './mock-screwfix.mjs';
+import { startMock, textPage, NOT_FOUND, BOT_CHECK, LIMITED, PICTURE } from './mock-screwfix.mjs';
 import { runCheck } from './run-check.mjs';
 
 const listOf = (items) => ({ version: '2026-10-20', count: items.length, items });
-const page = (code, name) => ({ text: [textPage({ code, name, price: 9.99 })] });
+const page = (code, name) => ({ text: [textPage({ code, name, price: 9.99 })], image: [PICTURE] });
 const names = (out) => JSON.parse(out.files['tools/product-search/data/web-names.json']);
 
 test('name check: saves names, notes codes with no page, cut-short names go first', async () => {
@@ -135,8 +135,10 @@ test('name check: saves names, notes codes with no page, cut-short names go firs
     assert.equal(n.products['33333'].missing, true);
     assert.equal(n.products['44444'].name, 'After A Pause', 'waits when jina says slow down, then reads it');
     assert.equal(n.named, 3);
-    assert.equal(mock.hits[0].code, '22222', 'the cut-short name is read first');
-    assert.ok(mock.hits.every((h) => h.mode === 'text'), 'only ever a text read');
+    const pageReads = mock.hits.filter((h) => h.mode !== 'image');
+    assert.equal(pageReads[0].code, '22222', 'the cut-short name is read first');
+    assert.ok(pageReads.every((h) => h.mode === 'text'), 'only ever a text read of a page');
+    assert.ok(!mock.hits.some((h) => h.mode === 'image' && h.code === '33333'), 'no photo asked for when there is no page');
     assert.match(out.commit, /\[skip ci\]/);
   } finally { await mock.close(); }
 });
@@ -152,8 +154,9 @@ test('name check: stops after 5 refusals in a row, and next time only tries a fe
     assert.equal(out.code, 1, 'the run fails, so GitHub sends an email');
     stopped = names(out);
     assert.equal(stopped.lastRun.tried, 5);
-    assert.match(stopped.lastRun.stopped, /5 products in a row/);
-    assert.match(out.stdout, /::error title=Product names stopped::/);
+    assert.ok(!mock.hits.some((h) => h.mode === 'image'), 'no photos asked for while the pages are being refused');
+    assert.match(stopped.lastRun.stopped, /5 in a row/);
+    assert.match(out.stdout, /::error title=Product names and photos stopped::/);
   } finally { await mock.close(); }
   // the next night: Screwfix is fine again, but only a small try is made
   const ok = {};
@@ -168,7 +171,7 @@ test('name check: stops after 5 refusals in a row, and next time only tries a fe
     assert.equal(n.lastRun.tried, 10);
     assert.equal(n.lastRun.stopped, null);
     assert.equal(n.products['50000'].tries, 1, 'refused ones wait a week before another go');
-    assert.ok(!mock.hits.some((h) => h.code === '50000'));
+    assert.ok(!mock.hits.some((h) => h.code === '50000' && h.mode !== 'image'), 'its page is left for a week');
   } finally { await mock.close(); }
 });
 
@@ -182,5 +185,43 @@ test('name check: a page that is not the product does not count as being turned 
     const out = await runCheck({ check: 'product-search', mock, files: { 'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'X', 0])) } });
     assert.equal(out.code, 0);
     assert.equal(names(out).lastRun.tried, 8);
+  } finally { await mock.close(); }
+});
+
+test('photo check: saves each photo as <CODE>.jpg, tells the page which ones it has, and asks once per product', async () => {
+  const mock = await startMock({
+    '71111': { text: [textPage({ code: '71111', name: 'Has A Photo', price: 5 })], image: [PICTURE] },
+    '72222': { text: [textPage({ code: '72222', name: 'Photo Missing', price: 5 })], image: [{ status: 404, body: 'none' }] },
+  });
+  try {
+    const files = { 'tools/product-search/data/products.json': listOf([['71111', 'Has A Photo', 0], ['72222', 'Photo Missing', 0]]) };
+    const out = await runCheck({ check: 'product-search', mock, files });
+    assert.equal(out.code, 0, out.stderr);
+    const n = names(out);
+    assert.equal(n.products['71111'].p, 1);
+    assert.ok('tools/product-search/photos/71111.jpg' in out.files, 'the photo file is written');
+    assert.ok(!('tools/product-search/photos/72222.jpg' in out.files));
+    assert.equal(n.products['72222'].name, 'Photo Missing', 'a missing photo does not lose the name');
+    assert.equal(n.products['72222'].pn, 1);
+    assert.equal(n.photos, 1);
+    assert.equal(n.lastRun.nophoto, 1);
+    assert.equal(out.code, 0, "a 404 photo isn't being turned away");
+  } finally { await mock.close(); }
+});
+
+test('photo check: a product whose name is already known only needs its photo, and the image server refusing stops the run', async () => {
+  const codes = Array.from({ length: 12 }, (_, i) => String(80000 + i));
+  const scen = {};
+  codes.forEach((c) => { scen[c] = { image: [{ status: 403, body: 'denied' }] }; });
+  const mock = await startMock(scen);
+  try {
+    const known = {}; codes.forEach((c) => { known[c] = { name: 'Known ' + c, at: '2026-10-19' }; });
+    const out = await runCheck({ check: 'product-search', mock, files: {
+      'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'Known ' + c, 0])),
+      'tools/product-search/data/web-names.json': { products: known } } });
+    assert.equal(out.code, 1, 'the run fails so GitHub sends an email');
+    assert.equal(names(out).lastRun.tried, 5);
+    assert.match(names(out).lastRun.stopped, /image server: HTTP 403/);
+    assert.ok(mock.hits.every((h) => h.mode === 'image'), 'the names were known, so no page was read');
   } finally { await mock.close(); }
 });
