@@ -1,7 +1,7 @@
 {
-  "updated": "2026-10-20T21:10:47.286Z",
-  "lastRun": {"date":"2026-10-20","tried":5,"found":0,"missing":0,"failed":0,"photos":0,"nophoto":0,"stopped":"5 in a row couldn't be read (last: image server: answered with something that isn't a picture)"},
-  "named": 19,
+  "updated": "2026-10-20T21:14:58.601Z",
+  "lastRun": {"date":"2026-10-20","tried":10,"found":10,"missing":0,"failed":0,"photos":0,"nophoto":0,"stopped":null},
+  "named": 29,
   "photos": 0,
   "of": 10171,
   "products": {
@@ -24,6 +24,16 @@
     "113PV": {"name":"Trend AB/125/180A 180 Grit 8-Hole Punched Multi-Material Sanding Discs 125mm 10 Pack","at":"2026-10-20"},
     "11541": {"name":"Easyfix Extra Large Head Clouts Galvanised 3mm x 40mm 1kg Pack","at":"2026-10-20"},
     "115HT": {"name":"Smith & Locke Hat & Coat Hooks Satin Anodised Aluminium 130mm 5 Pack","at":"2026-10-20"},
-    "116YW": {"name":"Site SDG310 Nitrile Powder-Free Disposable Grip Gloves Black X Large 50 Pack","at":"2026-10-20"}
+    "116YW": {"name":"Site SDG310 Nitrile Powder-Free Disposable Grip Gloves Black X Large 50 Pack","at":"2026-10-20"},
+    "117PT": {"name":"Easyfix Nylon & Steel Mushroom Head Hammer Fixings 6mm x 80mm 50 Pack","at":"2026-10-20"},
+    "118PN": {"name":"LAP 20A 16AX 1-Gang 2-Way Light Switch Brushed Stainless Steel with White Inserts","at":"2026-10-20"},
+    "1190F": {"name":"Hep2O Plastic Push-Fit Adapting Female Coupler 15mm x 1/2\"","at":"2026-10-20"},
+    "1190P": {"name":"Easydrive Phillips Wafer Self Drilling Baypole Screws 4.8mm x 50mm 100 Pack","at":"2026-10-20"},
+    "12000": {"name":"Marcrist Turbo Multi-Material Segmented Diamond Blade 300mm x 20mm","at":"2026-10-20"},
+    "12002": {"name":"Marcrist BF650SF Multi-Material Turbo Diamond Blade 230mm x 22.2mm","at":"2026-10-20"},
+    "121TW": {"name":"Brackenheath iSpot Frameless II Indoor & Outdoor LED Floodlight With PIR Sensor Black 30W 3300lm","at":"2026-10-20"},
+    "121VE": {"name":"Smith & Locke Hasp & Staple with Lock Galvanised 89mm","at":"2026-10-20"},
+    "1227D": {"name":"Erbauer Multi-Material Reciprocating Saw Blades 130mm 5 Pack","at":"2026-10-20"},
+    "1236P": {"name":"McAlpine Bath Waste & Overflow Chrome 16\"","at":"2026-10-20"}
   }
 }
