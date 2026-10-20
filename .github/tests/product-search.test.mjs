@@ -143,35 +143,72 @@ test('name check: saves names, notes codes with no page, cut-short names go firs
   } finally { await mock.close(); }
 });
 
-test('name check: stops after 5 refusals in a row, and next time only tries a few', async () => {
-  const codes = Array.from({ length: 30 }, (_, i) => String(50000 + i));
+const QUICK = { PAUSE_MS: '1000' };   // the hour's pause, shortened for the tests
+
+test('name check: 4 failures in a row mean an hour\'s pause, then it carries on', async () => {
+  const codes = Array.from({ length: 8 }, (_, i) => String(40000 + i));
   const scen = {};
-  codes.forEach((c) => { scen[c] = { text: [BOT_CHECK] }; });
+  codes.forEach((c, i) => { scen[c] = i < 4 ? { text: [BOT_CHECK] } : page(c, 'Thing ' + c); });
+  const mock = await startMock(scen);
+  try {
+    const out = await runCheck({ check: 'product-search', mock, env: QUICK, files: { 'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'Thing ' + c, 0])) } });
+    assert.equal(out.code, 0, out.stderr);
+    const n = names(out);
+    assert.equal(n.lastRun.pauses, 1);
+    assert.equal(n.lastRun.found, 4);
+    assert.equal(n.lastRun.stopped, null);
+    assert.match(out.stdout, /pausing for \d+ minutes/);
+  } finally { await mock.close(); }
+});
+
+test('name check: gives up after 3 pauses with nothing working, then the next run gives up at once if the first 4 fail', async () => {
+  const codes = Array.from({ length: 30 }, (_, i) => String(50000 + i));
+  const files = { 'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'Thing ' + c, 0])) };
+  const scen = {};
+  codes.forEach((c) => { scen[c] = { text: [BOT_CHECK], image: [{ status: 403, body: 'denied' }] }; });
   let mock = await startMock(scen);
   let stopped;
   try {
-    const out = await runCheck({ check: 'product-search', mock, files: { 'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'Thing ' + c, 0])) } });
+    const out = await runCheck({ check: 'product-search', mock, env: QUICK, files });
     assert.equal(out.code, 1, 'the run fails, so GitHub sends an email');
     stopped = names(out);
-    assert.equal(stopped.lastRun.tried, 5);
+    assert.equal(stopped.lastRun.pauses, 3);
+    assert.equal(stopped.lastRun.tried, 10, '4, pause, 2, pause, 2, pause, 2, give up');
     assert.ok(!mock.hits.some((h) => h.mode === 'image'), 'no photos asked for while the pages are being refused');
-    assert.match(stopped.lastRun.stopped, /5 in a row/);
-    assert.match(out.stdout, /::error title=Product names and photos stopped::/);
+    assert.match(stopped.lastRun.stopped, /3 pauses/);
+    assert.match(out.stdout, /::error title=Product names and photos gave up::/);
   } finally { await mock.close(); }
-  // the next night: Screwfix is fine again, but only a small try is made
+  // the next run while it's still refusing: gives up after the first 4, no pauses
+  mock = await startMock(scen);
+  try {
+    const out = await runCheck({ check: 'product-search', mock, env: QUICK, files: { ...files, 'tools/product-search/data/web-names.json': stopped } });
+    assert.equal(out.code, 1);
+    assert.equal(names(out).lastRun.tried, 4);
+    assert.equal(names(out).lastRun.pauses, 0);
+  } finally { await mock.close(); }
+  // and once Screwfix is fine again it carries on with everything left
   const ok = {};
   codes.forEach((c) => { ok[c] = page(c, 'Thing ' + c); });
   mock = await startMock(ok);
   try {
-    const out = await runCheck({ check: 'product-search', mock, files: {
-      'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'Thing ' + c, 0])),
-      'tools/product-search/data/web-names.json': stopped } });
+    const out = await runCheck({ check: 'product-search', mock, env: QUICK, files: { ...files, 'tools/product-search/data/web-names.json': stopped } });
     assert.equal(out.code, 0, out.stderr);
     const n = names(out);
-    assert.equal(n.lastRun.tried, 10);
+    assert.equal(n.lastRun.tried, 30, 'the other 20 done, and photos for the 10 whose pages wait a week');
+    assert.equal(n.lastRun.found, 20);
     assert.equal(n.lastRun.stopped, null);
-    assert.equal(n.products['50000'].tries, 1, 'refused ones wait a week before another go');
+    assert.equal(n.products['50000'].tries, 1);
     assert.ok(!mock.hits.some((h) => h.code === '50000' && h.mode !== 'image'), 'its page is left for a week');
+  } finally { await mock.close(); }
+});
+
+test('name check: stops starting new products when the run\'s time is up, without failing', async () => {
+  const mock = await startMock({ '45000': page('45000', 'Thing') });
+  try {
+    const out = await runCheck({ check: 'product-search', mock, env: { RUN_MINUTES: '0' }, files: { 'tools/product-search/data/products.json': listOf([['45000', 'Thing', 0]]) } });
+    assert.equal(out.code, 0, out.stderr);
+    assert.equal(names(out).lastRun.tried, 0);
+    assert.equal(names(out).lastRun.timeUp, true);
   } finally { await mock.close(); }
 });
 
@@ -209,18 +246,18 @@ test('photo check: saves each photo as <CODE>.jpg, tells the page which ones it 
   } finally { await mock.close(); }
 });
 
-test('photo check: a product whose name is already known only needs its photo, and the image server refusing stops the run', async () => {
+test('photo check: a product whose name is already known only needs its photo, and the image server refusing makes it give up', async () => {
   const codes = Array.from({ length: 12 }, (_, i) => String(80000 + i));
   const scen = {};
   codes.forEach((c) => { scen[c] = { image: [{ status: 403, body: 'denied' }] }; });
   const mock = await startMock(scen);
   try {
     const known = {}; codes.forEach((c) => { known[c] = { name: 'Known ' + c, a: 0, at: '2026-10-19' }; });
-    const out = await runCheck({ check: 'product-search', mock, files: {
+    const out = await runCheck({ check: 'product-search', mock, env: QUICK, files: {
       'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'Known ' + c, 0])),
       'tools/product-search/data/web-names.json': { products: known } } });
     assert.equal(out.code, 1, 'the run fails so GitHub sends an email');
-    assert.equal(names(out).lastRun.tried, 5);
+    assert.equal(names(out).lastRun.tried, 10);
     assert.match(names(out).lastRun.stopped, /image server: HTTP 403/);
     assert.ok(mock.hits.every((h) => h.mode === 'image'), 'the names were known, so no page was read');
   } finally { await mock.close(); }

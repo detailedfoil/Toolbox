@@ -61,13 +61,15 @@ explain changes in plain English and say what they'll see.
   A push to `main` that changes the reading code makes each run a five line smoke test.
   `.github/workflows/fuel.yml` runs `.github/fuel/check.mjs` every 3 hours for Leighton Buzzard only and commits
   `tools/fuel/data/prices.json` when a price changes or the saved copy is 5 hours old.
-- `.github/workflows/product-search-names.yml` runs `.github/product-search/check.mjs` every night (01:23 UTC): 300
-  product pages through jina (names), text reads only, then each photo through the free image relay wsrv.nl (Screwfix's image server answered GitHub's servers directly with
-  non-pictures on 20 Oct 2026), 12 s apart. Add `PHOTOS: 'off'` to the workflow to leave photos out. The page shows the
-  kept copy if there is one, otherwise loads from Screwfix; nothing is saved on phones.
-  It stops after 5 refusals in a row (the run fails, so GitHub emails detailedfoil) and then only tries 10 the next
-  night. Screwfix has blocked a nightly check before:
-  don't speed it up.
+- `.github/workflows/product-search-names.yml` runs `.github/product-search/check.mjs` every 6 hours (00:23, 06:23, 12:23,
+  18:23 UTC), each run up to 5.5 hours, so it goes round the clock until every product is done, then finds nothing to do.
+  Per product: the page through jina (name and age check, text read only), then the photo through the free relay
+  wsrv.nl (Screwfix's image server refused GitHub directly, 20 Oct 2026). About one product every 20 s, gaps 14 to 26 s,
+  a 2 to 6 minute break every 40 to 70 products, progress saved every 20. A failed product is skipped (retried after a
+  week, 3 goes). 4 failures in a row: an hour's pause; 3 pauses with nothing working: it gives up (run fails, GitHub
+  emails detailedfoil) and the next run gives up at once if its first 4 fail. detailedfoil asked for it to be as
+  unsuspicious as possible: keep it polite (slow, uneven, backs off), never add ways to dodge Screwfix's blocking, and
+  don't speed it up. Add `PHOTOS: 'off'` to the workflow to leave photos out.
 - `.github/tests/`: the tests. The checks are run against a pretend jina and Screwfix
   (`mock-screwfix.mjs`, with the made-up products in `scenarios.mjs`), so the tests never touch the real sites.
 

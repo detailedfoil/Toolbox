@@ -4,9 +4,9 @@
 # and saves it as tools/product-search/photos/<CODE>.jpg, so every phone gets photos from the Toolbox itself.
 # Photos go through the free image relay wsrv.nl, because Screwfix's image server turned GitHub away when asked
 # directly (20 Oct 2026). To leave photos out again, add PHOTOS: 'off' to the env below.
-# One product every 12 s or so. About 5 weeks to get through the whole list; what's already found isn't fetched again.
-# If Screwfix, jina or the image server starts turning it away it stops, the run shows as failed (GitHub emails you),
-# and the next night only tries 10 products before carrying on.
+# Around the clock, one product about every 20 s with breaks: about 3 days for the whole list; what's already found
+# isn't fetched again. 4 failures in a row: an hour's pause. 3 pauses with nothing working: it gives up, the run shows
+# as failed (GitHub emails you), and the next run tries a few first. Details at the top of check.mjs.
 #
 # A push that changes the check itself runs a small batch of 20, so a mistake shows up straight away.
 # To run it by hand: Actions tab > Product Search names and photos > Run workflow (choose how many).
@@ -14,8 +14,9 @@ name: Product Search names and photos
 
 on:
   schedule:
-    # 01:23 UTC is 02:23 in summer (BST), 01:23 in winter: after the A25 counter check (00:07) has finished.
-    - cron: '23 1 * * *'
+    # Every 6 hours, each run up to 5.5 hours, so it goes round the clock until everything is done; after that the runs
+    # find nothing to do and finish in a minute. Only one runs at a time (a new one waits for the last to finish).
+    - cron: '23 0,6,12,18 * * *'
   push:
     branches: [main]
     paths:
@@ -24,7 +25,7 @@ on:
   workflow_dispatch:
     inputs:
       count:
-        description: 'How many products to try (300 is a normal night)'
+        description: 'How many products to try (0 = no limit, as the scheduled runs do)'
         type: number
         default: 20
 
@@ -38,7 +39,7 @@ concurrency:
 jobs:
   names:
     runs-on: ubuntu-24.04
-    timeout-minutes: 150
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v7
 
@@ -51,10 +52,11 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Read product names and photos on screwfix.com
-        timeout-minutes: 140
+        timeout-minutes: 345
         env:
-          LIMIT: ${{ github.event_name == 'schedule' && '300' || github.event_name == 'push' && '20' || inputs.count }}
-          GAP_MS: '12000'
+          LIMIT: ${{ github.event_name == 'push' && '20' || inputs.count || '' }}
+          GAP_MS: '20000'       # about one product every 20 s, never evenly (14 to 26 s); see the top of check.mjs
+          RUN_MINUTES: '330'
         run: node .github/product-search/check.mjs
 
       - name: Save the names and photos

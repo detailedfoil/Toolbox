@@ -20,7 +20,7 @@ function walk(dir, base = dir, out = {}) {
 
 /* files: {'tools/shelf-check/data/plan.json': {...}, ...}; event: 'push' | 'schedule' | undefined (by hand);
    changed: the files a push event says it changed */
-export async function runCheck({ check, files, mode, event, changed, mock, repo = REPO }) {
+export async function runCheck({ check, files, mode, event, changed, mock, repo = REPO, env: extra = {} }) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'toolbox-' + check + '-'));
   const put = (f, v) => {
     fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
@@ -33,6 +33,7 @@ export async function runCheck({ check, files, mode, event, changed, mock, repo 
     fs.mkdirSync(temp);
     const env = { PATH: process.env.PATH, HOME: process.env.HOME, MOCK_PORT: String(mock.port), JINA_URL: `http://127.0.0.1:${mock.port}/`,
                   GAP_MS: '10', RUNNER_TEMP: temp, GITHUB_STEP_SUMMARY: path.join(temp, 'summary.md') };
+    Object.assign(env, extra);
     if (mode) env.MODE = mode;
     if (event) env.GITHUB_EVENT_NAME = event;
     if (changed) { put('event.json', { commits: [{ added: [], modified: changed }] }); env.GITHUB_EVENT_PATH = path.join(dir, 'event.json'); }

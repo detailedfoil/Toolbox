@@ -11,13 +11,23 @@
 //   {"tries": 2, "at": "...", "why": "..."}            name couldn't be read yet (tried again after a week, 3 goes)
 //   {"pn": 1, "pat": "..."}                            no photo yet (404 or refused), tried again after a week, 3 goes
 //
-// Gentle on purpose: one product every GAP_MS (12 s) or so. The name comes through jina (r.jina.ai, the same reader the
-// price checks use; a text read only, never the whole page), the photo straight from media.screwfix.com a few seconds
-// later (a 120 x 120 picture, about 4 KB). If Screwfix or jina starts turning us away (5 in a row turned away or
-// unanswered, pages or photos), it stops, says why at the top of the file and on the run's page, and the run fails so
-// GitHub emails detailedfoil. After a stop, the next night only tries 10 products; if those work it carries on.
+// Runs around the clock until everything is done (a run every 6 hours, each up to 5.5 hours), then the runs find
+// nothing to do and finish in a minute, picking up retries as they fall due. Polite on purpose (Screwfix has blocked a
+// nightly check before, and detailedfoil asked for it to look as ordinary as possible):
+//   - one product about every 20 s (GAP_MS), never evenly: each gap is anywhere from 14 to 26 s
+//   - every 40 to 70 products a longer break of 2 to 6 minutes
+//   - the name through jina (r.jina.ai, the same reader the price checks use; a text read only), the photo a few
+//     seconds later through the free image relay wsrv.nl (Screwfix's image server turned GitHub away directly)
+//   - a product that fails is skipped (tried again after a week, 3 goes at most)
+//   - 4 different products failing in a row: pause for an hour (+ up to 10 min), then carry on. If the first 2 after
+//     a pause fail too, pause again. After 3 pauses in a row with nothing working it gives up: the run fails (GitHub
+//     emails detailedfoil) and the next run first tries a few; if the first 4 of those fail it gives up again at once.
+//   - saves its progress every 20 products, so nothing is lost if a run is cut off
+// No tricks to dodge Screwfix's blocking: if it's refusing, this backs off and stops.
 //
-//   LIMIT   how many products to try this run (default 300)
+//   LIMIT        how many products to try this run (none: no limit)
+//   RUN_MINUTES  stop starting new products after this long (default 330, inside GitHub's 6 hour limit)
+//   PAUSE_MS     the pause after failures (default an hour; the tests shorten it)
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -32,12 +42,16 @@ const OUT = 'tools/product-search/data/web-names.json';
 const PHOTOS = 'tools/product-search/photos';
 const MEDIA = 'https://media.screwfix.com/is/image/ae235/';
 const JINA = process.env.JINA_URL || 'https://r.jina.ai/';
-const GAP = Number(process.env.GAP_MS || 12000);
+const GAP = Number(process.env.GAP_MS || 20000);
+const PAUSE = Number(process.env.PAUSE_MS || 3600000);
+const RUN_MS = Number(process.env.RUN_MINUTES || 330) * 60000;
+const STARTED = Date.now();
 // PHOTOS=off (set in the workflow) leaves the photos out. Screwfix's image server turned GitHub away on 20 Oct 2026
 // (answered the first 5 with something that wasn't a picture), so photos are off there; the code stays for another go.
 const PHOTOS_ON = process.env.PHOTOS !== 'off';
-const STOP_AFTER = 5;           // failures in a row that count as being turned away
-const PROBE = 10;               // products to try after a stop
+const FAILS_TO_PAUSE = 4;       // different products failing in a row before an hour's pause
+const FAILS_AFTER_PAUSE = 2;    // failing straight after a pause: pause again
+const MAX_PAUSES = 3;           // pauses in a row with nothing working: give up
 
 const dom = new JSDOM('<!doctype html><title>parser</title>', { url: 'https://detailedfoil.github.io/Toolbox/', runScripts: 'outside-only' });
 dom.window.eval(fs.readFileSync(path.join(ROOT, 'tools/price-tickets/lookup.js'), 'utf8'));
@@ -127,20 +141,36 @@ function save(head) {
   fs.writeFileSync(path.join(ROOT, OUT), `{\n${top.join(',\n')},\n  "products": {\n${lines.join(',\n')}\n  }\n}\n`);
 }
 
+const rand = (lo, hi) => lo + Math.random() * (hi - lo);
+
 async function main() {
   const probing = !!(state.lastRun && state.lastRun.stopped);
-  const limit = probing ? Math.min(PROBE, Number(process.env.LIMIT || 300)) : Number(process.env.LIMIT || 300);
+  const limit = Number(process.env.LIMIT) > 0 ? Number(process.env.LIMIT) : Infinity;
   const todo = queue().slice(0, limit);
-  log(`${todo.length} to try${probing ? ' (a small try after last time\'s stop)' : ''}; ${GAP / 1000} s apart`);
-  const run = { date: today, tried: 0, found: 0, missing: 0, failed: 0, photos: 0, nophoto: 0, stopped: null };
-  let inARow = 0, lastWhy = '', next = Date.now();
-  const turnedAway = (why) => { lastWhy = why; inARow++; return inARow >= STOP_AFTER; };
+  log(`${todo.length} to try${probing ? " (carefully: the last run gave up)" : ''}; about ${GAP / 1000} s apart`);
+  const run = { date: today, started: new Date().toISOString(), tried: 0, found: 0, missing: 0, failed: 0, photos: 0, nophoto: 0, pauses: 0, stopped: null, timeUp: false };
+  let fails = 0, pausesInARow = 0, worked = false, lastWhy = '', next = Date.now();
+  let breakAfter = Math.round(rand(40, 70)), sinceBreak = 0;
+  const writeOut = () => {
+    const named = Object.values(products).filter((p) => p.name).length;
+    const photos = Object.values(products).filter((p) => p.p).length;
+    save({ updated: new Date().toISOString(), lastRun: run, named, photos, of: list.items.length });
+    return { named, photos };
+  };
+  const timeLeft = () => RUN_MS - (Date.now() - STARTED);
 
   for (const code of todo) {
+    if (timeLeft() <= 0) { run.timeUp = true; log('Time for this run is up; the next run carries on'); break; }
     await sleep(Math.max(0, next - Date.now()));
-    next = Date.now() + GAP + Math.round(Math.random() * GAP * 0.3);
+    if (++sinceBreak > breakAfter) {
+      const rest = Math.round(rand(2, 6) * 60000 * (GAP / 20000));
+      log(`  a break of ${Math.round(rest / 1000)} s`);
+      await sleep(rest);
+      sinceBreak = 0; breakAfter = Math.round(rand(40, 70));
+    }
+    next = Date.now() + Math.round(GAP * rand(0.7, 1.3));
     run.tried++;
-    let stop = false, refused = false;
+    let failed = false, refused = false, ok = false;
 
     if (needsName(code)) {
       let got = await read(code);
@@ -150,56 +180,68 @@ async function main() {
       if (got.kind === 'found') {
         products[code] = { ...before, name: got.name, a: got.age ? 1 : 0, at: today };
         delete products[code].tries; delete products[code].why;
-        run.found++; inARow = 0;
-        log(`  ${code} ${got.name}`);
+        run.found++; ok = true;
+        log(`  ${code} ${got.name}${got.age ? ' (age restricted)' : ''}`);
       } else if (got.kind === 'missing') {
         products[code] = { ...before, missing: true, at: today };
-        run.missing++; inARow = 0;
+        run.missing++; ok = true;
         log(`  ${code} no page on screwfix.com`);
       } else {
         products[code] = { ...before, tries: (before.tries || 0) + 1, at: today, why: got.why };
-        run.failed++;
+        run.failed++; failed = true; refused = !!got.blocked; lastWhy = got.why;
         log(`  ${code} FAILED: ${got.why}`);
-        if (got.blocked) { refused = true; stop = turnedAway(got.why); } else inARow = 0;
       }
-      if (!stop && !refused && needsPhoto(code)) await sleep(3000 + Math.round(Math.random() * 2000));
+      if (!refused && needsPhoto(code) && !(products[code] || {}).missing) await sleep(Math.round(rand(3000, 6000) * (GAP / 20000)));
     }
 
-    if (!stop && !refused && needsPhoto(code) && !(products[code] || {}).missing) {
+    if (!refused && needsPhoto(code) && !(products[code] || {}).missing) {
       const got = await photo(code);
       const before = products[code] || {};
       if (got.kind === 'found') {
         fs.writeFileSync(photoFile(code), got.bytes);
         products[code] = { ...before, p: 1 };
         delete products[code].pn; delete products[code].pat;
-        run.photos++; inARow = 0;
+        run.photos++; ok = true;
         log(`  ${code} photo saved (${got.bytes.length} bytes)`);
       } else if (got.kind === 'none') {
         products[code] = { ...before, pn: (before.pn || 0) + 1, pat: today };
-        run.nophoto++; inARow = 0;
+        run.nophoto++; ok = true;
         log(`  ${code} no photo on Screwfix's image server`);
       } else {
         products[code] = { ...before, pn: (before.pn || 0) + 1, pat: today };
+        failed = true; lastWhy = got.why;
         log(`  ${code} PHOTO FAILED: ${got.why}`);
-        stop = turnedAway(got.why);
       }
     }
-    if (stop) { run.stopped = `${STOP_AFTER} in a row couldn't be read (last: ${lastWhy})`; break; }
+
+    if (failed) fails++;
+    else if (ok) { fails = 0; pausesInARow = 0; worked = true; }
+    if (run.tried % 20 === 0) writeOut();
+
+    if (fails >= (pausesInARow ? FAILS_AFTER_PAUSE : FAILS_TO_PAUSE)) {
+      if (probing && !worked) { run.stopped = `the first ${fails} products failed again (last: ${lastWhy})`; break; }
+      if (pausesInARow >= MAX_PAUSES) { run.stopped = `${MAX_PAUSES} pauses of an hour and still failing (last: ${lastWhy})`; break; }
+      const wait = Math.round(PAUSE * rand(1, 1.17));
+      if (timeLeft() < wait) { run.timeUp = true; log(`${fails} failed in a row and this run is nearly out of time: the next run carries on`); break; }
+      pausesInARow++; run.pauses++; fails = 0;
+      log(`  ${FAILS_TO_PAUSE} or more failed in a row (last: ${lastWhy}): pausing for ${Math.round(wait / 60000)} minutes`);
+      writeOut();
+      await sleep(wait);
+      next = Date.now();
+    }
   }
 
-  const named = Object.values(products).filter((p) => p.name).length;
-  const photos = Object.values(products).filter((p) => p.p).length;
-  save({ updated: new Date().toISOString(), lastRun: run, named, photos, of: list.items.length });
-  const summary = `Product names and photos: tried ${run.tried}, names found ${run.found}, no page ${run.missing}, names failed ${run.failed}, photos saved ${run.photos}, no photo ${run.nophoto}. ` +
-    `${named} names and ${photos} photos of ${list.items.length} so far.` + (run.stopped ? ` STOPPED: ${run.stopped}.` : '');
+  const { named, photos } = writeOut();
+  const summary = `Product names and photos: tried ${run.tried}, names found ${run.found}, no page ${run.missing}, names failed ${run.failed}, photos saved ${run.photos}, no photo ${run.nophoto}, pauses ${run.pauses}. ` +
+    `${named} names and ${photos} photos of ${list.items.length} so far.` + (run.stopped ? ` GAVE UP: ${run.stopped}.` : '');
   log(summary);
   if (process.env.RUNNER_TEMP) {
     fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'names-commit.txt'),
-      `Product names and photos: ${run.found} names, ${run.photos} photos${run.stopped ? ', stopped early' : ''} (${named} names, ${photos} photos of ${list.items.length}) [skip ci]\n`);
+      `Product names and photos: ${run.found} names, ${run.photos} photos${run.stopped ? ', gave up' : ''} (${named} names, ${photos} photos of ${list.items.length}) [skip ci]\n`);
   }
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
   if (run.stopped) {
-    annotate('error', 'Product names and photos stopped', run.stopped + '. The next run only tries ' + PROBE + ' products.');
+    annotate('error', 'Product names and photos gave up', run.stopped + '. The next run tries a few first and gives up again if the first 4 fail.');
     process.exitCode = 1;
   }
 }
