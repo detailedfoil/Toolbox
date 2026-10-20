@@ -1,0 +1,28 @@
+{
+  "updated": "2026-10-20T20:32:13.811Z",
+  "lastRun": {"date":"2026-10-20","tried":20,"found":19,"missing":0,"failed":1,"stopped":null},
+  "named": 19,
+  "of": 10171,
+  "products": {
+    "10084": {"name":"Nickel 165° Soft-Close Clip-On Concealed Hinges 136mm 2 Pack","at":"2026-10-20"},
+    "10130": {"name":"Zinsser B-I-N 2.5Ltr White Matt Stain Block Interior Multi Surface Primer","at":"2026-10-20"},
+    "10135": {"name":"Zinsser Bulls Eye 1-2-3 1Ltr White Matt Stain Block Interior & Exterior Multi Surface Primer","at":"2026-10-20"},
+    "10136": {"name":"Zinsser Bulls Eye 1-2-3 2.5Ltr White Matt Stain Block Interior & Exterior Multi Surface Primer","at":"2026-10-20"},
+    "1019T": {"name":"Easyfix A2 Stainless Steel Set Screws M6 x 50mm 10 Pack","at":"2026-10-20"},
+    "101FG": {"name":"Essentials Non Photoluminescent \"Fire Exit Man Right Arrow\" Sign 100mm x 400mm","at":"2026-10-20"},
+    "101YW": {"name":"Site SDG230 Nitrile Powder-Free Disposable Gloves Blue Small 100 Pack","at":"2026-10-20"},
+    "102KJ": {"name":"DEWALT DCH273N-XJ 2.5kg 18V Li-Ion XR Brushless Cordless SDS Drill - Bare","at":"2026-10-20"},
+    "1041P": {"tries":1,"at":"2026-10-20","why":"page: found, doesn't mention the code"},
+    "1047G": {"name":"Smith & Locke Fire Rated Satin Stainless Steel BS 5-Lever Mortice Deadlock 65mm Case - 45mm Backset","at":"2026-10-20"},
+    "104KH": {"name":"No Nonsense UV & Water-Resistant Painters Masking Tape 41m x 48mm","at":"2026-10-20"},
+    "104VG": {"name":"Chint NX3 Series 5-Module 2-Way Part-Populated Garage Consumer Unit","at":"2026-10-20"},
+    "1074J": {"name":"Smith & Locke Mid Duty Double Storage Hook Zinc-Plated 206 x 150mm","at":"2026-10-20"},
+    "108AK": {"name":"TRACER 200mm Deep Hole Construction Pencil Set 2B 2 Pieces","at":"2026-10-20"},
+    "1116C": {"name":"Dunlop Pricemastor Size 11 Black Non Safety Wellies","at":"2026-10-20"},
+    "111RV": {"name":"Site Karker Body Warmer Black Large 46\" Chest","at":"2026-10-20"},
+    "113PV": {"name":"Trend AB/125/180A 180 Grit 8-Hole Punched Multi-Material Sanding Discs 125mm 10 Pack","at":"2026-10-20"},
+    "11541": {"name":"Easyfix Extra Large Head Clouts Galvanised 3mm x 40mm 1kg Pack","at":"2026-10-20"},
+    "115HT": {"name":"Smith & Locke Hat & Coat Hooks Satin Anodised Aluminium 130mm 5 Pack","at":"2026-10-20"},
+    "116YW": {"name":"Site SDG310 Nitrile Powder-Free Disposable Grip Gloves Black X Large 50 Pack","at":"2026-10-20"}
+  }
+}
