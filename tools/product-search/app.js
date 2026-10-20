@@ -11,10 +11,10 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var q = $('q'), form = $('form'), statusEl = $('status'), noteEl = $('note'), results = $('results'), more = $('more');
-  var welcome = $('welcome'), stripMs = $('stripMs'), timingBar = $('timingBar'), toastEl = $('toast');
+  var welcome = $('welcome'), stripMs = $('stripMs'), toastEl = $('toast');
 
   var list = null, web = null, searcher = null, shown = null, shownCount = 0, listInfo = '';
-  var settings = { timings: get('ps-timings') === '1', nophotos: get('ps-nophotos') === '1' };
+  var settings = { nophotos: get('ps-nophotos') === '1' };
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
@@ -170,7 +170,7 @@
       return '<span class="sx-flag sx-' + f[2] + '">' + f[1] + '</span>';
     }).join('');
     return '<li class="sx-card">' +
-      '<div class="sx-ph" data-sku="' + esc(it.sku) + '"><img alt="" decoding="async"><span class="sx-ph-code">' + esc(it.sku) + '</span><span class="sx-ms"></span></div>' +
+      '<div class="sx-ph" data-sku="' + esc(it.sku) + '"><img alt="" decoding="async"><span class="sx-ph-code">' + esc(it.sku) + '</span></div>' +
       '<div class="sx-body">' +
         '<h3 class="sx-name">' + marked(title, words) + '</h3>' +
         (it.web && it.web.toLowerCase() !== it.name.toLowerCase() ? '<p class="sx-alt">Till name: ' + marked(it.name, words) + '</p>' : '') +
@@ -200,9 +200,6 @@
     Photos.load(sku, img).then(function (r) {
       box.classList.remove('loading');
       box.classList.add(r.source === 'failed' ? 'none' : 'ok');
-      record(r);
-      var label = { memory: 'shown before', saved: 'saved', web: 'Screwfix', failed: 'no photo' }[r.source];
-      box.querySelector('.sx-ms').textContent = label + ' ' + (r.ms < 1000 ? r.ms + ' ms' : (r.ms / 1000).toFixed(1) + ' s');
     });
   }
 
@@ -211,33 +208,6 @@
     if (entries.some(function (e) { return e.isIntersecting; })) addPage();
   }, { rootMargin: '600px 0px' }) : null;
   if (moreWatch) moreWatch.observe(more); else more.addEventListener('click', addPage);
-
-  /* ---------- the timing readout ---------- */
-
-  var times = { saved: [], web: [], memory: [], failed: [] };
-  function record(r) {
-    times[r.source].push(r.ms);
-    drawTimings();
-  }
-  function summary(arr) {
-    if (!arr.length) return null;
-    var sorted = arr.slice().sort(function (a, b) { return a - b; });
-    var avg = Math.round(arr.reduce(function (a, b) { return a + b; }, 0) / arr.length);
-    return { n: arr.length, avg: avg, mid: sorted[Math.floor(sorted.length / 2)], max: sorted[sorted.length - 1] };
-  }
-  function drawTimings() {
-    document.body.classList.toggle('sx-show-ms', settings.timings);
-    timingBar.hidden = !settings.timings;
-    if (!settings.timings) return;
-    var w = summary(times.web), s = summary(times.saved), parts = [];
-    parts.push(w ? '<span><b>Screwfix</b> ' + w.n + ' photos, typical ' + w.mid + ' ms, slowest ' + w.max + ' ms</span>' : '<span><b>Screwfix</b> none yet</span>');
-    parts.push(s ? '<span><b>Saved</b> ' + s.n + ', typical ' + s.mid + ' ms</span>' : '<span><b>Saved</b> none yet</span>');
-    if (times.memory.length) parts.push('<span><b>Shown before</b> ' + times.memory.length + '</span>');
-    if (times.failed.length) parts.push('<span class="bad"><b>No photo</b> ' + times.failed.length + '</span>');
-    var mode = Photos.mode();
-    parts.push('<span class="mode">' + (mode === 'img' ? 'Copies saved through the image relay' : mode === 'fetch' ? 'Copies saved straight from Screwfix' : 'Working out how to save copies') + '</span>');
-    timingBar.innerHTML = parts.join('');
-  }
 
   /* ---------- settings ---------- */
 
@@ -250,11 +220,7 @@
   }
   Photos.onSaved = showSaved;
 
-  $('timings').checked = settings.timings;
   $('nophotos').checked = settings.nophotos;
-  $('timings').addEventListener('change', function () {
-    settings.timings = this.checked; set('ps-timings', this.checked ? '1' : '0'); drawTimings();
-  });
   $('nophotos').addEventListener('change', function () {
     settings.nophotos = this.checked; set('ps-nophotos', this.checked ? '1' : '0');
     if (!this.checked) Array.prototype.forEach.call(results.querySelectorAll('.sx-ph.off'), function (b) { b.classList.remove('off'); showPhoto(b); });
@@ -298,7 +264,6 @@
   var m = /#q=([^&]*)/.exec(location.hash);
   if (m) { try { q.value = decodeURIComponent(m[1]); } catch (e) { /* bad address */ } }
 
-  drawTimings();
   showSaved();
   start();
 })();
