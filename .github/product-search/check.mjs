@@ -138,7 +138,10 @@ function save(head) {
   const keys = Object.keys(products).sort();
   const lines = keys.map((k) => `    ${JSON.stringify(k)}: ${JSON.stringify(products[k])}`);
   const top = Object.entries(head).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
-  fs.writeFileSync(path.join(ROOT, OUT), `{\n${top.join(',\n')},\n  "products": {\n${lines.join(',\n')}\n  }\n}\n`);
+  // written to a side file and renamed, so the workflow can save a copy part-way through a run without catching it half written
+  const file = path.join(ROOT, OUT);
+  fs.writeFileSync(file + '.tmp', `{\n${top.join(',\n')},\n  "products": {\n${lines.join(',\n')}\n  }\n}\n`);
+  fs.renameSync(file + '.tmp', file);
 }
 
 const rand = (lo, hi) => lo + Math.random() * (hi - lo);

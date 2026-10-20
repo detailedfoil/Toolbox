@@ -57,16 +57,18 @@ jobs:
           LIMIT: ${{ github.event_name == 'push' && '20' || inputs.count || '' }}
           GAP_MS: '20000'       # about one product every 20 s, never evenly (14 to 26 s); see the top of check.mjs
           RUN_MINUTES: '330'
-        run: node .github/product-search/check.mjs
+        run: |
+          node .github/product-search/check.mjs &
+          CHECK=$!
+          # while it works, save what's found every 20 minutes, so the Toolbox page's progress bar moves and nothing is lost
+          # if the run is cut off
+          while kill -0 $CHECK 2>/dev/null; do
+            for i in $(seq 1 120); do kill -0 $CHECK 2>/dev/null || break; sleep 10; done
+            kill -0 $CHECK 2>/dev/null || break
+            bash .github/product-search/save.sh "Product names and photos (progress) [skip ci]" || true
+          done
+          wait $CHECK
 
       - name: Save the names and photos
         if: always()
-        run: |
-          [ -f tools/product-search/data/web-names.json ] || exit 0
-          git add tools/product-search/data/web-names.json tools/product-search/photos
-          if git diff --cached --quiet; then echo "Nothing new to save"; exit 0; fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          if [ -f "$RUNNER_TEMP/names-commit.txt" ]; then git commit -q -F "$RUNNER_TEMP/names-commit.txt"; else git commit -q -m "Product names and photos (run stopped early) [skip ci]"; fi
-          for i in 1 2 3; do git push -q && exit 0; sleep 5; git pull -q --rebase; done
-          exit 1
+        run: bash .github/product-search/save.sh
