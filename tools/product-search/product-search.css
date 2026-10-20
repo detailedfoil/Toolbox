@@ -25,9 +25,8 @@ html:has(body.sx){background:var(--sx-bg,#f4f4f4)}
   font-size:.78rem;font-weight:700;letter-spacing:.02em;text-align:center}
 
 /* the account bar, header, search box and strips */
-.sx-account{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 16px;background:var(--sx-bar);color:#fff;font-size:.86rem}
-.sx-back{color:#fff !important;text-decoration:none;font-weight:600}
-.sx-parody{color:rgba(255,255,255,.85);font-size:.72rem;text-align:right}
+.sx-account{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:10px 16px;background:var(--sx-bar);color:#fff;font-size:.86rem}
+.sx-parody{color:#fff;font-size:.82rem;text-align:right}
 .sx-head{background:var(--sx-head)}
 .sx-head-in{max-width:960px;margin:0 auto;padding:14px 16px 10px}
 .sx-brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
