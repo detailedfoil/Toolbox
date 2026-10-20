@@ -1,8 +1,8 @@
 /* Product Search: storage on this phone and the product photos.
  *
  * Storage (IndexedDB "toolbox-product-search"): only the product list, so search works the moment the page opens,
- * even with no signal. Photos are NOT saved on the phone (detailedfoil, 20 Oct 2026): each one is a plain picture
- * from Screwfix's image server, media.screwfix.com/is/image/ae235/<CODE>_P at 120 x 120, the same server the A4
+ * even with no signal. Photos are NOT saved on the phone (detailedfoil, 20 Oct 2026): each one is a plain picture, the copy kept with
+ * the Toolbox (collected overnight) if there is one, otherwise from Screwfix's image server, media.screwfix.com/is/image/ae235/<CODE>_P at 120 x 120, the same server the A4
  * Posters tool uses, loaded only for results on screen. If one doesn't load the page shows a placeholder with the code.
  * (Photos once saved by an earlier version of this page are cleared away the next time it opens.)
  */
@@ -61,23 +61,34 @@
 
   var failed = new Set();         // skus whose photo didn't load this visit
 
-  /* Show the photo for sku in img. -> Promise<{source: 'web'|'failed'}> */
-  function load(sku, img) {
-    if (failed.has(sku)) return Promise.resolve({ source: 'failed' });
+  /* a plain picture in img from url -> Promise<boolean> (did it show) */
+  function show(img, url) {
     return new Promise(function (ok) {
-      var timer = setTimeout(function () { done(false); }, TIMEOUT);
-      function done(good) {
-        clearTimeout(timer);
-        img.onload = img.onerror = null;
-        if (!good) failed.add(sku);
-        ok({ source: good ? 'web' : 'failed' });
-      }
-      img.onload = function () { done(true); };
-      img.onerror = function () { done(false); };
+      var timer = setTimeout(function () { end(false); }, TIMEOUT);
+      function end(good) { clearTimeout(timer); img.onload = img.onerror = null; ok(good); }
+      img.onload = function () { end(true); };
+      img.onerror = function () { end(false); };
       img.referrerPolicy = 'no-referrer';
-      img.src = photoUrl(sku);
+      img.src = url;
     });
   }
 
-  root.ProductPhotos = { load: load, photoUrl: photoUrl, data: data };
+  /* Show the photo for sku in img: the copy kept with the Toolbox if the overnight check has found one (set by the
+     page), otherwise Screwfix's image server. -> Promise<{source: 'toolbox'|'web'|'failed'}> */
+  function load(sku, img) {
+    if (failed.has(sku)) return Promise.resolve({ source: 'failed' });
+    var first = Photos.stored && Photos.stored.has(sku)
+      ? show(img, 'product-search/photos/' + encodeURIComponent(sku) + '.jpg').then(function (good) { return good ? 'toolbox' : null; })
+      : Promise.resolve(null);
+    return first.then(function (source) {
+      if (source) return { source: source };
+      return show(img, photoUrl(sku)).then(function (good) {
+        if (!good) failed.add(sku);
+        return { source: good ? 'web' : 'failed' };
+      });
+    });
+  }
+
+  var Photos = { load: load, photoUrl: photoUrl, data: data, stored: null };   // stored: codes whose photo is kept with the Toolbox
+  root.ProductPhotos = Photos;
 })(this);

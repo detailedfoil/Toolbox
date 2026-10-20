@@ -46,6 +46,9 @@
     var ms = Math.round(performance.now() - t0);
     listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');
     q.placeholder = 'Search by code or name';
+    var have = new Set();
+    Object.keys(names).forEach(function (k) { if (names[k].p) have.add(k); });
+    Photos.stored = have;
     $('welcomeTitle').textContent = 'Search ' + n(items.length) + ' nailed items';
     run();
   }

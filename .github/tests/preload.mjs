@@ -5,6 +5,10 @@ const site = `http://127.0.0.1:${process.env.MOCK_PORT}/direct/`;
 const realFetch = globalThis.fetch;
 globalThis.fetch = (url, init) => {
   const u = String(url);
+  if (u.startsWith('https://wsrv.nl/')) {          // the image relay: it asks the pretend image server for the picture
+    const inner = new URL(u).searchParams.get('url') || '';
+    return realFetch(`http://127.0.0.1:${process.env.MOCK_PORT}/media/` + inner.replace(/^https:\/\/media\.screwfix\.com\//, ''), init);
+  }
   if (u.startsWith('https://media.screwfix.com/')) return realFetch(`http://127.0.0.1:${process.env.MOCK_PORT}/media/` + u.slice('https://media.screwfix.com/'.length), init);
   return realFetch(u.startsWith('https://www.screwfix.com/') ? site + u.slice('https://www.screwfix.com/'.length) : u, init);
 };

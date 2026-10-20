@@ -48,13 +48,12 @@ explain changes in plain English and say what they'll see.
   - `product-search`: Product Search, every store (tile badge "Under construction", page banner too: remove both when
     detailedfoil says). A parody "CrashFix" look on this page only (colours from screenshots of the real site). `search.js` is the search: no network, an index
     in memory, typo tolerant; add a test in `.github/tests/product-search.test.mjs` for any search that should work.
-    `photos.js` keeps the list and every thumbnail seen on the phone (IndexedDB), and loads photos from
-    media.screwfix.com (120 px), saving copies through wsrv.nl when the image server won't let the page read them.
+    `photos.js` keeps the product list on the phone (IndexedDB) and shows photos: the kept copy, else media.screwfix.com (120 px).
     `data/products.json` is made from detailedfoil's stock export by `.github/product-search/make-list.py` (code, name
     and the four warning flags only: no stock or locations, the repo is public). `data/web-names.json` holds the
     screwfix.com names and `photos/<CODE>.jpg` the 120 px photos, both written by the nightly check (`a: 1` on a
     product in `web-names.json` means age restricted, found by the same reader the posters use (`age` in `lookup.js`),
-    shown as an "Age restricted" badge; `p: 1` means its photo is saved; the page loads that copy before asking Screwfix).
+    shown as an "Age restricted" badge; `p: 1` means its photo is saved).
   - `nps`, `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
@@ -63,8 +62,9 @@ explain changes in plain English and say what they'll see.
   `.github/workflows/fuel.yml` runs `.github/fuel/check.mjs` every 3 hours for Leighton Buzzard only and commits
   `tools/fuel/data/prices.json` when a price changes or the saved copy is 5 hours old.
 - `.github/workflows/product-search-names.yml` runs `.github/product-search/check.mjs` every night (01:23 UTC): 300
-  product pages through jina (names), text reads only, then (only if `PHOTOS: 'off'` is removed from the workflow) each photo straight from media.screwfix.com, 12 s apart.
-  Photos are OFF: on 20 Oct 2026 the image server answered GitHub with non-pictures. The page saves photos on each phone as they're seen instead.
+  product pages through jina (names), text reads only, then each photo through the free image relay wsrv.nl (Screwfix's image server answered GitHub's servers directly with
+  non-pictures on 20 Oct 2026), 12 s apart. Add `PHOTOS: 'off'` to the workflow to leave photos out. The page shows the
+  kept copy if there is one, otherwise loads from Screwfix; nothing is saved on phones.
   It stops after 5 refusals in a row (the run fails, so GitHub emails detailedfoil) and then only tries 10 the next
   night. Screwfix has blocked a nightly check before:
   don't speed it up.

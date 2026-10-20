@@ -105,7 +105,11 @@ const HEADERS = { 'User-Agent': `Mozilla/5.0 (Windows NT 10.0; Win64; x64) Apple
 async function photo(code) {
   let res, bytes;
   try {
-    res = await fetch(MEDIA + code + '_P?wid=120&hei=120', { headers: HEADERS, signal: AbortSignal.timeout(30000) });
+    // through the free image relay wsrv.nl (it asks Screwfix from its own servers; Screwfix's image server turned
+    // GitHub's servers away when asked directly, 20 Oct 2026). PHOTO_VIA=direct asks Screwfix itself.
+    const own = MEDIA + code + '_P?wid=120&hei=120';
+    const url = process.env.PHOTO_VIA === 'direct' ? own : 'https://wsrv.nl/?url=' + encodeURIComponent(own) + '&output=jpg&q=85';
+    res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(30000) });
     bytes = Buffer.from(await res.arrayBuffer());
   } catch (e) {
     return { kind: 'fail', why: 'image server: no answer (' + String((e.cause && e.cause.code) || e.message).slice(0, 80) + ')', blocked: true };
