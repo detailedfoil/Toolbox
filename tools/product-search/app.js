@@ -169,7 +169,7 @@
       '<div class="sx-ph" data-sku="' + esc(it.sku) + '"><img alt="" decoding="async"><span class="sx-ph-code">' + esc(it.sku) + '</span></div>' +
       '<div class="sx-body">' +
         '<h3 class="sx-name">' + marked(title, words) + '</h3>' +
-        (it.web && it.web.toLowerCase() !== it.name.toLowerCase() ? '<p class="sx-alt">Till name: ' + marked(it.name, words) + '</p>' : '') +
+        (it.web && it.web.toLowerCase() !== it.name.toLowerCase() ? '<p class="sx-alt">Alternative name: ' + marked(it.name, words) + '</p>' : '') +
         (flags ? '<div class="sx-flags">' + flags + '</div>' : '') +
         '<div class="sx-row">' +
           '<button type="button" class="sx-code" data-copy="' + esc(it.sku) + '" aria-label="Copy product code ' + esc(it.sku) + '"><span>Product code</span> <b>' + markedCode(it.sku, shown.code, r.how) + '</b></button>' +
