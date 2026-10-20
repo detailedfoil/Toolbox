@@ -47,15 +47,7 @@
     listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');
     q.placeholder = 'Search by code or name';
     $('welcomeTitle').textContent = 'Search ' + n(items.length) + ' nailed items';
-    $('about').textContent = 'Product list from ' + (niceDate(list.version) || 'your stock export') + ': ' + n(items.length) +
-      ' products. Screwfix website names found so far: ' + n(named) + ' (a few hundred more a night). Search index built in ' + ms + ' ms.' +
-      (web && web.lastRun ? ' ' + runNote(web.lastRun) : '');
     run();
-  }
-  function runNote(r) {
-    if (!r || !r.date) return '';
-    if (r.stopped) return 'The last overnight check (' + niceDate(r.date) + ') stopped early: ' + r.stopped + '.';
-    return 'Last overnight check: ' + niceDate(r.date) + ', ' + n(r.found || 0) + ' names found.';
   }
 
   function fetchText(url) {
