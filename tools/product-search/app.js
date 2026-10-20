@@ -49,9 +49,46 @@
     var have = new Set();
     Object.keys(names).forEach(function (k) { if (names[k].p) have.add(k); });
     Photos.stored = have;
+    showProgress(items.length, names);
     $('welcomeTitle').textContent = 'Search ' + n(items.length) + ' nailed items';
     run();
   }
+
+  /* the "Under construction" bar opens a progress bar: how many products have been read from screwfix.com so far
+     (name and age restriction found), and how many photos are kept */
+  var pg = { total: 0, done: 0, photos: 0, when: '' };
+  function showProgress(total, names) {
+    var done = 0, photos = 0;
+    Object.keys(names).forEach(function (k) {
+      var p = names[k];
+      if (p.name && p.a !== undefined) done++;
+      if (p.p) photos++;
+    });
+    pg = { total: total, done: done, photos: photos, when: (web && web.updated) || '' };
+    drawProgress();
+  }
+  function drawProgress() {
+    if (!pg.total) return;
+    var pct = pg.done / pg.total * 100;
+    $('pgFill').style.width = pct + '%';
+    $('pgBar').setAttribute('aria-valuenow', Math.round(pct));
+    $('pgLine').textContent = n(pg.done) + ' of ' + n(pg.total) + ' products backed up (' + (pct < 10 ? pct.toFixed(1) : Math.round(pct)) + '%)';
+    var when = pg.when ? new Date(pg.when) : null;
+    var ago = '';
+    if (when && !isNaN(when)) {
+      var mins = Math.max(0, Math.round((Date.now() - when.getTime()) / 60000));
+      ago = ' Last saved ' + (mins < 2 ? 'just now' : mins < 90 ? mins + ' minutes ago' : mins < 2880 ? Math.round(mins / 60) + ' hours ago' : Math.round(mins / 1440) + ' days ago') + '.';
+    }
+    $('pgSub').textContent = n(pg.photos) + ' photos kept.' + ago;
+  }
+  function toggleProgress() {
+    var box = $('progress'), open = box.hidden;
+    box.hidden = !open;
+    $('build').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) drawProgress();
+  }
+  $('build').addEventListener('click', toggleProgress);
+  $('build').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleProgress(); } });
 
   function fetchText(url) {
     return fetch(url, { cache: 'no-cache' }).then(function (res) {

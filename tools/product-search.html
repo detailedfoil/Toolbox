@@ -9,11 +9,17 @@
 <title>Product Search</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="product-search/product-search.css?v=bd62a2b460">
+<link rel="stylesheet" href="product-search/product-search.css?v=aa30328f78">
 <script src="../analytics.js?v=f5e6d397aa"></script>
 </head>
 <body class="sx">
-<div class="sx-construction" role="note"><span>Under construction: things may move about or break</span></div>
+<div class="sx-construction" id="build" role="button" tabindex="0" aria-expanded="false" aria-controls="progress"><span>Under construction: things may move about or break</span></div>
+<section class="sx-progress" id="progress" hidden aria-live="polite">
+  <div class="sx-pg-title">Backed up from screwfix.com</div>
+  <div class="sx-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pgBar"><i id="pgFill"></i></div>
+  <p class="sx-pg-line" id="pgLine">Loading...</p>
+  <p class="sx-pg-sub" id="pgSub"></p>
+</section>
 
 <div class="sx-account">
   <span class="sx-parody">hopefully this wont crash too</span>
@@ -63,6 +69,6 @@
 
 <script src="product-search/search.js?v=f8a92b6c2d"></script>
 <script src="product-search/photos.js?v=c687a03fcf"></script>
-<script src="product-search/app.js?v=e47a666390"></script>
+<script src="product-search/app.js?v=5d6d3d3ede"></script>
 </body>
 </html>
