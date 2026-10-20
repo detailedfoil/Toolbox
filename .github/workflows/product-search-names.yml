@@ -2,6 +2,7 @@
 # (through jina, like the price checks) and saves the website name to tools/product-search/data/web-names.json, so
 # Product Search can find products by either name, then fetches the 120 x 120 photo from Screwfix's image server
 # and saves it as tools/product-search/photos/<CODE>.jpg, so every phone gets photos from the Toolbox itself.
+# PHOTOS IS SWITCHED OFF below (the image server refused GitHub on 20 Oct 2026): it reads names only.
 # One product every 12 s or so. About 5 weeks to get through the whole list; what's already found isn't fetched again.
 # If Screwfix, jina or the image server starts turning it away it stops, the run shows as failed (GitHub emails you),
 # and the next night only tries 10 products before carrying on.
@@ -53,6 +54,7 @@ jobs:
         env:
           LIMIT: ${{ github.event_name == 'schedule' && '300' || github.event_name == 'push' && '20' || inputs.count }}
           GAP_MS: '12000'
+          PHOTOS: 'off'         # Screwfix's image server turned GitHub away on 20 Oct 2026: names only. Remove this line to try photos again.
         run: node .github/product-search/check.mjs
 
       - name: Save the names and photos

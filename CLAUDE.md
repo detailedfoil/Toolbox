@@ -62,7 +62,8 @@ explain changes in plain English and say what they'll see.
   `.github/workflows/fuel.yml` runs `.github/fuel/check.mjs` every 3 hours for Leighton Buzzard only and commits
   `tools/fuel/data/prices.json` when a price changes or the saved copy is 5 hours old.
 - `.github/workflows/product-search-names.yml` runs `.github/product-search/check.mjs` every night (01:23 UTC): 300
-  product pages through jina (names), text reads only, then each photo straight from media.screwfix.com, 12 s apart.
+  product pages through jina (names), text reads only, then (only if `PHOTOS: 'off'` is removed from the workflow) each photo straight from media.screwfix.com, 12 s apart.
+  Photos are OFF: on 20 Oct 2026 the image server answered GitHub with non-pictures. The page saves photos on each phone as they're seen instead.
   It stops after 5 refusals in a row (the run fails, so GitHub emails detailedfoil) and then only tries 10 the next
   night. Screwfix has blocked a nightly check before:
   don't speed it up.

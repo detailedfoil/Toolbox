@@ -32,6 +32,9 @@ const PHOTOS = 'tools/product-search/photos';
 const MEDIA = 'https://media.screwfix.com/is/image/ae235/';
 const JINA = process.env.JINA_URL || 'https://r.jina.ai/';
 const GAP = Number(process.env.GAP_MS || 12000);
+// PHOTOS=off (set in the workflow) leaves the photos out. Screwfix's image server turned GitHub away on 20 Oct 2026
+// (answered the first 5 with something that wasn't a picture), so photos are off there; the code stays for another go.
+const PHOTOS_ON = process.env.PHOTOS !== 'off';
 const STOP_AFTER = 5;           // failures in a row that count as being turned away
 const PROBE = 10;               // products to try after a stop
 
@@ -55,6 +58,7 @@ const needsName = (code) => {
   return (p.tries || 0) < 3 && (!p.tries || daysSince(p.at) >= 7);
 };
 const needsPhoto = (code) => {
+  if (!PHOTOS_ON) return false;
   const p = products[code] || {};
   if (p.p && fs.existsSync(photoFile(code))) return false;
   return (p.pn || 0) < 3 && (!p.pn || daysSince(p.pat) >= 7);
