@@ -25,6 +25,7 @@
 //   - saves its progress every 20 products, so nothing is lost if a run is cut off
 // No tricks to dodge Screwfix's blocking: if it's refusing, this backs off and stops.
 //
+//   PHOTO_SWEEP  'on': fetch every missing photo first, quickly (about one a second), before the slow name reading
 //   LIMIT        how many products to try this run (none: no limit)
 //   RUN_MINUTES  stop starting new products after this long (default 330, inside GitHub's 6 hour limit)
 //   PAUSE_MS     the pause after failures (default an hour; the tests shorten it)
@@ -49,6 +50,7 @@ const STARTED = Date.now();
 // PHOTOS=off (set in the workflow) leaves the photos out. Screwfix's image server turned GitHub away on 20 Oct 2026
 // (answered the first 5 with something that wasn't a picture), so photos are off there; the code stays for another go.
 const PHOTOS_ON = process.env.PHOTOS !== 'off';
+const SWEEP_GAP = Number(process.env.PHOTO_GAP_MS || Math.round(GAP / 20));   // between photos in the sweep: 1 s with the usual 20 s gap
 const FAILS_TO_PAUSE = 4;       // different products failing in a row before an hour's pause
 const FAILS_AFTER_PAUSE = 2;    // failing straight after a pause: pause again
 const MAX_PAUSES = 3;           // pauses in a row with nothing working: give up
@@ -149,7 +151,7 @@ const rand = (lo, hi) => lo + Math.random() * (hi - lo);
 async function main() {
   const probing = !!(state.lastRun && state.lastRun.stopped);
   const limit = Number(process.env.LIMIT) > 0 ? Number(process.env.LIMIT) : Infinity;
-  const todo = queue().slice(0, limit);
+  let todo = queue().slice(0, limit);
   log(`${todo.length} to try${probing ? " (carefully: the last run gave up)" : ''}; about ${GAP / 1000} s apart`);
   const run = { date: today, started: new Date().toISOString(), tried: 0, found: 0, missing: 0, failed: 0, photos: 0, nophoto: 0, pauses: 0, stopped: null, timeUp: false };
   let fails = 0, pausesInARow = 0, worked = false, lastWhy = '', next = Date.now();
@@ -161,6 +163,46 @@ async function main() {
     return { named, photos };
   };
   const timeLeft = () => RUN_MS - (Date.now() - STARTED);
+
+  /* Photo sweep (PHOTO_SWEEP=on, set in the workflow). A photo's address only needs the product code, not the page, so
+     the photos are fetched first in one quick pass: about one a second (SWEEP_GAP, never evenly) instead of one every
+     20 s. Photos are a small request to a different server from the page reads. 3 refusals in a row stop the sweep for
+     this run (the names carry on, without photos) and a warning is shown. A product with no photo (404) isn't a refusal. */
+  let photosOff = false;
+  if (PHOTOS_ON && process.env.PHOTO_SWEEP === 'on') {
+    const want = list.items.map((r) => r[0]).filter(needsPhoto).slice(0, limit);
+    log(`photo sweep: ${want.length} photos to fetch, about ${SWEEP_GAP / 1000} s apart`);
+    let bad = 0, done = 0, why = '';
+    for (const code of want) {
+      if (timeLeft() <= 0) { run.timeUp = true; log('Time for this run is up during the photo sweep; the next run carries on'); break; }
+      await sleep(Math.round(SWEEP_GAP * rand(0.7, 1.5)));
+      const got = await photo(code);
+      const before = products[code] || {};
+      if (got.kind === 'found') {
+        fs.writeFileSync(photoFile(code), got.bytes);
+        products[code] = { ...before, p: 1 };
+        delete products[code].pn; delete products[code].pat;
+        run.photos++; bad = 0;
+      } else if (got.kind === 'none') {
+        products[code] = { ...before, pn: (before.pn || 0) + 1, pat: today };
+        run.nophoto++; bad = 0;
+      } else {
+        products[code] = { ...before, pn: (before.pn || 0) + 1, pat: today };
+        bad++; why = got.why;
+        log(`  ${code} PHOTO FAILED: ${got.why}`);
+        if (bad >= 3) {
+          photosOff = true; run.photoSweepStopped = why;
+          annotate('warning', 'Product photos turned away', `3 photos in a row failed (${why}). The photo sweep stopped for this run; names carry on without photos.`);
+          break;
+        }
+      }
+      if (++done % 50 === 0) writeOut();
+    }
+    writeOut();
+    log(`photo sweep finished: ${done} tried`);
+    todo = queue().slice(0, limit);     // the photos are done, so what's left is mostly names
+  }
+  const wantPhoto = (code) => !photosOff && needsPhoto(code);
 
   for (const code of todo) {
     if (timeLeft() <= 0) { run.timeUp = true; log('Time for this run is up; the next run carries on'); break; }
@@ -194,10 +236,10 @@ async function main() {
         run.failed++; failed = true; refused = !!got.blocked; lastWhy = got.why;
         log(`  ${code} FAILED: ${got.why}`);
       }
-      if (!refused && needsPhoto(code) && !(products[code] || {}).missing) await sleep(Math.round(rand(3000, 6000) * (GAP / 20000)));
+      if (!refused && wantPhoto(code) && !(products[code] || {}).missing) await sleep(Math.round(rand(3000, 6000) * (GAP / 20000)));
     }
 
-    if (!refused && needsPhoto(code) && !(products[code] || {}).missing) {
+    if (!refused && wantPhoto(code) && !(products[code] || {}).missing) {
       const got = await photo(code);
       const before = products[code] || {};
       if (got.kind === 'found') {

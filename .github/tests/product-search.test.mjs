@@ -263,6 +263,39 @@ test('photo check: a product whose name is already known only needs its photo, a
   } finally { await mock.close(); }
 });
 
+test('photo sweep: fetches every missing photo first and quickly, then reads names, without asking for a photo twice', async () => {
+  const codes = ['75001', '75002', '75003', '75004'];
+  const scen = {};
+  codes.forEach((c, i) => { scen[c] = { text: [textPage({ code: c, name: 'Sweep ' + c, price: 4 })], image: [i === 3 ? { status: 404, body: 'none' } : PICTURE] }; });
+  const mock = await startMock(scen);
+  try {
+    const out = await runCheck({ check: 'product-search', mock, env: { PHOTO_SWEEP: 'on' }, files: { 'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'Sweep ' + c, 0])) } });
+    assert.equal(out.code, 0, out.stderr);
+    const n = names(out);
+    assert.equal(n.photos, 3);
+    assert.equal(n.named, 4);
+    const firstPage = mock.hits.findIndex((h) => h.mode !== 'image');
+    assert.ok(firstPage >= 4 && mock.hits.slice(0, 4).every((h) => h.mode === 'image'), 'all four photos asked for before any page is read');
+    assert.equal(mock.hits.filter((h) => h.mode === 'image').length, 4, 'each photo asked for once');
+    assert.match(out.stdout, /photo sweep: 4 photos to fetch/);
+  } finally { await mock.close(); }
+});
+
+test('photo sweep: 3 refusals in a row stop it for this run, the names carry on, and the run does not fail', async () => {
+  const codes = Array.from({ length: 8 }, (_, i) => String(76000 + i));
+  const scen = {};
+  codes.forEach((c) => { scen[c] = { text: [textPage({ code: c, name: 'Sweep ' + c, price: 4 })], image: [{ status: 403, body: 'denied' }] }; });
+  const mock = await startMock(scen);
+  try {
+    const out = await runCheck({ check: 'product-search', mock, env: { PHOTO_SWEEP: 'on' }, files: { 'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'Sweep ' + c, 0])) } });
+    assert.equal(out.code, 0, out.stderr);
+    assert.equal(mock.hits.filter((h) => h.mode === 'image').length, 3, 'stopped after 3');
+    assert.equal(names(out).named, 8, 'the names still got read');
+    assert.match(names(out).lastRun.photoSweepStopped, /HTTP 403/);
+    assert.match(out.stdout, /::warning title=Product photos turned away::/);
+  } finally { await mock.close(); }
+});
+
 test('age check: a page with Challenge 25 wording is marked a: 1, others a: 0, and already-named products are read once more for it', async () => {
   const restricted = textPage({ code: '91111', name: 'Craft Knife', price: 3 }) + '\nThis product is Challenge 25. You may be asked for proof of age upon collection.\n';
   const mock = await startMock({

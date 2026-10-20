@@ -65,8 +65,10 @@ explain changes in plain English and say what they'll see.
   the saved copy is just a fallback and goes stale.
 - `.github/workflows/product-search-names.yml` runs `.github/product-search/check.mjs` every 6 hours (00:23, 06:23, 12:23,
   18:23 UTC), each run up to 5.5 hours, so it goes round the clock until every product is done, then finds nothing to do.
-  Per product: the page through jina (name and age check, text read only), then the photo through the free relay
-  wsrv.nl (Screwfix's image server refused GitHub directly, 20 Oct 2026). About one product every 20 s, gaps 14 to 26 s,
+  Each run starts with a photo sweep (`PHOTO_SWEEP: 'on'`): every missing photo, about one a second through the free relay
+  wsrv.nl (Screwfix's image server refused GitHub directly, 20 Oct 2026; a 40 photo test at that pace was not blocked), since a
+  photo's address needs only the code. 3 refusals in a row stop the sweep for that run (a warning, not a failure). Then per
+  product: the page through jina (name and age check, text read only), photos only for any the sweep left. About one product every 20 s, gaps 14 to 26 s,
   a 2 to 6 minute break every 40 to 70 products, progress saved every 20. A failed product is skipped (retried after a
   week, 3 goes). 4 failures in a row: an hour's pause; 3 pauses with nothing working: it gives up (run fails, GitHub
   emails detailedfoil) and the next run gives up at once if its first 4 fail. detailedfoil asked for it to be as

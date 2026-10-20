@@ -4,7 +4,8 @@
 # and saves it as tools/product-search/photos/<CODE>.jpg, so every phone gets photos from the Toolbox itself.
 # Photos go through the free image relay wsrv.nl, because Screwfix's image server turned GitHub away when asked
 # directly (20 Oct 2026). To leave photos out again, add PHOTOS: 'off' to the env below.
-# Around the clock, one product about every 20 s with breaks: about 3 days for the whole list; what's already found
+# Each run starts with a quick photo sweep (about one photo a second) for every product still without one, then the slow
+# name reading. Around the clock, one product about every 20 s with breaks: about 3 days for the whole list; what's already found
 # isn't fetched again. 4 failures in a row: an hour's pause. 3 pauses with nothing working: it gives up, the run shows
 # as failed (GitHub emails you), and the next run tries a few first. Details at the top of check.mjs.
 #
@@ -57,6 +58,7 @@ jobs:
           LIMIT: ${{ github.event_name == 'push' && '20' || inputs.count || '' }}
           GAP_MS: '20000'       # about one product every 20 s, never evenly (14 to 26 s); see the top of check.mjs
           RUN_MINUTES: '330'
+          PHOTO_SWEEP: 'on'     # every missing photo first, about one a second (names stay at one every 20 s); see check.mjs
         run: |
           node .github/product-search/check.mjs &
           CHECK=$!
