@@ -47,11 +47,8 @@
     listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');
     q.placeholder = 'Search by code or name';
     $('welcomeTitle').textContent = 'Search ' + n(items.length) + ' nailed items';
-    var have = new Set();
-    Object.keys(names).forEach(function (k) { if (names[k].p) have.add(k); });
-    Photos.stored = have;
     $('about').textContent = 'Product list from ' + (niceDate(list.version) || 'your stock export') + ': ' + n(items.length) +
-      ' products. Screwfix website names found so far: ' + n(named) + ', photos kept with the Toolbox: ' + n(have.size) + ' (a few hundred more a night). Search index built in ' + ms + ' ms.' +
+      ' products. Screwfix website names found so far: ' + n(named) + ' (a few hundred more a night). Search index built in ' + ms + ' ms.' +
       (web && web.lastRun ? ' ' + runNote(web.lastRun) : '');
     run();
   }
@@ -215,22 +212,10 @@
 
   /* ---------- settings ---------- */
 
-  var savedTimer = null;
-  function showSaved() {
-    clearTimeout(savedTimer);
-    savedTimer = setTimeout(function () {
-      Photos.count().then(function (c) { $('saved').textContent = 'Saved photos on this phone: ' + n(c || 0); });
-    }, 400);
-  }
-  Photos.onSaved = showSaved;
-
   $('nophotos').checked = settings.nophotos;
   $('nophotos').addEventListener('change', function () {
     settings.nophotos = this.checked; set('ps-nophotos', this.checked ? '1' : '0');
     if (!this.checked) Array.prototype.forEach.call(results.querySelectorAll('.sx-ph.off'), function (b) { b.classList.remove('off'); showPhoto(b); });
-  });
-  $('clearPhotos').addEventListener('click', function () {
-    Photos.clear().then(function () { showSaved(); toast('Saved photos cleared'); });
   });
 
   /* ---------- small things ---------- */
@@ -264,6 +249,5 @@
   var m = /#q=([^&]*)/.exec(location.hash);
   if (m) { try { q.value = decodeURIComponent(m[1]); } catch (e) { /* bad address */ } }
 
-  showSaved();
   start();
 })();
