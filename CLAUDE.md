@@ -59,6 +59,17 @@ explain changes in plain English and say what they'll see.
     description's search words, minus words already in its names, filler and bare numbers; the page loads it after the
     list and `search.js` uses it as a lower tier: codes, then names (title and alternative name), then description
     matches ("Found in the description"), then close spellings.
+  - `area-map`: Area Map, every store (all 986, UK, Ireland and the Isle of Man) on a Leaflet map (vendored in
+    `area-map/leaflet/`, OpenStreetMap tiles, greyed; a button turns them off). `data/stores.json` holds each store's
+    name, address, postcode, area, country and location ONLY: detailedfoil asked for no names of people, numbers, store
+    codes or anything else (the repo is public; a test checks the keys). `approx: 1` = pin placed from the postcode area
+    (or, in Ireland, by hand from the address), not the exact postcode. `data/areas.json` is made by
+    `.github/area-map/make-areas.mjs` (run it after any change to stores.json; a test fails until you do): every place
+    goes to its nearest store's area (worked out separately on Great Britain, the island of Ireland and the Isle of
+    Man), clipped to Natural Earth's coastline (`.github/area-map/land.json`), coloured so neighbours never share a
+    colour or two that look alike (`ALIKE`, checked for colour blindness). `geo.js` is the search and the sums (tested
+    in `.github/tests/area-map.test.mjs`). A town or postcode that isn't a store is looked up on postcodes.io (UK only).
+    "My store" and the street map setting stay on the phone.
   - `nps`, `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
