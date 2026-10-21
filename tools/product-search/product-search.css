@@ -13,13 +13,8 @@
 html:has(body.sx){background:var(--sx-bg,#f4f4f4);color-scheme:light}
 .sx a{color:var(--sx-link)}
 
-/* under construction */
-.sx-construction{background:repeating-linear-gradient(-45deg,#ffd200 0 14px,#111 14px 28px);padding:5px 0;padding-top:max(5px,env(safe-area-inset-top))}
-.sx-construction > span{display:block;width:max-content;max-width:calc(100% - 24px);margin:0 auto;padding:3px 10px;border-radius:6px;background:#111;color:#ffd200;
-  font-size:.78rem;font-weight:700;letter-spacing:.02em;text-align:center}
-
 /* the account bar, header, search box and strips */
-.sx-account{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:10px 16px;background:var(--sx-bar);color:#fff;font-size:.86rem}
+.sx-account{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top));background:var(--sx-bar);color:#fff;font-size:.86rem}
 .sx-parody{color:#fff;font-size:.82rem;text-align:right}
 .sx-head{background:var(--sx-head)}
 .sx-head-in{max-width:960px;margin:0 auto;padding:14px 16px 10px}

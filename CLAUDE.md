@@ -45,8 +45,8 @@ explain changes in plain English and say what they'll see.
     its rim shows. Allows for photos taken at a slight angle; amber = counted but worth a look. `money.js` does
     the sums in whole pence. Tested on two real photos (`.github/tests/fixtures/coins-*.jpg`, 50 10p and 48 20p,
     receipt blurred): any change to `coins.js` must keep those exact.
-  - `product-search`: Product Search, every store (tile badge "Under construction", page banner too: remove both when
-    detailedfoil says). A parody "CrashFix" look on this page only (colours from screenshots of the real site). `search.js` is the search: no network, an index
+  - `product-search`: Product Search, every store (the "Under construction" tile badge and page banner were removed on 21 Oct 2026,
+    detailedfoil's say; `badge` on a tile still works). A parody "CrashFix" look on this page only (colours from screenshots of the real site). `search.js` is the search: no network, an index
     in memory, typo tolerant; add a test in `.github/tests/product-search.test.mjs` for any search that should work.
     `photos.js` keeps the product list on the phone (IndexedDB) and shows photos: the kept copy only if there is one (Screwfix's image server isn't asked), else media.screwfix.com (120 px).
     `data/products.json` is made from detailedfoil's stock export by `.github/product-search/make-list.py` (code, name
