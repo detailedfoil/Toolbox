@@ -15,7 +15,7 @@ html:has(body.sx){background:var(--sx-bg,#f4f4f4);color-scheme:light}
 
 /* under construction */
 .sx-construction{background:repeating-linear-gradient(-45deg,#ffd200 0 14px,#111 14px 28px);padding:5px 0;padding-top:max(5px,env(safe-area-inset-top))}
-.sx-construction span{display:block;width:max-content;max-width:calc(100% - 24px);margin:0 auto;padding:3px 10px;border-radius:6px;background:#111;color:#ffd200;
+.sx-construction > span{display:block;width:max-content;max-width:calc(100% - 24px);margin:0 auto;padding:3px 10px;border-radius:6px;background:#111;color:#ffd200;
   font-size:.78rem;font-weight:700;letter-spacing:.02em;text-align:center}
 
 /* the account bar, header, search box and strips */

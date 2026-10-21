@@ -48,6 +48,10 @@
     Object.keys(names).forEach(function (k) { if (names[k].p) have.add(k); });
     Photos.stored = have;
     $('welcomeTitle').textContent = 'Search ' + n(items.length) + ' nailed items';
+    // the banner: how many products have their description so far
+    var described = 0;
+    Object.keys(names).forEach(function (k) { if (names[k].d === 1) described++; });
+    $('buildCount').textContent = web ? ' (' + n(described) + '/' + n(items.length) + ')' : '';
     if (quiet && q.value.trim() && (window.scrollY > 80 || results.querySelector('.sx-card.open'))) return;
     run();
   }
