@@ -266,7 +266,7 @@
     if (!open || box.getAttribute('data-done')) return;
     var sku = li.getAttribute('data-sku'), it = itemFor(sku);
     if (it && it.desc === 0) { box.innerHTML = '<p class="sx-desc-none">Screwfix doesn\'t have a description for this one.</p>'; box.setAttribute('data-done', '1'); return; }
-    if (!it || it.desc !== 1) { box.innerHTML = '<p class="sx-desc-none">No description saved for this one yet. They\'re being collected a few thousand a day.</p>'; return; }
+    if (!it || it.desc !== 1) { box.innerHTML = '<p class="sx-desc-none">No description saved for this one yet.</p>'; return; }
     box.innerHTML = '<p class="sx-desc-none">Loading the description...</p>';
     getDesc(sku).then(function (d) {
       if (!d || (!d.t && !(d.b && d.b.length))) { box.innerHTML = '<p class="sx-desc-none">No description saved for this one yet.</p>'; return; }
