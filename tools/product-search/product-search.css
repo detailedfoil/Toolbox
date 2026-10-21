@@ -8,15 +8,9 @@
   --sx-bar:#1b6bb5;--sx-head:#fff;--sx-navy:#0a3a8f;--sx-navy-dark:#0b1b5e;--sx-red:#e4141b;--sx-promo:#3a30f5;
   --sx-bg:#f4f4f4;--sx-card:#fff;--sx-line:#d4d4d4;--sx-text:#333;--sx-muted:#666;--sx-mark:#fff1a6;
   --sx-link:#0a3a8f;--sx-chip:#f0f0f0;--sx-input-bg:#fff;--sx-input-text:#222;--sx-focus:#7fe9f2;--sx-btn:#0a3a8f;
-  background:var(--sx-bg);color:var(--sx-text);
+  background:var(--sx-bg);color:var(--sx-text);color-scheme:light;   /* always light, whatever the phone is set to */
 }
-@media (prefers-color-scheme:dark){
-  .sx{--sx-bar:#16497c;--sx-head:#0f1626;--sx-navy:#9db9ff;--sx-navy-dark:#050a1c;--sx-red:#ff4a4f;--sx-promo:#3a30f5;
-      --sx-bg:#0b0f1a;--sx-card:#151b2b;--sx-line:#2b3550;--sx-text:#e6e9f2;--sx-muted:#9aa4bd;--sx-mark:rgba(255,210,0,.28);
-      --sx-link:#9db9ff;--sx-chip:#1d2540;--sx-input-bg:#fff;--sx-focus:#2fb5c4;--sx-btn:#3a5fd0}
-}
-html:has(body.sx){background:var(--sx-bg,#f4f4f4)}
-@media (prefers-color-scheme:dark){html:has(body.sx){background:#0b0f1a}}
+html:has(body.sx){background:var(--sx-bg,#f4f4f4);color-scheme:light}
 .sx a{color:var(--sx-link)}
 
 /* under construction */
