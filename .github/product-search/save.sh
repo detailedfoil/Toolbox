@@ -3,6 +3,7 @@
 # $1 = commit message to use when the run hasn't written its own summary yet.
 [ -f tools/product-search/data/web-names.json ] || exit 0
 paths=(tools/product-search/data/web-names.json)
+[ -f tools/product-search/data/desc-words.json ] && paths+=(tools/product-search/data/desc-words.json)
 for d in tools/product-search/photos tools/product-search/descriptions; do [ -d "$d" ] && paths+=("$d"); done
 git add -- "${paths[@]}"
 if git diff --cached --quiet; then echo "Nothing new to save"; exit 0; fi

@@ -23,6 +23,7 @@ on:
     paths:
       - '.github/product-search/check.mjs'
       - '.github/product-search/describe.mjs'
+      - 'tools/product-search/search.js'
       - '.github/workflows/product-search-names.yml'
   workflow_dispatch:
     inputs:

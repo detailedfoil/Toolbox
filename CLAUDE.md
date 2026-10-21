@@ -55,7 +55,10 @@ explain changes in plain English and say what they'll see.
     product in `web-names.json` means age restricted, found by the same reader the posters use (`age` in `lookup.js`),
     shown as an "Age restricted" badge; `p: 1` means its photo is saved; `d: 1` means `descriptions/<CODE>.json` holds its
     description, `{t, b}` = paragraph text and feature bullets, read from the same page by `.github/product-search/describe.mjs`,
-    tested on real pages saved in `.github/tests/fixtures/page-*.txt`; the page loads it only when a result is tapped).
+    tested on real pages saved in `.github/tests/fixtures/page-*.txt`; the page loads it only when a result is tapped). `data/desc-words.json` (also robot-written) holds each
+    description's search words, minus words already in its names, filler and bare numbers; the page loads it after the
+    list and `search.js` uses it as a lower tier: codes, then names (title and alternative name), then description
+    matches ("Found in the description"), then close spellings.
   - `nps`, `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
@@ -82,7 +85,7 @@ explain changes in plain English and say what they'll see.
 ## Things that are easy to break
 
 - **Files written by robots.** `tools/shelf-check/data/prices.json`, `phone.json` and
-  `tools/counter-trial/data/prices.json`, `ticks.json`, `tools/fuel/data/prices.json` and `tools/product-search/data/web-names.json` are written by the GitHub checks, or by the pages
+  `tools/counter-trial/data/prices.json`, `ticks.json`, `tools/fuel/data/prices.json`, `tools/product-search/data/web-names.json` and `desc-words.json` are written by the GitHub checks, or by the pages
   through the GitHub API with a token saved on a phone. Don't edit them by hand, and pull before you push:
   the checks commit to `main` most nights.
 - **The page reader** (`tools/price-tickets/lookup.js`) is behind every price on the site. Bump `VERSION`

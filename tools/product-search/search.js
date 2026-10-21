@@ -11,6 +11,10 @@
  *  - The way the stock names are written: 1.5 is stored as "1 5", "Pk10" / "10pk" / "pack of 10",
  *    "blk" for black, '2"' and "2in" for 2 inch, "15 mm" and "15mm", "P-Trap" and "ptrap" and "p trap".
  *  - A few trade words people use for the same thing (bulb / lamp, spanner / wrench, allen / hex...).
+ *  - Descriptions (item.dw: the description's words that aren't already in the names, saved by the GitHub check as
+ *    data/desc-words.json): a lower tier. The order is always codes, then products whose names have every word,
+ *    then products where some words are only in the description, then close spellings of names. No spelling slips
+ *    in descriptions, and a word that's only a number never matches one ("20" isn't "20 minutes").
  */
 (function (root) {
   'use strict';
@@ -153,6 +157,17 @@
       });
     });
     var vocab = Array.from(post.keys()).sort();
+    // the description words: their own index, so a match there always ranks below a match in the names
+    var dpost = new Map();
+    items.forEach(function (it, n) {
+      if (!it.dw) return;
+      String(it.dw).split(' ').forEach(function (w) {
+        if (!w) return;
+        var list = dpost.get(w);
+        if (!list) dpost.set(w, [n]); else if (list[list.length - 1] !== n) list.push(n);
+      });
+    });
+    var dvocab = Array.from(dpost.keys()).sort();
     var bySku = new Map();
     items.forEach(function (it, n) { bySku.set(it.sku, n); });
     var cache = new Map();
@@ -196,6 +211,62 @@
       (ALSO[q] || []).forEach(function (alt) {
         words(alt).filter(Boolean).forEach(function (a) {
           matchWord(a, false).forEach(function (s, n) { if (!(out.get(n) >= s - 1)) out.set(n, s - 1); });
+        });
+      });
+      return out;
+    }
+
+    /* one typed word (and the words it can also mean) in the descriptions -> Map(item -> score): whole word 10,
+       start of a word (3 letters or more) 6 to 9. Numbers alone don't match. */
+    var dcache = new Map();
+    function matchDesc(q) {
+      if (!dpost.size || /^\d+$/.test(q)) return new Map();
+      if (dcache.has(q)) return dcache.get(q);
+      var hits = new Map();
+      function give(w, score) {
+        var list = dpost.get(w);
+        for (var k = 0; k < list.length; k++) if (!(hits.get(list[k]) >= score)) hits.set(list[k], score);
+      }
+      [q].concat(ALSO[q] || []).forEach(function (alt, i) {
+        words(alt).filter(Boolean).forEach(function (a) {
+          var less = i ? 1 : 0;
+          if (dpost.has(a)) give(a, 10 - less);
+          if (a.length >= 3) {
+            for (var j = lowerBound(dvocab, a); j < dvocab.length && dvocab[j].lastIndexOf(a, 0) === 0; j++) {
+              if (dvocab[j] !== a) give(dvocab[j], 6 + 3 * a.length / dvocab[j].length - less);
+            }
+          }
+        });
+      });
+      if (dcache.size > 400) dcache.clear();
+      dcache.set(q, hits);
+      return hits;
+    }
+
+    /* products where every typed word is in the names or the description, and at least one only in the description.
+       A word found in the names scores in full, one found only in the description scores half, so products with
+       more of the words in their names come first. */
+    function byDesc(qs, skip) {
+      if (!dpost.size) return [];
+      var inName = qs.map(function (q) { return matchAny(q, false); });
+      var inDesc = qs.map(matchDesc);
+      var out = [];
+      // start from the rarest description word, so it's quick
+      var order = qs.map(function (q, i) { return i; }).sort(function (a, b) { return inDesc[a].size - inDesc[b].size; });
+      var seen = new Set();
+      order.forEach(function (k) {
+        inDesc[k].forEach(function (s, n) {
+          if (seen.has(n) || skip.has(n)) return;
+          seen.add(n);
+          var total = 0, descOnly = 0;
+          for (var i = 0; i < qs.length; i++) {
+            var a = inName[i].get(n);
+            if (a !== undefined) { total += a; continue; }
+            var b = inDesc[i].get(n);
+            if (b === undefined) return;
+            total += b / 2; descOnly++;
+          }
+          if (descOnly) out.push({ n: n, score: total });
         });
       });
       return out;
@@ -245,7 +316,7 @@
 
     var UNIT_ONLY = new RegExp('^\\d+(' + UNITS + '|inch)$', 'i');
 
-    /* what's typed -> {list: [{item, how}], total, note} ; how: 'sku' | 'near' | 'name' | 'close' */
+    /* what's typed -> {list: [{item, how}], total, note} ; how: 'sku' | 'near' | 'name' | 'desc' | 'close' */
     function find(text, limit) {
       limit = limit || 300;
       var raw = String(text || '').trim();
@@ -274,12 +345,15 @@
       if (!qs.length) qs = raw.toLowerCase().match(/[a-z0-9]+/g) || [];
       if (qs.length && !whole) {
         var named = byName(qs, false), close = [];
+        var inNames = new Set(named.map(function (r) { return r.n; }));
+        var described = codes.length && code && raw.replace(/\s+/g, '').length <= 5 ? [] : byDesc(qs, inNames);
         // few or no hits as typed: add close spellings (not when it was clearly a code)
-        if (named.length < 5 && !codes.length) {
-          var have = new Set(named.map(function (r) { return r.n; }));
+        if (named.length + described.length < 5 && !codes.length) {
+          var have = new Set(inNames);
+          described.forEach(function (r) { have.add(r.n); });
           close = byName(qs, true).filter(function (r) { return !have.has(r.n); });
         }
-        if (!named.length && !close.length && qs.length > 1 && !codes.length) {
+        if (!named.length && !described.length && !close.length && qs.length > 1 && !codes.length) {
           // nothing has every word: show what has the most of them
           var count = new Map(), score = new Map(), most = 0;
           qs.forEach(function (q) {
@@ -291,8 +365,9 @@
             if (close.length) res.note = 'Nothing matches every word, so these match most of them.';
           }
         }
-        if (!named.length && close.length && !res.note) res.note = 'Showing close spellings.';
+        if (!named.length && !described.length && close.length && !res.note) res.note = 'Showing close spellings.';
         rank(named, qs).forEach(function (r) { push(names, r.n, 'name'); });
+        rank(described, qs).forEach(function (r) { push(names, r.n, 'desc'); });
         rank(close, qs).forEach(function (r) { push(names, r.n, 'close'); });
       }
       // "12v", "22mm": a size, so names first; otherwise codes first
@@ -302,7 +377,7 @@
       return res;
     }
 
-    return { find: find, size: items.length, words: vocab.length };
+    return { find: find, size: items.length, words: vocab.length, descWords: dvocab.length };
   }
 
   var api = { build: build, words: words, slips: slips, asCode: asCode, SKU_SHAPE: SKU_SHAPE };

@@ -40,12 +40,15 @@ import { describe } from './describe.mjs';
 
 const require = createRequire(import.meta.url);
 const { JSDOM } = require('jsdom');
+// the page's own search, so the description words are cut up exactly the way the page will look them up
+const PS = require(new URL('../../tools/product-search/search.js', import.meta.url).pathname);
 
 const ROOT = process.cwd();
 const LIST = 'tools/product-search/data/products.json';
 const OUT = 'tools/product-search/data/web-names.json';
 const PHOTOS = 'tools/product-search/photos';
 const DESCRIPTIONS = 'tools/product-search/descriptions';
+const DESC_WORDS = 'tools/product-search/data/desc-words.json';
 const MEDIA = 'https://media.screwfix.com/is/image/ae235/';
 const JINA = process.env.JINA_URL || 'https://r.jina.ai/';
 const GAP = Number(process.env.GAP_MS || 20000);
@@ -92,6 +95,37 @@ const needsPhoto = (code) => {
   if (p.p && fs.existsSync(photoFile(code))) return false;
   return (p.pn || 0) < 3 && (!p.pn || daysSince(p.pat) >= 7);
 };
+
+/* The words the page searches descriptions by (data/desc-words.json, one product per line): each description's
+   words as search.js cuts them up, without the ones already in that product's names (the names are searched first
+   anyway), numbers on their own, single letters and filler words. Once 1,000 products have descriptions, words in more
+   than 1 in 10 of them are left out too ("suitable", "ideal"...): they'd match half the list. Remade at the start
+   of each run and whenever a description is saved. */
+const FILLER = new Set(('use used using ideal suitable suit provide provides providing offer offers offering feature features featuring ' +
+  'include includes including design designed easy easily also more most other every even any all can will may this that these ' +
+  'which from into its it is are be been by an as at or our your you up out over under per range ready quality high great ' +
+  'excellent perfect ensure ensures allow allows giving give help helps make makes making well new very').split(' '));
+let descDirty = true;
+function writeDescWords() {
+  if (!descDirty) return;
+  descDirty = false;
+  const byCode = {}, df = new Map();
+  for (const [code, name] of list.items) {
+    const p = products[code];
+    if (!p || p.d !== 1 || !fs.existsSync(descFile(code))) continue;
+    let d;
+    try { d = JSON.parse(fs.readFileSync(descFile(code), 'utf8')); } catch (e) { continue; }
+    const named = new Set(PS.words(name).concat(PS.words(p.name || '')).filter(Boolean));
+    const ws = [...new Set(PS.words((d.t || '') + ' . ' + (d.b || []).join(' . ')).filter((w) => w && w.length > 1 && !/^\d+$/.test(w) && !FILLER.has(w) && !named.has(w)))];
+    byCode[code] = ws;
+    for (const w of ws) df.set(w, (df.get(w) || 0) + 1);
+  }
+  const n = Object.keys(byCode).length, cap = n >= 1000 ? n / 10 : Infinity;
+  const lines = Object.entries(byCode).map(([code, ws]) => `    ${JSON.stringify(code)}: ${JSON.stringify(ws.filter((w) => df.get(w) <= cap).join(' '))}`);
+  const file = path.join(ROOT, DESC_WORDS);
+  fs.writeFileSync(file + '.tmp', `{\n  "updated": ${JSON.stringify(new Date().toISOString())},\n  "products": {\n${lines.join(',\n')}\n  }\n}\n`);
+  fs.renameSync(file + '.tmp', file);
+}
 
 /* which products to try, in order: names cut short at 50 characters first, they gain most */
 function queue() {
@@ -172,6 +206,7 @@ async function main() {
     const photos = Object.values(products).filter((p) => p.p).length;
     const described = Object.values(products).filter((p) => p.d).length;
     save({ updated: new Date().toISOString(), lastRun: run, named, photos, described, of: list.items.length });
+    writeDescWords();
     return { named, photos, described };
   };
   const timeLeft = () => RUN_MS - (Date.now() - STARTED);
@@ -236,7 +271,7 @@ async function main() {
       if (got.kind === 'limited') got = { kind: 'fail', why: 'jina kept saying slow down (HTTP 429)', blocked: true };
       const before = products[code] || {};
       if (got.kind === 'found') {
-        if (got.desc) fs.writeFileSync(descFile(code), JSON.stringify(got.desc) + '\n');
+        if (got.desc) { fs.writeFileSync(descFile(code), JSON.stringify(got.desc) + '\n'); descDirty = true; }
         products[code] = { ...before, name: got.name, a: got.age ? 1 : 0, d: got.desc ? 1 : 0, at: today };
         delete products[code].tries; delete products[code].why;
         run.found++; ok = true;

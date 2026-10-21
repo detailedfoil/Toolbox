@@ -69,6 +69,7 @@ html:has(body.sx){background:var(--sx-bg,#f4f4f4);color-scheme:light}
 .sx-name{margin:0;font-size:1rem;line-height:1.3;font-weight:700;color:var(--sx-text);overflow-wrap:anywhere}
 .sx-alt{margin:-2px 0 0;font-size:.8rem;color:var(--sx-muted);overflow-wrap:anywhere}
 .sx-name mark,.sx-alt mark,.sx-code mark{background:var(--sx-mark);color:inherit;padding:0 1px}
+.sx-why{margin:0;font-size:.78rem;font-weight:700;color:var(--sx-muted);text-transform:uppercase;letter-spacing:.02em}
 .sx-flags{display:flex;flex-wrap:wrap;gap:5px}
 .sx-flag{font-family:"SX Barlow",system-ui,sans-serif;font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.02em;padding:2px 7px;border-radius:5px;line-height:1.15;background:var(--sx-card);border:2px solid currentColor}
 .sx-haz{color:var(--sx-red);background:#fff;box-shadow:inset 0 0 0 1px #fff}

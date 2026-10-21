@@ -8,6 +8,7 @@
   var LIST_URL = 'product-search/data/products.json';
   var WEB_URL = 'product-search/data/web-names.json';
   var DESC_URL = 'product-search/descriptions/';
+  var DESC_WORDS_URL = 'product-search/data/desc-words.json';   // the words descriptions are searched by, loaded after the list
   var PAGE = 24;
   var FLAGS = [[1, 'Hazardous', 'haz'], [2, 'Aerosol', 'aer'], [4, 'Non-trolleyable', 'trl'], [8, 'Sharp or liquid', 'shp'], [16, 'Age restricted', 'age']];
 
@@ -15,7 +16,7 @@
   var q = $('q'), form = $('form'), statusEl = $('status'), noteEl = $('note'), results = $('results'), more = $('more');
   var welcome = $('welcome'), stripMs = $('stripMs'), toastEl = $('toast');
 
-  var list = null, web = null, searcher = null, shown = null, shownCount = 0, listInfo = '';
+  var list = null, web = null, dwords = null, searcher = null, shown = null, shownCount = 0, listInfo = '';
   var settings = { nophotos: get('ps-nophotos') === '1' };
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -31,13 +32,14 @@
 
   /* ---------- the product list ---------- */
 
-  function useList(newList, newWeb, where) {
+  // quiet: only the description words changed, so don't redo a search someone is already reading
+  function useList(newList, newWeb, where, quiet) {
     list = newList; web = newWeb;
     var names = (web && web.products) || {};
     var items = list.items.map(function (r) {
       var w = names[r[0]] && names[r[0]].name;
       var p = names[r[0]] || {};
-      return { sku: r[0], name: r[1], flags: (r[2] || 0) | (p.a ? 16 : 0), web: w || '', desc: p.d };
+      return { sku: r[0], name: r[1], flags: (r[2] || 0) | (p.a ? 16 : 0), web: w || '', desc: p.d, dw: (dwords && dwords[r[0]]) || '' };
     });
     searcher = PS.build(items);
     listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');
@@ -46,6 +48,7 @@
     Object.keys(names).forEach(function (k) { if (names[k].p) have.add(k); });
     Photos.stored = have;
     $('welcomeTitle').textContent = 'Search ' + n(items.length) + ' nailed items';
+    if (quiet && q.value.trim() && (window.scrollY > 80 || results.querySelector('.sx-card.open'))) return;
     run();
   }
 
@@ -58,8 +61,9 @@
 
   function start() {
     var saved = null;
-    Promise.all([Photos.data.get('list'), Photos.data.get('web')]).then(function (got) {
+    Promise.all([Photos.data.get('list'), Photos.data.get('web'), Photos.data.get('descwords')]).then(function (got) {
       saved = got;
+      if (got[2] && got[2].words) dwords = got[2].words;
       if (got[0] && got[0].list) useList(got[0].list, got[1] && got[1].web, 'saved');
     }).catch(function () { /* nothing saved yet */ }).then(function () {
       // then check the site for anything newer
@@ -82,7 +86,17 @@
         statusEl.textContent = "Couldn't load the product list. Check your signal and reload the page.";
         q.placeholder = 'Product list not loaded';
       }
-    });
+    }).then(function () {
+      // then, in the background, the description words (bigger, and only for the lower tier of results)
+      return fetchText(DESC_WORDS_URL).then(function (text) {
+        var dp = print(text);
+        if (saved && saved[2] && saved[2].print === dp) return;
+        var got = JSON.parse(text).products || {};
+        dwords = got;
+        if (list) useList(list, web, 'new', true);
+        Photos.data.put('descwords', { print: dp, words: got });
+      });
+    }).catch(function () { /* descriptions can't be searched this time; names still work */ });
   }
 
   /* ---------- searching ---------- */
@@ -167,6 +181,7 @@
         '<h3 class="sx-name">' + marked(title, words) + '</h3>' +
         (it.web && it.web.toLowerCase() !== it.name.toLowerCase() ? '<p class="sx-alt">Alternative name: ' + marked(it.name, words) + '</p>' : '') +
         (flags ? '<div class="sx-flags">' + flags + '</div>' : '') +
+        (r.how === 'desc' ? '<p class="sx-why">Found in the description</p>' : '') +
         '<div class="sx-row">' +
           '<button type="button" class="sx-code" data-copy="' + esc(it.sku) + '" aria-label="Copy product code ' + esc(it.sku) + '"><span>Product code</span> <b>' + markedCode(it.sku, shown.code, r.how) + '</b></button>' +
           '<a class="sx-open" href="https://www.screwfix.com/p/product/' + esc(it.sku.toLowerCase()) + '" target="_blank" rel="noopener">View on screwfix.com</a>' +

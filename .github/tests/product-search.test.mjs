@@ -365,7 +365,38 @@ test('description check: saved as descriptions/<CODE>.json with d: 1, d: 0 when 
     assert.equal(saved.b[0], 'Double-Countersunk Head for Reduced Shear');
     assert.ok(!('tools/product-search/descriptions/94444.json' in out.files));
     assert.ok(mock.hits.some((h) => h.code === '16497' && h.mode === 'text'), 'read again for its description');
+    const dw = JSON.parse(out.files['tools/product-search/data/desc-words.json']).products;
+    const w16497 = dw['16497'].split(' ');
+    assert.ok(w16497.includes('wax') && w16497.includes('carbon') && w16497.includes('masonry'), 'the description words, cut up as search.js does');
+    assert.ok(!w16497.includes('goldscrew'), 'words already in the names are left out');
+    assert.ok(!w16497.includes('suitable') && !w16497.includes('50') && !w16497.includes('for'), 'no filler words or bare numbers');
+    assert.ok(!('94444' in dw), 'nothing for a product without a description');
   } finally { await mock.close(); }
+});
+
+test('search: titles and alternative names always come before description matches', () => {
+  const t = PS.build([
+    { sku: '11111', name: 'Plain Screws 5x50', web: 'Goldscrew Screws 5mm x 50mm', flags: 0, dw: 'wax coated carbon steel' },
+    { sku: '22222', name: 'Wax Coated Screws 4x40', flags: 0 },
+    { sku: '33333', name: 'Screws 3x30', web: 'Wax Finish Screws 3mm x 30mm', flags: 0 },
+    { sku: '44444', name: 'Shellac Primer 1L', flags: 0, dw: 'stain killer sealer odour' },
+    { sku: '55555', name: 'Odour Killer Spray', flags: 2 },
+    { sku: '66666', name: 'Primer 2.5L', flags: 0, dw: 'touch dry 20mins recoatable' },
+  ]);
+  const hits = (q) => [...t.find(q).list].map((r) => r.item.sku + ':' + r.how);
+  assert.deepEqual(hits('wax'), ['22222:name', '33333:name', '11111:desc'], 'title and alternative name first, the description last');
+  assert.deepEqual(hits('wax screws'), ['22222:name', '33333:name', '11111:desc']);
+  assert.deepEqual(hits('odour'), ['55555:name', '44444:desc']);
+  assert.deepEqual(hits('primer odour'), ['44444:desc'], 'one word in the name, one in the description');
+  assert.deepEqual(hits('recoat'), ['66666:desc'], 'the start of a word in a description');
+  assert.deepEqual(hits('20'), [], 'a number alone never matches a description');
+  assert.deepEqual(hits('stain kil'), ['44444:desc']);
+  assert.equal(t.find('wax').note, '', 'no "close spellings" note when the description had it');
+});
+
+test('search: a product code is not looked for in descriptions', () => {
+  const t = PS.build([{ sku: '843PG', name: 'Rotary Tool', flags: 0 }, { sku: '11111', name: 'Bits', flags: 0, dw: '843pg compatible' }]);
+  assert.deepEqual([...t.find('843PG').list].map((r) => r.item.sku), ['843PG']);
 });
 
 test('search: age restricted products can be found by "age restricted" or "challenge 25"', () => {
