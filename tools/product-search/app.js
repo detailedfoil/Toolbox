@@ -179,7 +179,7 @@
       '<div class="sx-ph" data-sku="' + esc(it.sku) + '"><img alt="" decoding="async"><span class="sx-ph-code">' + esc(it.sku) + '</span></div>' +
       '<div class="sx-body">' +
         '<h3 class="sx-name">' + marked(title, words) + '</h3>' +
-        (it.web && it.web.toLowerCase() !== it.name.toLowerCase() ? '<p class="sx-alt">Alternative name: ' + marked(it.name, words) + '</p>' : '') +
+        (it.web && it.web.toLowerCase() !== it.name.toLowerCase() ? '<p class="sx-alt">ILS name: ' + marked(it.name, words) + '</p>' : '') +
         (flags ? '<div class="sx-flags">' + flags + '</div>' : '') +
         (r.how === 'desc' ? '<p class="sx-why">Found in the description</p>' : '') +
         '<div class="sx-row">' +
