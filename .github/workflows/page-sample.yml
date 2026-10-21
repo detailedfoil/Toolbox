@@ -1,0 +1,26 @@
+# One-off (21 Oct 2026): saves the page text jina gives for 3 products to the branch page-samples, to see how the
+# description is laid out. 3 reads, 8 s apart. Delete this file and the branch afterwards.
+name: Page text samples
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sample:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read 3 pages
+        run: |
+          mkdir -p samples
+          for c in 16497 123XR 10048; do
+            curl -sS -m 60 "https://r.jina.ai/https://www.screwfix.com/p/product/$(echo $c | tr A-Z a-z)" -o samples/$c.txt -w "$c %{http_code} %{size_download}\n" || true
+            sleep 8
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git checkout -q --orphan page-samples
+          git rm -rq --cached .
+          git add samples
+          git commit -q -m "Page text samples [skip ci]"
+          git push -q -f origin page-samples
