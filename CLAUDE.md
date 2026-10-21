@@ -53,7 +53,9 @@ explain changes in plain English and say what they'll see.
     and the four warning flags only: no stock or locations, the repo is public). `data/web-names.json` holds the
     screwfix.com names and `photos/<CODE>.jpg` the 120 px photos (JPEG quality 85, about 2 KB each; `PHOTO_PX` and `PHOTO_QUALITY` in check.mjs), both written by the nightly check (`a: 1` on a
     product in `web-names.json` means age restricted, found by the same reader the posters use (`age` in `lookup.js`),
-    shown as an "Age restricted" badge; `p: 1` means its photo is saved).
+    shown as an "Age restricted" badge; `p: 1` means its photo is saved; `d: 1` means `descriptions/<CODE>.json` holds its
+    description, `{t, b}` = paragraph text and feature bullets, read from the same page by `.github/product-search/describe.mjs`,
+    tested on real pages saved in `.github/tests/fixtures/page-*.txt`; the page loads it only when a result is tapped).
   - `nps`, `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the

@@ -1,6 +1,6 @@
 # Product Search check, round the clock until every product is done: it reads the product page on screwfix.com
-# (through jina, like the price checks) and saves the website name to tools/product-search/data/web-names.json, so
-# Product Search can find products by either name, then fetches the 120 x 120 photo from Screwfix's image server
+# (through jina, like the price checks) and saves the website name and age check to tools/product-search/data/web-names.json
+# and the description to tools/product-search/descriptions/<CODE>.json, so Product Search can find products by either name, then fetches the 120 x 120 photo from Screwfix's image server
 # and saves it as tools/product-search/photos/<CODE>.jpg, so every phone gets photos from the Toolbox itself.
 # Photos go through the free image relay wsrv.nl, because Screwfix's image server turned GitHub away when asked
 # directly (20 Oct 2026). To leave photos out again, add PHOTOS: 'off' to the env below.
@@ -22,6 +22,7 @@ on:
     branches: [main]
     paths:
       - '.github/product-search/check.mjs'
+      - '.github/product-search/describe.mjs'
       - '.github/workflows/product-search-names.yml'
   workflow_dispatch:
     inputs:

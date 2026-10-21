@@ -1,8 +1,10 @@
 #!/bin/bash
-# Commits the names and photos found so far (called part-way through a run and again at the end). $1 = commit message to
-# use when the run hasn't written its own summary yet.
+# Commits the names, descriptions and photos found so far (called part-way through a run and again at the end).
+# $1 = commit message to use when the run hasn't written its own summary yet.
 [ -f tools/product-search/data/web-names.json ] || exit 0
-git add tools/product-search/data/web-names.json tools/product-search/photos
+paths=(tools/product-search/data/web-names.json)
+for d in tools/product-search/photos tools/product-search/descriptions; do [ -d "$d" ] && paths+=("$d"); done
+git add -- "${paths[@]}"
 if git diff --cached --quiet; then echo "Nothing new to save"; exit 0; fi
 git config user.name "github-actions[bot]"
 git config user.email "41898283+github-actions[bot]@users.noreply.github.com"

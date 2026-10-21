@@ -252,7 +252,7 @@ test('photo check: a product whose name is already known only needs its photo, a
   codes.forEach((c) => { scen[c] = { image: [{ status: 403, body: 'denied' }] }; });
   const mock = await startMock(scen);
   try {
-    const known = {}; codes.forEach((c) => { known[c] = { name: 'Known ' + c, a: 0, at: '2026-10-19' }; });
+    const known = {}; codes.forEach((c) => { known[c] = { name: 'Known ' + c, a: 0, d: 0, at: '2026-10-19' }; });
     const out = await runCheck({ check: 'product-search', mock, env: QUICK, files: {
       'tools/product-search/data/products.json': listOf(codes.map((c) => [c, 'Known ' + c, 0])),
       'tools/product-search/data/web-names.json': { products: known } } });
@@ -314,6 +314,57 @@ test('age check: a page with Challenge 25 wording is marked a: 1, others a: 0, a
     assert.equal(n['92222'].a, 0);
     assert.equal(n['93333'].a, 0, 'read again to find out');
     assert.ok(mock.hits.some((h) => h.code === '93333' && h.mode === 'text'));
+  } finally { await mock.close(); }
+});
+
+/* ---------- descriptions (.github/product-search/describe.mjs), on real pages as jina gave them (21 Oct 2026) ---------- */
+const { describe } = await import('../product-search/describe.mjs');
+const fixture = (c) => fs.readFileSync(path.join(REPO, '.github/tests/fixtures/page-' + c + '.txt'), 'utf8');
+
+test('description: the paragraph and the feature bullets, exactly as on the page', () => {
+  const d = describe(fixture('16497'), '16497');
+  assert.equal(d.t, 'Top quality, waxed single thread, multipurpose screw. Popular with the professional. Features a lower screw-in torque and faster drive speed. Suitable for screwdrivers, combi drills and impact drivers.');
+  assert.deepEqual([...d.b], ['Double-Countersunk Head for Reduced Shear', 'Carbon Steel Construction', 'Zinc-Plated & Yellow-Passivated', 'Wax-Coated',
+    'Deep, Sharp, Single Thread for Cutting Cleanly through Wood', 'Fully Threaded', 'For Wood, Plastic, Masonry & 1mm Sheet Metal',
+    'Heat-Treated for Snap Resistance', 'Corrosion-Resistant']);
+});
+
+test('description: leaves out the Challenge 25 sentence and the green star badge link', () => {
+  const sharpie = describe(fixture('123XR'), '123XR');
+  assert.match(sharpie.t, /^Quick-drying, water-resistant ink\./);
+  assert.doesNotMatch(sharpie.t, /Challenge 25|proof of age/i);
+  assert.deepEqual([...sharpie.b], ['Fibre Tip', 'Solvented', 'Fade & Water-Resistant Dye-Based Ink', 'Clip-Cap']);
+  const dewalt = describe(fixture('10048'), '10048');
+  assert.match(dewalt.t, /^DEWALT 18V XR brushless/);
+  assert.doesNotMatch(dewalt.t, /Extending product lifecycles|media\.screwfix|\]\(/);
+  assert.equal(dewalt.b.length, 10);
+  assert.equal(dewalt.b[9], '3.2° Oscillating Angle for Cutting');
+});
+
+test('description: none for a page without one, another product\'s page, or no page', () => {
+  assert.equal(describe(textPage({ code: '11111', name: 'Plain', price: 1 }), '11111'), null);
+  assert.equal(describe(fixture('16497'), '17178'), null, "the heading is for a different code");
+  assert.equal(describe('', '16497'), null);
+});
+
+test('description check: saved as descriptions/<CODE>.json with d: 1, d: 0 when the page has none, and named products are read again for it', async () => {
+  const mock = await startMock({
+    '16497': { text: [fixture('16497')], image: [PICTURE] },
+    '94444': page('94444', 'No Description Here'),
+  });
+  try {
+    const out = await runCheck({ check: 'product-search', mock, files: {
+      'tools/product-search/data/products.json': listOf([['16497', 'Goldscrew 5x50 200pk', 0], ['94444', 'No Desc', 0]]),
+      'tools/product-search/data/web-names.json': { products: { '16497': { name: 'Goldscrew', a: 0, at: '2026-10-20', p: 1 } } } } });
+    assert.equal(out.code, 0, out.stderr);
+    const n = names(out);
+    assert.equal(n.products['16497'].d, 1);
+    assert.equal(n.products['94444'].d, 0);
+    assert.equal(n.described, 1);
+    const saved = JSON.parse(out.files['tools/product-search/descriptions/16497.json']);
+    assert.equal(saved.b[0], 'Double-Countersunk Head for Reduced Shear');
+    assert.ok(!('tools/product-search/descriptions/94444.json' in out.files));
+    assert.ok(mock.hits.some((h) => h.code === '16497' && h.mode === 'text'), 'read again for its description');
   } finally { await mock.close(); }
 });
 

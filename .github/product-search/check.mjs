@@ -1,12 +1,15 @@
-// Product Search: collects each product's name as screwfix.com shows it, and its photo, a few hundred a night.
+// Product Search: collects each product's name as screwfix.com shows it, whether it's age restricted, its description
+// and its photo.
 // The names let the search match either name (the stock-system names are cut off at 50 characters and
 // abbreviated); the photos are kept in the repo so every phone gets them from the Toolbox itself, whether or not
 // Screwfix's image server is up.
 //
 // Run by .github/workflows/product-search-names.yml. Reads tools/product-search/data/products.json and adds to
 // tools/product-search/data/web-names.json (one product per line) and tools/product-search/photos/<CODE>.jpg:
-//   {"name": "...", "a": 1, "at": "2026-10-21"}       name found; a: 1 = age restricted (Challenge 25 / proof of age wording on the page,
-//                                                    the same reader the poster maker uses), 0 = not
+//   {"name": "...", "a": 1, "d": 1, "at": "2026-10-21"}  name found; a: 1 = age restricted (Challenge 25 / proof of age wording on the page,
+//                                                    the same reader the poster maker uses), 0 = not; d: 1 = description saved as
+//                                                    tools/product-search/descriptions/<CODE>.json ({t: text, b: [bullets]},
+//                                                    read from the same page by describe.mjs), 0 = the page had none
 //   {"missing": true, "at": "..."}                     Screwfix has no page for that code
 //   {"tries": 2, "at": "...", "why": "..."}            name couldn't be read yet (tried again after a week, 3 goes)
 //   {"pn": 1, "pat": "..."}                            no photo yet (404 or refused), tried again after a week, 3 goes
@@ -33,6 +36,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { readJSON, londonDate, sleep, log, annotate, MAJOR } from '../lib/price-check.mjs';
+import { describe } from './describe.mjs';
 
 const require = createRequire(import.meta.url);
 const { JSDOM } = require('jsdom');
@@ -41,6 +45,7 @@ const ROOT = process.cwd();
 const LIST = 'tools/product-search/data/products.json';
 const OUT = 'tools/product-search/data/web-names.json';
 const PHOTOS = 'tools/product-search/photos';
+const DESCRIPTIONS = 'tools/product-search/descriptions';
 const MEDIA = 'https://media.screwfix.com/is/image/ae235/';
 const JINA = process.env.JINA_URL || 'https://r.jina.ai/';
 const GAP = Number(process.env.GAP_MS || 20000);
@@ -70,12 +75,14 @@ const products = state.products || {};
 const daysSince = (iso) => (Date.parse(today) - Date.parse(iso || '2000-01-01')) / 864e5;
 fs.mkdirSync(path.join(ROOT, PHOTOS), { recursive: true });
 const photoFile = (code) => path.join(ROOT, PHOTOS, code + '.jpg');
+fs.mkdirSync(path.join(ROOT, DESCRIPTIONS), { recursive: true });
+const descFile = (code) => path.join(ROOT, DESCRIPTIONS, code + '.json');
 
 /* what each product still needs */
 const needsName = (code) => {
   const p = products[code];
   if (!p) return true;
-  if (p.name) return p.a === undefined;      // named before age checking was added: read once more for it
+  if (p.name) return p.a === undefined || p.d === undefined;   // named before the age check / descriptions were added: read once more
   if (p.missing) return false;
   return (p.tries || 0) < 3 && (!p.tries || daysSince(p.at) >= 7);
 };
@@ -112,7 +119,7 @@ async function read(code) {
   }
   if (r.status === 'notfound') return { kind: 'missing' };
   if (r.status === 'blocked') return { kind: 'fail', why: 'turned away (' + (r.why || 'blocked') + ', HTTP ' + res.status + ')', blocked: true };
-  if ((r.status === 'found' || r.status === 'partial') && r.name && !r.unsure) return { kind: 'found', name: r.name, age: !!r.age };
+  if ((r.status === 'found' || r.status === 'partial') && r.name && !r.unsure) return { kind: 'found', name: r.name, age: !!r.age, desc: describe(text, code) };
   return { kind: 'fail', why: 'page: ' + r.status + (r.unsure ? ", doesn't mention the code" : r.name ? '' : ', no name') };
 }
 
@@ -163,8 +170,9 @@ async function main() {
   const writeOut = () => {
     const named = Object.values(products).filter((p) => p.name).length;
     const photos = Object.values(products).filter((p) => p.p).length;
-    save({ updated: new Date().toISOString(), lastRun: run, named, photos, of: list.items.length });
-    return { named, photos };
+    const described = Object.values(products).filter((p) => p.d).length;
+    save({ updated: new Date().toISOString(), lastRun: run, named, photos, described, of: list.items.length });
+    return { named, photos, described };
   };
   const timeLeft = () => RUN_MS - (Date.now() - STARTED);
 
@@ -228,10 +236,11 @@ async function main() {
       if (got.kind === 'limited') got = { kind: 'fail', why: 'jina kept saying slow down (HTTP 429)', blocked: true };
       const before = products[code] || {};
       if (got.kind === 'found') {
-        products[code] = { ...before, name: got.name, a: got.age ? 1 : 0, at: today };
+        if (got.desc) fs.writeFileSync(descFile(code), JSON.stringify(got.desc) + '\n');
+        products[code] = { ...before, name: got.name, a: got.age ? 1 : 0, d: got.desc ? 1 : 0, at: today };
         delete products[code].tries; delete products[code].why;
         run.found++; ok = true;
-        log(`  ${code} ${got.name}${got.age ? ' (age restricted)' : ''}`);
+        log(`  ${code} ${got.name}${got.age ? ' (age restricted)' : ''}${got.desc ? '' : ' (no description)'}`);
       } else if (got.kind === 'missing') {
         products[code] = { ...before, missing: true, at: today };
         run.missing++; ok = true;
@@ -281,9 +290,9 @@ async function main() {
     }
   }
 
-  const { named, photos } = writeOut();
+  const { named, photos, described } = writeOut();
   const summary = `Product names and photos: tried ${run.tried}, names found ${run.found}, no page ${run.missing}, names failed ${run.failed}, photos saved ${run.photos}, no photo ${run.nophoto}, pauses ${run.pauses}. ` +
-    `${named} names and ${photos} photos of ${list.items.length} so far.` + (run.stopped ? ` GAVE UP: ${run.stopped}.` : '');
+    `${named} names, ${described} descriptions and ${photos} photos of ${list.items.length} so far.` + (run.stopped ? ` GAVE UP: ${run.stopped}.` : '');
   log(summary);
   if (process.env.RUNNER_TEMP) {
     fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'names-commit.txt'),

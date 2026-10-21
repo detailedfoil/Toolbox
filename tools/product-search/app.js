@@ -1,11 +1,13 @@
 /* Product Search page: loads the list (from this phone first, then checks the site for a newer one), searches as
- * you type, shows results a screenful at a time and each result's photo as it scrolls into view. */
+ * you type, shows results a screenful at a time and each result's photo as it scrolls into view. Tapping a result
+ * opens it to show its description (descriptions/<CODE>.json, saved by the GitHub check, loaded only when tapped). */
 (function () {
   'use strict';
 
   var PS = window.ProductSearch, Photos = window.ProductPhotos;
   var LIST_URL = 'product-search/data/products.json';
   var WEB_URL = 'product-search/data/web-names.json';
+  var DESC_URL = 'product-search/descriptions/';
   var PAGE = 24;
   var FLAGS = [[1, 'Hazardous', 'haz'], [2, 'Aerosol', 'aer'], [4, 'Non-trolleyable', 'trl'], [8, 'Sharp or liquid', 'shp'], [16, 'Age restricted', 'age']];
 
@@ -34,7 +36,8 @@
     var names = (web && web.products) || {};
     var items = list.items.map(function (r) {
       var w = names[r[0]] && names[r[0]].name;
-      return { sku: r[0], name: r[1], flags: (r[2] || 0) | (names[r[0]] && names[r[0]].a ? 16 : 0), web: w || '' };
+      var p = names[r[0]] || {};
+      return { sku: r[0], name: r[1], flags: (r[2] || 0) | (p.a ? 16 : 0), web: w || '', desc: p.d };
     });
     searcher = PS.build(items);
     listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');
@@ -158,7 +161,7 @@
     var flags = FLAGS.filter(function (f) { return it.flags & f[0]; }).map(function (f) {
       return '<span class="sx-flag sx-' + f[2] + '">' + f[1] + '</span>';
     }).join('');
-    return '<li class="sx-card">' +
+    return '<li class="sx-card" data-sku="' + esc(it.sku) + '">' +
       '<div class="sx-ph" data-sku="' + esc(it.sku) + '"><img alt="" decoding="async"><span class="sx-ph-code">' + esc(it.sku) + '</span></div>' +
       '<div class="sx-body">' +
         '<h3 class="sx-name">' + marked(title, words) + '</h3>' +
@@ -168,7 +171,9 @@
           '<button type="button" class="sx-code" data-copy="' + esc(it.sku) + '" aria-label="Copy product code ' + esc(it.sku) + '"><span>Product code</span> <b>' + markedCode(it.sku, shown.code, r.how) + '</b></button>' +
           '<a class="sx-open" href="https://www.screwfix.com/p/product/' + esc(it.sku.toLowerCase()) + '" target="_blank" rel="noopener">View on screwfix.com</a>' +
         '</div>' +
-      '</div></li>';
+      '</div>' +
+      '<button type="button" class="sx-toggle" aria-expanded="false"><span>Description</span></button>' +
+      '<div class="sx-desc" hidden></div></li>';
   }
 
   /* ---------- photos, as they come into view ---------- */
@@ -228,8 +233,50 @@
   }
   results.addEventListener('click', function (e) {
     var b = e.target.closest('[data-copy]');
-    if (b) copy(b.getAttribute('data-copy'));
+    if (b) { copy(b.getAttribute('data-copy')); return; }
+    if (e.target.closest('a')) return;                       // "View on screwfix.com"
+    var li = e.target.closest('.sx-card');
+    if (!li || (e.target.closest('.sx-desc') && !e.target.closest('.sx-toggle'))) return;   // reading or selecting the description
+    toggleDesc(li);
   });
+
+  /* ---------- descriptions, when a result is tapped ---------- */
+
+  var descs = new Map();      // code -> Promise<{t, b} | null>, for this visit
+  function getDesc(sku) {
+    if (!descs.has(sku)) {
+      descs.set(sku, fetch(DESC_URL + encodeURIComponent(sku) + '.json').then(function (res) {
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }).catch(function (e) { descs.delete(sku); throw e; }));
+    }
+    return descs.get(sku);
+  }
+  function itemFor(sku) {
+    var hit = shown && shown.list.filter(function (r) { return r.item.sku === sku; })[0];
+    return hit ? hit.item : null;
+  }
+  function toggleDesc(li) {
+    var box = li.querySelector('.sx-desc'), btn = li.querySelector('.sx-toggle');
+    var open = box.hidden;
+    box.hidden = !open;
+    li.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!open || box.getAttribute('data-done')) return;
+    var sku = li.getAttribute('data-sku'), it = itemFor(sku);
+    if (it && it.desc === 0) { box.innerHTML = '<p class="sx-desc-none">Screwfix doesn\'t have a description for this one.</p>'; box.setAttribute('data-done', '1'); return; }
+    if (!it || it.desc !== 1) { box.innerHTML = '<p class="sx-desc-none">No description saved for this one yet. They\'re being collected a few thousand a day.</p>'; return; }
+    box.innerHTML = '<p class="sx-desc-none">Loading the description...</p>';
+    getDesc(sku).then(function (d) {
+      if (!d || (!d.t && !(d.b && d.b.length))) { box.innerHTML = '<p class="sx-desc-none">No description saved for this one yet.</p>'; return; }
+      box.innerHTML = (d.t ? d.t.split(/\n\n+/).map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') : '') +
+        (d.b && d.b.length ? '<ul>' + d.b.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '');
+      box.setAttribute('data-done', '1');
+    }, function () {
+      box.innerHTML = '<p class="sx-desc-none">Couldn\'t load the description. Check your signal, then close and tap again.</p>';
+    });
+  }
   q.addEventListener('input', run);
   form.addEventListener('submit', function (e) { e.preventDefault(); q.blur(); run(); });
 
