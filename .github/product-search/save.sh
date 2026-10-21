@@ -11,5 +11,9 @@ git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
 if [ -n "$1" ]; then git commit -q -m "$1"
 elif [ -f "$RUNNER_TEMP/names-commit.txt" ]; then git commit -q -F "$RUNNER_TEMP/names-commit.txt"
 else git commit -q -m "Product names and photos (run stopped early) [skip ci]"; fi
-for i in 1 2 3; do git push -q && exit 0; sleep 5; git pull -q --rebase --autostash; done
+for i in 1 2 3; do
+  git push -q && exit 0
+  sleep 5
+  git pull -q --rebase --autostash || { echo "Couldn't fit this run's progress on top of the latest main"; git rebase --abort 2>/dev/null; }
+done
 exit 1
