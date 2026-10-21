@@ -1,12 +1,14 @@
 {
   "name": "toolbox-checks",
   "private": true,
-  "description": "The price checks that run on GitHub (Monday shelf check, A25 counter trial) and the tests: npm test. jpeg-js reads the Till Count test photos.",
+  "description": "The price checks that run on GitHub (Monday shelf check, A25 counter trial) and the tests: npm test. jpeg-js reads the Till Count test photos. d3-delaunay and polygon-clipping draw the Area Map shapes (area-map/make-areas.mjs).",
   "scripts": {
     "test": "node --test \"tests/*.test.mjs\""
   },
   "dependencies": {
+    "d3-delaunay": "6.0.4",
     "jpeg-js": "0.4.4",
-    "jsdom": "26.1.0"
+    "jsdom": "26.1.0",
+    "polygon-clipping": "0.15.7"
   }
 }

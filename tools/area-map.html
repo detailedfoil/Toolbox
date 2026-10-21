@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Toolbox">
+<title>Area Map</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../style.css?v=b86f5823a5">
+<link rel="stylesheet" href="area-map/leaflet/leaflet.css?v=a783710282">
+<link rel="stylesheet" href="area-map/area-map.css?v=970d4e2f5d">
+<script src="../auth-data.js?v=26c132d57a"></script>
+<script src="../auth.js?v=51f9bae97e"></script>
+<script src="../analytics.js?v=f5e6d397aa"></script>
+</head>
+<body class="am-page">
+<div class="am">
+  <div class="am-top">
+    <a class="back" href="../index.html">&larr; Toolbox</a>
+    <h1>Area Map</h1>
+  </div>
+  <div class="am-main">
+    <div class="am-mapwrap">
+      <div id="map" aria-label="Map of every Screwfix store, coloured by area"></div>
+      <div class="am-fabs">
+        <button class="am-fab" id="near" type="button" title="Stores near me" aria-label="Stores near me">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        </button>
+        <button class="am-fab" id="all" type="button" title="Show the whole map" aria-label="Show the whole map">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+        <button class="am-fab" id="style" type="button" title="Street map on or off" aria-label="Street map" aria-pressed="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 4-6 2v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>
+        </button>
+      </div>
+    </div>
+    <section class="am-panel" id="panel" aria-label="Areas and stores">
+      <div class="am-grab" id="grab" aria-hidden="true"><span></span></div>
+      <div class="am-searchrow" id="searchrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input class="am-q" id="q" type="search" placeholder="Store, town, postcode or area" aria-label="Search stores, towns, postcodes or areas" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <button class="am-clear" id="clear" type="button" aria-label="Clear search" hidden>&times;</button>
+      </div>
+      <div class="am-view" id="view" aria-live="polite"><p class="am-empty">Loading the store list&hellip;</p></div>
+    </section>
+  </div>
+</div>
+<div class="am-toast" id="toast" role="status" aria-live="polite"></div>
+<script src="area-map/leaflet/leaflet.js?v=dc71f8a688"></script>
+<script src="area-map/geo.js?v=98d8395547"></script>
+<script src="area-map/app.js?v=b35f8507d6"></script>
+</body>
+</html>
