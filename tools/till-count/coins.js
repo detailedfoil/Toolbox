@@ -1,6 +1,7 @@
 /* Till Count: finds the coins in a photo of one pile of the same coin, on a plain surface.
    No libraries, so it's small and quick on a phone. It looks for each coin's rim:
-     1. edges: every point where the picture changes sharply, with the direction it changes in
+     1. edges: every point where the picture changes sharply in lightness or colour, with the direction it changes in
+        (colour too: a silver coin on a warm wooden desk can be no lighter than the wood)
      2. each edge point "votes" for where the middle of a circle through it would be. A coin's rim makes
         lots of votes land on the coin's middle; the desk and the design inside a coin don't
      3. first pass, any size: finds the usual size of one coin (every coin in the photo is the same coin)
@@ -12,7 +13,8 @@
 (function (root) {
   'use strict';
 
-  var VERSION = '2026-10-19a';
+  var VERSION = '2026-10-22a';
+  var CHROMA = 2; // how much a change of colour (red against blue) counts next to a change of lightness
   var WORK = 800; // the photo is looked at no bigger than this (long side), plenty for coins and quick
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -21,16 +23,16 @@
   function grey(img) {
     var W0 = img.width, H0 = img.height, src = img.data, L0 = Math.max(W0, H0);
     var f = L0 > WORK ? WORK / L0 : 1, W = Math.max(1, Math.round(W0 * f)), H = Math.max(1, Math.round(H0 * f));
-    var sum = new Float32Array(W * H), cnt = new Float32Array(W * H), x, y, i, j, row;
+    var sum = new Float32Array(W * H), cs = new Float32Array(W * H), cnt = new Float32Array(W * H), x, y, i, j, row;
     for (y = 0; y < H0; y++) {
       row = Math.min(H - 1, Math.floor(y * f)) * W;
       for (x = 0; x < W0; x++) {
         j = (y * W0 + x) * 4; i = row + Math.min(W - 1, Math.floor(x * f));
-        sum[i] += 0.299 * src[j] + 0.587 * src[j + 1] + 0.114 * src[j + 2]; cnt[i]++;
+        sum[i] += 0.299 * src[j] + 0.587 * src[j + 1] + 0.114 * src[j + 2]; cs[i] += src[j] - src[j + 2]; cnt[i]++;
       }
     }
-    for (i = 0; i < W * H; i++) sum[i] = cnt[i] ? sum[i] / cnt[i] : 0;
-    return { g: sum, W: W, H: H, f: f };
+    for (i = 0; i < W * H; i++) { sum[i] = cnt[i] ? sum[i] / cnt[i] : 0; cs[i] = cnt[i] ? cs[i] * CHROMA / cnt[i] : 0; }
+    return { g: sum, c: cs, W: W, H: H, f: f };
   }
 
   /* box blur, radius r, both directions */
@@ -56,13 +58,18 @@
   }
 
   /* thin edges (the strongest point across each edge), with their direction, kept in a grid for quick lookups */
-  function edgePoints(g, W, H, opt) {
-    var s = blur(blur(g, W, H, 1), W, H, 1), n = W * H;
-    var gx = new Float32Array(n), gy = new Float32Array(n), mag = new Float32Array(n), x, y, i, a, b, ax, ay, m;
+  function edgePoints(g, W, H, opt, ch) {
+    var s = blur(blur(g, W, H, 1), W, H, 1), n = W * H, s2 = ch ? blur(blur(ch, W, H, 1), W, H, 1) : null;
+    var gx = new Float32Array(n), gy = new Float32Array(n), mag = new Float32Array(n), x, y, i, a, b, ax, ay, m, a2, b2;
     for (y = 1; y < H - 1; y++) for (x = 1; x < W - 1; x++) {
       i = y * W + x;
       a = s[i - W + 1] + 2 * s[i + 1] + s[i + W + 1] - s[i - W - 1] - 2 * s[i - 1] - s[i + W - 1];
       b = s[i + W - 1] + 2 * s[i + W] + s[i + W + 1] - s[i - W - 1] - 2 * s[i - W] - s[i - W + 1];
+      if (s2) { // a colour change counts too: a silver coin on a warm wooden desk can be no lighter than the wood
+        a2 = s2[i - W + 1] + 2 * s2[i + 1] + s2[i + W + 1] - s2[i - W - 1] - 2 * s2[i - 1] - s2[i + W - 1];
+        b2 = s2[i + W - 1] + 2 * s2[i + W] + s2[i + W + 1] - s2[i - W - 1] - 2 * s2[i - W] - s2[i - W + 1];
+        if (a2 * a2 + b2 * b2 > a * a + b * b) { a = a2; b = b2; }
+      }
       gx[i] = a; gy[i] = b; mag[i] = Math.sqrt(a * a + b * b);
     }
     // the desk's own grain sets the bar: the smoothest 15% of the photo (in 16 pixel squares) is desk,
@@ -224,7 +231,7 @@
   function detect(img, opt) {
     opt = opt || {};
     var P = grey(img), W = P.W, H = P.H, L = Math.max(W, H), i, k;
-    var E = edgePoints(P.g, W, H, opt);
+    var E = edgePoints(P.g, W, H, opt, opt.grey ? null : P.c);
     var res = { version: VERSION, coins: [], maybe: [], unit: 0, warn: [], width: img.width, height: img.height };
     var dbg = opt.debug ? (res.debug = { edges: E.n, t: E.t, med: E.med, W: W, H: H }) : null;
     if (E.n < 50) { res.warn.push('none'); return res; }

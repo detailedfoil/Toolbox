@@ -44,8 +44,11 @@ explain changes in plain English and say what they'll see.
     any size finds one coin's size, a second finds every coin of about that size), each checked by how much of
     its rim shows. Allows for photos taken at a slight angle; amber = counted but worth a look. `money.js` does
     the sums in whole pence. Tested on two real photos (`.github/tests/fixtures/coins-*.jpg`, 50 10p and 48 20p,
-    receipt blurred): any change to `coins.js` must keep those exact.
-  - `coin-counter-2`: Photo Coin Counter 2 (the sequel to Photo Coin Counter, built 22 Oct 2026; the first one is untouched),
+    receipt blurred): any change to `coins.js` must keep those exact. Edges come from lightness and colour (red minus
+    blue, `CHROMA`), added 22 Oct 2026: on wood it found 71% of coins before, 99% after. Also tested on four made-up piles
+    of one coin (`coins-pile-*.jpg`, from `.github/coin-counter-2/make-mixes.py` with `PILES=1`, some on `wood.jpg`, bare
+    wood cut from a real phone photo). The sequel's `mixed.js` doesn't have the colour edges (left as it is).
+  - `coin-counter-2`: Photo Coin Counter 2 (the sequel to Photo Coin Counter, built 22 Oct 2026),
     every store. One photo of MIXED coins: `mixed.js` (window.MixedCoins) finds every coin with a copy of coins.js's rim
     voting, run in five size bands, then traces each outline where it meets the desk and works out the coin from its
     metal (copper; silver; a gold ring round a silver middle = £1/£2), shape (7-sided 20p/50p and 12-sided £1, from the

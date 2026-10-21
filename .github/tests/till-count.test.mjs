@@ -86,3 +86,17 @@ test('till count: a bare patch of desk has no coins, and a close-up still finds 
     assert.ok(n >= wholly && n <= centred, `${name}: ${n} found, expected ${wholly} to ${centred}`);
   }
 });
+
+// piles of one coin made by .github/coin-counter-2/make-mixes.py (PILES=1) from the real 10p and 20p coins: on bare
+// wood from a real phone photo (warm light, grain and shadows), touching in dim warm light, and tilted, small and soft.
+// The .json beside each says where every coin is. A silver coin on warm wood is hardly lighter than the wood, so these
+// need the colour edges.
+test('till count: piles of one coin on real wood, touching, tilted: finds them all and nothing else', () => {
+  for (const f of ['wood-c20', 'wood-c1', 'tilt-c100', 'touch-c5']) {
+    const truth = JSON.parse(fs.readFileSync(path.join(HERE, 'fixtures', 'coins-pile-' + f + '.json'), 'utf8')).coins;
+    const r = CC.detect(photo('coins-pile-' + f + '.jpg'));
+    const hit = truth.filter((t) => r.coins.some((c) => Math.hypot(c.x - t.x, c.y - t.y) < 20)).length;
+    assert.ok(hit >= truth.length - 1, f + ': found ' + hit + ' of ' + truth.length);
+    assert.ok(r.coins.length <= truth.length, f + ': ' + r.coins.length + ' counted for ' + truth.length);
+  }
+});

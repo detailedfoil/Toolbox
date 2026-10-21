@@ -1,6 +1,7 @@
 """Makes mixed-coin test photos from the two real photos (real 10p and 20p coins). Other coins are made from
 those: 5p and 50p by size, 1p and 2p recoloured copper, the £2 and the twelve-sided £1 with a gold ring.
-Writes <name>.jpg and <name>.json (the coins as placed: x, y, coin) into the folder given."""
+With PILES=1: piles of one coin each for the first Photo Coin Counter (tools/till-count), some on wood.jpg
+(bare wood from a real phone photo, warm light and shadows). Writes <name>.jpg and <name>.json (the coins as placed: x, y, coin) into the folder given."""
 import json, math, random, sys
 import numpy as np
 from PIL import Image, ImageFilter, ImageDraw
@@ -93,13 +94,14 @@ def make_coin(coin, px_per_mm, rng, tint=1.0):
     spr = Image.fromarray(rgba, 'RGBA').rotate(rng.uniform(0, 360), resample=Image.BICUBIC, expand=False)
     return spr, (cx, cy), target
 
-def scene(name, counts, size=(1400, 1050), px_per_mm=3.3, cast=(1, 1, 1), tilt=(0.0, 0.0), seed=1, gap=(3, 14), desk=(205, 205, 203), blur=0.5):
+def scene(name, counts, size=(1400, 1050), px_per_mm=3.3, cast=(1, 1, 1), tilt=(0.0, 0.0), seed=1, gap=(3, 14), desk=(205, 205, 203), blur=0.5, bg=None, dim=1.0):
     rng = random.Random(seed); np.random.seed(seed)
     W, H = size
     yy, xx = np.mgrid[0:H, 0:W]
     light = 1 + 0.06 * (xx / W - 0.5) - 0.05 * (yy / H - 0.5)
     base = np.stack([np.full((H, W), desk[i], np.float32) * light for i in range(3)], axis=2)
     base += np.random.normal(0, 2.2, base.shape)
+    if bg: base = np.asarray(Image.open(bg).convert('RGB').resize((W, H))).astype(np.float32)
     canvas = Image.fromarray(np.clip(base, 0, 255).astype(np.uint8)).convert('RGBA')
     shadow = Image.new('L', (W, H), 0)
     sd = ImageDraw.Draw(shadow)
@@ -127,13 +129,20 @@ def scene(name, counts, size=(1400, 1050), px_per_mm=3.3, cast=(1, 1, 1), tilt=(
         canvas.alpha_composite(p['spr'], (int(round(p['x'] - sx / 2)), int(round(p['y'] - sy / 2))))
     img = canvas.convert('RGB')
     if blur: img = img.filter(ImageFilter.GaussianBlur(blur))
-    a = np.asarray(img).astype(np.float32) * np.array(cast, np.float32)
+    a = np.asarray(img).astype(np.float32) * np.array(cast, np.float32) * dim
     a += np.random.normal(0, 1.5, a.shape)
     Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).save(OUT + '/' + name + '.jpg', quality=88)
     json.dump({'coins': [{'x': round(p['x'], 1), 'y': round(p['y'], 1), 'coin': p['coin']} for p in placed]}, open(OUT + '/' + name + '.json', 'w'))
     print(name, len(placed), 'coins', {c: sum(1 for p in placed if p['coin'] == c) for c in MM})
 
 import os
+if os.environ.get('PILES'):
+    WOOD = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wood.jpg')
+    for i, k in enumerate(['c1', 'c2', 'c5', 'c10', 'c20', 'c50', 'c100', 'c200']):
+        scene('wood-' + k, {k: 30}, bg=WOOD, gap=(1, 10), seed=100 + i)
+        scene('touch-' + k, {k: 40}, gap=(0, 2), cast=(1.07, 1.0, 0.86), dim=0.75, seed=200 + i)
+        scene('tilt-' + k, {k: 35}, bg=WOOD, tilt=(0.1, 0.3), px_per_mm=2.6, size=(1200, 900), blur=1.0, seed=300 + i)
+    sys.exit()
 if os.environ.get('HARD'):
     mix = {'c1': 6, 'c2': 4, 'c5': 5, 'c10': 5, 'c20': 6, 'c50': 3, 'c100': 3, 'c200': 2}
     scene('h-touching', mix, gap=(0, 2), seed=21)
