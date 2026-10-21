@@ -13,7 +13,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = '2026-10-21a';
+  var VERSION = '2026-10-22a';
   var WORK = 1000; // finding the coins: the photo is looked at no bigger than this (long side)
   var RAYS = 144;  // tracing a coin's outline: one look every 2.5 degrees
 
@@ -549,14 +549,18 @@
     return out;
   }
 
-  /* how likely each metal is, from the two colours */
-  function metals(col) {
+  /* how likely each metal is, from the two colours. ref: the colour of this photo's silver coins (the light can
+     make silver look warm), so copper is judged against that. Set on the Royal Mint's photo of every coin: copper
+     shows 0.07 to 0.13 redder than silver (the newer coins are paler), a £1 or £2 ring 0.04 to 0.06 yellower than
+     its middle */
+  function metals(col, ref) {
     var mid = col.mid, ring = col.ring;
     if (!(mid.n >= 8) || !(ring.n >= 8)) return { copper: 0.25, silver: 0.5, two: 0.25 };
-    var lift = ring.yb - mid.yb; // a gold ring round a silver middle: the ring is much yellower
-    var red = Math.max(mid.rg, (mid.rg + ring.rg) / 2);
-    var two = sig((lift - 0.045) / 0.012) * (1 - sig((mid.rg - 0.085) / 0.012));
-    var copper = sig((red - 0.075) / 0.013) * (1 - two);
+    ref = ref || [0, 0];
+    var lift = (ring.yb - mid.yb) + 0.5 * (ring.rg - mid.rg); // a gold ring round a silver middle
+    var red = Math.max(mid.rg, (mid.rg + ring.rg) / 2) - ref[0];
+    var two = sig((lift - 0.035) / 0.009) * (1 - sig((mid.rg - ref[0] - 0.05) / 0.012));
+    var copper = sig((red - 0.045) / 0.011) * (1 - two);
     var silver = Math.max(0, 1 - two - copper);
     return { copper: copper, silver: silver, two: two };
   }
@@ -783,8 +787,13 @@
       kept.push(o);
     });
     res.gains = desk.gains.map(function (v) { return Math.round(v * 1000) / 1000; });
-    kept.forEach(function (o) {
-      var col = colours(img, o, desk.gains), pm = metals(col), sh = shapes(o.t);
+    // the photo's silver: the middles of the coins that look silver at first sight
+    var cols = kept.map(function (o) { return colours(img, o, desk.gains); });
+    var firstSilver = cols.filter(function (col) { return metals(col).silver > 0.6; });
+    var ref = firstSilver.length >= 3 ? [median(firstSilver.map(function (c) { return c.mid.rg; })), median(firstSilver.map(function (c) { return c.mid.yb; }))] : [0, 0];
+    res.silver = ref.map(round3);
+    kept.forEach(function (o, k) {
+      var col = cols[k], pm = metals(col, ref), sh = shapes(o.t);
       res.coins.push({
         x: o.x, y: o.y, r: o.r, state: 'on', hidden: !o.t || o.t.q < 0.4, seen: o.c.seen,
         f: { lr: Math.log(o.r), u: (o.x - W / 2) / L, v: (o.y - H / 2) / L, pm: pm, p7: sh.p7, p12: sh.p12, q: o.t ? o.t.q : 0.3 },
