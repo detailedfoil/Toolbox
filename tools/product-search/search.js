@@ -42,7 +42,7 @@
     rawlplug: ['plug'], screwdriver: ['driver'], hacksaw: ['hack'], stanley: ['utility'], mole: ['locking'],
     sander: ['sanding'], aerosol: ['spray'], spray: ['aerosol'], hazard: ['hazardous'], paintbrush: ['brush'], extension: ['ext'], ext: ['extension']
   };
-  var FLAG_WORDS = [[1, 'hazardous'], [2, 'aerosol'], [4, 'non trolleyable'], [8, 'sharp liquid'], [16, 'age restricted challenge 25 over 18']];
+  var FLAG_WORDS = [[16, 'age restricted challenge 25 over 18']];     // only the age warning is shown, so only it is searchable
   var STOP = { x: 1, of: 1, and: 1, with: 1, for: 1, the: 1, to: 1, in: 1, on: 1, each: 1, a: 1 };
   var UNITS = 'mm|cm|m|km|kg|g|mg|ml|cl|l|ltr|litre|litres|v|w|kw|a|ah|mah|lm|k|kva|ft|m2|m3|psi|bar|nm|rpm|db|mtr|metre|metres|meter|meters';
 
@@ -143,7 +143,7 @@
       else if (list[list.length - 1] !== n) list.push(n);
     }
     items.forEach(function (it, n) {
-      // the warnings count as words too, so "hazardous" or "aerosol paint" finds them
+      // the age warning counts as words too, so "age restricted" or "challenge 25" finds them
       var flagged = FLAG_WORDS.filter(function (f) { return it.flags & f[0]; }).map(function (f) { return f[1]; }).join(' ');
       [it.name, it.web, flagged].forEach(function (text) {
         if (!text) return;

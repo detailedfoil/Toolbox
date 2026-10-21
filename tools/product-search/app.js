@@ -10,7 +10,7 @@
   var DESC_URL = 'product-search/descriptions/';
   var DESC_WORDS_URL = 'product-search/data/desc-words.json';   // the words descriptions are searched by, loaded after the list
   var PAGE = 24;
-  var FLAGS = [[1, 'Hazardous', 'haz'], [2, 'Aerosol', 'aer'], [4, 'Non-trolleyable', 'trl'], [8, 'Sharp or liquid', 'shp'], [16, 'Age restricted', 'age']];
+  var FLAGS = [[16, 'Age restricted', 'age']];     // the only label shown (hazardous, aerosol, non-trolleyable and sharp or liquid were removed, 21 Oct)
 
   var $ = function (id) { return document.getElementById(id); };
   var q = $('q'), form = $('form'), statusEl = $('status'), noteEl = $('note'), results = $('results'), more = $('more');

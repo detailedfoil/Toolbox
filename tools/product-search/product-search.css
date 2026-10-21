@@ -72,10 +72,6 @@ html:has(body.sx){background:var(--sx-bg,#f4f4f4);color-scheme:light}
 .sx-why{margin:0;font-size:.78rem;font-weight:700;color:var(--sx-muted);text-transform:uppercase;letter-spacing:.02em}
 .sx-flags{display:flex;flex-wrap:wrap;gap:5px}
 .sx-flag{font-family:"SX Barlow",system-ui,sans-serif;font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.02em;padding:2px 7px;border-radius:5px;line-height:1.15;background:var(--sx-card);border:2px solid currentColor}
-.sx-haz{color:var(--sx-red);background:#fff;box-shadow:inset 0 0 0 1px #fff}
-.sx-aer{color:#d96a00;background:#fff}
-.sx-trl{color:#0a3a8f;background:#fff}
-.sx-shp{color:#6b3fa0;background:#fff}
 .sx-age{color:#fff;background:#b0124d;border-color:#b0124d}
 .sx-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:auto}
 .sx-code{border:0;background:none;padding:4px 0;font:inherit;color:var(--sx-muted);font-size:.85rem;cursor:pointer;text-align:left}

@@ -86,9 +86,9 @@ test('names: the way the stock names are written', () => {
 
 test('names: trade words, warnings and the screwfix.com name', () => {
   assert.deepEqual(skus('allen key'), ['178XG']);
-  assert.deepEqual(skus('hazardous'), ['20080']);
-  assert.deepEqual(skus('aerosol'), ['21697', '9866T'].filter((x) => skus('aerosol').includes(x)));
-  assert.equal(skus('aerosol').length, 2);
+  assert.deepEqual(skus('hazardous'), [], 'the hazardous warning is no longer shown or searched');
+  assert.ok(!skus('aerosol').includes('9866T') || /aerosol/i.test(made.find((m) => m.sku === '9866T').name), 'nor the aerosol one');
+  assert.deepEqual(skus('aerosol'), ['21697'], 'only products with aerosol in their name');
   assert.deepEqual(skus('pointed tooth'), ['1001X']);
   assert.deepEqual(skus('21 inch bow saw'), ['1001X']);
 });
