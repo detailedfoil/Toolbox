@@ -1,4 +1,4 @@
-# Overnight Product Search check: for a few hundred products a night it reads the product page on screwfix.com
+# Product Search check, round the clock until every product is done: it reads the product page on screwfix.com
 # (through jina, like the price checks) and saves the website name to tools/product-search/data/web-names.json, so
 # Product Search can find products by either name, then fetches the 120 x 120 photo from Screwfix's image server
 # and saves it as tools/product-search/photos/<CODE>.jpg, so every phone gets photos from the Toolbox itself.

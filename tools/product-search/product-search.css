@@ -103,9 +103,6 @@ html:has(body.sx){background:var(--sx-bg,#f4f4f4)}
 .sx-switch input:checked + .sx-knob{background:#0a3a8f}
 .sx-switch input:checked + .sx-knob::after{transform:translateX(18px)}
 .sx-switch input:focus-visible + .sx-knob{outline:3px solid var(--sx-focus);outline-offset:2px}
-.sx-saved{margin:10px 0 2px;font-size:.88rem}
-.sx-link{border:0;background:none;padding:6px 0;color:var(--sx-link);font:inherit;font-size:.9rem;cursor:pointer;text-decoration:underline}
-.sx-small{color:var(--sx-muted);font-size:.78rem;margin:10px 0 0}
 
 /* toast */
 .sx-toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;background:#111;color:#fff;

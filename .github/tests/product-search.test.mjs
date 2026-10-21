@@ -291,6 +291,7 @@ test('photo sweep: 3 refusals in a row stop it for this run, the names carry on,
     assert.equal(out.code, 0, out.stderr);
     assert.equal(mock.hits.filter((h) => h.mode === 'image').length, 3, 'stopped after 3');
     assert.equal(names(out).named, 8, 'the names still got read');
+    assert.equal(mock.hits.filter((h) => h.mode === 'image').length, 3, 'and no more photos asked for while reading them');
     assert.match(names(out).lastRun.photoSweepStopped, /HTTP 403/);
     assert.match(out.stdout, /::warning title=Product photos turned away::/);
   } finally { await mock.close(); }

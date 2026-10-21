@@ -50,6 +50,10 @@ const STARTED = Date.now();
 // PHOTOS=off (set in the workflow) leaves the photos out. Screwfix's image server turned GitHub away on 20 Oct 2026
 // (answered the first 5 with something that wasn't a picture), so photos are off there; the code stays for another go.
 const PHOTOS_ON = process.env.PHOTOS !== 'off';
+// the size photos are kept at: 120 x 120 pixels, JPEG quality 85, about 2 KB each (about 21 MB for the whole list).
+// 80 and 60 would make them about 1.3 KB (13 MB) but a little soft on a phone; detailedfoil to decide (21 Oct 2026).
+const PHOTO_PX = 120;
+const PHOTO_QUALITY = 85;
 const SWEEP_GAP = Number(process.env.PHOTO_GAP_MS || Math.round(GAP / 20));   // between photos in the sweep: 1 s with the usual 20 s gap
 const FAILS_TO_PAUSE = 4;       // different products failing in a row before an hour's pause
 const FAILS_AFTER_PAUSE = 2;    // failing straight after a pause: pause again
@@ -123,8 +127,8 @@ async function photo(code) {
   try {
     // through the free image relay wsrv.nl (it asks Screwfix from its own servers; Screwfix's image server turned
     // GitHub's servers away when asked directly, 20 Oct 2026). PHOTO_VIA=direct asks Screwfix itself.
-    const own = MEDIA + code + '_P?wid=120&hei=120';
-    const url = process.env.PHOTO_VIA === 'direct' ? own : 'https://wsrv.nl/?url=' + encodeURIComponent(own) + '&output=jpg&q=85';
+    const own = MEDIA + code + '_P?wid=' + PHOTO_PX + '&hei=' + PHOTO_PX;
+    const url = process.env.PHOTO_VIA === 'direct' ? own : 'https://wsrv.nl/?url=' + encodeURIComponent(own) + '&w=' + PHOTO_PX + '&h=' + PHOTO_PX + '&fit=inside&output=jpg&q=' + PHOTO_QUALITY;
     res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(30000) });
     bytes = Buffer.from(await res.arrayBuffer());
   } catch (e) {
@@ -206,6 +210,7 @@ async function main() {
 
   for (const code of todo) {
     if (timeLeft() <= 0) { run.timeUp = true; log('Time for this run is up; the next run carries on'); break; }
+    if (!needsName(code) && !wantPhoto(code)) continue;    // only wanted a photo, and the sweep has done it (or stopped)
     await sleep(Math.max(0, next - Date.now()));
     if (++sinceBreak > breakAfter) {
       const rest = Math.round(rand(2, 6) * 60000 * (GAP / 20000));

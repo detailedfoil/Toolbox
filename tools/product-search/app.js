@@ -20,10 +20,6 @@
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function n(x) { return Number(x).toLocaleString('en-GB'); }
-  function niceDate(iso) {
-    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
-    return m ? Number(m[3]) + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m[2] - 1] + ' ' + m[1] : '';
-  }
   // a quick fingerprint of a file's text, to tell whether the saved copy is the latest
   function print(text) {
     var h = 2166136261;
@@ -35,15 +31,12 @@
 
   function useList(newList, newWeb, where) {
     list = newList; web = newWeb;
-    var names = (web && web.products) || {}, named = 0;
+    var names = (web && web.products) || {};
     var items = list.items.map(function (r) {
       var w = names[r[0]] && names[r[0]].name;
-      if (w) named++;
       return { sku: r[0], name: r[1], flags: (r[2] || 0) | (names[r[0]] && names[r[0]].a ? 16 : 0), web: w || '' };
     });
-    var t0 = performance.now();
     searcher = PS.build(items);
-    var ms = Math.round(performance.now() - t0);
     listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');
     q.placeholder = 'Search by code or name';
     var have = new Set();
