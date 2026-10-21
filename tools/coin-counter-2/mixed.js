@@ -762,7 +762,7 @@
     } else desk = deskOf(img, circles);
     // the desk round one coin, unless what's round it isn't desk-like (a circle found on a ring in a coin's
     // design has the coin itself round it)
-    var deskFor = function (j) { var l = locals[j]; return l && l.noise <= Math.max(12, desk.noise * 3) ? l : desk; };
+    var deskFor = function (j) { var l = locals[j]; return l && l.noise <= Math.max(12, desk.noise * 1.6) ? l : desk; };
     // a gap between coins can look like a circle through bits of its neighbours' rims, but inside it's desk
     if (desk.busy == null) desk.busy = got.length ? median(got.map(function (o) { return o.busy; })) : 2;
     var insd = circles.map(function (c, j) { return inside(img, c, deskFor(j).rgb); });
@@ -770,7 +770,7 @@
     var nF = F.found.length, typical = median(ins.slice(0, nF));
     var keepIn = function (j) {
       var dk = deskFor(j), busy = dk.busy || desk.busy || 2;
-      return ins[j] >= Math.max(dk.noise * 3 + 6, typical * 0.15) || insd[j].busy >= Math.max(busy * 2.5, busy + 4);
+      return ins[j] >= Math.max(Math.min(dk.noise * 3 + 6, desk.noise * 1.5 + 4), typical * 0.15) || insd[j].busy >= Math.max(busy * 2.2, busy + 3);
     };
     var traced = [];
     F.found.forEach(function (c, j) {
