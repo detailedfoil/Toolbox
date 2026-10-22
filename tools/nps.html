@@ -9,7 +9,7 @@
 <title>NPS</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="nps/nps.css?v=be8cc846a6">
+<link rel="stylesheet" href="nps/nps.css?v=bc06adcb7c">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -25,8 +25,23 @@
   <h1>NPS</h1>
   <p class="nps-sub">See how many promoters it takes to hit your target, and how every store in the area is doing.</p>
 
-  <p class="nps-meta" id="meta">Loading the latest data</p>
+  <p class="nps-meta"><span id="meta">Loading the latest data</span> <button class="link" type="button" id="pasteOpen" hidden>Paste new data</button></p>
   <p class="nps-error" id="error" role="alert" hidden></p>
+
+  <section class="card paste" id="paste" aria-labelledby="pasteTitle" hidden>
+    <h2 id="pasteTitle">Paste the NPS data</h2>
+    <p class="paste-sub">Copy the data text from the NPS chat and paste it here. It's kept on this device only, never put on the site.</p>
+    <textarea id="pasteText" rows="7" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="NPS 22.10.2026&#10;Store | Promoters | Passives | Detractors&#10;Dunstable (LB1) | 148 | 12 | 3&#10;..." aria-describedby="pasteCheck"></textarea>
+    <p class="paste-check" id="pasteCheck" aria-live="polite"></p>
+    <div class="paste-actions">
+      <button class="btn" type="button" id="pasteClip">Paste from clipboard</button>
+      <button class="btn btn-primary" type="button" id="pasteLoad" disabled>Show it</button>
+    </div>
+    <div class="paste-foot" id="pasteFoot" hidden>
+      <button class="link" type="button" id="pasteCancel">Cancel</button>
+      <button class="link danger" type="button" id="pasteForget">Remove the data from this device</button>
+    </div>
+  </section>
 
   <div id="main" hidden>
     <div class="nps-tabs" role="tablist" aria-label="NPS views">
@@ -67,7 +82,7 @@
 </dialog>
 
 <script src="nps/xlsx.mini.min.js?v=3120abba1f"></script>
-<script src="nps/engine.js?v=97c659bb74"></script>
-<script src="nps/app.js?v=5cd51424ef"></script>
+<script src="nps/engine.js?v=9845c02b3d"></script>
+<script src="nps/app.js?v=a784c0e4bc"></script>
 </body>
 </html>

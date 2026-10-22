@@ -47,6 +47,66 @@
     return { date: m ? m[0] : "", fileName: fileName || "", stores: stores, area: area || sumArea(stores) };
   }
 
+  /* Pasted text, one store per line: the name, then promoters, passives and detractors.
+     Lenient on purpose: commas, tabs, pipes or spaces between, a header line, a rank in front,
+     a score as a percentage, labels like "P 148" all get through. A date (DD.MM.YYYY) anywhere
+     in the text is the data date. "Area Total" is used if given, otherwise the stores are added up. */
+  var SEP = "\\s,;|:=\\t";
+  var WHOLE = new RegExp("(?:^|[" + SEP + "])(\\d{1,7})(?=$|[" + SEP + "])", "g");
+
+  function parseText(text) {
+    text = String(text || "").replace(/\r/g, "");
+    var t = text.trim();
+    if (!t) throw new Error("Paste the NPS data first.");
+
+    if (t[0] === "{") {                                   // the site's own data file
+      var j;
+      try { j = JSON.parse(t); } catch (e) { throw new Error("That looks like data but it's cut off. Copy all of it and paste again."); }
+      if (!j || !Array.isArray(j.stores) || !j.stores.length) throw new Error("No stores found in that data.");
+      var js = j.stores.map(function (s) { return { name: str(s.name), p: num(s.p), pa: num(s.pa), d: num(s.d) }; });
+      return { date: str(j.date), fileName: "", stores: js, area: j.area ? { name: "Area Total", p: num(j.area.p), pa: num(j.area.pa), d: num(j.area.d) } : sumArea(js) };
+    }
+
+    var dm = /\b(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})\b/.exec(text);
+    var date = dm ? ("0" + dm[1]).slice(-2) + "." + ("0" + dm[2]).slice(-2) + "." + dm[3] : "";
+
+    var stores = [], area = null, seen = {}, order = ["p", "pa", "d"];
+    text.split("\n").forEach(function (raw) {
+      var line = raw.replace(/\*\*/g, "").replace(/[\u2013\u2014]/g, "-").trim();
+      if (!line || /^[-|:=\s]+$/.test(line)) return;               // blank, or a table rule like |---|---|
+      var hits = [], m;
+      WHOLE.lastIndex = 0;
+      while ((m = WHOLE.exec(line))) hits.push({ v: Number(m[1]), at: m.index + m[0].length - m[1].length });
+      if (hits.length < 3) {                                          // a header: note the column order
+        var lo = line.toLowerCase(), ip = lo.indexOf("promoter"), ipa = lo.indexOf("passive"), id = lo.indexOf("detractor");
+        if (ip > -1 && ipa > -1 && id > -1) order = [["p", ip], ["pa", ipa], ["d", id]].sort(function (a, b) { return a[1] - b[1]; }).map(function (x) { return x[0]; });
+        return;
+      }
+      var k = hits.length;                                            // a responses column after the three: drop it
+      if (k >= 4 && hits[k - 1].v === hits[k - 4].v + hits[k - 3].v + hits[k - 2].v && hits[k - 1].v > 0) hits.pop();
+      var three = hits.slice(-3);
+      var name = line.slice(0, hits[hits.length - 3].at)
+        .replace(/^[\s|]+/, "")
+        .replace(/^(?:#?\d{1,2}[.)]?[\s|]+|[-*\u2022]\s+)/, "")                     // rank or bullet in front
+        .replace(/(?:[\s|,;:=\t]+[-+]?\d+(?:\.\d+)?%?)+[\s|,;:=\t]*$/, "")        // a score or rank after the name
+        .replace(/[\s|,;:=\t]*\b(?:p|promoters?)\s*[:=]?[\s|,;:=\t]*$/i, "")     // "P 148"
+        .replace(/[\s|,;:=\t-]+$/, "")
+        .trim();
+      if (!/[a-z]/i.test(name)) return;
+      var rec = { name: name };
+      order.forEach(function (key, i) { rec[key] = three[i].v; });
+      if (/^(area\s*)?total$/i.test(name) || /^area$/i.test(name)) { area = { name: "Area Total", p: rec.p, pa: rec.pa, d: rec.d }; return; }
+      if (seen[name.toLowerCase()]) throw new Error(name + " is in the list twice.");
+      seen[name.toLowerCase()] = true;
+      stores.push(rec);
+    });
+
+    if (stores.length < 2) throw new Error("Couldn't find the stores. Each line needs a store name then its promoters, passives and detractors.");
+    var sum = sumArea(stores);
+    return { date: date, fileName: "", stores: stores, area: area || sum,
+      areaMatches: !area || (area.p === sum.p && area.pa === sum.pa && area.d === sum.d) };
+  }
+
   function sumArea(stores) {
     return stores.reduce(function (a, s) { return { name: "Area Total", p: a.p + s.p, pa: a.pa + s.pa, d: a.d + s.d }; },
       { name: "Area Total", p: 0, pa: 0, d: 0 });
@@ -191,7 +251,7 @@
 
   var api = {
     ON_TARGET: ON_TARGET, AMBER: AMBER, GREAT: GREAT, band: band, ladder: ladder,
-    parseWorkbook: parseWorkbook, total: total, nps: nps,
+    parseWorkbook: parseWorkbook, parseText: parseText, total: total, nps: nps,
     calculate: calculate, overview: overview, rankAmong: rankAmong, perStore: perStore
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

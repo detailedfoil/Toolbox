@@ -79,29 +79,105 @@
 
   function showError(msg) { const e = $("error"); e.textContent = msg || ""; e.hidden = !msg; }
 
+  const PASTE_KEY = "toolbox.nps.pasted";
+  const dayNum = (d) => { const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(d || ""); return m ? +(m[3] + m[2] + m[1]) : 0; };
+  const today = () => { const d = new Date(); return ("0" + d.getDate()).slice(-2) + "." + ("0" + (d.getMonth() + 1)).slice(-2) + "." + d.getFullYear(); };
+  function getPasted() { try { const d = JSON.parse(localStorage.getItem(PASTE_KEY) || "null"); return d && Array.isArray(d.stores) && d.stores.length ? d : null; } catch (e) { return null; } }
+
   async function loadPublished() {
+    let pub = null;
     try {
       const r = await fetch("nps/data/data.json" + bust(), { cache: "no-store" });
-      if (!r.ok) throw new Error(r.status);
-      useData(await r.json());
-    } catch (e) {
-      $("meta").textContent = "No NPS data has been published yet.";
-    }
+      if (r.ok) pub = await r.json();
+    } catch (e) {}
+    const pasted = getPasted();
+    if (pasted && (!pub || dayNum(pasted.date) >= dayNum(pub.date))) useData(pasted, "pasted");
+    else if (pub) useData(pub, "published");
+    else showPaste(false);
     setTrendsImage("nps/data/trends.png" + bust());
   }
 
-  function useData(data) {
+  function useData(data, source) {
     state.data = data;
+    state.source = source;
     if (state.store && state.store[0] !== "@" && !data.stores.some((s) => s.name === state.store)) state.store = "";
     state.open.clear();
-    $("meta").textContent = (data.date ? "Data from " + data.date : "Latest data") + ", " + data.stores.length + " stores";
+    $("meta").textContent = (data.date ? "Data from " + data.date : "Latest data") + ", " + data.stores.length + " stores" + (source === "pasted" ? ", on this device" : "") + ".";
+    $("pasteOpen").hidden = false;
+    $("paste").hidden = true;
     render();
   }
 
+  /* ---------- pasting the data (kept on this device only) ---------- */
+  let pastedData = null;
+  function showPaste(hasData) {
+    $("paste").hidden = false;
+    $("pasteFoot").hidden = !hasData;
+    $("pasteForget").hidden = !getPasted();
+    $("pasteOpen").hidden = true;
+    if (!hasData) { $("meta").textContent = "No NPS data on this device yet."; $("main").hidden = true; }
+    checkPaste();
+  }
+  function checkPaste() {
+    const el = $("pasteCheck"), txt = $("pasteText").value;
+    pastedData = null;
+    $("pasteLoad").disabled = true;
+    el.classList.remove("bad");
+    if (!txt.trim()) { el.textContent = ""; return; }
+    try {
+      const d = NPS.parseText(txt);
+      let msg = "Found " + d.stores.length + " stores" + (d.date ? ", dated " + d.date : "") + ".";
+      if (!d.date) { d.date = today(); msg += " No date in it, so it'll show today's."; }
+      if (!d.areaMatches) msg += " The area total doesn't match the stores added up, so check nothing is missing.";
+      if (d.stores.some((s) => !NPS.total(s))) msg += " " + d.stores.filter((s) => !NPS.total(s)).length + " with no responses.";
+      el.textContent = msg;
+      pastedData = d;
+      $("pasteLoad").disabled = false;
+    } catch (e) {
+      el.textContent = e.message;
+      el.classList.add("bad");
+    }
+  }
+  $("pasteText").addEventListener("input", checkPaste);
+  $("pasteOpen").addEventListener("click", () => { showPaste(true); $("pasteText").focus(); });
+  $("pasteCancel").addEventListener("click", () => { $("pasteText").value = ""; $("paste").hidden = true; $("pasteOpen").hidden = false; });
+  $("pasteClip").addEventListener("click", async () => {
+    try {
+      const t = await navigator.clipboard.readText();
+      if (!t.trim()) throw new Error("empty");
+      $("pasteText").value = t;
+      checkPaste();
+    } catch (e) {
+      $("pasteCheck").textContent = "Couldn't read the clipboard. Press and hold in the box and choose Paste.";
+      $("pasteCheck").classList.add("bad");
+      $("pasteText").focus();
+    }
+  });
+  $("pasteLoad").addEventListener("click", () => {
+    if (!pastedData) return;
+    const d = { date: pastedData.date, fileName: "", stores: pastedData.stores, area: pastedData.area, pasted: new Date().toISOString() };
+    try { localStorage.setItem(PASTE_KEY, JSON.stringify(d)); } catch (e) {}
+    $("pasteText").value = "";
+    useData(d, "pasted");
+    $("main").scrollIntoView({ block: "start" });
+  });
+  $("pasteForget").addEventListener("click", () => {
+    if (!confirm("Remove the NPS data from this device?")) return;
+    try { localStorage.removeItem(PASTE_KEY); } catch (e) {}
+    state.data = null;
+    $("pasteText").value = "";
+    loadPublished();
+  });
+
   function setTrendsImage(src) {
     const img = $("trendsImg"), link = $("trendsLink"), hint = $("trendsHint");
-    img.onload = () => { link.hidden = false; hint.textContent = "Tap the chart to open it full size."; };
-    img.onerror = () => { link.hidden = true; hint.textContent = "No trends chart has been published yet."; };
+    const showTab = (on) => {
+      $("tabbtn-trends").hidden = !on;
+      document.querySelector(".nps-tabs").style.gridTemplateColumns = on ? "" : "repeat(2, 1fr)";
+      if (!on && state.tab === "trends" && state.data) setTab("calc");
+    };
+    img.onload = () => { link.hidden = false; hint.textContent = "Tap the chart to open it full size."; showTab(true); };
+    img.onerror = () => { link.hidden = true; hint.textContent = "No trends chart has been published yet."; showTab(false); };
     img.src = src;
     link.href = src;
   }
@@ -168,7 +244,7 @@
     try {
       const json = JSON.stringify({ date: data.date, fileName: data.fileName, stores: data.stores, area: data.area, published: new Date().toISOString() }, null, 1);
       await publish(DATA_PATH, toBase64(new TextEncoder().encode(json)), "Update NPS data" + (data.date ? " (" + data.date + ")" : ""));
-      useData(data);
+      useData(data, "published");
       status("Done. The page now shows " + (data.date || "the new data") + ".");
     } catch (e) { publishError(e); }
   });
@@ -497,7 +573,7 @@
   });
   document.querySelector(".nps-tabs").addEventListener("keydown", (e) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-    const order = ["calc", "overview", "trends"], i = order.indexOf(state.tab);
+    const order = ["calc", "overview", "trends"].filter((k) => !$("tabbtn-" + k).hidden), i = order.indexOf(state.tab);
     const next = order[(i + (e.key === "ArrowRight" ? 1 : order.length - 1)) % order.length];
     setTab(next);
     $("tabbtn-" + next).focus();

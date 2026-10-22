@@ -79,7 +79,11 @@ explain changes in plain English and say what they'll see.
     colour or two that look alike (`ALIKE`, checked for colour blindness). `geo.js` is the search and the sums (tested
     in `.github/tests/area-map.test.mjs`). A town or postcode that isn't a store is looked up on postcodes.io (UK only).
     "My store" and the street map setting stay on the phone.
-  - `nps`, `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
+  - `nps`: the NPS figures were taken off the public site on 22 Oct 2026. Now detailedfoil pastes the figures as text
+    (made by his NPS chat) into the page; `parseText` in `engine.js` reads them (lenient: pipes, tabs, commas, a header,
+    ranks, scores; tested in `.github/tests/nps.test.mjs`) and they're kept in that phone's localStorage
+    (`toolbox.nps.pasted`) only, never committed. The YTD trends tab hides itself when there's no chart.
+  - `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

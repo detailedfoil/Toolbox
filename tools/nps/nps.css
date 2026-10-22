@@ -227,3 +227,19 @@
 .r .k small { display: block; color: var(--muted); font-size: .8rem; font-weight: 400; margin-top: 1px; }
 .r .v b.need, .r .v b.room { font-size: 1.1rem; }
 .sec.first { margin-top: 20px; }
+
+/* ---------- paste the data ---------- */
+.paste { margin-top: 16px; }
+.paste h2 { margin: 0; font-size: 1.1rem; letter-spacing: -.01em; }
+.paste-sub { color: var(--muted); font-size: .9rem; margin: 4px 0 12px; }
+.paste textarea { display: block; width: 100%; box-sizing: border-box; min-height: 150px; padding: 12px 14px; font: 15px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; border-radius: 12px; border: 1px solid var(--border); background: var(--field); color: var(--text); outline: none; resize: vertical; }
+.paste textarea:focus { border-color: var(--accent); }
+.paste-check { min-height: 1.3em; margin: 10px 2px 0; font-size: .88rem; color: var(--good); }
+.paste-check.bad { color: var(--bad); }
+.paste-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.paste-actions .btn { white-space: normal; text-align: center; line-height: 1.2; }
+.btn:disabled { opacity: .45; cursor: default; transform: none; }
+.paste-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; font-size: .9rem; }
+.link.danger { color: var(--bad); }
+.nps-meta .link { font-size: inherit; padding: 2px 0; }
+.nps-tabs [hidden] { display: none !important; }
