@@ -46,18 +46,9 @@ explain changes in plain English and say what they'll see.
     the sums in whole pence. Tested on two real photos (`.github/tests/fixtures/coins-*.jpg`, 50 10p and 48 20p,
     receipt blurred): any change to `coins.js` must keep those exact. Edges come from lightness and colour (red minus
     blue, `CHROMA`), added 22 Oct 2026: on wood it found 71% of coins before, 99% after. Also tested on four made-up piles
-    of one coin (`coins-pile-*.jpg`, from `.github/coin-counter-2/make-mixes.py` with `PILES=1`, some on `wood.jpg`, bare
-    wood cut from a real phone photo). The sequel's `mixed.js` doesn't have the colour edges (left as it is).
-  - `coin-counter-2`: Photo Coin Counter 2 (the sequel to Photo Coin Counter, built 22 Oct 2026),
-    every store. One photo of MIXED coins: `mixed.js` (window.MixedCoins) finds every coin with a copy of coins.js's rim
-    voting, run in five size bands, then traces each outline where it meets the desk and works out the coin from its
-    metal (copper; silver; a gold ring round a silver middle = £1/£2), shape (7-sided 20p/50p and 12-sided £1, from the
-    7th and 12th harmonic of the outline) and size next to the others (it tries every scale, with a slope across the
-    photo for a tilted shot, and how common each coin is in the photo). If two readings fit (only 5p-or-10p sized coins),
-    it asks; a coin you set pins the scale and the rest follow. Photos add together; coins only (no notes or float);
-    counts in sessionStorage, photos in memory only. Tests in `.github/tests/coin-counter-2.test.mjs`: the two real
-    photos, and two mixed photos made by `.github/coin-counter-2/make-mixes.py` from the real 10p and 20p coins (other
-    coins resized and recoloured), with what's where in the .json beside each.
+    of one coin (`coins-pile-*.jpg`, from `.github/till-count/make-piles.py` with `PILES=1`, some on `wood.jpg`, bare
+    wood cut from a real phone photo).
+  - Photo Coin Counter 2 (mixed coins, `coin-counter-2`) was a test, built and removed 22 Oct 2026 at detailedfoil's say.
   - `product-search`: Product Search, every store (the "Under construction" tile badge and page banner were removed on 21 Oct 2026,
     detailedfoil's say; `badge` on a tile still works). A parody "CrashFix" look on this page only (colours from screenshots of the real site). `search.js` is the search: no network, an index
     in memory, typo tolerant; add a test in `.github/tests/product-search.test.mjs` for any search that should work.
@@ -124,8 +115,6 @@ explain changes in plain English and say what they'll see.
   - `tools/shelf-check/app.js` and `tools/counter-trial/app.js`: the device check (relays left out after
     failing, keeping the screen awake), the error report (`attemptLine`, `connTest`, `copyText`,
     `reportSheet`) and `checkVersion`.
-  - `tools/till-count/coins.js` and `tools/coin-counter-2/mixed.js`: finding the coins (edges, voting, `rim`). The
-    second is a widened copy, so a fix to the finding in one may be worth making in the other.
   - `tools/price-tickets/app.js` and `tools/posters/app.js`: the code / price / name rows, status messages,
     the lookup queue, making and sharing the PDFs, and the toast.
 

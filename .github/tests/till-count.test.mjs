@@ -87,7 +87,7 @@ test('till count: a bare patch of desk has no coins, and a close-up still finds 
   }
 });
 
-// piles of one coin made by .github/coin-counter-2/make-mixes.py (PILES=1) from the real 10p and 20p coins: on bare
+// piles of one coin made by .github/till-count/make-piles.py (PILES=1) from the real 10p and 20p coins: on bare
 // wood from a real phone photo (warm light, grain and shadows), touching in dim warm light, and tilted, small and soft.
 // The .json beside each says where every coin is. A silver coin on warm wood is hardly lighter than the wood, so these
 // need the colour edges.

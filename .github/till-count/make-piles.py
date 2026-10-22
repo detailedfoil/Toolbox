@@ -1,4 +1,7 @@
-"""Makes mixed-coin test photos from the two real photos (real 10p and 20p coins). Other coins are made from
+"""Makes coin test photos for the Photo Coin Counter (tools/till-count). Run from .github:
+  PILES=1 python3 till-count/make-piles.py tests/fixtures till-count/sprites.json /tmp/piles   (needs numpy and Pillow)
+sprites.json: the real coins in the two test photos (middle, size, and whether a 20p stands clear). Without PILES it
+makes mixed-coin photos (left over from Photo Coin Counter 2, removed 22 Oct 2026). Originally: makes mixed-coin test photos from the two real photos (real 10p and 20p coins). Other coins are made from
 those: 5p and 50p by size, 1p and 2p recoloured copper, the £2 and the twelve-sided £1 with a gold ring.
 With PILES=1: piles of one coin each for the first Photo Coin Counter (tools/till-count), some on wood.jpg
 (bare wood from a real phone photo, warm light and shadows). Writes <name>.jpg and <name>.json (the coins as placed: x, y, coin) into the folder given."""
