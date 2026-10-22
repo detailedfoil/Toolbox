@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  var PS = window.ProductSearch, Photos = window.ProductPhotos, Families = window.ProductFamilies;
+  var PS = window.ProductSearch, Photos = window.ProductPhotos;
   var LIST_URL = 'product-search/data/products.json';
   var WEB_URL = 'product-search/data/web-names.json';
   var DESC_URL = 'product-search/descriptions/';
@@ -16,7 +16,7 @@
   var q = $('q'), form = $('form'), statusEl = $('status'), noteEl = $('note'), results = $('results'), more = $('more');
   var welcome = $('welcome'), stripMs = $('stripMs'), toastEl = $('toast');
 
-  var list = null, web = null, dwords = null, searcher = null, bySku = new Map(), shown = null, shownCount = 0, listInfo = '';
+  var list = null, web = null, dwords = null, searcher = null, shown = null, shownCount = 0, listInfo = '';
   var settings = { nophotos: get('ps-nophotos') === '1' };
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -42,8 +42,6 @@
       var p = names[r[0]] || {};
       return { sku: r[0], name: r[1], flags: (r[2] || 0) | (p.a ? 16 : 0), web: w || '', desc: p.d, dw: (dwords && dwords[r[0]]) || '' };
     });
-    Families.group(items);          // sizes of the same product: it.fam (all of them, smallest first) and it.size
-    bySku = new Map(items.map(function (it) { return [it.sku, it]; }));
     searcher = PS.build(items);
     listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');
     q.placeholder = 'Search by code or name';
@@ -126,17 +124,10 @@
     var res = searcher.find(text, 500);
     var ms = performance.now() - t0;
     stripMs.textContent = ms < 1 ? ms.toFixed(1) + ' milliseconds' : Math.round(ms) + ' milliseconds';
-    // sizes of the same product show as one result (the best match), with a size switcher on it
-    var seenFam = new Set(), one = [];
-    res.list.forEach(function (r) {
-      var f = r.item.fam;
-      if (f) { if (seenFam.has(f)) return; seenFam.add(f); }
-      one.push(r);
-    });
-    shown = { list: one, total: res.total, note: res.note, more: res.total > res.list.length };
+    shown = res;
     shown.words = PS.words(text).filter(Boolean);
     shown.code = PS.asCode(text);
-    statusEl.textContent = one.length ? (shown.more ? 'Lots of results' : n(one.length) + (one.length === 1 ? ' result' : ' results'))
+    statusEl.textContent = res.total ? n(res.total) + (res.total === 1 ? ' result' : ' results') + (res.total > res.list.length ? ' (showing the best ' + n(res.list.length) + ')' : '')
       : 'No products match "' + text.trim() + '"';
     noteEl.hidden = !res.note;
     noteEl.textContent = res.note || '';
@@ -157,7 +148,7 @@
     var left = shown.list.length - shownCount;
     more.hidden = left <= 0;
     more.textContent = left > 0 ? 'Loading more...' : '';
-    if (left <= 0 && shown.more) {
+    if (left <= 0 && shown.total > shown.list.length) {
       more.hidden = false;
       more.textContent = 'That\'s the best ' + n(shown.list.length) + '. Add another word to narrow it down.';
     }
@@ -197,45 +188,8 @@
           '<a class="sx-open" href="https://www.screwfix.com/p/product/' + esc(it.sku.toLowerCase()) + '" target="_blank" rel="noopener">View on screwfix.com</a>' +
         '</div>' +
       '</div>' +
-      sizes(it) +
       '<button type="button" class="sx-toggle" aria-expanded="false"><span>Description</span></button>' +
       '<div class="sx-desc" hidden></div></li>';
-  }
-
-  /* The size switcher: a few short sizes as buttons, more as a drop-down list (the phone's own picker). Picking a size
-     swaps the card for that product in place. */
-  function sizes(it) {
-    var f = it.fam;
-    if (!f) return '';
-    var seen = {}, twice = {};
-    f.forEach(function (m) { var k = String(m.size).toLowerCase(); if (seen[k]) twice[k] = 1; seen[k] = 1; });
-    var label = function (m) { return (m.size || m.sku) + (twice[String(m.size).toLowerCase()] ? ' (' + m.sku + ')' : ''); };
-    var chars = f.reduce(function (a, m) { return a + label(m).length; }, 0);
-    if (f.length <= 5 && chars <= 70) {
-      return '<div class="sx-sizes" role="group" aria-label="Sizes"><span class="sx-sizes-h">Size</span>' + f.map(function (m) {
-        var on = m === it;
-        return '<button type="button" class="sx-size' + (on ? ' on' : '') + '" data-pick="' + esc(m.sku) + '" aria-pressed="' + on + '">' + esc(label(m)) + '</button>';
-      }).join('') + '</div>';
-    }
-    return '<div class="sx-sizes sx-sizes-list"><label><span class="sx-sizes-h">Size</span>' +
-      '<select data-pick-list aria-label="Size">' + f.map(function (m) {
-        return '<option value="' + esc(m.sku) + '"' + (m === it ? ' selected' : '') + '>' + esc(label(m)) + '</option>';
-      }).join('') + '</select></label><span class="sx-sizes-n">' + n(f.length) + ' sizes</span></div>';
-  }
-  function pick(li, sku) {
-    var it = bySku.get(sku);
-    if (!it || li.getAttribute('data-sku') === sku) return;
-    var wasOpen = li.classList.contains('open'), wasList = !!li.querySelector('[data-pick-list]');
-    var holder = document.createElement('ul');
-    holder.innerHTML = card({ item: it, how: 'size' });
-    var nli = holder.firstChild;
-    li.parentNode.replaceChild(nli, li);
-    var ph = nli.querySelector('.sx-ph');
-    ph.setAttribute('data-watched', '1');
-    showPhoto(ph);
-    if (wasOpen) toggleDesc(nli);
-    var keep = nli.querySelector(wasList ? '[data-pick-list]' : '.sx-size.on');
-    if (keep) keep.focus({ preventScroll: true });
   }
 
   /* ---------- photos, as they come into view ---------- */
@@ -297,17 +251,9 @@
     var b = e.target.closest('[data-copy]');
     if (b) { copy(b.getAttribute('data-copy')); return; }
     if (e.target.closest('a')) return;                       // "View on screwfix.com"
-    var p = e.target.closest('[data-pick]');
-    if (p) { pick(p.closest('.sx-card'), p.getAttribute('data-pick')); return; }
-    if (e.target.closest('.sx-sizes')) return;               // the size list (handled when it changes)
     var li = e.target.closest('.sx-card');
     if (!li || (e.target.closest('.sx-desc') && !e.target.closest('.sx-toggle'))) return;   // reading or selecting the description
     toggleDesc(li);
-  });
-
-  results.addEventListener('change', function (e) {
-    var s = e.target.closest('[data-pick-list]');
-    if (s) pick(s.closest('.sx-card'), s.value);
   });
 
   /* ---------- descriptions, when a result is tapped ---------- */
@@ -323,7 +269,10 @@
     }
     return descs.get(sku);
   }
-  function itemFor(sku) { return bySku.get(sku) || null; }
+  function itemFor(sku) {
+    var hit = shown && shown.list.filter(function (r) { return r.item.sku === sku; })[0];
+    return hit ? hit.item : null;
+  }
   function toggleDesc(li) {
     var box = li.querySelector('.sx-desc'), btn = li.querySelector('.sx-toggle');
     var open = box.hidden;
