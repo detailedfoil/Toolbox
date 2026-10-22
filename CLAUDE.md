@@ -54,7 +54,8 @@ explain changes in plain English and say what they'll see.
     in memory, typo tolerant; add a test in `.github/tests/product-search.test.mjs` for any search that should work.
     `photos.js` keeps the product list on the phone (IndexedDB) and shows photos: the kept copy only if there is one (Screwfix's image server isn't asked), else media.screwfix.com (120 px).
     `data/products.json` is made from detailedfoil's stock export by `.github/product-search/make-list.py` (code, name
-    and the four warning flags only: no stock or locations, the repo is public). `data/web-names.json` holds the
+    and the four warning flags only: no stock or locations, the repo is public). It reads the workbook or the report
+    pasted as text; for a newer export he wants `--add` (keeps every product already there as it is, adds new codes only). `data/web-names.json` holds the
     screwfix.com names and `photos/<CODE>.jpg` the 120 px photos (JPEG quality 85, about 2 KB each; `PHOTO_PX` and `PHOTO_QUALITY` in check.mjs), both written by the nightly check (`a: 1` on a
     product in `web-names.json` means age restricted, found by the same reader the posters use (`age` in `lookup.js`),
     shown as an "Age restricted" badge; `p: 1` means its photo is saved; `d: 1` means `descriptions/<CODE>.json` holds its
