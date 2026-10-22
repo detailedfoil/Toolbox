@@ -40,7 +40,7 @@ test('the product list is valid: unique 5 character codes, a name each, warnings
     assert.match(sku, /^(\d{3}[A-Z]{2}|\d{4}[A-Z]|\d{5})$/, 'odd code ' + sku);
     assert.ok(!seen.has(sku), 'twice: ' + sku); seen.add(sku);
     assert.ok(name && typeof name === 'string', 'no name for ' + sku);
-    assert.ok(Number.isInteger(flags) && flags >= 0 && flags < 16, 'odd warnings for ' + sku);
+    assert.ok(Number.isInteger(flags) && flags >= 0 && flags < 32, 'odd warnings for ' + sku);   // 16 = age restricted, from the stock list
   }
 });
 

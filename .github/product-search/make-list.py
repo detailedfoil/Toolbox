@@ -5,11 +5,15 @@
 
 The export can be the workbook (the "Paste Here!" sheet, table tblSKU) or the report copied as text (tab separated,
 each heading on a line of its own, then one product per line).
---add keeps every product already in the list exactly as it is and only adds codes it hasn't got (detailedfoil,
-22 Oct 2026: "just add the extra items, dont need to delete anything"). Without --add the list is replaced.
+--add keeps every product already in the list as it is and only adds codes it hasn't got (detailedfoil,
+22 Oct 2026: "just add the extra items, dont need to delete anything"). The one change it makes to a product already
+there: one the export marks age restricted gets the age restricted mark (it's never taken off). Without --add the list
+is replaced.
 
 Writes tools/product-search/data/products.json: one product per line, [SKU, name, flags], where flags adds up
-1 = hazardous, 2 = aerosol, 4 = non-trolleyable, 8 = sharp or liquid (a column the export hasn't got counts as no).
+1 = hazardous, 2 = aerosol, 4 = non-trolleyable, 8 = sharp or liquid, 16 = age restricted (a column the export
+hasn't got counts as no). The page shows only the age restricted one, as do products the GitHub check finds are age
+restricted on screwfix.com (`a: 1` in web-names.json).
 Stock, locations and anything else store-specific are left out on purpose: the repo is public.
 The workbook needs openpyxl (pip install openpyxl). It reads the values Excel saved, so save the workbook in Excel first.
 """
@@ -18,7 +22,8 @@ import json, re, sys, datetime, pathlib
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT = ROOT / 'tools/product-search/data/products.json'
 SKU = re.compile(r'^(\d{3}[A-Z]{2}|\d{4}[A-Z]|\d{5})$')
-FLAGS = [('Hazardous', 1), ('Aerosol', 2), ('Non Trolleyable', 4), ('Sharp or Liquid', 8)]
+FLAGS = [('Hazardous', 1), ('Aerosol', 2), ('Non Trolleyable', 4), ('Sharp or Liquid', 8), ('Age Restricted', 16)]
+AGE = 16
 
 
 def code(v):
@@ -76,13 +81,18 @@ def main(src, add):
         old = json.loads(OUT.read_text(encoding='utf-8'))['items']
         have = {i[0] for i in old}
         new = [i for i in items if i[0] not in have]
+        age = {i[0] for i in items if i[2] & AGE}
+        marked = 0
+        for o in old:
+            if o[0] in age and not o[2] & AGE: o[2] |= AGE; marked += 1
         note.append(f'{len(new)} new added to the {len(old)} already there'
                     f' ({sum(1 for c in have if c not in seen)} not in this export, kept)')
+        if marked: note.append(f'{marked} already there marked age restricted')
         items = old + new
     items.sort(key=lambda x: x[0])
     version = datetime.date.today().isoformat()
     lines = ',\n'.join('    ' + json.dumps(i, ensure_ascii=False) for i in items)
-    OUT.write_text('{\n  "version": %s,\n  "count": %d,\n  "flags": {"1": "Hazardous", "2": "Aerosol", "4": "Non-trolleyable", "8": "Sharp or liquid"},\n  "items": [\n%s\n  ]\n}\n'
+    OUT.write_text('{\n  "version": %s,\n  "count": %d,\n  "flags": {"1": "Hazardous", "2": "Aerosol", "4": "Non-trolleyable", "8": "Sharp or liquid", "16": "Age restricted"},\n  "items": [\n%s\n  ]\n}\n'
                    % (json.dumps(version), len(items), lines), encoding='utf-8')
     if missing: note.append('no ' + ', '.join(missing) + ' column, counted as no')
     if bad: note.append(f'skipped {len(bad)} odd codes: {bad[:10]}')
