@@ -225,6 +225,21 @@ test('name check: a page that is not the product does not count as being turned 
   } finally { await mock.close(); }
 });
 
+test('name check: a name that is really "URL Source: ..." is not saved, and one saved before is read again', async () => {
+  const junk = 'Title: \n\nURL Source: https://www.screwfix.com/p/product/96666\n\nMarkdown Content:\nShop by department\n';
+  const mock = await startMock({ '96666': { text: [junk], image: [PICTURE] }, '97777': page('97777', 'Proper Name') });
+  try {
+    const out = await runCheck({ check: 'product-search', mock, files: {
+      'tools/product-search/data/products.json': listOf([['96666', 'Junk', 0], ['97777', 'Proper', 0]]),
+      'tools/product-search/data/web-names.json': { products: { '97777': { name: 'URL Source: https://www.screwfix.com/p/product/97777', a: 0, d: 0, at: '2026-10-21', p: 1 } } } } });
+    assert.equal(out.code, 0, out.stderr);
+    const n = names(out).products;
+    assert.equal(n['96666'].name, undefined);
+    assert.equal(n['96666'].tries, 1, 'counted as a failed read, tried again in a week');
+    assert.equal(n['97777'].name, 'Proper Name', 'the bad one saved before is read again');
+  } finally { await mock.close(); }
+});
+
 test('photo check: saves each photo as <CODE>.jpg, tells the page which ones it has, and asks once per product', async () => {
   const mock = await startMock({
     '71111': { text: [textPage({ code: '71111', name: 'Has A Photo', price: 5 })], image: [PICTURE] },
@@ -397,6 +412,104 @@ test('search: titles and alternative names always come before description matche
 test('search: a product code is not looked for in descriptions', () => {
   const t = PS.build([{ sku: '843PG', name: 'Rotary Tool', flags: 0 }, { sku: '11111', name: 'Bits', flags: 0, dw: '843pg compatible' }]);
   assert.deepEqual([...t.find('843PG').list].map((r) => r.item.sku), ['843PG']);
+});
+
+/* ---------- sizes of the same product (tools/product-search/families.js) ---------- */
+const FAM = loadModule('tools/product-search/families.js');
+const family = (items, sku) => { FAM.group(items); const it = items.find((i) => i.sku === sku); return it.fam ? [...it.fam].map((m) => m.sku + ' ' + m.size) : null; };
+
+test('sizes: the same product in different sizes is one family, smallest first, labelled by size', () => {
+  const items = [
+    { sku: '16497', name: 'Goldscrew 5x50mm Pk200', web: 'Goldscrew PZ Double-Countersunk Thread Cutting Multipurpose Screws 5mm x 50mm 200 Pack' },
+    { sku: '12005', name: 'Goldscrew 4.5x40mm Pk200', web: 'Goldscrew PZ Double-Countersunk Thread Cutting Multipurpose Screws 4.5mm x 40mm 200 Pack' },
+    { sku: '16775', name: 'Goldscrew 3.5x30GoldPk200', web: 'Goldscrew PZ Double-Countersunk Thread Cutting Multipurpose Screws 3.5mm x 30mm 200 Pack' },
+    { sku: '16159', name: 'Goldscrew 4x40mm Pk200', web: '' },                 // not read from screwfix.com yet: joins by its stock name
+    { sku: '67543', name: 'Spax Woodscrews 4x40mm Pk200', web: '' },
+  ];
+  assert.deepEqual(family(items, '16497'), ['16775 3.5mm x 30mm 200 Pack', '16159 4x40mm Pk200', '12005 4.5mm x 40mm 200 Pack', '16497 5mm x 50mm 200 Pack']);
+  assert.equal(items.find((i) => i.sku === '67543').fam, undefined, 'a different brand is not a size');
+});
+
+test('sizes: litres, gauges and inches, sizes in clothing and boots, and stock names that write 1.0mm as "1 0mm"', () => {
+  assert.deepEqual(family([
+    { sku: '10135', name: 'Zinsser Bulls Eye 1-2-3 Interior and Exterior 1L', web: 'Zinsser Bulls Eye 1-2-3 1Ltr White Matt Stain Block Interior & Exterior Multi Surface Primer' },
+    { sku: '10136', name: 'Zinsser Bulls Eye 1-2-3 Interior and Exterior 2.5L', web: 'Zinsser Bulls Eye 1-2-3 2.5Ltr White Matt Stain Block Interior & Exterior Multi Surface Primer' },
+  ], '10135'), ['10135 1Ltr', '10136 2.5Ltr']);
+  assert.deepEqual(family([
+    { sku: 'A', name: 'x', web: 'Quicksilver PZ Woodscrews 8ga x 1 1/2" 200 Pack' },
+    { sku: 'B', name: 'y', web: 'Quicksilver PZ Woodscrews 8ga x 1 1/4" 200 Pack' },
+  ], 'A'), ['B 8ga x 1 1/4" 200 Pack', 'A 8ga x 1 1/2" 200 Pack']);
+  assert.deepEqual(family([
+    { sku: 'C', name: 'c', web: 'Site Mercury Size 10 Black Steel Toe Cap Safety Trainers' },
+    { sku: 'D', name: 'd', web: 'Site Mercury Size 9 Black Steel Toe Cap Safety Trainers' },
+    { sku: 'E', name: 'e', web: 'Site Harvell Hi-Vis Jacket Yellow X Large 44-46" Chest' },
+    { sku: 'F', name: 'f', web: 'Site Harvell Hi-Vis Jacket Yellow Large 41-43" Chest' },
+  ], 'C'), ['D Size 9', 'C Size 10']);
+  assert.deepEqual(family([
+    { sku: 'G', name: 'Erbauer 1 0mm HSS Drill PK 5', web: '' },
+    { sku: 'H', name: 'Erbauer 1 5mm HSS Drill PK 5', web: '' },
+    { sku: 'I', name: 'Erbauer 10mm Chisel', web: 'Erbauer Wood Chisel 10mm' },     // Erbauer is a brand seen on screwfix.com
+  ], 'H'), ['G 1.0mm PK 5', 'H 1.5mm PK 5']);
+});
+
+test('sizes: different models, colours and products whose stock name could be one of several are not grouped', () => {
+  const items = [
+    { sku: 'M1', name: 'DEWALT DCD796N 18V', web: 'DEWALT DCD796N-XJ 18V XR Brushless Cordless Combi Drill - Bare' },
+    { sku: 'M2', name: 'DEWALT DCD778N 18V', web: 'DEWALT DCD778N-XJ 18V XR Brushless Cordless Combi Drill - Bare' },
+    { sku: 'C1', name: 'Zinsser All Coat Ext White 1L', web: '' },
+    { sku: 'C2', name: 'Zinsser All Coat Ext Black 1L', web: '' },
+    { sku: 'E1', name: 'Elbow 15mm Pk10', web: 'Flomasta Copper End Feed Elbow 15mm 10 Pack' },
+    { sku: 'E2', name: 'Elbow 22mm Pk10', web: 'JG Speedfit Push-Fit Elbow 22mm 10 Pack' },
+    { sku: 'E3', name: 'Elbow 28mm Pk10', web: '' },
+    { sku: 'S1', name: 'CAM LOCK 15MM PACK OF 50', web: '' },
+    { sku: 'S2', name: 'Cam Lock 15mm Pack Of 50', web: '' },
+  ];
+  FAM.group(items);
+  for (const it of items) assert.equal(it.fam, undefined, it.sku + ' is on its own');
+});
+
+test('sizes: one way of measuring per family: mm, inches and gauge are never mixed, and gold and silver stay apart', () => {
+  const items = [
+    { sku: 'Q1', name: 'Quicksilver CSK 1.5X8 (4x40mm) PK200', web: 'Quicksilver PZ Double-Countersunk Woodscrews 8ga x 1 1/2" 200 Pack' },
+    { sku: 'Q2', name: 'Quicksilver CSK 1.25X8 (4x30mm) PK200', web: 'Quicksilver PZ Double-Countersunk Woodscrews 8ga x 1 1/4" 200 Pack' },
+    { sku: 'Q3', name: 'Quicksilver PZ Double-Countersunk Woodscrews 4mm x 50mm 200 Pack', web: 'Quicksilver PZ Double-Countersunk Woodscrews 4mm x 50mm 200 Pack' },
+    { sku: 'Q4', name: 'Quicksilver PZ Double-Countersunk Woodscrews 4mm x 60mm 200 Pack', web: 'Quicksilver PZ Double-Countersunk Woodscrews 4mm x 60mm 200 Pack' },
+    { sku: 'Q5', name: 'Quicksilver CSK 2X8 (4x50mm) PK200', web: '' },     // not read yet, and its stock name is in mm: waits
+    { sku: 'V1', name: 'Vent 9x3', web: 'Map Vent Adjustable Vent White 9" x 3"' },
+    { sku: 'V2', name: 'Vent 9x6', web: 'Map Vent Adjustable Vent White 9" x 6"' },
+    { sku: 'V3', name: 'Vent 152x76', web: 'Map Vent Adjustable Vent White 152mm x 76mm' },
+    { sku: 'G1', name: 'Turbo Coach Screws Gold 6x25mm PK100', web: 'Turbo Coach Screws Gold 6mm x 25mm 100 Pack' },
+    { sku: 'G2', name: 'Turbo Coach Screws Gold 6x50mm PK100', web: 'Turbo Coach Screws Gold 6mm x 50mm 100 Pack' },
+    { sku: 'S1', name: 'Turbo Coach Screws Silver 6x50mm Pk100', web: 'Turbo Coach Screws Silver 6mm x 50mm 100 Pack' },
+    { sku: 'S2', name: 'Turbo Coach Screws Silver 6x70mm Pk100', web: 'Turbo Coach Screws Silver 6mm x 70mm 100 Pack' },
+  ];
+  FAM.group(items);
+  const fam = (sku) => { const it = items.find((i) => i.sku === sku); return it.fam ? [...it.fam].map((m) => m.sku) : []; };
+  assert.deepEqual(fam('Q1'), ['Q2', 'Q1'], 'gauge and inches together, smallest first');
+  assert.deepEqual(fam('Q3'), ['Q3', 'Q4'], 'the mm ones a family of their own');
+  assert.deepEqual(fam('Q5'), [], 'waits until its screwfix.com name is known');
+  assert.deepEqual(fam('V1'), ['V1', 'V2']);
+  assert.deepEqual(fam('V3'), []);
+  assert.deepEqual(fam('G1'), ['G1', 'G2']);
+  assert.deepEqual(fam('S1'), ['S1', 'S2']);
+});
+
+test('sizes: brands are never mixed, even when a stock name leaves the brand out', () => {
+  const items = [
+    { sku: 'B1', name: 'Endfeed Elbow 15mm', web: 'Flomasta Copper End Feed Elbow 15mm' },
+    { sku: 'B2', name: 'Endfeed Elbow 22mm', web: 'Flomasta Copper End Feed Elbow 22mm' },
+    { sku: 'B3', name: 'Endfeed Elbow 28mm', web: '' },                        // could be any brand: waits to be read
+    { sku: 'B4', name: 'Pushfit Elbow 15mm', web: '' },                        // no brand at all: on its own
+    { sku: 'B5', name: 'Pushfit Elbow 22mm', web: '' },
+    { sku: 'B6', name: 'Flomasta Copper Tee 15mm', web: '' },                  // a known brand: grouped while waiting
+    { sku: 'B7', name: 'Flomasta Copper Tee 22mm', web: '' },
+  ];
+  FAM.group(items);
+  const fam = (sku) => { const it = items.find((i) => i.sku === sku); return it.fam ? [...it.fam].map((m) => m.sku) : []; };
+  assert.deepEqual(fam('B1'), ['B1', 'B2']);
+  assert.deepEqual(fam('B3'), []);
+  assert.deepEqual(fam('B4'), []);
+  assert.deepEqual(fam('B6'), ['B6', 'B7']);
 });
 
 test('search: age restricted products can be found by "age restricted" or "challenge 25"', () => {

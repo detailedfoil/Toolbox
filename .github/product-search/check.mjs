@@ -81,10 +81,14 @@ const photoFile = (code) => path.join(ROOT, PHOTOS, code + '.jpg');
 fs.mkdirSync(path.join(ROOT, DESCRIPTIONS), { recursive: true });
 const descFile = (code) => path.join(ROOT, DESCRIPTIONS, code + '.json');
 
+// a "name" that is really jina's own heading lines: an empty page title once gave "URL Source: https://..." (22 Oct 2026)
+const JUNK_NAME = /^(?:url source|title|markdown content|warning|published time)\s*:/i;
+
 /* what each product still needs */
 const needsName = (code) => {
   const p = products[code];
   if (!p) return true;
+  if (p.name && JUNK_NAME.test(p.name)) return true;       // saved before that was caught: read again
   if (p.name) return p.a === undefined || p.d === undefined;   // named before the age check / descriptions were added: read once more
   if (p.missing) return false;
   return (p.tries || 0) < 3 && (!p.tries || daysSince(p.at) >= 7);
@@ -153,6 +157,7 @@ async function read(code) {
   }
   if (r.status === 'notfound') return { kind: 'missing' };
   if (r.status === 'blocked') return { kind: 'fail', why: 'turned away (' + (r.why || 'blocked') + ', HTTP ' + res.status + ')', blocked: true };
+  if (r.name && JUNK_NAME.test(r.name)) return { kind: 'fail', why: 'page: no product name (empty page title)' };
   if ((r.status === 'found' || r.status === 'partial') && r.name && !r.unsure) return { kind: 'found', name: r.name, age: !!r.age, desc: describe(text, code) };
   return { kind: 'fail', why: 'page: ' + r.status + (r.unsure ? ", doesn't mention the code" : r.name ? '' : ', no name') };
 }

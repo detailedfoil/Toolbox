@@ -63,6 +63,12 @@ explain changes in plain English and say what they'll see.
     description's search words, minus words already in its names, filler and bare numbers; the page loads it after the
     list and `search.js` uses it as a lower tier: codes, then names (title and alternative name), then description
     matches ("Found in the description"), then close spellings.
+    `families.js` groups sizes of the same product (detailedfoil, 22 Oct 2026): a name with its sizes taken out (mm,
+    inches, gauge, litres, packs, clothing and boot sizes) is the family; results show one card per family (the best
+    match) with a size switcher (buttons for up to 5 short sizes, otherwise a drop-down) that swaps the card in place.
+    Rules he set: never mix brands, never mix ways of measuring (mm / inches / gauge), gold and silver ranges apart.
+    screwfix.com names are used; a product not read yet joins only a family of its own brand measured the same way,
+    and stock-only families need a brand seen on screwfix.com. Tested in `.github/tests/product-search.test.mjs`.
   - `area-map`: Area Map, every store (all 986, UK, Ireland and the Isle of Man) on a Leaflet map (vendored in
     `area-map/leaflet/`, OpenStreetMap tiles, greyed; a button turns them off). `data/stores.json` holds each store's
     name, address, postcode, area, country and location ONLY: detailedfoil asked for no names of people, numbers, store
