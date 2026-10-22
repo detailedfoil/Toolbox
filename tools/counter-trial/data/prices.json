@@ -1,7 +1,7 @@
 {
   "trial": "A25 Behind counter trial",
   "checked": "2026-10-22",
-  "run": {"date":"2026-10-22","started":"2026-10-22T00:46:21.587Z","finished":"2026-10-22T04:16:01.694Z","trigger":"schedule","complete":false,"total":69,"checked":68,"not_found":0,"unchecked":1,"moved":0,"off_printed":3,"stopped":"1 line could not be checked","fails":{"6432V":"jina: page: blocked (other); direct: Screwfix's bot check (HTTP 202)"}},
+  "run": {"date":"2026-10-22","started":"2026-10-22T00:46:21.587Z","finished":"2026-10-22T08:16:47.530Z","trigger":"schedule","complete":true,"total":69,"checked":69,"not_found":0,"unchecked":0,"moved":0,"off_printed":3},
   "products": {
     "10171": {"name":"Essentials Pop-Up Garden Bag 690 x 560mm 170Ltr","price":12.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-22","moves":[]},
     "44241": {"name":"Masterplug TCM24-XD Mechanical Plug-In & Plug-Through Compact Timer","price":4.99,"since":"2026-10-13","status":"ok","was":5.99,"on":"2026-10-22","moves":[]},
@@ -71,6 +71,6 @@
     "521FM": {"name":"Fortress Trade 12\" Pro Big Roller Set 17 Pieces","price":25.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-22","moves":[]},
     "843PG": {"name":"Titan TTB949MLT 130W Electric Multi-Tool & Accessories 230-240V 214 Piece Set","price":28.99,"since":"2026-10-17","status":"ok","was":32.99,"on":"2026-10-22","moves":[]},
     "1480V": {"name":"Erbauer 1/4\" Hex Shank Mixed Impact Screwdriver Bit Set 113 Pieces","price":24.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-22","moves":[]},
-    "6432V": {"name":"Erbauer Hex Shank Nut & Socket Driver Bit Set 12 Pieces","price":20.99,"since":"2026-10-17","status":"unchecked","was":null,"on":"2026-10-21","moves":[]}
+    "6432V": {"name":"Erbauer Hex Shank Nut & Socket Driver Bit Set 12 Pieces","price":20.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-22","moves":[]}
   }
 }
