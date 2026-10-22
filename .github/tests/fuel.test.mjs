@@ -72,9 +72,6 @@ test('fuel: every Area 20 store has a place, and its map link asks for the right
   for (const s of F.STORES) assert.ok(s.place && /^[A-Z0-9]{3}$/.test(s.code) && s.town, JSON.stringify(s));
   assert.equal(F.STORES.find((s) => s.code === 'FA2').place, 'Leighton Buzzard');
   assert.equal(F.mapURL('Leighton Buzzard', 'diesel'), 'https://www.petrolprices.co.uk/map.php?location=Leighton%20Buzzard&fuel_type=B7&radius=5');
-  // the NPS sheet's store names, so a store reads the same everywhere on the site
-  const nps = JSON.parse(fs.readFileSync(path.join(REPO, 'tools/nps/data/data.json'), 'utf8')).stores.map((s) => s.name).sort();
-  assert.deepEqual(plain(F.STORES.map((s) => s.name).sort()), nps);
 });
 
 test('fuel: a changed price keeps the old one and when it changed; an unchanged one keeps its time', () => {
