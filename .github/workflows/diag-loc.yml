@@ -9,6 +9,7 @@ jobs:
       - name: probe
         run: |
           set +e
+          exec > res.txt 2>&1
           echo "--- postcodes.io reverse"
           curl -sS -m 20 -H "Origin: https://detailedfoil.github.io" -D - "https://api.postcodes.io/postcodes?lon=-0.6577&lat=51.9174&limit=1" | head -c 900
           for loc in "LU7 4TU" "LU74TU" "51.9174,-0.6577" "51.9174%2C-0.6577"; do
@@ -17,6 +18,8 @@ jobs:
               --data-urlencode "location=${loc//%2C/,}" --data "fuel_type=E10&radius=5" -o out.txt
             grep -c "miles away" out.txt; grep -m3 -i "of [0-9]* stations\|near\|results" out.txt; sed -n 1,3p out.txt
           done
-      - name: show
+      - name: report
+        if: always()
         run: |
-          echo "done"
+          i=0
+          head -c 3500 res.txt | while IFS= read -r l; do i=$((i+1)); echo "::notice title=p$i::${l:0:200}"; done
