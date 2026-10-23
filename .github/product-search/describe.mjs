@@ -25,6 +25,24 @@ function plain(s) {
     .trim();
 }
 
+/* Is this product itself age restricted? Screwfix puts one notice straight under the product heading, in red: "We operate
+   a Challenge 25 policy in all our stores and may be asked for proof of age upon collection. You must be 18 years old or
+   over to buy this product." Only that notice, in that place, counts (detailedfoil, 23 Oct 2026): the page reader's own
+   check looks at the whole page and was catching promotional red boxes (28 Stanley tape measures, toolboxes...).
+   -> the notice's text (kept so a wrong one can be seen), or '' */
+const NOTICE = /challenge[\s-]*25[\s\S]{0,200}?(?:18|eighteen)\s*(?:years?|yrs?)\s*(?:old\s*)?or\s+(?:over|older|above)[\s\S]{0,80}?\bto\s+(?:buy|purchase)\b[\s\S]{0,40}/i;
+export function ageNotice(text, code) {
+  if (!text || !code) return '';
+  const esc = String(code).replace(/[^A-Za-z0-9]/g, '');
+  const head = new RegExp('^#\\s+.*\\(\\s*' + esc + '\\s*\\)\\s*$', 'im').exec(text);
+  if (!head) return '';
+  const from = head.index + head[0].length;
+  const end = text.indexOf('#product_additional_details_container', from);
+  if (end < 0 || end - from > 20000) return '';
+  const m = NOTICE.exec(plain(text.slice(from, end)));
+  return m ? m[0].trim().slice(0, 240) : '';
+}
+
 export function describe(text, code) {
   if (!text || !code) return null;
   const esc = String(code).replace(/[^A-Za-z0-9]/g, '');

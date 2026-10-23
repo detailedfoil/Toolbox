@@ -6,8 +6,8 @@
 //
 // Run by .github/workflows/product-search-names.yml. Reads tools/product-search/data/products.json and adds to
 // tools/product-search/data/web-names.json (one product per line) and tools/product-search/photos/<CODE>.jpg:
-//   {"name": "...", "a": 1, "d": 1, "at": "2026-10-21"}  name found; a: 1 = age restricted (Challenge 25 / proof of age wording on the page,
-//                                                    the same reader the poster maker uses), 0 = not; d: 1 = description saved as
+//   {"name": "...", "a": 1, "an": "the notice", "d": 1, "at": "2026-10-21"}  name found; a: 1 = age restricted (the Challenge 25 notice under the
+//                                                    product heading, found by describe.mjs ageNotice; an = its words), 0 = not; d: 1 = description saved as
 //                                                    tools/product-search/descriptions/<CODE>.json ({t: text, b: [bullets]},
 //                                                    read from the same page by describe.mjs), 0 = the page had none
 //   {"missing": true, "at": "..."}                     Screwfix has no page for that code
@@ -36,7 +36,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { readJSON, londonDate, sleep, log, annotate, MAJOR } from '../lib/price-check.mjs';
-import { describe } from './describe.mjs';
+import { describe, ageNotice } from './describe.mjs';
 
 const require = createRequire(import.meta.url);
 const { JSDOM } = require('jsdom');
@@ -89,6 +89,7 @@ const needsName = (code) => {
   const p = products[code];
   if (!p) return true;
   if (p.name && JUNK_NAME.test(p.name)) return true;       // saved before that was caught: read again
+  if (p.name && p.a === 1 && !p.an) return true;               // flagged by the old whole-page age check, which caught promo boxes (23 Oct 2026): read again
   if (p.name) return p.a === undefined || p.d === undefined;   // named before the age check / descriptions were added: read once more
   if (p.missing) return false;
   return (p.tries || 0) < 3 && (!p.tries || daysSince(p.at) >= 7);
@@ -158,7 +159,10 @@ async function read(code) {
   if (r.status === 'notfound') return { kind: 'missing' };
   if (r.status === 'blocked') return { kind: 'fail', why: 'turned away (' + (r.why || 'blocked') + ', HTTP ' + res.status + ')', blocked: true };
   if (r.name && JUNK_NAME.test(r.name)) return { kind: 'fail', why: 'page: no product name (empty page title)' };
-  if ((r.status === 'found' || r.status === 'partial') && r.name && !r.unsure) return { kind: 'found', name: r.name, age: !!r.age, desc: describe(text, code) };
+  if ((r.status === 'found' || r.status === 'partial') && r.name && !r.unsure) {
+    // not r.age: that looks at the whole page, promotional red boxes included. Only Screwfix's own notice under the heading counts.
+    return { kind: 'found', name: r.name, age: ageNotice(text, code), desc: describe(text, code) };
+  }
   return { kind: 'fail', why: 'page: ' + r.status + (r.unsure ? ", doesn't mention the code" : r.name ? '' : ', no name') };
 }
 
@@ -278,6 +282,7 @@ async function main() {
       if (got.kind === 'found') {
         if (got.desc) { fs.writeFileSync(descFile(code), JSON.stringify(got.desc) + '\n'); descDirty = true; }
         products[code] = { ...before, name: got.name, a: got.age ? 1 : 0, d: got.desc ? 1 : 0, at: today };
+        if (got.age) products[code].an = got.age; else delete products[code].an;   // the notice's words, so a wrong one can be seen
         delete products[code].tries; delete products[code].why;
         run.found++; ok = true;
         log(`  ${code} ${got.name}${got.age ? ' (age restricted)' : ''}${got.desc ? '' : ' (no description)'}`);

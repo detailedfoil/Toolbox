@@ -312,29 +312,52 @@ test('photo sweep: 3 refusals in a row stop it for this run, the names carry on,
   } finally { await mock.close(); }
 });
 
-test('age check: a page with Challenge 25 wording is marked a: 1, others a: 0, and already-named products are read once more for it', async () => {
-  const restricted = textPage({ code: '91111', name: 'Craft Knife', price: 3 }) + '\nThis product is Challenge 25. You may be asked for proof of age upon collection.\n';
+// a product page as jina gives it, with Screwfix's age notice under the heading when notice is true, and a promotional red box
+// further up that mentions proof of age (as on the pages the old whole-page check wrongly flagged, 23 Oct 2026)
+const MORE = '\n[More Info](https://www.screwfix.com/p/x/CODE#product_additional_details_container)\n';
+const notice = 'We operate a Challenge 25 policy in all our stores and may be asked for proof of age upon collection. You must be 18 years old or over to buy this product.';
+const withNotice = (code, name, on, promo) => textPage({ code, name, price: 3 }).replace('# ' + name + ' (' + code + ')',
+  (promo ? 'Win a prize! Over 18s only, bring proof of age to enter our Challenge 25 draw.\n\n' : '') + '# ' + name + ' (' + code + ')\n\n(120)\n\n' + (on ? notice + '\n\n' : '') + 'A useful product.\n' + MORE.replace('CODE', code));
+
+test('age check: only the notice under the heading counts, not promotional boxes, and products flagged by the old check are read again', async () => {
   const mock = await startMock({
-    '91111': { text: [restricted], image: [PICTURE] },
-    '92222': page('92222', 'Plain Product'),
-    '93333': page('93333', 'Named Before'),
+    '91111': { text: [withNotice('91111', 'Craft Knife', true, false)], image: [PICTURE] },
+    '92222': { text: [withNotice('92222', 'Plain Product', false, false)], image: [PICTURE] },
+    '93333': { text: [withNotice('93333', 'Named Before', false, false)], image: [PICTURE] },
+    '94444': { text: [withNotice('94444', 'Promo Box Tape', false, true)], image: [PICTURE] },
+    '95555': { text: [withNotice('95555', 'Flagged Wrongly', false, true)], image: [PICTURE] },
+    '96666': { text: [withNotice('96666', 'Really Restricted', true, true)], image: [PICTURE] },
   });
   try {
     const out = await runCheck({ check: 'product-search', mock, files: {
-      'tools/product-search/data/products.json': listOf([['91111', 'Craft Knife', 8], ['92222', 'Plain', 0], ['93333', 'Named Before', 0]]),
-      'tools/product-search/data/web-names.json': { products: { '93333': { name: 'Named Before', at: '2026-10-19' } } } } });
+      'tools/product-search/data/products.json': listOf([['91111', 'Craft Knife', 8], ['92222', 'Plain', 0], ['93333', 'Named Before', 0], ['94444', 'Tape', 0], ['95555', 'Flagged', 0], ['96666', 'Restricted', 0]]),
+      'tools/product-search/data/web-names.json': { products: { '93333': { name: 'Named Before', at: '2026-10-19' },
+        '95555': { name: 'Flagged Wrongly', a: 1, d: 1, at: '2026-10-22', p: 1 } } } } });
     assert.equal(out.code, 0, out.stderr);
     const n = names(out).products;
     assert.equal(n['91111'].a, 1);
+    assert.match(n['91111'].an, /^Challenge 25 policy|^challenge 25 policy/i, 'its words are kept so a wrong one can be seen');
     assert.equal(n['92222'].a, 0);
     assert.equal(n['93333'].a, 0, 'read again to find out');
-    assert.ok(mock.hits.some((h) => h.code === '93333' && h.mode === 'text'));
+    assert.equal(n['94444'].a, 0, 'a promotional box that mentions proof of age is not the notice');
+    assert.equal(n['95555'].a, 0, 'flagged by the old whole-page check: read again, and cleared');
+    assert.equal(n['95555'].an, undefined);
+    assert.equal(n['96666'].a, 1);
+    assert.ok(mock.hits.some((h) => h.code === '95555' && h.mode === 'text'));
   } finally { await mock.close(); }
 });
 
 /* ---------- descriptions (.github/product-search/describe.mjs), on real pages as jina gave them (21 Oct 2026) ---------- */
-const { describe } = await import('../product-search/describe.mjs');
+const { describe, ageNotice } = await import('../product-search/describe.mjs');
 const fixture = (c) => fs.readFileSync(path.join(REPO, '.github/tests/fixtures/page-' + c + '.txt'), 'utf8');
+
+test('age notice: real pages with no notice give none, a page with Screwfix\'s notice gives its words', () => {
+  for (const c of ['16497', '10048']) assert.equal(ageNotice(fixture(c), c), '', c);
+  assert.match(ageNotice(fixture('123XR'), '123XR'), /^Challenge 25 policy in all our stores.*to buy this product/, 'a real age restricted page');
+  const text = fixture('16497').replace(/(^#\s+.*\(16497\)\s*$)/m, '$1\n\n(5209)\n\n' + notice + '\n');
+  assert.match(ageNotice(text, '16497'), /^Challenge 25 policy in all our stores.*to buy this product/);
+  assert.equal(ageNotice(fixture('16497') + '\nChallenge 25: bring proof of age. You must be 18 years old or over to buy this.\n', '16497'), '', 'outside the product section does not count');
+});
 
 test('description: the paragraph and the feature bullets, exactly as on the page', () => {
   const d = describe(fixture('16497'), '16497');
