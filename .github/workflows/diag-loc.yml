@@ -10,16 +10,15 @@ jobs:
         run: |
           set +e
           exec > res.txt 2>&1
-          echo "--- postcodes.io reverse"
-          curl -sS -m 20 -H "Origin: https://detailedfoil.github.io" -D - "https://api.postcodes.io/postcodes?lon=-0.6577&lat=51.9174&limit=1" | head -c 900
-          for loc in "LU7 4TU" "LU74TU" "51.9174,-0.6577" "51.9174%2C-0.6577"; do
+          echo "--- start"
+          for loc in "LU7 4TU" "51.9174,-0.6577"; do
             echo; echo "--- location=$loc"
             curl -sS -m 40 -G "https://r.jina.ai/https://www.petrolprices.co.uk/map.php" -H "X-Timeout: 20" -H "Accept: text/plain" \
               --data-urlencode "location=${loc//%2C/,}" --data "fuel_type=E10&radius=5" -o out.txt
-            grep -c "miles away" out.txt; grep -m3 -i "of [0-9]* stations\|near\|results" out.txt; sed -n 1,3p out.txt
+            grep -c "miles away" out.txt; grep -i "stations\|miles away" out.txt | head -8; grep -n -i -B3 "miles away" out.txt | grep -v "^--" | head -14
           done
       - name: report
         if: always()
         run: |
-          grep -v -i "^nel\|^report-to\|^server\|^cf-\|^x-\|^etag\|^accept\|^vary\|^date\|^content-\|^access\|^strict\|^cache\|^alt-svc" res.txt | tr -d '\r' | head -c 1800 | tr '\n' '|' > one.txt
+          grep -v -i "^nel\|^report-to\|^server\|^cf-\|^x-\|^etag\|^accept\|^vary\|^date\|^content-\|^access\|^strict\|^cache\|^alt-svc" res.txt | tr -d '\r' | head -c 2600 | tr '\n' '|' > one.txt
           echo "::notice title=result::$(cat one.txt)"
