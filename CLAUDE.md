@@ -32,7 +32,7 @@ explain changes in plain English and say what they'll see.
     shop plan from the brief; a new brief can wait in `data/plan.next.json` until its `effective` date.
   - `counter-trial`: the A25 Behind counter trial page (it also uses `shelf-check/shelf-check.css`).
     `data/plan.json` is the ticket list with the printed prices.
-  - `fuel`: Fuel Prices, every Area 20 store (pick your store; forecourts within 5 miles). `parse.js` holds the
+  - `fuel`: Fuel Prices, every Area 20 store (a big "Closest to me" button uses the phone's location as `lat,lng` to 3 decimals in the same map URL, or pick your store; forecourts within 5 miles). `parse.js` holds the
     store list and reads PetrolPrices.co.uk's fuel map (`map.php`, the government Fuel Finder feed) as jina renders
     it (needs `X-Timeout`, or the list hasn't filled in). The government's own feed blocks GitHub's servers. Shared by
     the page (live on every open) and the Leighton Buzzard backup on GitHub. `data/hidden.json` lists forecourts to

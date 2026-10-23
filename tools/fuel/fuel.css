@@ -13,6 +13,18 @@ body[data-fuel="diesel"] .fu{--fuel:var(--diesel);--fuel-ink:var(--diesel-ink);-
 .fu [hidden]{display:none!important}
 .fu h1{margin-bottom:4px}
 .fu-sub{margin:0 0 14px;color:var(--muted)}
+.fu-here{display:flex;align-items:center;gap:14px;width:100%;min-height:72px;padding:12px 18px;border-radius:18px;border:2px solid var(--border);background:var(--card);color:var(--text);font:inherit;text-align:left;cursor:pointer;transition:background .15s,border-color .15s,transform .12s}
+.fu-here:active{transform:scale(.985)}
+.fu-here svg{width:30px;height:30px;flex:none}
+.fu-here span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fu-here b{font-size:1.2rem;font-weight:750}
+.fu-here small{color:var(--muted);font-size:.82rem;font-weight:550}
+.fu-here.is-on{background:var(--fuel);border-color:var(--fuel);color:var(--fuel-ink)}
+.fu-here.is-on small{color:inherit;opacity:.85}
+.fu-here:disabled{cursor:progress}
+.fu-hint{margin:8px 4px 0;color:var(--old);font-size:.84rem}
+.fu-or{margin:12px 4px 8px;color:var(--muted);font-size:.8rem;font-weight:650;text-transform:uppercase;letter-spacing:.06em}
+.fu-store.is-off{opacity:.6}
 .fu-store{position:relative;display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:0 14px;min-height:52px;border-radius:16px;background:var(--card);border:1px solid var(--border)}
 .fu-store:focus-within{border-color:var(--accent)}
 .fu-store span{color:var(--muted);font-size:.82rem;font-weight:600;white-space:nowrap}

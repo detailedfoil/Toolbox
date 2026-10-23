@@ -1,12 +1,14 @@
 /* Fuel Prices: ranks the forecourts within 5 miles of your store by petrol (E10) or diesel (B7) price.
 
-   - Pick your store at the top (it starts on the store you signed in as, and this device remembers the pick).
+   - Tap Closest to me (the phone's location, forecourts within 5 miles of where you are), or pick your store under it
+     (it starts on the store you signed in as, and this device remembers the pick).
    - Each time the page opens (and on Check again) it reads PetrolPrices.co.uk's fuel map for that town through jina
      (r.jina.ai), petrol and diesel, with the same reader as the GitHub backup (fuel/parse.js). That page shows the
      UK Government Fuel Finder feed.
    - Leighton Buzzard also has a GitHub backup every 3 hours (tools/fuel/data/prices.json, read from the site and
      from raw.githubusercontent.com), shown when the live check can't get through and used for "what changed".
-   - The last prices seen for each town stay on this device (fu-town-v2:<place>), so the page has something to show
+   - The last prices seen for each town stay on this device (fu-town-v2:<place>; one slot, fu-town-v2:here, for the
+     latest 'closest to me' spot), so the page has something to show
      straight away and can tell you what moved since you last looked. */
 (function () {
   'use strict';
@@ -16,14 +18,19 @@
   var LITRES = 55, STALE_DAYS = 3;
   var NAMES = { petrol: 'petrol', diesel: 'diesel' };
   var $ = function (id) { return document.getElementById(id); };
-  var state = { hide: [], fuel: 'petrol', store: null, shown: null, kind: '', run: 0, checking: false, hiddenAt: 0 };
+  var state = { hide: [], fuel: 'petrol', mode: 'store', locating: 0, store: null, shown: null, kind: '', run: 0, checking: false, hiddenAt: 0 };
 
   function load(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function ms(iso) { var t = iso ? Date.parse(iso) : NaN; return isNaN(t) ? 0 : t; }
   function money(p) { return p.toFixed(1) + 'p'; }
-  function townKey(place) { return 'fu-town-v2:' + place; }
+  function townKey(store) { return 'fu-town-v2:' + (store.here ? 'here' : store.place); }
+  /* what this device last saw for a store; for 'closest to me' only if it was the same spot (about 100 m) */
+  function lastSeen(store) {
+    var d = load(townKey(store));
+    return d && d.stations && (!store.here || d.place === store.place) ? d : null;
+  }
 
   /* "12:03 today", "21:47 yesterday", "09:05 Sat 17 Oct", UK time */
   function when(iso) {
@@ -108,7 +115,7 @@
     $('again').disabled = true;
     $('error').hidden = true;
     setStatus(state.shown ? 'Checking for newer prices' : 'Getting the latest prices', true);
-    var device = load(townKey(place));
+    var device = lastSeen(store);
     var backup = place === BACKUP.place ? loadBackup() : Promise.resolve(null);
     backup.then(function (gh) {
       if (!mine()) return;
@@ -119,7 +126,7 @@
         if (!mine()) return;
         var synced = [two[0].synced, two[1].synced].filter(Boolean).sort().pop() || null;
         var data = F.merge(base, F.combine(two[0], two[1]), synced, new Date().toISOString(), place).data;
-        save(townKey(place), data);
+        save(townKey(store), data);
         show(data, 'live');
       }, function (err) {
         if (!mine()) return;
@@ -242,30 +249,87 @@
     render();
   }
 
-  function pickStore(name) {
-    var store = F.STORES.filter(function (s) { return s.name === name; })[0];
-    if (!store) return;
-    var samePlace = state.store && state.store.place === store.place;
+  function setMode(mode) {
+    state.mode = mode;
+    save('fu-mode-v1', mode);
+    $('here').classList.toggle('is-on', mode === 'here');
+    $('here').setAttribute('aria-pressed', String(mode === 'here'));
+    $('storeBox').classList.toggle('is-off', mode === 'here');
+    if (mode === 'here') $('store').value = '';
+    $('hereSub').textContent = mode === 'here' ? 'Showing forecourts around where you are' : "Uses your phone's location";
+  }
+
+  /* point the page at a store, or at the spot the phone is in (store.here) */
+  function use(store) {
+    var samePlace = state.store && state.store.place === store.place && !!state.store.here === !!store.here;
     state.store = store;
-    save('fu-store-v1', store.name);
-    $('store').value = store.name;
     $('town').textContent = store.town;
-    $('sub').textContent = 'Forecourts within ' + F.RADIUS + ' miles of ' + store.place.split(',')[0] + ', cheapest first.';
+    $('sub').textContent = store.here ? 'Forecourts within ' + F.RADIUS + ' miles of where you are, cheapest first.'
+      : 'Forecourts within ' + F.RADIUS + ' miles of ' + store.place.split(',')[0] + ', cheapest first.';
     document.title = 'Fuel near ' + store.town;
-    if (samePlace) return;
+    if (samePlace) { refresh(); return; }
     state.shown = null;
     state.kind = '';
     $('view').hidden = true;
     $('error').hidden = true;
-    var cached = load(townKey(store.place));
-    if (cached && cached.stations) show(cached, 'cached', true);
+    var cached = lastSeen(store);
+    if (cached) show(cached, 'cached', true);
     refresh();
+  }
+
+  function pickStore(name) {
+    var store = F.STORES.filter(function (s) { return s.name === name; })[0];
+    if (!store) return;
+    state.locating++;
+    $('here').disabled = false;
+    $('hereMsg').hidden = true;
+    setMode('store');
+    save('fu-store-v1', store.name);
+    $('store').value = store.name;
+    var same = state.store && !state.store.here && state.store.place === store.place;
+    if (same) { state.store = store; return; }
+    use(store);
+  }
+
+  var HERE_WHY = {
+    1: "Location is blocked for this page. Allow it in your browser's site settings, or pick a store.",
+    2: "Couldn't work out where you are. Try again outside, or pick a store.",
+    3: "Took too long to find where you are. Try again, or pick a store."
+  };
+
+  /* "Closest to me": ask the phone where it is, then read the forecourts within 5 miles of that spot.
+     quiet = the page opening on its own (remembered choice): fall back to the store quietly if it can't. */
+  function pickHere(quiet) {
+    var msg = $('hereMsg');
+    if (!navigator.geolocation) { msg.textContent = "This browser can't share a location. Pick a store instead."; msg.hidden = false; setMode('store'); return; }
+    var token = ++state.locating;
+    msg.hidden = true;
+    $('here').disabled = true;
+    $('hereSub').textContent = 'Finding where you are';
+    setStatus('Finding where you are', true);
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      if (token !== state.locating) return;
+      $('here').disabled = false;
+      var place = pos.coords.latitude.toFixed(3) + ',' + pos.coords.longitude.toFixed(3);
+      setMode('here');
+      use({ name: 'Near me', town: 'you', place: place, here: true });
+    }, function (err) {
+      if (token !== state.locating) return;
+      $('here').disabled = false;
+      setMode('store');
+      var back = state.store && !state.store.here ? state.store : null;
+      if (back) { pickStore(back.name); state.shown ? show(state.shown, state.kind) : refresh(); }
+      else pickStore(load('fu-store-v1') || F.STORES[0].name);
+      msg.textContent = HERE_WHY[err && err.code] || HERE_WHY[2];
+      msg.hidden = false;
+    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 });
   }
 
   /* ---------- start ---------- */
 
-  $('store').innerHTML = F.STORES.map(function (s) { return '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>'; }).join('');
+  $('store').innerHTML = '<option value="" disabled hidden>Pick a store</option>' + F.STORES.map(function (s) { return '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>'; }).join('');
   $('store').addEventListener('change', function () { pickStore(this.value); });
+  $('here').addEventListener('click', function () { pickHere(false); });
   Array.prototype.forEach.call(document.querySelectorAll('.fu-switch button'), function (b) {
     b.addEventListener('click', function () { pickFuel(b.dataset.fuel); });
   });
@@ -273,7 +337,7 @@
   // back on the page after a while (a phone tab left open): check again by itself
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) state.hiddenAt = Date.now();
-    else if (state.hiddenAt && Date.now() - state.hiddenAt > 10 * 60000 && !state.checking) refresh();
+    else if (state.hiddenAt && Date.now() - state.hiddenAt > 10 * 60000 && !state.checking) { if (state.mode === 'here') pickHere(true); else refresh(); }
   });
 
   // forecourts left out of the lists (closed, say) until they report a new price; the same list for every store
@@ -285,10 +349,16 @@
   var me = '';
   try { me = (localStorage.getItem('toolbox.signedIn.area20') || '').toUpperCase(); } catch (e) { /* private mode */ }
   var signedIn = F.STORES.filter(function (s) { return s.code === me; })[0];
-  pickStore(load('fu-store-v1') || (signedIn ? signedIn.name : 'Leighton Buzzard (FA2)'));
+  var startStore = load('fu-store-v1') || (signedIn ? signedIn.name : 'Leighton Buzzard (FA2)');
+  if (load('fu-mode-v1') === 'here' && navigator.geolocation) {
+    // last time was 'closest to me': show the usual store while the phone works out where it is now
+    $('store').value = '';
+    use(F.STORES.filter(function (x) { return x.name === startStore; })[0] || F.STORES[0]);
+    pickHere(true);
+  } else pickStore(startStore);
   // signing in on this page (the sign-in screen sits over it) picks that store, unless one was already chosen here
   window.addEventListener('toolbox:login', function () {
-    if (load('fu-store-v1-chosen')) return;
+    if (load('fu-store-v1-chosen') || state.mode === 'here') return;
     var code = ''; try { code = (localStorage.getItem('toolbox.signedIn.area20') || '').toUpperCase(); } catch (e) {}
     var s = F.STORES.filter(function (x) { return x.code === code; })[0];
     if (s) pickStore(s.name);

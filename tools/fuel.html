@@ -9,7 +9,7 @@
 <title>Fuel prices</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="fuel/fuel.css?v=665c70073e">
+<link rel="stylesheet" href="fuel/fuel.css?v=401b9c461b">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -20,8 +20,15 @@
   <h1>Fuel near <span id="town">your store</span></h1>
   <p class="fu-sub" id="sub">Forecourts near your store, cheapest first.</p>
 
-  <label class="fu-store">
-    <span>Your store</span>
+  <button type="button" class="fu-here" id="here" aria-pressed="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+    <span><b>Closest to me</b><small id="hereSub">Uses your phone's location</small></span>
+  </button>
+  <p class="fu-hint" id="hereMsg" role="status" hidden></p>
+  <p class="fu-or">or pick a store</p>
+
+  <label class="fu-store" id="storeBox">
+    <span>Store</span>
     <select id="store" aria-label="Your store"></select>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
   </label>
@@ -51,6 +58,6 @@
   </div>
 </div>
 <script src="fuel/parse.js?v=d044cc1985"></script>
-<script src="fuel/app.js?v=dbc60553ea"></script>
+<script src="fuel/app.js?v=420925beef"></script>
 </body>
 </html>
