@@ -12,7 +12,7 @@ is replaced.
 
 Writes tools/product-search/data/products.json: one product per line, [SKU, name, flags], where flags adds up
 1 = hazardous, 2 = aerosol, 4 = non-trolleyable, 8 = sharp or liquid, 16 = age restricted (a column the export
-hasn't got counts as no). The page shows only the age restricted one, as do products the GitHub check finds are age
+hasn't got counts as no), 32 = not in the latest export (--add sets and clears it each time). The page shows only the age restricted one, as do products the GitHub check finds are age
 restricted on screwfix.com (`a: 1` in web-names.json).
 Stock, locations and anything else store-specific are left out on purpose: the repo is public.
 The workbook needs openpyxl (pip install openpyxl). It reads the values Excel saved, so save the workbook in Excel first.
@@ -24,6 +24,7 @@ OUT = ROOT / 'tools/product-search/data/products.json'
 SKU = re.compile(r'^(\d{3}[A-Z]{2}|\d{4}[A-Z]|\d{5})$')
 FLAGS = [('Hazardous', 1), ('Aerosol', 2), ('Non Trolleyable', 4), ('Sharp or Liquid', 8), ('Age Restricted', 16)]
 AGE = 16
+NOT_ON_ILS = 32   # not in the latest export: the page may use the GitHub check's age finding for these (and only these)
 
 
 def code(v):
@@ -85,6 +86,7 @@ def main(src, add):
         marked = 0
         for o in old:
             if o[0] in age and not o[2] & AGE: o[2] |= AGE; marked += 1
+            o[2] = (o[2] | NOT_ON_ILS) if o[0] not in seen else (o[2] & ~NOT_ON_ILS)
         note.append(f'{len(new)} new added to the {len(old)} already there'
                     f' ({sum(1 for c in have if c not in seen)} not in this export, kept)')
         if marked: note.append(f'{marked} already there marked age restricted')
@@ -92,7 +94,7 @@ def main(src, add):
     items.sort(key=lambda x: x[0])
     version = datetime.date.today().isoformat()
     lines = ',\n'.join('    ' + json.dumps(i, ensure_ascii=False) for i in items)
-    OUT.write_text('{\n  "version": %s,\n  "count": %d,\n  "flags": {"1": "Hazardous", "2": "Aerosol", "4": "Non-trolleyable", "8": "Sharp or liquid", "16": "Age restricted"},\n  "items": [\n%s\n  ]\n}\n'
+    OUT.write_text('{\n  "version": %s,\n  "count": %d,\n  "flags": {"1": "Hazardous", "2": "Aerosol", "4": "Non-trolleyable", "8": "Sharp or liquid", "16": "Age restricted", "32": "Not in the latest ILS export"},\n  "items": [\n%s\n  ]\n}\n'
                    % (json.dumps(version), len(items), lines), encoding='utf-8')
     if missing: note.append('no ' + ', '.join(missing) + ' column, counted as no')
     if bad: note.append(f'skipped {len(bad)} odd codes: {bad[:10]}')

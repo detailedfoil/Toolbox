@@ -40,8 +40,10 @@
       var w = names[r[0]] && names[r[0]].name;
       if (w && /^(?:url source|title|markdown content|warning)\s*:/i.test(w)) w = '';   // a bad read, waiting to be read again
       var p = names[r[0]] || {};
-      // age restricted comes from the stock list only (flag 16): screwfix.com's "a" caught promotional red boxes (23 Oct 2026)
-      return { sku: r[0], name: r[1], flags: (r[2] || 0), web: w || '', desc: p.d, dw: (dwords && dwords[r[0]]) || '' };
+      // age restricted comes from the stock list (flag 16). Only for products the latest stock list doesn't have (flag 32) does
+      // screwfix.com's own Challenge 25 notice count (a with an: the notice's words), as the old check caught promotional red boxes
+      var flags = ((r[2] || 0) & 16) | (((r[2] || 0) & 32) && p.a && p.an ? 16 : 0);
+      return { sku: r[0], name: r[1], flags: flags, web: w || '', desc: p.d, dw: (dwords && dwords[r[0]]) || '' };
     });
     searcher = PS.build(items);
     listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');

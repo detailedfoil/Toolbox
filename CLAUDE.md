@@ -55,15 +55,16 @@ explain changes in plain English and say what they'll see.
     `photos.js` keeps the product list on the phone (IndexedDB) and shows photos: the kept copy only if there is one (Screwfix's image server isn't asked), else media.screwfix.com (120 px).
     `data/products.json` is made from detailedfoil's stock export by `.github/product-search/make-list.py` (code, name
     and the warning flags only: no stock or locations, the repo is public; flag 16 is the export's "Age Restricted"
-    column, added 22 Oct 2026). The "Age restricted" badge and search go by that stock list flag ONLY (detailedfoil, 23 Oct
-    2026): the check's `a` from screwfix.com was catching promotional red boxes (28 Stanley tape measures, toolboxes and
-    the like), so the page ignores `a`. It reads the workbook or the report
+    column, added 22 Oct 2026). The "Age restricted" badge and search go by that stock list flag (detailedfoil, 23 Oct
+    2026): the check's old `a` from screwfix.com was catching promotional red boxes (28 Stanley tape measures, toolboxes and
+    the like). The one exception: flag 32 (`--add` sets it on products the latest export doesn't have, 661 on 23 Oct, among
+    them knives) lets the page use the check's `a` for those only, and only when `an` (the notice's words) is there. It reads the workbook or the report
     pasted as text; for a newer export he wants `--add` (keeps every product already there as it is, adds new codes only,
     and adds the age mark to any the export marks age restricted, never taking it off). `data/web-names.json` holds the
     screwfix.com names and `photos/<CODE>.jpg` the 120 px photos (JPEG quality 85, about 2 KB each; `PHOTO_PX` and `PHOTO_QUALITY` in check.mjs), both written by the nightly check (`a: 1` on a
     product in `web-names.json` means Screwfix's own Challenge 25 notice sits under the product heading (`ageNotice` in
     `describe.mjs`, not `lookup.js`'s whole-page check, which caught promo boxes; `an` holds the notice's words); the page
-    doesn't use it (see above), it's a cross-check; `p: 1` means its photo is saved; `d: 1` means `descriptions/<CODE>.json` holds its
+    uses it only for flag 32 products (see above), otherwise it's a cross-check; `p: 1` means its photo is saved; `d: 1` means `descriptions/<CODE>.json` holds its
     description, `{t, b}` = paragraph text and feature bullets, read from the same page by `.github/product-search/describe.mjs`,
     tested on real pages saved in `.github/tests/fixtures/page-*.txt`; the page loads it only when a result is tapped). `data/desc-words.json` (also robot-written) holds each
     description's search words, minus words already in its names, filler and bare numbers; the page loads it after the
