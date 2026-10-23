@@ -55,12 +55,14 @@ explain changes in plain English and say what they'll see.
     `photos.js` keeps the product list on the phone (IndexedDB) and shows photos: the kept copy only if there is one (Screwfix's image server isn't asked), else media.screwfix.com (120 px).
     `data/products.json` is made from detailedfoil's stock export by `.github/product-search/make-list.py` (code, name
     and the warning flags only: no stock or locations, the repo is public; flag 16 is the export's "Age Restricted"
-    column, added 22 Oct 2026, so those show the badge before the check reaches them). It reads the workbook or the report
+    column, added 22 Oct 2026). The "Age restricted" badge and search go by that stock list flag ONLY (detailedfoil, 23 Oct
+    2026): the check's `a` from screwfix.com was catching promotional red boxes (28 Stanley tape measures, toolboxes and
+    the like), so the page ignores `a`. It reads the workbook or the report
     pasted as text; for a newer export he wants `--add` (keeps every product already there as it is, adds new codes only,
     and adds the age mark to any the export marks age restricted, never taking it off). `data/web-names.json` holds the
     screwfix.com names and `photos/<CODE>.jpg` the 120 px photos (JPEG quality 85, about 2 KB each; `PHOTO_PX` and `PHOTO_QUALITY` in check.mjs), both written by the nightly check (`a: 1` on a
-    product in `web-names.json` means age restricted, found by the same reader the posters use (`age` in `lookup.js`),
-    shown as an "Age restricted" badge; `p: 1` means its photo is saved; `d: 1` means `descriptions/<CODE>.json` holds its
+    product in `web-names.json` means the page reader (`age` in `lookup.js`) saw Challenge 25 wording, not used by the page
+    any more (see above); `p: 1` means its photo is saved; `d: 1` means `descriptions/<CODE>.json` holds its
     description, `{t, b}` = paragraph text and feature bullets, read from the same page by `.github/product-search/describe.mjs`,
     tested on real pages saved in `.github/tests/fixtures/page-*.txt`; the page loads it only when a result is tapped). `data/desc-words.json` (also robot-written) holds each
     description's search words, minus words already in its names, filler and bare numbers; the page loads it after the

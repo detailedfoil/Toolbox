@@ -40,7 +40,8 @@
       var w = names[r[0]] && names[r[0]].name;
       if (w && /^(?:url source|title|markdown content|warning)\s*:/i.test(w)) w = '';   // a bad read, waiting to be read again
       var p = names[r[0]] || {};
-      return { sku: r[0], name: r[1], flags: (r[2] || 0) | (p.a ? 16 : 0), web: w || '', desc: p.d, dw: (dwords && dwords[r[0]]) || '' };
+      // age restricted comes from the stock list only (flag 16): screwfix.com's "a" caught promotional red boxes (23 Oct 2026)
+      return { sku: r[0], name: r[1], flags: (r[2] || 0), web: w || '', desc: p.d, dw: (dwords && dwords[r[0]]) || '' };
     });
     searcher = PS.build(items);
     listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');
