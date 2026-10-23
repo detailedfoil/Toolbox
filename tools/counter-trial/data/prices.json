@@ -1,7 +1,7 @@
 {
   "trial": "A25 Behind counter trial",
   "checked": "2026-10-23",
-  "run": {"date":"2026-10-23","started":"2026-10-23T00:48:20.174Z","finished":"2026-10-23T01:02:01.765Z","trigger":"schedule","complete":false,"total":69,"checked":68,"not_found":0,"unchecked":1,"moved":0,"off_printed":3,"stopped":"1 line could not be checked","fails":{"287LF":"jina: page doesn't mention the code"}},
+  "run": {"date":"2026-10-23","started":"2026-10-23T00:48:20.174Z","finished":"2026-10-23T04:07:36.262Z","trigger":"schedule","complete":true,"total":69,"checked":69,"not_found":0,"unchecked":0,"moved":0,"off_printed":3},
   "products": {
     "10171": {"name":"Essentials Pop-Up Garden Bag 690 x 560mm 170Ltr","price":12.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-23","moves":[]},
     "44241": {"name":"Masterplug TCM24-XD Mechanical Plug-In & Plug-Through Compact Timer","price":4.99,"since":"2026-10-13","status":"ok","was":5.99,"on":"2026-10-23","moves":[]},
@@ -62,7 +62,7 @@
     "266FX": {"name":"Evolution R165CCSL 1200W 165mm Electric Multi-Material Circular Saw 220-240V","price":49.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-23","moves":[]},
     "3691R": {"name":"LAP Bronx Outdoor Up & Down Wall Light With PIR Sensor Black","price":20.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-23","moves":[]},
     "892PG": {"name":"LAP Weyburn Outdoor LED Floodlight With PIR Sensor Black 30W 3000lm","price":12.68,"since":"2026-10-17","status":"ok","was":14.98,"on":"2026-10-23","moves":[]},
-    "287LF": {"name":"1000 LED Indoor & Outdoor Very Warm White Compact String Christmas Lights","price":29.99,"since":"2026-10-17","status":"unchecked","was":null,"on":"2026-10-22","moves":[]},
+    "287LF": {"name":"1000 LED Indoor & Outdoor Very Warm White Compact String Christmas Lights","price":29.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-23","moves":[]},
     "178KT": {"name":"Makita DUB186Z 18V Li-Ion LXT Cordless Blower - Bare","price":84.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-23","moves":[]},
     "255VE": {"name":"Scrubb Driveway, Patio, Concrete & Masonry Cleaner 5Ltr","price":16.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-23","moves":[]},
     "294YU": {"name":"Resolva Lawn Extra Weedkiller 150m² 3Ltr","price":19.09,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-23","moves":[]},
