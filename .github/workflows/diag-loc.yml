@@ -1,0 +1,22 @@
+name: diag-loc
+on:
+  push:
+    branches: [diag-loc]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: probe
+        run: |
+          set +e
+          echo "--- postcodes.io reverse"
+          curl -sS -m 20 -H "Origin: https://detailedfoil.github.io" -D - "https://api.postcodes.io/postcodes?lon=-0.6577&lat=51.9174&limit=1" | head -c 900
+          for loc in "LU7 4TU" "LU74TU" "51.9174,-0.6577" "51.9174%2C-0.6577"; do
+            echo; echo "--- location=$loc"
+            curl -sS -m 40 -G "https://r.jina.ai/https://www.petrolprices.co.uk/map.php" -H "X-Timeout: 20" -H "Accept: text/plain" \
+              --data-urlencode "location=${loc//%2C/,}" --data "fuel_type=E10&radius=5" -o out.txt
+            grep -c "miles away" out.txt; grep -m3 -i "of [0-9]* stations\|near\|results" out.txt; sed -n 1,3p out.txt
+          done
+      - name: show
+        run: |
+          echo "done"
