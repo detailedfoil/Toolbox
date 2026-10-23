@@ -21,5 +21,5 @@ jobs:
       - name: report
         if: always()
         run: |
-          grep -v -i "^nel\|^report-to\|^server\|^cf-\|^x-\|^etag\|^accept\|^vary\|^date\|^content-\|^access\|^strict\|^cache\|^alt-svc" res.txt | head -c 1800 | tr '\n' '|' > one.txt
+          grep -v -i "^nel\|^report-to\|^server\|^cf-\|^x-\|^etag\|^accept\|^vary\|^date\|^content-\|^access\|^strict\|^cache\|^alt-svc" res.txt | tr -d '\r' | head -c 1800 | tr '\n' '|' > one.txt
           echo "::notice title=result::$(cat one.txt)"
