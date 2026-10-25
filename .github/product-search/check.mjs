@@ -75,6 +75,7 @@ const today = londonDate();
 const list = readJSON(LIST);
 const state = readJSON(OUT, { products: {} });
 const products = state.products || {};
+const ilsAge = new Set(list.items.filter((r) => r[2] & 16).map((r) => r[0]));   // products the stock list marks age restricted
 const daysSince = (iso) => (Date.parse(today) - Date.parse(iso || '2000-01-01')) / 864e5;
 fs.mkdirSync(path.join(ROOT, PHOTOS), { recursive: true });
 const photoFile = (code) => path.join(ROOT, PHOTOS, code + '.jpg');
@@ -89,6 +90,8 @@ const needsName = (code) => {
   const p = products[code];
   if (!p) return true;
   if (p.name && JUNK_NAME.test(p.name)) return true;       // saved before that was caught: read again
+  // ILS says age restricted but the page showed no notice when read (121EH, a NEW product, 25 Oct 2026): look again, a day after the last read
+  if (p.name && p.a === 0 && ilsAge.has(code) && daysSince(p.at) >= 1) return true;
   if (p.name && p.a === 1 && !p.an) return true;               // flagged by the old whole-page age check, which caught promo boxes (23 Oct 2026): read again
   if (p.name) return p.a === undefined || p.d === undefined;   // named before the age check / descriptions were added: read once more
   if (p.missing) return false;

@@ -347,6 +347,20 @@ test('age check: only the notice under the heading counts, not promotional boxes
   } finally { await mock.close(); }
 });
 
+test('age check: a product the stock list marks age restricted, read before with no notice, is read again', async () => {
+  const mock = await startMock({ '97001': { text: [withNotice('97001', 'Added Later', true, false)], image: [PICTURE] }, '97002': { text: [withNotice('97002', 'Not Marked', false, false)], image: [PICTURE] } });
+  try {
+    const out = await runCheck({ check: 'product-search', mock, files: {
+      'tools/product-search/data/products.json': listOf([['97001', 'Added Later', 16], ['97002', 'Not Marked', 0]]),
+      'tools/product-search/data/web-names.json': { products: { '97001': { name: 'Added Later', a: 0, d: 1, at: '2026-10-22', p: 1 }, '97002': { name: 'Not Marked', a: 0, d: 1, at: '2026-10-22', p: 1 } } } } });
+    assert.equal(out.code, 0, out.stderr);
+    const n = names(out).products;
+    assert.equal(n['97001'].a, 1, 'the notice is there now');
+    assert.ok(mock.hits.some((h) => h.code === '97001'));
+    assert.ok(!mock.hits.some((h) => h.code === '97002'), 'one the stock list does not mark is left alone');
+  } finally { await mock.close(); }
+});
+
 /* ---------- descriptions (.github/product-search/describe.mjs), on real pages as jina gave them (21 Oct 2026) ---------- */
 const { describe, ageNotice } = await import('../product-search/describe.mjs');
 const fixture = (c) => fs.readFileSync(path.join(REPO, '.github/tests/fixtures/page-' + c + '.txt'), 'utf8');

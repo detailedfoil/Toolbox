@@ -63,7 +63,7 @@ explain changes in plain English and say what they'll see.
     and adds the age mark to any the export marks age restricted, never taking it off). `data/web-names.json` holds the
     screwfix.com names and `photos/<CODE>.jpg` the 120 px photos (JPEG quality 85, about 2 KB each; `PHOTO_PX` and `PHOTO_QUALITY` in check.mjs), both written by the nightly check (`a: 1` on a
     product in `web-names.json` means Screwfix's own Challenge 25 notice sits under the product heading (`ageNotice` in
-    `describe.mjs`, not `lookup.js`'s whole-page check, which caught promo boxes; `an` holds the notice's words); the page
+    `describe.mjs`; a product the stock list marks age restricted but read with no notice is read again a day later, as 121EH's notice came after the first read; not `lookup.js`'s whole-page check, which caught promo boxes; `an` holds the notice's words); the page
     uses it only for flag 32 products (see above), otherwise it's a cross-check; `p: 1` means its photo is saved; `d: 1` means `descriptions/<CODE>.json` holds its
     description, `{t, b}` = paragraph text and feature bullets, read from the same page by `.github/product-search/describe.mjs`,
     tested on real pages saved in `.github/tests/fixtures/page-*.txt`; the page loads it only when a result is tapped). `data/desc-words.json` (also robot-written) holds each
