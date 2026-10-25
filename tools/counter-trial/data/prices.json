@@ -1,7 +1,7 @@
 {
   "trial": "A25 Behind counter trial",
   "checked": "2026-10-25",
-  "run": {"date":"2026-10-25","started":"2026-10-25T00:42:51.499Z","finished":"2026-10-25T00:56:24.642Z","trigger":"schedule","complete":false,"total":69,"checked":68,"not_found":0,"unchecked":1,"moved":0,"off_printed":3,"stopped":"1 line could not be checked","fails":{"135AN":"jina: page: blocked (other); direct: Screwfix's bot check (HTTP 202)"}},
+  "run": {"date":"2026-10-25","started":"2026-10-25T00:42:51.499Z","finished":"2026-10-25T04:07:04.186Z","trigger":"schedule","complete":true,"total":69,"checked":69,"not_found":0,"unchecked":0,"moved":0,"off_printed":3},
   "products": {
     "10171": {"name":"Essentials Pop-Up Garden Bag 690 x 560mm 170Ltr","price":12.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-25","moves":[]},
     "44241": {"name":"Masterplug TCM24-XD Mechanical Plug-In & Plug-Through Compact Timer","price":4.99,"since":"2026-10-13","status":"ok","was":5.99,"on":"2026-10-25","moves":[]},
@@ -54,7 +54,7 @@
     "509PT": {"name":"Titan 1/4\" Shank Router Bits 13 Piece Set","price":26.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-25","moves":[]},
     "487EH": {"name":"Titan TTB1347SDM 6.6kg Electric SDS Max Hammer Drill 220-240V","price":109.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-25","moves":[]},
     "874EH": {"name":"Titan TTB1325SDR 160W Electric Detail Sander 220-240V","price":19.97,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-25","moves":[]},
-    "135AN": {"name":"Titan TTB1471JSW 600W Electric Jigsaw 240V","price":23.99,"since":"2026-10-17","status":"unchecked","was":null,"on":"2026-10-24","moves":[]},
+    "135AN": {"name":"Titan TTB1471JSW 600W Electric Jigsaw 240V","price":23.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-25","moves":[]},
     "912KJ": {"name":"Titan TTB773HTG 2000W Electric Heat Gun 220-240V","price":19.97,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-25","moves":[]},
     "226EY": {"name":"Titan TTB1233DRH 600W Electric Percussion Drill 220-240V","price":24.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-25","moves":[]},
     "688EH": {"name":"Titan TTB1323MLT 300W Electric Multi-Tool 220-240V","price":39.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-25","moves":[]},
