@@ -1,10 +1,11 @@
 /* Product Search page: loads the list (from this phone first, then checks the site for a newer one), searches as
  * you type, shows results a screenful at a time and each result's photo as it scrolls into view. Tapping a result
- * opens it to show its description (descriptions/<CODE>.json, saved by the GitHub check, loaded only when tapped). */
+ * opens it to show its description (descriptions/<CODE>.json, saved by the GitHub check, loaded only when tapped).
+ * Stock levels pasted from the stock system (stock.js) show on each result, for the visit only. */
 (function () {
   'use strict';
 
-  var PS = window.ProductSearch, Photos = window.ProductPhotos;
+  var PS = window.ProductSearch, Photos = window.ProductPhotos, Stock = window.ProductStock;
   var LIST_URL = 'product-search/data/products.json';
   var WEB_URL = 'product-search/data/web-names.json';
   var DESC_URL = 'product-search/descriptions/';
@@ -17,6 +18,8 @@
   var welcome = $('welcome'), stripMs = $('stripMs'), toastEl = $('toast');
 
   var list = null, web = null, dwords = null, searcher = null, shown = null, shownCount = 0, listInfo = '';
+  var baseItems = [], stock = Stock.load();    // stock: {at, count, rows: {CODE: [available, name, age]}}
+  var inStockOnly = false;
   var settings = { nophotos: get('ps-nophotos') === '1' };
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -45,15 +48,32 @@
       var flags = ((r[2] || 0) & 16) | (((r[2] || 0) & 32) && p.a && p.an ? 16 : 0);
       return { sku: r[0], name: r[1], flags: flags, web: w || '', desc: p.d, dw: (dwords && dwords[r[0]]) || '' };
     });
-    searcher = PS.build(items);
-    listInfo = n(items.length) + ' products ready' + (where === 'saved' ? ', saved on this phone' : '');
+    baseItems = items;
+    listWhere = where;
+    build();
     q.placeholder = 'Search by code or name';
     var have = new Set();
     Object.keys(names).forEach(function (k) { if (names[k].p) have.add(k); });
     Photos.stored = have;
-    $('welcomeTitle').textContent = 'Search ' + n(items.length) + ' nailed items';
     if (quiet && q.value.trim() && (window.scrollY > 80 || results.querySelector('.sx-card.open'))) return;
     run();
+  }
+
+  /* the search, over the list plus any pasted products the list hasn't got (for the visit only) */
+  var listWhere = '';
+  function build() {
+    var items = baseItems;
+    if (stock && stock.rows) {
+      var have = new Set(baseItems.map(function (it) { return it.sku; }));
+      var extra = Object.keys(stock.rows).filter(function (k) { return !have.has(k) && stock.rows[k][1]; }).map(function (k) {
+        var r = stock.rows[k];
+        return { sku: k, name: r[1], flags: r[2] ? 16 : 0, web: '', desc: undefined, dw: '' };
+      });
+      if (extra.length) items = baseItems.concat(extra);
+    }
+    searcher = PS.build(items);
+    listInfo = n(items.length) + ' products ready' + (listWhere === 'saved' ? ', saved on this phone' : '');
+    $('welcomeTitle').textContent = 'Search ' + n(items.length) + ' nailed items';
   }
 
   function fetchText(url) {
@@ -125,13 +145,20 @@
     welcome.hidden = true;
     var t0 = performance.now();
     var res = searcher.find(text, 500);
+    if (inStockOnly && stock && stock.rows) {
+      // only what's in stock (Available Qty above 0), best matches first as before
+      var cut = res.total > res.list.length;
+      res.list = res.list.filter(function (r) { return available(r.item.sku) > 0; });
+      res.total = res.list.length;
+      res.note = res.note || (cut && !res.list.length ? 'None of the best matches are in stock. Add another word to narrow it down.' : '');
+    }
     var ms = performance.now() - t0;
     stripMs.textContent = ms < 1 ? ms.toFixed(1) + ' milliseconds' : Math.round(ms) + ' milliseconds';
     shown = res;
     shown.words = PS.words(text).filter(Boolean);
     shown.code = PS.asCode(text);
     statusEl.textContent = res.total ? n(res.total) + (res.total === 1 ? ' result' : ' results') + (res.total > res.list.length ? ' (showing the best ' + n(res.list.length) + ')' : '')
-      : 'No products match "' + text.trim() + '"';
+      : (inStockOnly && stock ? 'Nothing in stock matches "' : 'No products match "') + text.trim() + '"';
     noteEl.hidden = !res.note;
     noteEl.textContent = res.note || '';
     results.innerHTML = '';
@@ -186,6 +213,7 @@
         (it.web && it.web.toLowerCase() !== it.name.toLowerCase() ? '<p class="sx-alt">ILS name: ' + marked(it.name, words) + '</p>' : '') +
         (flags ? '<div class="sx-flags">' + flags + '</div>' : '') +
         (r.how === 'desc' ? '<p class="sx-why">Found in the description</p>' : '') +
+        stockLine(it.sku) +
         '<div class="sx-row">' +
           '<button type="button" class="sx-code" data-copy="' + esc(it.sku) + '" aria-label="Copy product code ' + esc(it.sku) + '"><span>Product code</span> <b>' + markedCode(it.sku, shown.code, r.how) + '</b></button>' +
           '<a class="sx-open" href="https://www.screwfix.com/p/product/' + esc(it.sku.toLowerCase()) + '" target="_blank" rel="noopener">View on screwfix.com</a>' +
@@ -194,6 +222,66 @@
       '<button type="button" class="sx-toggle" aria-expanded="false"><span>Description</span></button>' +
       '<div class="sx-desc" hidden></div></li>';
   }
+
+  /* ---------- stock levels, pasted from the stock system (for the visit only) ---------- */
+
+  // the Available Qty from the pasted report
+  function stockLine(sku) {
+    if (!stock || !stock.rows) return '';
+    var r = stock.rows[sku];
+    if (!r) return '<p class="sx-stk sx-stk-none">Not in the pasted stock</p>';
+    return '<p class="sx-stk ' + (r[0] > 0 ? 'sx-stk-in' : 'sx-stk-out') + '">Available <b>' + n(r[0]) + '</b></p>';
+  }
+  function available(sku) { var r = stock && stock.rows && stock.rows[sku]; return r ? r[0] : 0; }
+
+  var stockOpen = $('stockOpen'), stockClear = $('stockClear'), stockPaste = $('stockPaste'), stockText = $('stockText');
+  var stockMsg = $('stockMsg'), stockClip = $('stockClip'), stockWhat = $('stockWhat');
+  function showStockBar() {
+    var on = !!(stock && stock.rows);
+    stockWhat.textContent = on ? 'Stock pasted at ' + new Date(stock.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) +
+      ' (' + n(stock.count) + ' products). Only on this device, not saved or sent anywhere: gone when you close the tab.' : 'Paste stock levels to see them on each result (PC only).';
+    stockOpen.textContent = on ? 'Paste again' : 'Paste stock';
+    stockClear.hidden = !on;
+    $('inStockWrap').hidden = !on;
+    if (!on) { inStockOnly = false; $('inStock').checked = false; }
+  }
+  function useStock(text) {
+    var got = Stock.parse(text);
+    if (!got) {
+      stockMsg.hidden = false;
+      stockMsg.textContent = text.trim() ? "Couldn't find any products in that. Copy the whole SKU List report and try again." : '';
+      return false;
+    }
+    stock = { at: Date.now(), count: got.count, rows: got.rows };
+    var kept = Stock.save(stock);
+    stockText.value = '';
+    stockMsg.hidden = true;
+    stockPaste.hidden = true;
+    showStockBar();
+    toast('Stock for ' + n(got.count) + ' products' + (kept ? '' : ' (until you reload)'));
+    if (baseItems.length) { build(); run(); }
+    return true;
+  }
+  stockOpen.addEventListener('click', function () {
+    stockPaste.hidden = false; stockMsg.hidden = true;
+    stockClip.hidden = !(navigator.clipboard && navigator.clipboard.readText);
+    if (stockClip.hidden) stockText.focus();
+  });
+  $('stockCancel').addEventListener('click', function () { stockPaste.hidden = true; stockText.value = ''; });
+  stockClear.addEventListener('click', function () {
+    stock = null; Stock.clear(); showStockBar(); toast('Stock cleared');
+    if (baseItems.length) { build(); run(); }
+  });
+  stockClip.addEventListener('click', function () {
+    navigator.clipboard.readText().then(useStock, function () {
+      stockClip.hidden = true;
+      stockMsg.hidden = false; stockMsg.textContent = "Couldn't read the clipboard. Click the box and press Ctrl+V instead.";
+      stockText.focus();
+    });
+  });
+  $('inStock').addEventListener('change', function () { inStockOnly = this.checked; run(); });
+  stockText.addEventListener('input', function () { if (stockText.value.length > 20) useStock(stockText.value); });
+  showStockBar();
 
   /* ---------- photos, as they come into view ---------- */
 

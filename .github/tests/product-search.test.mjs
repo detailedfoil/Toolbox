@@ -442,3 +442,34 @@ test('search: age restricted products can be found by "age restricted" or "chall
   assert.deepEqual([...t.find('age restricted').list].map((r) => r.item.sku), ['11111']);
   assert.deepEqual([...t.find('challenge 25').list].map((r) => r.item.sku), ['11111']);
 });
+
+/* ---------- stock levels pasted from the stock system (tools/product-search/stock.js); made-up rows only ---------- */
+const STOCK = loadModule('tools/product-search/stock.js');
+const T = '\t';
+const screen = 'D.A.I.\nXX1 TC\nInventory ' + T + 'Locations ' + T + 'Help \n \nScreen Index' + T + 'Log Out' + T + 'Refresh\nSKU List\nWHERE Nailed = YES\n';
+
+test('stock: the SKU List report as copied (14 columns, headings one per line, screen lines around it): Available Qty only', () => {
+  const heads = ['SKU Code' + T + 'Find text in SKU Code' + T + 'This field can be drilled upon', 'SKU Definition State', 'SKU Type', 'Description',
+    'Base Unit Qty', 'Total Qty', 'Available Qty', 'Unreserved Qty', 'Age Restricted', 'Hazardous', 'Aerosol', 'Non Trolleyable', 'Nailed Location', 'SKU held'];
+  const row = (c, d, t, a, u, age) => [c, 'COMPLETE', 'HOST', d, '1', t, a, u, age, 'NO', 'NO', 'NO', 'ZZZ-00-00-00', 'NO'].join(T);
+  const text = (screen + heads.join('\n') + '\n' + [row('11111', 'Thing One', 6, 6, 6, 'NO'), row('222AB', 'Thing  Two', 9, 7, 5, 'YES'),
+    row('33333', 'Gone', 0, 0, 0, 'NO')].join('\n') + '\nClick here for the field chooser\n').replace(/\n/g, '\r\n');
+  const s = STOCK.parse(text);
+  assert.equal(s.count, 3);
+  assert.equal(s.skipped, 0);
+  assert.deepEqual([...s.rows['11111']], [6, 'Thing One', 0]);
+  assert.deepEqual([...s.rows['222AB']], [7, 'Thing Two', 1], 'the Available Qty, not total or unreserved');
+  assert.deepEqual([...s.rows['33333']], [0, 'Gone', 0]);
+  assert.ok(!JSON.stringify(s).includes('ZZZ-00-00-00'), 'locations are not kept');
+});
+
+test('stock: the older 10 column layout, columns in another order, and rows pasted without headings', () => {
+  const ten = (c, a) => [c, 'Name ' + c, a + 1, a, a, 'NO', 'NO', 'NO', 'ZZZ-00-00-00', 'NO'].join(T);
+  const heads = 'SKU Code' + T + 'Find text\nDescription\nTotal Qty\nAvailable Qty\nUnreserved Qty\nAge Restricted\nHazardous\nAerosol\nNailed Location\nSKU held\n';
+  assert.deepEqual([...STOCK.parse(screen + heads + ten('44444', 10)).rows['44444']], [10, 'Name 44444', 0]);
+  const moved = 'SKU Code\nNailed Location\nAvailable Qty\nDescription\nTotal Qty\n' + ['55555', 'ZZZ-00-00-00', '2', 'Moved About', '3'].join(T) + '\n';
+  assert.deepEqual([...STOCK.parse(moved).rows['55555']], [2, 'Moved About', 0]);
+  assert.deepEqual([...STOCK.parse(ten('66666', 4)).rows['66666']], [4, 'Name 66666', 0]);
+  assert.equal(STOCK.parse('hello\nnot a report at all'), null);
+  assert.equal(STOCK.parse(''), null);
+});

@@ -70,6 +70,13 @@ explain changes in plain English and say what they'll see.
     description's search words, minus words already in its names, filler and bare numbers; the page loads it after the
     list and `search.js` uses it as a lower tier: codes, then names (title and alternative name), then description
     matches ("Found in the description"), then close spellings.
+    Stock levels (detailedfoil, 25 Oct 2026): "Paste stock" takes the stock system's SKU List report (Nailed = YES, Print
+    Preview, Ctrl+A, Ctrl+C: PC only, the page says so; the steps and `stock-help.png` are in the paste box), read by `stock.js` (headings found by
+    name, so a different column choice works; tested in product-search.test.mjs with made-up rows). Each result shows only
+    the Available Qty (he doesn't want locations; only that column, the name and age are kept), and an "In stock only"
+    switch hides results with none available. Kept in sessionStorage
+    (`ps-stock`) for that tab only and never sent or committed: stock is store-specific and the repo is
+    public. Pasted products not in the list are searchable for the visit, by their stock system name.
     Grouping sizes of the same product into one result with a size switcher (buttons or a drop-down) was built and
     removed on 22 Oct 2026 at detailedfoil's say (he didn't like it): every size is its own result.
   - `area-map`: Area Map, every store (all 986, UK, Ireland and the Isle of Man) on a Leaflet map (vendored in

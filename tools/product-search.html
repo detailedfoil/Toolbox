@@ -9,7 +9,7 @@
 <title>Product Search</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="product-search/product-search.css?v=61863f8fa3">
+<link rel="stylesheet" href="product-search/product-search.css?v=59ab9b24af">
 <script src="../analytics.js?v=f5e6d397aa"></script>
 </head>
 <body class="sx">
@@ -37,6 +37,37 @@
 <a class="sx-promo" href="#q" onclick="document.getElementById('q').focus();return false">ONLY SEARCHES NAILED ITEMS. SEARCH NOW <i aria-hidden="true"></i></a>
 
 <main class="sx-main">
+  <section class="sx-stock" id="stock" aria-label="Stock levels">
+    <div class="sx-stock-bar">
+      <p class="sx-stock-what" id="stockWhat">Paste stock levels to see them on each result (PC only).</p>
+      <div class="sx-stock-btns">
+        <button type="button" class="sx-btn" id="stockOpen">Paste stock</button>
+        <button type="button" class="sx-btn sx-btn-quiet" id="stockClear" hidden>Clear</button>
+      </div>
+    </div>
+    <label class="sx-switch sx-instock" id="inStockWrap" hidden>
+      <input type="checkbox" id="inStock">
+      <span class="sx-knob" aria-hidden="true"></span>
+      <span>In stock only</span>
+    </label>
+    <div class="sx-stock-paste" id="stockPaste" hidden>
+      <p class="sx-pc-only">This only works on a PC (the stock system runs there).</p>
+      <ol class="sx-steps">
+        <li>In <b>SKU Query</b>, set <b>Nailed</b> to <b>YES</b> and press <b>Run Query</b>.</li>
+        <li>Press the magnifying glass icon (in the red box):
+          <img class="sx-steps-pic" src="product-search/stock-help.png" width="717" height="78" alt="The toolbar, with the Print Preview icon (a page with a magnifying glass) in a red box"></li>
+        <li>Press <b>Ctrl+A</b>, then <b>Ctrl+C</b>.</li>
+        <li>Paste it in the box below.</li>
+      </ol>
+      <p class="sx-private">Stock data isn&#8217;t saved or sent anywhere. It only stays on this device, and is gone when you close the tab.</p>
+      <button type="button" class="sx-btn" id="stockClip" hidden>Paste from clipboard</button>
+      <textarea id="stockText" class="sx-stock-text" rows="4" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                placeholder="Paste here (Ctrl+V)" aria-label="Paste the stock report here"></textarea>
+      <p class="sx-stock-msg" id="stockMsg" role="status" hidden></p>
+      <button type="button" class="sx-btn sx-btn-quiet" id="stockCancel">Cancel</button>
+    </div>
+  </section>
+
   <p class="sx-status" id="status" role="status">Loading the product list...</p>
   <p class="sx-note" id="note" hidden></p>
 
@@ -60,7 +91,8 @@
 <div class="sx-toast" id="toast" role="status" hidden></div>
 
 <script src="product-search/search.js?v=4cb4264a3c"></script>
+<script src="product-search/stock.js?v=622e06e7f3"></script>
 <script src="product-search/photos.js?v=0197b7a96c"></script>
-<script src="product-search/app.js?v=6992256de1"></script>
+<script src="product-search/app.js?v=3c3a248304"></script>
 </body>
 </html>
