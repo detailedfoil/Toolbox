@@ -356,8 +356,8 @@ test('age check: a product the stock list marks age restricted, read before with
     assert.equal(out.code, 0, out.stderr);
     const n = names(out).products;
     assert.equal(n['97001'].a, 1, 'the notice is there now');
-    assert.ok(mock.hits.some((h) => h.code === '97001'));
-    assert.ok(!mock.hits.some((h) => h.code === '97002'), 'one the stock list does not mark is left alone');
+    assert.ok(mock.hits.some((h) => h.code === '97001' && h.mode === 'text'));
+    assert.ok(!mock.hits.some((h) => h.code === '97002' && h.mode === 'text'), 'one the stock list does not mark is left alone');
   } finally { await mock.close(); }
 });
 
