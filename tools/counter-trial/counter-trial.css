@@ -97,3 +97,5 @@
 
 .ct-sync{margin:.5rem 0 .75rem}
 .ct-sync.is-bad{color:var(--sc-warn,#b45309)}
+.ct-retry { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.ct-retry .btn { flex: 1 1 140px; }

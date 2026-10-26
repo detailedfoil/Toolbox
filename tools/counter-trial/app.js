@@ -155,7 +155,7 @@
       var left = run.unchecked || 0;
       alerts.push('The GitHub check got ' + (run.checked || 0) + ' of ' + (run.total || L.length) + '. ' +
         (left === 1 ? 'The other one keeps its last price' : 'The other ' + left + ' keep their last price') +
-        (/slow down|429|202/.test(run.stopped || '') ? ' (Screwfix turned it away)' : '') + '. Tap <b>Check on this device</b> to read ' + (left === 1 ? 'it' : 'them') + '.');
+        (/slow down|429|202/.test(run.stopped || '') ? ' (Screwfix turned it away)' : '') + '. Tap <b>Retry</b> under <b>Couldn\'t be read</b> to try ' + (left === 1 ? 'it' : 'just those') + ' again now, on this device or on GitHub.');
     }
     $('alert').hidden = !alerts.length;
     $('alert').innerHTML = alerts.length ? WARN + '<div>' + alerts.join('<br>') + '</div>' : '';
@@ -234,6 +234,9 @@
     var miss = L.filter(function (l) { return l.missed; });
     $('missBox').hidden = !miss.length || (!src.prices.checked && !phoneLast());
     $('missCount').textContent = miss.length;
+    $('missRetry').textContent = 'Retry ' + (miss.length === 1 ? 'this one' : 'these ' + miss.length) + ' on this device';
+    $('missRetry').disabled = !!phone;
+    $('missRetryGh').disabled = !!running;
     $('missList').innerHTML = miss.map(function (l) {
       return '<li class="sc-row ct-miss" data-code="' + esc(l.code) + '"><div>' +
         '<a class="sc-code ct-sfx" href="https://www.screwfix.com/p/product/' + esc(l.code.toLowerCase()) + '" target="_blank" rel="noopener">' + esc(l.code) + ' &#8599;</a>' +
@@ -562,10 +565,10 @@
     if (was && !running) { refresh(); setTimeout(refresh, 180000); toast('Check finished, prices updated'); }
   }
 
-  function dispatch(t) {
+  function dispatch(t, mode) {
     return fetch(API + '/dispatches', {
       method: 'POST', headers: ghHeaders(t), cache: 'no-store',
-      body: JSON.stringify({ ref: 'main', inputs: { mode: 'full' } })
+      body: JSON.stringify({ ref: 'main', inputs: { mode: mode || 'full' } })
     }).then(function (r) {
       if (r.status === 204) return null;
       if (r.status === 401) return "GitHub didn't accept that token. It may have expired or been copied wrong.";
@@ -594,6 +597,20 @@
     });
   });
 
+  // retry only the missed lines on GitHub (mode auto: on a day already checked it just finishes the unchecked ones)
+  $('missRetryGh').addEventListener('click', function () {
+    if (running) { toast('GitHub is already checking'); return; }
+    var t = token();
+    if (!t) { setupSheet(null, false, 'auto'); return; }
+    var btn = this;
+    btn.classList.add('is-busy');
+    dispatch(t, 'auto').then(function (err) {
+      btn.classList.remove('is-busy');
+      if (!err) { started(); return; }
+      if (/token/.test(err)) setupSheet(err, false, 'auto'); else toast(err);
+    });
+  });
+
   $('foot').addEventListener('click', function (e) {
     if (!e.target.closest('[data-forget]')) return;
     e.preventDefault();
@@ -604,14 +621,14 @@
     render();
   });
 
-  function setupSheet(err, forSync) {
+  function setupSheet(err, forSync, mode) {
     var wrap = document.createElement('div');
     wrap.className = 'sc-sheet ct-sheet';
     wrap.innerHTML = '<div class="sc-sheet-card" role="dialog" aria-modal="true" aria-labelledby="ctSheetH">' +
       (forSync ? '<h2 id="ctSheetH">Sync ticks across devices</h2>' +
       '<p>Save a GitHub token on this device once, and every tick you make is saved to GitHub, so all your devices show the same shelf prices. Do this once on each device. The token stays on that device and can only reach Toolbox.</p>'
-      : '<h2 id="ctSheetH">Check on GitHub</h2>' +
-      '<p>Starts a full check of all ' + (L.length || 69) + ' tickets straight away. It runs on GitHub and takes about 10 minutes.</p>' +
+      : '<h2 id="ctSheetH">' + (mode === 'auto' ? 'Retry on GitHub' : 'Check on GitHub') + '</h2>' +
+      '<p>' + (mode === 'auto' ? 'Retries just the lines that were missed, straight away. It runs on GitHub and takes a few minutes.' : 'Starts a full check of all ' + (L.length || 69) + ' tickets straight away. It runs on GitHub and takes about 10 minutes.') + '</p>' +
       '<a class="btn" href="' + RUNS + '" target="_blank" rel="noopener">Open on GitHub, then tap Run workflow</a>' +
       '<hr><h2>Make it one tap</h2>' +
       '<p>Save a GitHub token on this device once, and the Check on GitHub button starts it itself, and your ticks sync across devices. It stays on this device and can only reach Toolbox.</p>') +
@@ -648,7 +665,7 @@
         });
         return;
       }
-      dispatch(t).then(function (msg) {
+      dispatch(t, mode).then(function (msg) {
         btn.classList.remove('is-busy');
         if (msg) { e.hidden = false; e.textContent = msg; return; }
         try { localStorage.setItem(TOKEN_KEY, t); } catch (x) { /* private mode: it still ran this once */ }
@@ -1126,6 +1143,15 @@
   $('progReport').addEventListener('click', function () { reportSheet(); });
   $('reportLink').addEventListener('click', function () { reportSheet(); });
   $('missReport').addEventListener('click', function () { reportSheet(); });
+  // retry just the lines that couldn't be read, straight away (on this device)
+  $('missRetry').addEventListener('click', function () {
+    if (phone) return;
+    var codes = L.filter(function (l) { return l.missed; }).map(function (l) { return l.code; });
+    if (!codes.length) return;
+    store(PHONE_RUN_KEY, { started: new Date().toISOString(), total: codes.length, got: 0, fails: 0, failed: [], retry: true, codes: codes });
+    startPhone(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 
   /* ---------- a newer version of this page: say so, as an old copy left open is easy to miss ---------- */
 
