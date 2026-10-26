@@ -2,7 +2,7 @@
  "name": "Autumn 2 front of house",
  "short": "Autumn 2 FOH",
  "store": "Screwfix Dunstable",
- "brief": "Autumn 2 UK main campaign brief, updated 16.10.26",
+ "brief": "Autumn 2 UK main campaign brief, updated 23.10.26",
  "order": "Each bay is listed top shelf first, left to right along each shelf.",
  "bays": [
   {
@@ -557,7 +557,7 @@
       "942YW",
       "191YW",
       "140RV",
-      "980YW",
+      "182GX",
       "674YW",
       "535EN",
       "971YW"
@@ -591,7 +591,7 @@
     "942YW",
     "191YW",
     "140RV",
-    "980YW",
+    "182GX",
     "674YW",
     "535EN",
     "971YW",
@@ -624,7 +624,7 @@
      "codes": [
       "856RV",
       "32648",
-      "610RV",
+      "973EA",
       "20418",
       "23256",
       "516YW",
@@ -666,7 +666,7 @@
     "562YW",
     "856RV",
     "32648",
-    "610RV",
+    "973EA",
     "20418",
     "23256",
     "516YW",
@@ -2352,7 +2352,8 @@
     {
      "label": "For Low level bay 4",
      "codes": [
-      "136FM"
+      "136FM",
+      "771LU"
      ]
     },
     {
@@ -2373,7 +2374,9 @@
       "482GT",
       "2948F",
       "90147",
-      "191LH"
+      "191LH",
+      "940LU",
+      "957LU"
      ]
     },
     {
@@ -2422,6 +2425,12 @@
      ]
     },
     {
+     "label": "For Dump bins",
+     "codes": [
+      "940LU"
+     ]
+    },
+    {
      "label": "For Power Tool Bay",
      "codes": [
       "436TM",
@@ -2452,6 +2461,7 @@
     "16497",
     "18493",
     "136FM",
+    "771LU",
     "2726V",
     "3305V",
     "850JC",
@@ -2463,6 +2473,8 @@
     "2948F",
     "90147",
     "191LH",
+    "940LU",
+    "957LU",
     "59707",
     "84584",
     "594RR",
@@ -2486,47 +2498,56 @@
   }
  ],
  "changes": {
-  "brief": "16.10.26",
-  "since": "09.10.26",
+  "brief": "23.10.26",
+  "since": "16.10.26",
   "added": [
    {
-    "code": "320AU",
-    "bay": "Dump stacks",
-    "where": "Dump stacks, replaces 5892P",
-    "name": "Magnusson Aluminium Folding Work Platform",
-    "note": "was a contingency line"
+    "code": "182GX",
+    "bay": "Workwear: Site (HLB 2)",
+    "where": "Workwear: Site (HLB 2), Gloves, 4th (replaces 980YW)",
+    "name": "Site Thermal Gloves Orange Large"
    },
    {
-    "code": "600CJ",
-    "bay": "Weather reactive",
-    "where": "Weather reactive, Heating",
-    "name": "Nilaveli 2000W Electric Portable Fan Heater White"
+    "code": "973EA",
+    "bay": "Workwear: Big brands (HLB 3)",
+    "where": "Workwear: Big brands (HLB 3), Gloves, 3rd (replaces 610RV)",
+    "name": null
+   },
+   {
+    "code": "771LU",
+    "bay": "Contingencies",
+    "where": "Contingencies, for Low level bay 4",
+    "name": "UltraGrime Pro Multiuse Infinity Plastic Free XXL"
+   },
+   {
+    "code": "940LU",
+    "bay": "Contingencies",
+    "where": "Contingencies, for Low level bay 6 and Dump bins",
+    "name": "Big Wipes Plastic Free Multi-Surface Wipes Tub 100"
+   },
+   {
+    "code": "957LU",
+    "bay": "Contingencies",
+    "where": "Contingencies, for Low level bay 6",
+    "name": "UltraGrime Plastic Free power clean wipes 70pk"
    }
   ],
   "removed": [
    {
-    "code": "5892P",
-    "bay": "Dump stacks",
-    "where": "Dump stacks",
-    "name": "Mac Allister Aluminium 470mm x 0.6m Folding Work Platform",
-    "price": 44.99,
-    "on": "2026-10-19"
+    "code": "980YW",
+    "bay": "Workwear: Site (HLB 2)",
+    "where": "Workwear: Site (HLB 2), Gloves",
+    "name": "Site Gloves Black Large",
+    "price": 3.69,
+    "on": "2026-10-26"
    },
    {
-    "code": "690JL",
-    "bay": "Weather reactive",
-    "where": "Weather reactive, Misc",
-    "name": "No Nonsense Mould & Mildew Remover 1Ltr",
-    "price": 7.49,
-    "on": "2026-10-19"
-   },
-   {
-    "code": "7748P",
-    "bay": "Weather reactive",
-    "where": "Weather reactive, Heating",
-    "name": "Essentials 1000W Electric Portable Quartz Heater Grey",
-    "price": 16.99,
-    "on": "2026-10-19"
+    "code": "610RV",
+    "bay": "Workwear: Big brands (HLB 3)",
+    "where": "Workwear: Big brands (HLB 3), Gloves",
+    "name": "Site Cut-Resistant Gloves Grey/Black Large",
+    "price": 2.99,
+    "on": "2026-10-26"
    }
   ],
   "check": [
