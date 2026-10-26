@@ -1,8 +1,8 @@
 {
  "place": "Leighton Buzzard",
  "radius": 5,
- "synced": "2026-10-21T00:26:00+01:00",
- "checked": "2026-10-20T23:35:25.461Z",
+ "synced": "2026-10-26T07:03:00+00:00",
+ "checked": "2026-10-26T07:07:20.792Z",
  "stations": {
   "45 LAKE STREET LEIGHTON BUZZARD BEDFORDSHIRE BEDFORDSHIRE": {
    "brand": "BP",
@@ -10,14 +10,18 @@
    "raw": "45 Lake Street Leighton buzzard Bedfordshire, Bedfordshire",
    "miles": 0.2,
    "petrol": {
-    "p": 166.7,
-    "date": "2026-10-19",
-    "since": "2026-10-19T12:02:23.107Z"
+    "p": 164.7,
+    "date": "2026-10-24",
+    "since": "2026-10-26T07:07:20.792Z",
+    "prev": 166.7,
+    "prevSince": "2026-10-19T12:02:23.107Z"
    },
    "diesel": {
-    "p": 194.7,
-    "date": "2026-10-19",
-    "since": "2026-10-19T12:02:23.107Z"
+    "p": 192.7,
+    "date": "2026-10-24",
+    "since": "2026-10-26T07:07:20.792Z",
+    "prev": 194.7,
+    "prevSince": "2026-10-19T12:02:23.107Z"
    }
   },
   "LAKE STREET LEIGHTON BUZZARD": {
@@ -26,14 +30,18 @@
    "raw": "LAKE STREET, LEIGHTON BUZZARD",
    "miles": 0.3,
    "petrol": {
-    "p": 166.7,
-    "date": "2026-10-14",
-    "since": "2026-10-19T12:02:23.107Z"
+    "p": 165.7,
+    "date": "2026-10-22",
+    "since": "2026-10-26T07:07:20.792Z",
+    "prev": 166.7,
+    "prevSince": "2026-10-19T12:02:23.107Z"
    },
    "diesel": {
-    "p": 194.7,
-    "date": "2026-10-14",
-    "since": "2026-10-19T12:02:23.107Z"
+    "p": 193.7,
+    "date": "2026-10-22",
+    "since": "2026-10-26T07:07:20.792Z",
+    "prev": 194.7,
+    "prevSince": "2026-10-19T12:02:23.107Z"
    }
   },
   "TESCO STORES LTD VIMY ROAD LEIGHTON BUZZARD": {
@@ -42,13 +50,15 @@
    "raw": "TESCO STORES LTD, VIMY ROAD, LEIGHTON BUZZARD",
    "miles": 0.3,
    "petrol": {
-    "p": 168.9,
-    "date": "2026-10-15",
-    "since": "2026-10-19T12:02:23.107Z"
+    "p": 167.9,
+    "date": "2026-10-23",
+    "since": "2026-10-26T07:07:20.792Z",
+    "prev": 168.9,
+    "prevSince": "2026-10-19T12:02:23.107Z"
    },
    "diesel": {
     "p": 193.9,
-    "date": "2026-10-15",
+    "date": "2026-10-23",
     "since": "2026-10-19T12:02:23.107Z"
    }
   },
