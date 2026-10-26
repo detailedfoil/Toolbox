@@ -8,7 +8,7 @@
  *  - the page, its code and the lists: the site first (so updates come through), the kept copy when there's no
  *    answer in 4 seconds or no connection
  *  - photos and descriptions: the kept copy first (they hardly change), the site otherwise
- * The "Save everything" button (app.js) puts every photo and description into the same cache in one go.
+ * The "Save for no signal" button (app.js) puts every description (not photos) into the same cache in one go.
  */
 'use strict';
 

@@ -2,7 +2,7 @@
  * you type, shows results a screenful at a time and each result's photo as it scrolls into view. Tapping a result
  * opens it to show its description (descriptions/<CODE>.json, saved by the GitHub check, loaded only when tapped).
  * Stock levels pasted from the stock system (stock.js) show on each result, for the visit only.
- * product-search-sw.js lets the page open with no signal; "Save everything" keeps every photo and description too. */
+ * product-search-sw.js lets the page open with no signal; "Save for no signal" keeps every description too (text only, no photos). */
 (function () {
   'use strict';
 
@@ -285,7 +285,7 @@
   stockText.addEventListener('input', function () { if (stockText.value.length > 20) useStock(stockText.value); });
   showStockBar();
 
-  /* ---------- working with no signal: product-search-sw.js, and "Save everything" ---------- */
+  /* ---------- working with no signal: product-search-sw.js, and "Save for no signal" ---------- */
 
   var CACHE = 'product-search-v1';          // the same cache product-search-sw.js keeps things in
   var saveBox = $('save'), saveAll = $('saveAll'), saveDel = $('saveDel'), saveRun = $('saveRun');
@@ -299,24 +299,23 @@
     saveAll.hidden = true;
   }
 
-  // everything there is to save: the page and its files, the lists, every photo and description the Toolbox keeps
+  // everything there is to save: the page and its files, the lists and every description (text only: no photos, detailedfoil 26 Oct 2026)
   function everything() {
     var names = (web && web.products) || {}, files = [location.pathname, LIST_URL, WEB_URL, DESC_WORDS_URL,
       'product-search/stock-help.png', 'posters/fonts/BarlowSemiCondensed-ExtraBold.ttf', '../manifest.json'];
     Array.prototype.forEach.call(document.querySelectorAll('script[src], link[rel="stylesheet"]'), function (el) {
       files.push(el.getAttribute('src') || el.getAttribute('href'));
     });
-    var photos = [], descs = [];
+    var descs = [];
     Object.keys(names).forEach(function (k) {
-      if (names[k].p) photos.push('product-search/photos/' + encodeURIComponent(k) + '.jpg');
       if (names[k].d === 1) descs.push(DESC_URL + encodeURIComponent(k) + '.json');
     });
-    return { files: files, photos: photos, descs: descs };
+    return { files: files, descs: descs };
   }
-  // about 2 KB a photo and 0.4 KB a description (measured 26 Oct 2026), plus about 3.7 MB for the page and lists
+  // about 0.4 KB a description (measured 26 Oct 2026), plus about 3.7 MB for the page and lists
   function showSaveSize() {
     var all = everything();
-    var mb = (all.photos.length * 1.96 + all.descs.length * 0.41) / 1024 + 3.7;
+    var mb = (all.descs.length * 0.41) / 1024 + 3.7;
     $('saveSize').textContent = Math.max(1, Math.round(mb)) + ' MB';
   }
   function showSaved() {
@@ -324,12 +323,12 @@
     try { s = JSON.parse(localStorage.getItem('ps-saved') || 'null'); } catch (e) { s = null; }
     saveDone.hidden = !s;
     saveDel.hidden = !s;
-    saveAll.textContent = s ? 'Save again (adds anything new)' : 'Save everything';
+    saveAll.textContent = s ? 'Save again (adds anything new)' : 'Save for no signal';
     if (s) {
       var d = new Date(s.at);
       saveDone.textContent = 'Saved ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' at ' +
-        d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ': ' + n(s.products) + ' products, ' + n(s.photos) +
-        ' photos and ' + n(s.descs) + ' descriptions. Works with no Wi-Fi or signal.' + (s.missed ? ' (' + n(s.missed) + " couldn't be saved: press Save again later.)" : '');
+        d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ': ' + n(s.products) + ' products and ' + n(s.descs) +
+        ' descriptions (no photos). Works with no Wi-Fi or signal.' + (s.missed ? ' (' + n(s.missed) + " couldn't be saved: press Save again later.)" : '');
     }
   }
 
@@ -341,7 +340,7 @@
     saveRun.hidden = false; saveDone.hidden = true;
     var all = everything(), cache, done = 0, missed = 0;
     var jobs = all.files.map(function (u) { return { url: u, always: true }; })
-      .concat(all.photos.concat(all.descs).map(function (u) { return { url: u }; }));
+       .concat(all.descs.map(function (u) { return { url: u }; }));
     var total = jobs.length;
     function shown() { saveProg.value = total ? done / total : 1; saveMsg.textContent = 'Saving ' + n(done) + ' of ' + n(total) + '...'; }
     shown();
@@ -353,7 +352,7 @@
       function next() {
         if (at >= jobs.length) return Promise.resolve();
         var job = jobs[at++], url = new URL(job.url, location.href);
-        // a photo or description already kept is left as it is (checked one at a time: listing 20,000 at once can fail)
+        // a description already kept is left as it is (checked one at a time: listing 20,000 at once can fail)
         return (job.always ? Promise.resolve(null) : cache.match(url.href)).then(function (hit) {
           if (hit) return;
           return get(url.href, 0).then(function (res) {
@@ -371,9 +370,9 @@
     }).then(function () {
       try {
         localStorage.setItem('ps-saved', JSON.stringify({ at: Date.now(), products: list.items.length, missed: missed,
-          photos: all.photos.length, descs: all.descs.length }));
+          descs: all.descs.length }));
       } catch (e) { /* private mode: still saved */ }
-      toast(missed ? 'Saved, apart from ' + n(missed) : 'Everything saved on this device');
+      toast(missed ? 'Saved, apart from ' + n(missed) : 'Saved on this device');
     }, function () {
       toast("Couldn't save: the device may be out of space");
     }).then(function () {
