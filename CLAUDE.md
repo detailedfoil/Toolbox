@@ -86,9 +86,9 @@ explain changes in plain English and say what they'll see.
     Working with no signal (detailedfoil, 26 Oct 2026): `tools/product-search-sw.js` is a service worker registered by
     app.js with scope "product-search", so it only looks after this page and its files (never the other tools). It keeps
     every Toolbox file the page fetches (page, code and lists site-first with a 4 s fallback to the kept copy; photos
-    and descriptions kept-first); never anything from another site. "Save for no signal" in Settings puts the page, lists and every
-    description (web-names `d`) into the same cache (`product-search-v1`), 4 at a time, about 7 MB and 8,000+ files, a minute or two.
-    Text only, no photos (detailedfoil, 26 Oct 2026: "just have it save the text not images"); photos then show their placeholder with no signal; the size shown is worked out from the counts. Saved files are checked one at a time
+    and descriptions kept-first); never anything from another site. "Save for no signal" in Settings puts only the page, its code and
+    `products.json` (SKU code + ILS name) into the same cache (`product-search-v1`), about 1 MB and a dozen files, a moment.
+    No photos, descriptions, `web-names.json` or `desc-words.json` (detailedfoil, 26 Oct 2026: "just the ILS name, not description, keep it a small file"; "and SKU code"); with no signal photos show their placeholder, descriptions and description search don't work; the size shown is worked out from the counts. Saved files are checked one at a time
     (`cache.match`): listing 20,000 with `cache.keys()` can fail in Chrome. The page has to be opened once with signal.
     Grouping sizes of the same product into one result with a size switcher (buttons or a drop-down) was built and
     removed on 22 Oct 2026 at detailedfoil's say (he didn't like it): every size is its own result.

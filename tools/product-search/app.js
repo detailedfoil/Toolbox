@@ -2,7 +2,7 @@
  * you type, shows results a screenful at a time and each result's photo as it scrolls into view. Tapping a result
  * opens it to show its description (descriptions/<CODE>.json, saved by the GitHub check, loaded only when tapped).
  * Stock levels pasted from the stock system (stock.js) show on each result, for the visit only.
- * product-search-sw.js lets the page open with no signal; "Save for no signal" keeps every description too (text only, no photos). */
+ * product-search-sw.js lets the page open with no signal; "Save for no signal" keeps the SKU codes and names (no photos or descriptions). */
 (function () {
   'use strict';
 
@@ -299,24 +299,18 @@
     saveAll.hidden = true;
   }
 
-  // everything there is to save: the page and its files, the lists and every description (text only: no photos, detailedfoil 26 Oct 2026)
+  // everything there is to save: the page, its files and the ILS list of SKU codes and names (no photos or descriptions, detailedfoil 26 Oct 2026)
   function everything() {
-    var names = (web && web.products) || {}, files = [location.pathname, LIST_URL, WEB_URL, DESC_WORDS_URL,
+    var files = [location.pathname, LIST_URL,
       'product-search/stock-help.png', 'posters/fonts/BarlowSemiCondensed-ExtraBold.ttf', '../manifest.json'];
     Array.prototype.forEach.call(document.querySelectorAll('script[src], link[rel="stylesheet"]'), function (el) {
       files.push(el.getAttribute('src') || el.getAttribute('href'));
     });
-    var descs = [];
-    Object.keys(names).forEach(function (k) {
-      if (names[k].d === 1) descs.push(DESC_URL + encodeURIComponent(k) + '.json');
-    });
-    return { files: files, descs: descs };
+    return { files: files };
   }
-  // about 0.4 KB a description (measured 26 Oct 2026), plus about 3.7 MB for the page and lists
+  // the page, its code and the ILS product list only
   function showSaveSize() {
-    var all = everything();
-    var mb = (all.descs.length * 0.41) / 1024 + 3.7;
-    $('saveSize').textContent = Math.max(1, Math.round(mb)) + ' MB';
+    $('saveSize').textContent = '1 MB';
   }
   function showSaved() {
     var s = null;
@@ -327,8 +321,7 @@
     if (s) {
       var d = new Date(s.at);
       saveDone.textContent = 'Saved ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' at ' +
-        d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ': ' + n(s.products) + ' products and ' + n(s.descs) +
-        ' descriptions (no photos). Works with no Wi-Fi or signal.' + (s.missed ? ' (' + n(s.missed) + " couldn't be saved: press Save again later.)" : '');
+        d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ': ' + n(s.products) + ' products (SKU codes and names). Works with no Wi-Fi or signal.' + (s.missed ? ' (' + n(s.missed) + " couldn't be saved: press Save again later.)" : '');
     }
   }
 
@@ -340,7 +333,7 @@
     saveRun.hidden = false; saveDone.hidden = true;
     var all = everything(), cache, done = 0, missed = 0;
     var jobs = all.files.map(function (u) { return { url: u, always: true }; })
-       .concat(all.descs.map(function (u) { return { url: u }; }));
+      ;
     var total = jobs.length;
     function shown() { saveProg.value = total ? done / total : 1; saveMsg.textContent = 'Saving ' + n(done) + ' of ' + n(total) + '...'; }
     shown();
@@ -369,8 +362,7 @@
       return Promise.all([next(), next(), next(), next()]);
     }).then(function () {
       try {
-        localStorage.setItem('ps-saved', JSON.stringify({ at: Date.now(), products: list.items.length, missed: missed,
-          descs: all.descs.length }));
+        localStorage.setItem('ps-saved', JSON.stringify({ at: Date.now(), products: list.items.length, missed: missed }));
       } catch (e) { /* private mode: still saved */ }
       toast(missed ? 'Saved, apart from ' + n(missed) : 'Saved on this device');
     }, function () {
