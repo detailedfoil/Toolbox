@@ -45,6 +45,74 @@ test('price compare: reads the real store pages, each one the price including VA
   assert.equal(R.text(real('jewson-cu15'), job('cu15/jewson')).why, 'no price on the page');
 });
 
+// batteries, cable and 28mm copper, as the stores showed them on 26 Oct 2026 (fixtures/compare-<store>-<item>.txt)
+test('price compare: reads the real battery, cable and 28mm pages, each one the price including VAT', () => {
+  const real = (f) => fs.readFileSync(path.join(HERE, 'fixtures', 'compare-' + f + '.txt'), 'utf8');
+  const want = {
+    'its-dewalt5': [54.98, 71.99],       // "YOU SAVE £14.17 / £59.99 / £45.82 EX VAT (£54.98 INC VAT)": the old price is without VAT
+    'its-milwaukee5': [54.98, 63.59],
+    'bq-dewalt5': [53, 57],              // "Original price £57 Save £4£53"
+    'machinemart-dewalt5': [62.39, 68.39], // "£62.39INC\nVAT ... Was £68.39 inc.VAT"
+    'anglia-makita5': [71.99, 83.99],    // "Was ~~£83.99~~ £71.99 inc. VAT (£59.99 exc. VAT)"
+    'tooledup-dewalt5': [59.95, null], 'powertoolworld-dewalt5': [49.99, null],
+    'toolstation-te25': [93.99, null],   // "Pitacs Twin & Earth Cable (6242Y) Grey 2.5mm2 Drum": no length in the name (noLen)
+    'tlc-te25': [94.8, null],            // a table: "Price (ex VAT) | per 100M | £79.00 | Price (inc VAT) | per 100M | £94.80"
+    'yesss-te25': [119.74, null], 'screwfix-te25': [93.99, null], 'wickes-te25': [99, null],
+    'travisperkins-cu28': [45.14, null]  // the retail price, not the trade price after UNLOCK TRADE PRICE
+  };
+  const items = { anglia: 'angliatoolcentre' };
+  for (const [f, [v, was]] of Object.entries(want)) {
+    const [store, item] = f.split('-');
+    const j = { ...job(item + '/' + (items[store] || store)) };
+    if (store === 'screwfix' && item === 'te25') j.urls = [j.urls[0]];
+    const r = R.text(real(f), j);
+    assert.deepEqual(r.ok ? [r.price, r.was ?? null] : r.why, [v, was], f);
+  }
+});
+
+test('price compare: batteries are one genuine battery of the right make, never a twin pack, a kit or a copy', () => {
+  for (const [key, name] of [['dewalt5/screwfix', 'DEWALT DCB184-XJ 18V 5.0Ah Li-Ion XR Slide Pack Battery(6328D)'], ['dewalt5/toolstation', 'DeWalt XR 18V Battery 5.0Ah'],
+    ['dewalt5/tooledup', 'DeWalt DCB184 18v XR Cordless Li-ion Battery 5ah'], ['dewalt5/bq', 'DeWalt 18V 5Ah Li-ion Battery - DCB184-XJ'],
+    ['makita5/screwfix', 'Makita BL1850B 18V 5.0Ah Li-Ion LXT Battery(676YX)'], ['makita5/angliatoolcentre', 'MAKITA BL1850B 18V LXT 5.0AH LITHIUM-ION BATTERY'],
+    ['makita5/bq', 'Makita BL1850 Battery 18V 5.0Ah LXT Lithium-Ion Battery'], ['milwaukee5/screwfix', 'Milwaukee M18 B5 18V 5.0Ah Li-Ion RedLithium Battery(853FJ)'],
+    ['milwaukee5/bq', 'Milwaukee M18B5 18v 5AH M18 Battery Li-Ion REDLITHIUM REDLINK'], ['milwaukee5/toolstation', 'Milwaukee M18 Battery 5.0Ah']]) {
+    assert.equal(R.nameOk(name, job(key)), '', key + ': ' + name);
+  }
+  for (const [key, name] of [['dewalt5/toolstation', 'DeWalt Powerstack 18V XR Battery 5.0Ah'], ['dewalt5/toolstation', 'DeWalt Powerstack 18V XR Battery 5.0Ah 2Pk'],
+    ['dewalt5/bq', 'DeWalt DCB184 XR Lithium-Ion 5Ah Battery Twin Pack With DCB1104 Multi Voltage Charger'], ['dewalt5/bq', '3 x Dewalt DCB184 5.0ah 18v XR Lithium Ion Li-Ion Battery'],
+    ['dewalt5/bq', 'DeWalt McLaren F1 DCB184 18v 5.0Ah Li-Ion Battery XR Range Lithium DCB184M'], ['dewalt5/its', 'Dewalt DCB184 5.0Ah 18V XR Li-Ion Battery - Pack of 3'],
+    ['dewalt5/screwfix', 'DeWalt DCB182 18V 4.0Ah XR Battery'], ['dewalt5/its', 'Dewalt DCB184X2 18V 5.0Ah'],
+    ['makita5/bq', '2pack 5.0Ah Compatible Batteries for Makita 18V LXT Lithium Ion Tools'], ['makita5/its', 'Makita BL1850B 5.0Ah 18V LXT Li-Ion Battery - Pack of 3'],
+    ['makita5/powertoolworld', 'Makita BL1850X2 18v LXT 5.0Ah Li-Ion Battery Twin Pack'], ['makita5/screwfix', 'Makita BL4050F 40V XGT 5.0Ah Battery'],
+    ['milwaukee5/bq', 'x3 Milwaukee M18B5 18v 5AH M18 Battery Li-Ion REDLITHIUM REDLINK Triple Pack'], ['milwaukee5/screwfix', 'Milwaukee M18 HB5.5 18V 5.5Ah High Output Battery'],
+    ['milwaukee5/powertoolworld', 'Milwaukee M18 NRG-501 18v Battery & Charger Kit Inc 1x 5.0Ah Battery'], ['milwaukee5/tooledup', 'Milwaukee M18 B5-CR 18v Cordless Chemical Resistant Li-ion Battery 5ah'],
+    ['milwaukee5/screwfix', 'Milwaukee M12 B4 12V 4.0Ah Battery']]) {
+    assert.notEqual(R.nameOk(name, job(key)), '', key + ': ' + name);
+  }
+  // twin and earth: a 100m drum of plain grey 6242Y of the right size only
+  assert.equal(R.nameOk('Time 6242Y Grey 2.5mm²  Twin & Earth Cable 100m Drum(75935)', job('te25/screwfix')), '');
+  assert.equal(R.nameOk('Twin and Earth Cable, 1.5mm² PVC, Grey, H6242Y Range (100m Drum)', job('te15/yesss')), '');
+  for (const [key, name] of [['te25/wickes', 'Twin & Earth Cable - 2.5mm2 x 50m'], ['te15/wickes', 'Twin & Earth Cable - 2.5mm2 x 100m'],
+    ['te25/builderdepot', '2.5mm Low Smoke Zero Halogen Twin&Earth Cable 100m Drum 6242B'], ['te15/screwfix', 'Refurb Time 6242Y Grey 1.5mm² Twin & Earth Cable 100m Drum'],
+    ['te15/travisperkins', 'Time 6243YH 1.5mm 3 core & Earth Cable Grey 100m'], ['te25/screwfix', 'Time 6242Y Grey 2.5mm Twin & Earth Cable 25m Coil']]) {
+    assert.notEqual(R.nameOk(name, job(key)), '', key + ': ' + name);
+  }
+  assert.match(price(R.text(page('x', '# DeWalt XR 18V Battery 5.0Ah\n\n£7.99 Inc VAT'), job('dewalt5/toolstation'))), /doesn't look like/, "a battery's believable price");
+  assert.equal(R.unitPrice(54.99, job('dewalt5/screwfix')), 54.99, 'a battery is ranked on its price');
+  assert.equal(R.unitPrice(93.99, job('te25/toolstation')), 0.9399, 'cable on its price a metre');
+});
+
+test('price compare: each group is compared at its own stores, and the cheapest of a store\'s two brands is kept', () => {
+  const at = (item) => JOBS.filter((j) => j.item.id === item).map((j) => j.store.id);
+  assert.ok(at('cu15').includes('jewson') && !at('cu15').includes('its'), 'copper: the plumbing merchants, not the tool shops');
+  assert.ok(at('dewalt5').includes('its') && !at('dewalt5').includes('jewson') && !at('dewalt5').includes('tlc'));
+  assert.ok(at('te25').includes('tlc') && !at('te25').includes('its'));
+  for (const item of ['cu15', 'dewalt5', 'te25']) assert.ok(at(item).includes('screwfix'), item + ' includes Screwfix');
+  const r = R.cheapest([{ ok: true, price: 96.99, name: 'Prysmian' }, { ok: false, why: 'gone' }, { ok: true, price: 93.99, name: 'Time' }]);
+  assert.deepEqual([r.price, r.name], [93.99, 'Time']);
+  assert.equal(R.cheapest([{ ok: false, why: 'the store says the page has gone (404)' }]).why, 'the store says the page has gone (404)');
+});
+
 test('price compare: reads each store layout, and the price with VAT whichever way round the page shows it', () => {
   // Screwfix: "£13.88Inc Vat"
   assert.equal(price(R.text(page('Wednesbury Copper Pipe 15mm x 3m (98683) | Screwfix.com', '# Wednesbury Copper Pipe 15mm x 3m (98683)\n\n£13.88Inc Vat\n\n£11.57Ex Vat'), job('cu15/screwfix'))), 13.88);
@@ -134,16 +202,22 @@ test('price compare: a whole page gives its product data, with VAT added when th
 
 /* ---------- the list ---------- */
 
-test('price compare: every product has an entry for every store, and every entry can be read or says why not', () => {
+test("price compare: every product has an entry for every store in its group, and every entry can be read or says why not", () => {
   const ids = LIST.stores.map((s) => s.id);
   assert.equal(new Set(ids).size, ids.length, 'store ids are unique');
   assert.equal(LIST.stores.filter((s) => s.home).length, 1, 'one store is ours');
   assert.equal(new Set(LIST.items.map((i) => i.id)).size, LIST.items.length);
+  for (const g of LIST.groups) {
+    (g.stores || []).forEach((id) => assert.ok(ids.includes(id), `${g.id}'s store ${id} is on the store list`));
+    assert.ok(!g.stores || g.stores.includes(LIST.stores.find((s) => s.home).id), g.id + ' includes our own store');
+  }
   for (const item of LIST.items) {
-    assert.ok(LIST.groups.some((g) => g.id === item.group), item.id + ' is in a group');
-    assert.ok(item.name && item.short && item.size && item.q && item.len > 0 && item.perM[0] < item.perM[1], item.id + ' has its names, length and price range');
+    const group = LIST.groups.find((g) => g.id === item.group);
+    assert.ok(group, item.id + ' is in a group');
+    const range = item.perM || item.range;
+    assert.ok(item.name && item.short && item.size && item.q && range && range[0] < range[1] && (!item.perM || item.len > 0), item.id + ' has its names, price range and (for a price per metre) its length');
     [...item.has, item.not].forEach((re) => new RegExp(re, 'i'));
-    assert.deepEqual(Object.keys(item.at).sort(), [...ids].sort(), item.id + ' has an entry for every store');
+    assert.deepEqual(Object.keys(item.at).sort(), (group.stores || ids).slice().sort(), item.id + ' has an entry for every store in its group, and no others');
     for (const [sid, e] of Object.entries(item.at)) {
       const store = LIST.stores.find((s) => s.id === sid);
       R.links(e).forEach((u) => assert.match(u, new RegExp('^https://(?:www\\.)?' + store.site.replace(/\./g, '\\.') + '/'), `${item.id}/${sid} links to ${store.site}`));
@@ -151,7 +225,7 @@ test('price compare: every product has an entry for every store, and every entry
     }
   }
   const read = JOBS.filter((j) => j.urls.length && !j.none).map((j) => j.key);
-  assert.ok(read.length >= 18, 'most stores are read');
+  for (const item of LIST.items) assert.ok(read.filter((k) => k.startsWith(item.id + '/')).length >= 6, item.id + ' is read at 6 stores or more');
   assert.ok(read.includes('cu15/screwfix') && read.includes('cu22/screwfix'));
   // the product names the stores use pass the name check (as seen 26 Oct 2026)
   for (const [key, name] of [['cu15/screwfix', 'Wednesbury Copper Pipe 15mm x 3m (98683)'], ['cu22/toolstation', 'Wednesbury Copper Pipe 22mm x 3m'],
@@ -336,6 +410,36 @@ test("price compare check: jina blocked but the store answers directly; a push r
     assert.match(r.stdout, /Smoke test: nothing saved/);
     assert.equal(fs.readFileSync(path.join(dir, 'prices.json'), 'utf8'), before);
     assert.equal(r.commit, '');
+  } finally {
+    s.server.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("price compare check: a store's two brands give the cheaper; a push doesn't retry a broken site, or email about it", async () => {
+  const pages = shop(), s = await pretend(pages), dir = setup();
+  try {
+    const list = JSON.parse(JSON.stringify(SMALL));
+    list.items[0].at.merch = { url: ['https://merch.example/15', 'https://merch.example/15-other'], cheapest: true };
+    list.items[1].at.merch = { url: 'https://broken.example/22' };
+    fs.writeFileSync(path.join(dir, 'compare.json'), JSON.stringify(list));
+    pages['https://merch.example/15-other'] = { text: text('Other Brand Copper Tube 15mm x 3m', '£13.20 Inc VAT') };
+    pages['https://broken.example/22'] = { text: { status: 422, body: '{"code":422,"readableMessage":"net::ERR_CERT_DATE_INVALID"}' }, direct: { status: 503, body: 'down' } };
+    let r = await check(s, dir);
+    assert.deepEqual(plain([r.data.items.cu15.merch.price, r.data.items.cu15.merch.url, r.data.items.cu15.merch.name]), [13.2, 'https://merch.example/15-other', 'Other Brand Copper Tube 15mm x 3m']);
+    assert.ok(s.hits.includes('text https://merch.example/15') && s.hits.includes('text https://merch.example/15-other'), 'both brands read');
+    assert.deepEqual(plain([r.data.items.cu22.merch.price ?? null, r.data.items.cu22.merch.fail.url]), [null, 'https://broken.example/22']);
+    // a push: the broken site (never read, same address) isn't new, so it's a smoke test
+    r = await check(s, dir, { event: 'push', now: '2026-10-26T09:00:00.000Z' });
+    assert.match(r.stdout, /Smoke test: nothing saved/);
+    assert.ok(!s.hits.some((h) => /broken\.example/.test(h)));
+    // a new address for it is tried, and a push that reads nothing new isn't a failed run (no email)
+    list.items[1].at.merch = { url: 'https://broken.example/22-new' };
+    fs.writeFileSync(path.join(dir, 'compare.json'), JSON.stringify(list));
+    pages['https://broken.example/22-new'] = pages['https://broken.example/22'];
+    r = await check(s, dir, { event: 'push', now: '2026-10-26T10:00:00.000Z' });
+    assert.ok(s.hits.includes('text https://broken.example/22-new'));
+    assert.equal(r.code, 0, 'one failed page on a push is not worth an email');
   } finally {
     s.server.close();
     fs.rmSync(dir, { recursive: true, force: true });

@@ -1,4 +1,5 @@
-/* Price Compare: the same product's price at every major store, cheapest first (copper pipe to start with).
+/* Price Compare: the same product's price at every major store, cheapest first (copper pipe, 18V batteries, twin and
+   earth cable; each group can have its own stores).
 
    - data/compare.json lists the stores and products, and why some stores have no price. data/prices.json is what the
      GitHub check found (twice a day, .github/price-compare/check.mjs). Both come from the site and from
@@ -8,7 +9,7 @@
      than GitHub's copy. A price more than 25% away from the one showing is only believed once the page's own product
      data agrees.
    - The product shown, and Inc / Ex VAT, are remembered on this phone (pc-item-v1, pc-group-v1, pc-vat-v1). Every price
-     is kept including VAT; Ex VAT shows it divided by 1.2 (copper pipe carries 20% VAT). */
+     is kept including VAT; Ex VAT shows it divided by 1.2 (everything compared carries 20% VAT). */
 (function () {
   'use strict';
   var R = window.PriceRead;
@@ -145,7 +146,7 @@
     $('list').innerHTML = priced.map(function (r, i) {
       if (r.unit !== last) { rank = i + 1; last = r.unit; }
       var gap = r.price - priced[0].price, best = r.unit === min;
-      var meta = [money(r.unit) + ' a metre'];
+      var meta = item.len ? [money(r.unit) + ' a metre'] : [];
       if (r.fail && !r.pending) meta.push('<i class="is-old">couldn\'t read since ' + esc(when(ms(r.fail.since))) + '</i>');
       else if (r.src === 'phone') meta.push('checked on this phone ' + esc(when(r.at)));
       if (r.was) meta.push('<i class="is-offer">on offer, was ' + money(r.was) + '</i>');
@@ -162,7 +163,7 @@
       return '<li><a class="pc-row' + (best ? ' is-best' : '') + (r.store.home ? ' is-home' : '') + (r.busy ? ' is-busy' : '') + '" href="' + esc(r.url) + '" target="_blank" rel="noopener">' +
         '<span class="pc-rank">' + rank + '</span>' +
         '<span class="pc-who"><b>' + esc(r.store.name) + '</b><span class="pc-name">' + esc(r.name || '') + '</span>' +
-        '<span class="pc-meta">' + meta.join(' · ') + '</span>' + note + '</span>' +
+        (meta.length ? '<span class="pc-meta">' + meta.join(' · ') + '</span>' : '') + note + '</span>' +
         '<span class="pc-price"><b>' + money(r.price) + '</b><span>' + (best ? 'Cheapest' : '+' + diff(gap)) + '</span></span>' +
         '</a></li>';
     }).join('') || '<li class="pc-empty">No prices yet. Tap Check now to read every store.</li>';
@@ -292,6 +293,20 @@
   }
 
   function readLive(job, shown) {
+    // a store selling two brands of the same thing (cheapest: true): read each and keep the lowest
+    if (job.entry.cheapest && job.urls.length > 1) {
+      var reads = [];
+      return job.urls.reduce(function (p, url) {
+        return p.then(function () {
+          var one = {}; for (var k in job) one[k] = job[k];
+          one.urls = [url];
+          return readUrls(one, shown).then(function (r) { reads.push(r); });
+        });
+      }, Promise.resolve()).then(function () { return state.checking ? R.cheapest(reads) : { ok: false, why: 'stopped' }; });
+    }
+    return readUrls(job, shown);
+  }
+  function readUrls(job, shown) {
     var urls = job.urls.slice(), lastWhy = '';
     function next() {
       if (!urls.length || !state.checking) return Promise.resolve({ ok: false, why: state.checking ? lastWhy || 'no answer' : 'stopped' });

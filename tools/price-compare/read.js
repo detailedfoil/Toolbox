@@ -4,6 +4,9 @@
 
    jobs(list, group) -> every store for every product in data/compare.json (one group, or all):
      [{key, item, store, entry, urls, none}]. none: why that store has no price (shown on the page, never read).
+     A group with its own stores list (tool shops for batteries, electrical wholesalers for cable) only has those;
+     a group without one has every store. An entry with cheapest: true reads every address and keeps the lowest
+     (a store selling two brands of the same thing).
    text(page, job) -> {ok: true, price, was, name, how} | {ok: false, why, name, gone}
      page: jina's normal read (markdown, starting "Title: ..."). The price is the first one after the product's
      heading that isn't a per-metre, finance, delivery or was price. Copper pipe carries 20% VAT, so when two prices
@@ -15,11 +18,13 @@
      are taken as including VAT unless the data says otherwise or store.ld is 'ex' (BES, Travis Perkins).
    agrees(htmlResult, price) -> whether the page's data backs up a price read from its text (big jumps need it).
    nameOk(name, job) -> '' or why the page isn't this product (another size, a pack of 10, chrome...).
-   unitPrice(price, job) -> the price per metre, for ranking (an entry can have its own len, or a pack count).
+   unitPrice(price, job) -> the price per metre, for ranking (an entry can have its own len, or a pack count); for a
+     product with no length (a battery) the price of one.
+   The believable price: item.perM (per metre) or item.range (for one, a product with no length).
    All prices are numbers in pounds, including VAT, rounded to the penny. */
 (function (root) {
   'use strict';
-  var VERSION = '2026-10-26b';
+  var VERSION = '2026-10-26c';
   var VAT = 1.2;
   var NEAR = 0.0105;          // a price with VAT is the price without VAT x 1.2, give or take rounding to the penny
 
@@ -52,11 +57,17 @@
     return Array.isArray(entry.url) ? entry.url.slice() : [entry.url];
   }
 
+  /* the stores one product is compared at: its group's own list if it has one, else every store */
+  function storesFor(list, item) {
+    var g = (list.groups || []).filter(function (x) { return x.id === item.group; })[0], ids = g && g.stores;
+    return (list.stores || []).filter(function (s) { return !ids || ids.indexOf(s.id) >= 0; });
+  }
+
   function jobs(list, group) {
     var out = [];
     (list.items || []).forEach(function (item) {
       if (group && item.group !== group) return;
-      (list.stores || []).forEach(function (store) {
+      storesFor(list, item).forEach(function (store) {
         var entry = (item.at || {})[store.id] || {};
         out.push({ key: item.id + '/' + store.id, item: item, store: store, entry: entry, urls: links(entry), none: entry.none || store.none || (links(entry).length ? '' : 'Not found on their website') });
       });
@@ -81,7 +92,8 @@
     var has = entry.has || item.has || [];
     for (var i = 0; i < has.length; i++) if (!new RegExp(has[i], 'i').test(n)) return 'a different product ("' + short(name) + '")';
     var len = entry.len || item.len;
-    if (len && !entry.options && !lenRe(len).test(n)) return 'a different length ("' + short(name) + '")';
+    // noLen: the store's name for it doesn't give the length (Toolstation's cable drums), so it can't be checked
+    if (len && !entry.options && !entry.noLen && !lenRe(len).test(n)) return 'a different length ("' + short(name) + '")';
     var not = entry.not != null ? entry.not : item.not;
     if (not && new RegExp(not, 'i').test(n)) return 'a different product ("' + short(name) + '")';
     return '';
@@ -128,7 +140,7 @@
   var RELATED = /^[ \t]*(?:#+[ \t]*)?(?:you (?:may|might) also|related products|customers (?:also|who)|frequently bought|people also|similar products|recently viewed|alternative products|complete the job|accessories|other (?:customers|people)|compare similar|more from)/im;
 
   // a short line of its own just above a price, labelling it ("Was" / "Save" on one line, the price on the next)
-  var WAS_LINE = /^(?:was|rrp|previously|before)\b[^£\d]{0,12}$/i;
+  var WAS_LINE = /^(?:was|rrp|previously|before|original price|list price)\b[^£\d]{0,12}$/i;
   var OTHER_LINE = /^(?:save|saving|you save|from|pay|delivery|spend|finance|(?:[2-9]|\d{2,})\s*(?:\+|&\s*over|and\s*over|or\s*more|and\s*more)|qty\b|quantity\b)[^£\d]{0,12}$/i;
   // a price for buying several ("10+£15.12", "10 & Over£13.38", "5 and more"), not one length; "1-9" is the single price
   var TIER = /(?:^|[^\d.,£])(?:[2-9]|\d{2,})\s*(?:\+|&\s*over|and\s*over|or\s*more|and\s*more|-\s*\d+)\s*$/i;
@@ -155,11 +167,15 @@
       var prev = out[out.length - 1];
       if (!(v > 0)) c.skip = 'zero';
       else if (/~~$/.test(before) || /^~~/.test(after)) c.skip = 'was';          // ~~£33.00~~: struck through
-      else if (/\b(?:was|rrp)\b[^£\d]{0,14}$/i.test(line) || (!line.trim() && WAS_LINE.test(above))) c.skip = 'was';
-      else if (SKIP_BEFORE.test(line) || TIER.test(line) || (!line.trim() && OTHER_LINE.test(above))) c.skip = 'other';
+      else if (/\b(?:was|rrp|original price|list price)\b[^£\d]{0,14}$/i.test(line) || (!line.trim() && WAS_LINE.test(above))) c.skip = 'was';
+      else if (SKIP_BEFORE.test(line) || TIER.test(line) || (!line.trim() && OTHER_LINE.test(above))) {
+        c.skip = 'other';
+        // a saving ("Save £4£53", B&Q): the price straight after it is the price, not stuck to it
+        c.save = /\b(?:save|saving)\b[^£\d]{0,14}$/i.test(line) || (!line.trim() && /^(?:save|saving|you save)\b/i.test(above));
+      }
       else if (SKIP_AFTER.test(after)) c.skip = 'other';
       // stuck straight onto a price that isn't the one ("20+£15.37£12.81": the bulk price without VAT too; "£100-£150")
-      else if (prev && prev.skip && prev.skip !== 'zero' && /^[\s*_|\-–]*(?:to|and)?[\s]*$/i.test(region.slice(prev.end, m.index))) c.skip = prev.skip;
+      else if (prev && prev.skip && prev.skip !== 'zero' && !prev.save && /^[\s*_|\-–]*(?:to|and)?[\s]*$/i.test(region.slice(prev.end, m.index))) c.skip = prev.skip;
       if (!c.skip) {
         var lb = /(?:inc(?:l(?:uding)?)?\.?\s*vat|ex(?:c(?:l(?:uding)?)?)?\.?\s*vat)\s*:?\s*$/i.exec(before.slice(-22));
         // a label after the price (before the next one, within a few lines), unless it's on the same line as the next
@@ -180,6 +196,17 @@
     var c = cands.filter(function (x) { return !x.skip; });
     for (var k = 0; k < c.length; k++) {
       var got = pickAt(cands, c, k, vatDefault);
+      // an unlabelled price just before a price that says what it is, and dearer than it, is the old price (ITS: "YOU
+      // SAVE £14.17 / £59.99 / £45.82 EX VAT (£54.98 INC VAT)", the old price in the same terms as the one after it)
+      var nx = c[k + 1];
+      if (got && !got.sure && nx && nx.at - c[k].end < 220) {
+        var then = pickAt(cands, c, k + 1, vatDefault);
+        if (then && then.sure && Math.abs(then.price - c[k].v) >= NEAR) {
+          var exTerms = nx.label === 'ex' || (c[k + 2] && Math.abs(nx.v * VAT - c[k + 2].v) < NEAR);
+          var old = exTerms ? r2(c[k].v * VAT) : c[k].v;
+          if (old > then.price) return { price: then.price, was: old < then.price * 3 ? old : then.was, sure: true };
+        }
+      }
       if (got && (got.sure || !sureOnly)) return got;
       if (!sureOnly) return got;
     }
@@ -210,7 +237,7 @@
 
   function sane(r, job) {
     if (!r.ok) return r;
-    var range = (job.item && job.item.perM) || [0, Infinity], u = unitPrice(r.price, job);
+    var item = job.item || {}, range = item.perM || item.range || [0, Infinity], u = unitPrice(r.price, job);
     if (!(u >= range[0] && u <= range[1])) return fail(money(r.price) + " doesn't look like this product's price", { name: r.name, seen: r.price });
     return r;
   }
@@ -362,7 +389,13 @@
     return 'https://www.google.com/search?q=' + encodeURIComponent('site:' + store.site + ' ' + (item.q || item.name));
   }
 
-  var api = { VERSION: VERSION, VAT: VAT, jobs: jobs, links: links, text: text, html: html, agrees: agrees, nameOk: nameOk, unitPrice: unitPrice, siteSearch: siteSearch, decode: decode, pageText: pageText };
+  /* the lowest of several reads of one product at one store (an entry with cheapest: true) */
+  function cheapest(reads) {
+    var ok = reads.filter(function (r) { return r && r.ok; }).sort(function (a, b) { return a.price - b.price; });
+    return ok[0] || reads.filter(Boolean)[0] || fail('no address to read');
+  }
+
+  var api = { VERSION: VERSION, VAT: VAT, jobs: jobs, storesFor: storesFor, cheapest: cheapest, links: links, text: text, html: html, agrees: agrees, nameOk: nameOk, unitPrice: unitPrice, siteSearch: siteSearch, decode: decode, pageText: pageText };
   root.PriceRead = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

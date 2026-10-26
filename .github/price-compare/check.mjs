@@ -121,6 +121,15 @@ async function direct(url) {
 /* one store's price for one product -> {ok, price, was, name, url, how} or {ok: false, why, direct, seen}
    (why: through jina, the main reason; direct: what the store itself said, for working out what's wrong) */
 async function readJob(job) {
+  // a store selling two brands of the same thing (cheapest: true): read each and keep the lowest
+  if (job.entry.cheapest && job.urls.length > 1) {
+    const reads = [];
+    for (const url of job.urls) reads.push(await readUrls({ ...job, urls: [url] }));
+    return R.cheapest(reads);
+  }
+  return readUrls(job);
+}
+async function readUrls(job) {
   const whys = [], directs = [];
   let seen = null;
   for (const url of job.urls) {
@@ -164,7 +173,13 @@ const only = String(process.env.RAW_STORES || '').split(/[\s,]+/).filter(Boolean
 if (mode === 'raw') todo = all.filter((j) => j.urls.length && (!only.length || only.includes(j.store.id)));
 else if (mode === 'test') todo = readable.slice(0, 3);
 else if (mode === 'new') {
-  todo = readable.filter((j) => { const r = rowOf(j); return !r || r.price == null || !j.urls.includes(r.url); });
+  // new: never tried, or its address changed (a row that has only ever failed notes the address it tried, so a push
+  // doesn't try a broken site again until the next scheduled run)
+  todo = readable.filter((j) => {
+    const r = rowOf(j);
+    if (!r) return true;
+    return r.price != null ? !j.urls.includes(r.url) : !(r.fail && j.urls.includes(r.fail.url));
+  });
   if (!todo.length) { mode = 'test'; todo = readable.slice(0, 3); }
 } else todo = readable;
 const saving = mode === 'all' || mode === 'new';
@@ -259,6 +274,7 @@ for (const job of order) {
   } else {
     row.fail = { since: (old && old.fail && old.fail.since) || NOW, why: r.why, n: ((old && old.fail && old.fail.n) || 0) + 1 };
     if (r.direct && r.direct !== r.why) row.fail.direct = r.direct;
+    if (row.price == null) row.fail.url = job.urls[0];
     if (r.pending != null) row.pending = { price: r.pending, on: (old && old.pending && Math.abs(old.pending.price - r.pending) < 0.011 && old.pending.on) || NOW };
     else delete row.pending;
     fails.push(`${label}: ${r.why}${r.direct && r.direct !== r.why ? ' (straight from the store: ' + r.direct + ')' : ''}`);
@@ -321,7 +337,8 @@ if (saving) {
   console.log(`${mode === 'test' ? 'Smoke test' : 'Run'}: nothing saved.`);
 }
 
-if (tried && !read) {
+// (a push that only tried a page or two that failed isn't worth an email: the schedule will say if it's broken)
+if (tried && !read && (mode !== 'new' || tried >= 3)) {
   console.log(`::error title=Price compare::Couldn't read any of the ${tried} pages (${fails[0] || ''})`);
   process.exit(1);
 }
