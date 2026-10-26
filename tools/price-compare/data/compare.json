@@ -174,7 +174,7 @@
     "wickes": {"url": "https://www.wickes.co.uk/Twin+Earth-Cable---1-5mm2-x-100m/p/156252"},
     "bq": {"url": "https://www.diy.com/departments/prysmian-grey-twin-earth-cable-1-5mm-x-100m/33835_BQ.prd"},
     "travisperkins": {"url": "https://www.travisperkins.co.uk/cable-drums/time-6242yh-1-5mm-twin-and-earth-cable-grey-100m/p/414299"},
-    "selco": {"url": "https://www.selcobw.com/1-5mm-twin-earth-cable-grey-100m"},
+    "selco": {"none": "Only shows a price once you pick the length on their page"},
     "builderdepot": {"url": "https://www.builderdepot.co.uk/1-5mm-twin-and-earth-cable-100m-drum-6242y"},
     "tlc": {"url": "https://www.tlc-direct.co.uk/Products/CA1dot5G.html"},
     "yesss": {"url": "https://www.yesss.co.uk/h-6242y-15-grey-100-mtr-rls"},
