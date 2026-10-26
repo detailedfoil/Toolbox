@@ -1,7 +1,8 @@
 /* Product Search: storage on this phone and the product photos.
  *
  * Storage (IndexedDB "toolbox-product-search"): only the product list, so search works the moment the page opens,
- * even with no signal. Photos are NOT saved on the phone (detailedfoil, 20 Oct 2026): each one is a plain picture, the copy kept with
+ * even with no signal. Photos aren't saved here (detailedfoil, 20 Oct 2026); the "Save everything" button (app.js, 26 Oct)
+ * keeps them in product-search-sw.js's cache only when pressed. Each one is a plain picture, the copy kept with
  * the Toolbox (collected by the GitHub check; the only one asked for if there is one), otherwise from Screwfix's image server, media.screwfix.com/is/image/ae235/<CODE>_P at 120 x 120, the same server the A4
  * Posters tool uses, loaded only for results on screen. If one doesn't load the page shows a placeholder with the code.
  * (Photos once saved by an earlier version of this page are cleared away the next time it opens.)

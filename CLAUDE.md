@@ -77,6 +77,13 @@ explain changes in plain English and say what they'll see.
     switch hides results with none available. Kept in sessionStorage
     (`ps-stock`) for that tab only and never sent or committed: stock is store-specific and the repo is
     public. Pasted products not in the list are searchable for the visit, by their stock system name.
+    Working with no signal (detailedfoil, 26 Oct 2026): `tools/product-search-sw.js` is a service worker registered by
+    app.js with scope "product-search", so it only looks after this page and its files (never the other tools). It keeps
+    every Toolbox file the page fetches (page, code and lists site-first with a 4 s fallback to the kept copy; photos
+    and descriptions kept-first); never anything from another site. "Save everything" in Settings puts every photo and
+    description (from web-names `p` / `d`) into the same cache (`product-search-v1`), 4 at a time, about 29 MB and 20,000
+    files, a few minutes; the size shown is worked out from the counts. Saved files are checked one at a time
+    (`cache.match`): listing 20,000 with `cache.keys()` can fail in Chrome. The page has to be opened once with signal.
     Grouping sizes of the same product into one result with a size switcher (buttons or a drop-down) was built and
     removed on 22 Oct 2026 at detailedfoil's say (he didn't like it): every size is its own result.
   - `area-map`: Area Map, every store (all 986, UK, Ireland and the Isle of Man) on a Leaflet map (vendored in

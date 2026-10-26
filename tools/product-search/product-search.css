@@ -129,6 +129,16 @@ html:has(body.sx){background:var(--sx-bg,#f4f4f4);color-scheme:light}
 .sx-switch input:checked + .sx-knob::after{transform:translateX(18px)}
 .sx-switch input:focus-visible + .sx-knob{outline:3px solid var(--sx-focus);outline-offset:2px}
 
+/* save everything for no signal */
+.sx-save{margin:0 0 14px;padding:0 0 14px;border-bottom:1px solid var(--sx-line)}
+.sx-save h3{margin:0 0 6px;font-size:1rem;color:var(--sx-navy)}
+.sx-save p{margin:0 0 10px;font-size:.9rem;line-height:1.4}
+.sx-save-btns{display:flex;gap:8px;flex-wrap:wrap}
+.sx-save-run{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:.85rem;color:var(--sx-muted)}
+.sx-save-run[hidden],.sx-save-done[hidden]{display:none}
+.sx-save-run progress{flex:1;min-width:0;height:12px;accent-color:var(--sx-navy)}
+.sx-save .sx-save-done{margin:10px 0 0;font-weight:700;color:#0f7a2e}
+
 /* toast */
 .sx-toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;background:#111;color:#fff;
   padding:10px 16px;border-radius:999px;font-size:.88rem;font-weight:650;box-shadow:0 4px 16px rgba(0,0,0,.3)}

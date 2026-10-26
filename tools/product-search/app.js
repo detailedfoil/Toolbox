@@ -1,7 +1,8 @@
 /* Product Search page: loads the list (from this phone first, then checks the site for a newer one), searches as
  * you type, shows results a screenful at a time and each result's photo as it scrolls into view. Tapping a result
  * opens it to show its description (descriptions/<CODE>.json, saved by the GitHub check, loaded only when tapped).
- * Stock levels pasted from the stock system (stock.js) show on each result, for the visit only. */
+ * Stock levels pasted from the stock system (stock.js) show on each result, for the visit only.
+ * product-search-sw.js lets the page open with no signal; "Save everything" keeps every photo and description too. */
 (function () {
   'use strict';
 
@@ -51,6 +52,7 @@
     baseItems = items;
     listWhere = where;
     build();
+    showSaveSize();
     q.placeholder = 'Search by code or name';
     var have = new Set();
     Object.keys(names).forEach(function (k) { if (names[k].p) have.add(k); });
@@ -282,6 +284,125 @@
   $('inStock').addEventListener('change', function () { inStockOnly = this.checked; run(); });
   stockText.addEventListener('input', function () { if (stockText.value.length > 20) useStock(stockText.value); });
   showStockBar();
+
+  /* ---------- working with no signal: product-search-sw.js, and "Save everything" ---------- */
+
+  var CACHE = 'product-search-v1';          // the same cache product-search-sw.js keeps things in
+  var saveBox = $('save'), saveAll = $('saveAll'), saveDel = $('saveDel'), saveRun = $('saveRun');
+  var saveProg = $('saveProg'), saveMsg = $('saveMsg'), saveDone = $('saveDone'), saving = false;
+  var canSave = 'serviceWorker' in navigator && 'caches' in window;
+  if (canSave) {
+    // scope "product-search": only this page and its files, never the other tools
+    navigator.serviceWorker.register('product-search-sw.js', { scope: 'product-search' }).catch(function () { /* opens online only */ });
+  } else {
+    saveBox.querySelector('p').textContent = "This browser can't save the site for use with no signal.";
+    saveAll.hidden = true;
+  }
+
+  // everything there is to save: the page and its files, the lists, every photo and description the Toolbox keeps
+  function everything() {
+    var names = (web && web.products) || {}, files = [location.pathname, LIST_URL, WEB_URL, DESC_WORDS_URL,
+      'product-search/stock-help.png', 'posters/fonts/BarlowSemiCondensed-ExtraBold.ttf', '../manifest.json'];
+    Array.prototype.forEach.call(document.querySelectorAll('script[src], link[rel="stylesheet"]'), function (el) {
+      files.push(el.getAttribute('src') || el.getAttribute('href'));
+    });
+    var photos = [], descs = [];
+    Object.keys(names).forEach(function (k) {
+      if (names[k].p) photos.push('product-search/photos/' + encodeURIComponent(k) + '.jpg');
+      if (names[k].d === 1) descs.push(DESC_URL + encodeURIComponent(k) + '.json');
+    });
+    return { files: files, photos: photos, descs: descs };
+  }
+  // about 2 KB a photo and 0.4 KB a description (measured 26 Oct 2026), plus about 3.7 MB for the page and lists
+  function showSaveSize() {
+    var all = everything();
+    var mb = (all.photos.length * 1.96 + all.descs.length * 0.41) / 1024 + 3.7;
+    $('saveSize').textContent = Math.max(1, Math.round(mb)) + ' MB';
+  }
+  function showSaved() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem('ps-saved') || 'null'); } catch (e) { s = null; }
+    saveDone.hidden = !s;
+    saveDel.hidden = !s;
+    saveAll.textContent = s ? 'Save again (adds anything new)' : 'Save everything';
+    if (s) {
+      var d = new Date(s.at);
+      saveDone.textContent = 'Saved ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' at ' +
+        d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ': ' + n(s.products) + ' products, ' + n(s.photos) +
+        ' photos and ' + n(s.descs) + ' descriptions. Works with no Wi-Fi or signal.' + (s.missed ? ' (' + n(s.missed) + " couldn't be saved: press Save again later.)" : '');
+    }
+  }
+
+  function saveEverything() {
+    if (saving || !canSave) return;
+    if (!list) { toast('Wait for the product list to load first'); return; }
+    saving = true;
+    saveAll.disabled = true; saveDel.disabled = true;
+    saveRun.hidden = false; saveDone.hidden = true;
+    var all = everything(), cache, done = 0, missed = 0;
+    var jobs = all.files.map(function (u) { return { url: u, always: true }; })
+      .concat(all.photos.concat(all.descs).map(function (u) { return { url: u }; }));
+    var total = jobs.length;
+    function shown() { saveProg.value = total ? done / total : 1; saveMsg.textContent = 'Saving ' + n(done) + ' of ' + n(total) + '...'; }
+    shown();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () { /* the phone decides */ });
+    caches.open(CACHE).then(function (c) {
+      cache = c;
+      var at = 0;
+      // 4 at a time, politely: GitHub Pages serves the site
+      function next() {
+        if (at >= jobs.length) return Promise.resolve();
+        var job = jobs[at++], url = new URL(job.url, location.href);
+        // a photo or description already kept is left as it is (checked one at a time: listing 20,000 at once can fail)
+        return (job.always ? Promise.resolve(null) : cache.match(url.href)).then(function (hit) {
+          if (hit) return;
+          return get(url.href, 0).then(function (res) {
+            if (res) return cache.put(url.href, res);
+            missed++;
+            if (window.console) console.warn('Not saved: ' + url.href);
+          });
+        }).catch(function () { missed++; }).then(function () {
+          done++;
+          if (done % 25 === 0 || done === total) shown();
+          return next();
+        });
+      }
+      return Promise.all([next(), next(), next(), next()]);
+    }).then(function () {
+      try {
+        localStorage.setItem('ps-saved', JSON.stringify({ at: Date.now(), products: list.items.length, missed: missed,
+          photos: all.photos.length, descs: all.descs.length }));
+      } catch (e) { /* private mode: still saved */ }
+      toast(missed ? 'Saved, apart from ' + n(missed) : 'Everything saved on this device');
+    }, function () {
+      toast("Couldn't save: the device may be out of space");
+    }).then(function () {
+      saving = false;
+      saveAll.disabled = false; saveDel.disabled = false;
+      saveRun.hidden = true;
+      showSaved();
+    });
+  }
+  // one file, with one more go after a pause if the site says it's busy -> Promise<Response|null>
+  function get(url, tries) {
+    return fetch(url, { cache: 'no-cache' }).then(function (res) {
+      if (res.ok) return res;
+      if ((res.status === 429 || res.status >= 500) && tries < 2) {
+        return new Promise(function (ok) { setTimeout(ok, 5000 * (tries + 1)); }).then(function () { return get(url, tries + 1); });
+      }
+      return null;
+    });
+  }
+  saveAll.addEventListener('click', saveEverything);
+  saveDel.addEventListener('click', function () {
+    if (saving) return;
+    caches.delete(CACHE).then(function () {
+      try { localStorage.removeItem('ps-saved'); } catch (e) { /* nothing kept */ }
+      showSaved();
+      toast('Saved copy deleted');
+    });
+  });
+  showSaved();
 
   /* ---------- photos, as they come into view ---------- */
 

@@ -9,7 +9,7 @@
 <title>Product Search</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="product-search/product-search.css?v=59ab9b24af">
+<link rel="stylesheet" href="product-search/product-search.css?v=c4cbc5538b">
 <script src="../analytics.js?v=f5e6d397aa"></script>
 </head>
 <body class="sx">
@@ -80,6 +80,21 @@
 
   <section class="sx-settings" id="settings">
     <h2>Settings</h2>
+    <div class="sx-save" id="save">
+      <h3>Save everything on this device</h3>
+      <p>Saves every product, photo and description on this device, so the site opens and works even with no Wi-Fi or
+        signal. It&#8217;s about <b id="saveSize">30 MB</b>, so best done on Wi-Fi. It takes a few minutes: keep this page open
+        until it says it&#8217;s saved.</p>
+      <div class="sx-save-btns">
+        <button type="button" class="sx-btn" id="saveAll">Save everything</button>
+        <button type="button" class="sx-btn sx-btn-quiet" id="saveDel" hidden>Delete saved copy</button>
+      </div>
+      <div class="sx-save-run" id="saveRun" hidden>
+        <progress id="saveProg" max="1" value="0"></progress>
+        <span id="saveMsg"></span>
+      </div>
+      <p class="sx-save-done" id="saveDone" hidden></p>
+    </div>
     <label class="sx-switch">
       <input type="checkbox" id="nophotos">
       <span class="sx-knob" aria-hidden="true"></span>
@@ -92,7 +107,7 @@
 
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="product-search/stock.js?v=622e06e7f3"></script>
-<script src="product-search/photos.js?v=0197b7a96c"></script>
-<script src="product-search/app.js?v=3c3a248304"></script>
+<script src="product-search/photos.js?v=2a4799138a"></script>
+<script src="product-search/app.js?v=730e72cd68"></script>
 </body>
 </html>
