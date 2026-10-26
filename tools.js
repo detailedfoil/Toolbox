@@ -9,6 +9,7 @@ const TOOLS = [
   { name: "Offline site", desc: "Find any product by code or name, with photos, when screwfix.com is down", icon: "🔎", url: "tools/product-search.html", category: "Screwfix" },
   { name: "Area Map", desc: "Every Screwfix store on a map by area, with the nearest stores to anywhere", icon: "🗺️", url: "tools/area-map.html", category: "Screwfix" },
   { name: "Monday Price Check", desc: "Weekly shelf price check: what changed, plus printable sheets", icon: "📋", url: "tools/shelf-check.html", category: "Screwfix" },
+  { name: "Price Compare", desc: "15mm and 22mm copper pipe at every major store, cheapest first", icon: "⚖️", url: "tools/price-compare.html", category: "Screwfix" },
   { name: "A25 Behind counter trial", desc: "Nightly price check on the behind counter tickets, kept until you tick them off", icon: "🧾", url: "tools/counter-trial.html", category: "Screwfix", only: ["LB1"] },
   { name: "NPS", desc: "Promoters needed to hit your target, plus an area overview", icon: "📊", url: "tools/nps.html", category: "Screwfix" },
   { name: "Audit Ready", desc: "Team audit quiz: safety, Challenge 25, deliveries and more", icon: "🧠", url: "tools/audit-quiz.html?v=2026101402", category: "Screwfix" },

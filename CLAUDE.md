@@ -94,6 +94,19 @@ explain changes in plain English and say what they'll see.
     (made by his NPS chat) into the page; `parseText` in `engine.js` reads them (lenient: pipes, tabs, commas, a header,
     ranks, scores; tested in `.github/tests/nps.test.mjs`) and they're kept in that phone's localStorage
     (`toolbox.nps.pasted`) only, never committed. The YTD trends tab hides itself when there's no chart.
+  - `price-compare`: Price Compare, every store (built 26 Oct 2026): the same product's price at every major store,
+    cheapest first, starting with 15mm and 22mm copper pipe (one 3m length, inc VAT). `data/compare.json` is the list
+    (detailedfoil's stores, each product's page at each store, or `none` with why there's no price: Jewson needs a branch,
+    Wolseley and Plumbase need a trade account...). To compare something new, add an item there (a group too if it's a
+    new kind of thing) with an entry for every store; a push prices just the new rows within minutes. `read.js` reads a
+    price out of a page as jina hands it back (shared by the page's "Check now" and the GitHub check): the first price
+    after the product's heading that isn't per metre, finance, delivery or a was price; two prices together where one is
+    1.2 times the other means the bigger includes VAT, otherwise the Inc/Ex VAT label says, and an unlabelled one counts as
+    including VAT (`vat: 'ex'` on a store says otherwise). The heading must match the item (`has`, `not`, `len`), so a 10 pack,
+    another size or chrome pipe is never read as it. The whole page (JSON-LD, price meta tags, or Magento's option prices
+    for a page where you pick the size first, `options`) only when the text has no price, or to confirm a big jump.
+    "Check now" reads every store live on the phone (2 at a time, jina paced to one request every 3.3 s), kept on that
+    phone (`pc-live-v1`) and shown wherever newer than GitHub's. Tested in `.github/tests/price-compare.test.mjs`.
   - `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
@@ -114,13 +127,19 @@ explain changes in plain English and say what they'll see.
   emails detailedfoil) and the next run gives up at once if its first 4 fail. detailedfoil asked for it to be as
   unsuspicious as possible: keep it polite (slow, uneven, backs off), never add ways to dodge Screwfix's blocking, and
   don't speed it up. Add `PHOTOS: 'off'` to the workflow to leave photos out.
+- `.github/workflows/price-compare.yml` runs `.github/price-compare/check.mjs` twice a day (05:41 and 12:41 UTC) and saves
+  `tools/price-compare/data/prices.json` (one row per store per product, its last 6 moves, `fail` when the latest read
+  failed: the last price stays). A new price more than 25% from the last is only believed when the page's product data
+  agrees or the next run sees it again (`pending`). A push changing the list prices only new rows (nothing new = a 3 page
+  smoke test). Run it by hand in `raw` mode to save every store page as it came back to the `diag-compare` branch, for
+  working out a new store's layout (`extra` adds more addresses).
 - `.github/tests/`: the tests. The checks are run against a pretend jina and Screwfix
   (`mock-screwfix.mjs`, with the made-up products in `scenarios.mjs`), so the tests never touch the real sites.
 
 ## Things that are easy to break
 
 - **Files written by robots.** `tools/shelf-check/data/prices.json`, `phone.json` and
-  `tools/counter-trial/data/prices.json`, `ticks.json`, `tools/fuel/data/prices.json`, `tools/product-search/data/web-names.json` and `desc-words.json` are written by the GitHub checks, or by the pages
+  `tools/counter-trial/data/prices.json`, `ticks.json`, `tools/fuel/data/prices.json`, `tools/price-compare/data/prices.json`, `tools/product-search/data/web-names.json` and `desc-words.json` are written by the GitHub checks, or by the pages
   through the GitHub API with a token saved on a phone. Don't edit them by hand, and pull before you push:
   the checks commit to `main` most nights.
 - **The page reader** (`tools/price-tickets/lookup.js`) is behind every price on the site. Bump `VERSION`

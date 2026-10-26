@@ -1,0 +1,82 @@
+{
+ "_how": "The Price Compare list: which stores and products the page compares. Read by the page and by the twice-daily GitHub check (.github/price-compare/check.mjs), which writes prices.json. To compare something new, add an item (and a group if it's a new kind of thing) with an entry for every store: url (the product page, or a list of pages to try in order), or none (why there's no price, shown on the page). A store-level none applies to every item. has: words the product's name must contain, not: words it mustn't (a 10 pack, a chrome pipe), perM: the believable price range per metre, len: the length in metres (an entry's own len or pack overrides it). After a push the check reads anything new within a few minutes.",
+ "stores": [
+  { "id": "screwfix", "name": "Screwfix", "site": "screwfix.com", "home": true },
+  { "id": "toolstation", "name": "Toolstation", "site": "toolstation.com" },
+  { "id": "wickes", "name": "Wickes", "site": "wickes.co.uk" },
+  { "id": "bq", "name": "B&Q", "site": "diy.com" },
+  { "id": "travisperkins", "name": "Travis Perkins", "site": "travisperkins.co.uk" },
+  { "id": "jewson", "name": "Jewson", "site": "jewson.co.uk", "none": "Only shows a price once you pick a branch" },
+  { "id": "cityplumbing", "name": "City Plumbing", "site": "cityplumbing.co.uk" },
+  { "id": "selco", "name": "Selco", "site": "selcobw.com" },
+  { "id": "builderdepot", "name": "Builder Depot", "site": "builderdepot.co.uk" },
+  { "id": "amazon", "name": "Amazon UK", "site": "amazon.co.uk" },
+  { "id": "plumbase", "name": "Plumbase", "site": "plumbase.co.uk", "none": "No prices on their website without a trade account" },
+  { "id": "wolseley", "name": "Wolseley", "site": "wolseley.co.uk", "none": "No prices on their website without a trade account" },
+  { "id": "plumbingsuperstore", "name": "Plumbing Superstore", "site": "plumbingsuperstore.co.uk" },
+  { "id": "ukplumbingsupplies", "name": "UK Plumbing Supplies", "site": "ukplumbingsupplies.com" },
+  { "id": "graham", "name": "Graham", "site": "grahamplumbersmerchant.co.uk" },
+  { "id": "bes", "name": "BES", "site": "bes.co.uk" },
+  { "id": "plumbworld", "name": "Plumbworld", "site": "plumbworld.co.uk" },
+  { "id": "ufhstore", "name": "The Underfloor Heating Store", "site": "theunderfloorheatingstore.com" }
+ ],
+ "groups": [
+  { "id": "copper", "name": "Copper pipe", "about": "One 3m length of plain copper pipe, including VAT." }
+ ],
+ "items": [
+  {
+   "id": "cu15", "group": "copper", "name": "15mm copper pipe, 3m", "short": "15mm", "sub": "3m length", "size": "15mm x 3m", "len": 3,
+   "q": "15mm copper pipe 3m",
+   "has": ["(?:^|[^\\d.])15\\s?mm\\b", "copper"],
+   "not": "chrome|pvc|coated|plastic|pe-?x\\b|speedfit|microbore|\\b(?:[2-9]|\\d\\d+)\\s?(?:pack|pk)\\b|pack of (?:[2-9]|\\d\\d+)|\\bpk\\s?(?:[2-9]|\\d\\d+)",
+   "perM": [1.5, 25],
+   "at": {
+    "screwfix": { "url": "https://www.screwfix.com/p/wednesbury-copper-pipe-15mm-x-3m/98683" },
+    "toolstation": { "url": "https://www.toolstation.com/wednesbury-copper-pipe/p82026" },
+    "wickes": { "url": ["https://www.wickes.co.uk/Wednesbury-Copper-Pipe---15mm-x-3m/p/9000279730", "https://www.wickes.co.uk/Wickes-Copper-Pipe---15mm-x-3m/p/420001"] },
+    "bq": { "url": "https://www.diy.com/departments/wednesbury-copper-compression-pipe-l-3m-dia-15mm/33952_BQ.prd" },
+    "travisperkins": { "url": "https://www.travisperkins.co.uk/copper-pipe/wednesbury-copper-tube-plain-lengths-15mm-x-3m/p/313813" },
+    "jewson": { "url": "https://www.jewson.co.uk/p/wednesbury-table-plain-copper-tube-3m-x-15mm-TXZZ1503" },
+    "cityplumbing": { "url": "https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-15mm-x-3m/p/313813" },
+    "selco": { "url": "https://www.selcobw.com/copper-pipe-15mm-x-3m" },
+    "builderdepot": { "url": "https://www.builderdepot.co.uk/copper-tube-15mm-x-3m" },
+    "amazon": { "none": "No single 3m length found on Amazon" },
+    "plumbase": {},
+    "wolseley": { "url": "https://www.wolseley.co.uk/product/yorkshire-copper-tube-15-mm-3-metre/" },
+    "plumbingsuperstore": { "url": "https://www.plumbingsuperstore.co.uk/product/kitemarked-copper-pipe-and-tube.html", "options": { "Pipe Size": "15mm", "Pipe Length": "3m", "Pipe Pack Size": "Singles" }, "has": ["copper"] },
+    "ukplumbingsupplies": { "none": "No 3m copper pipe found on their website" },
+    "graham": { "url": "https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ1503/plain-copper-tube-15mm-x-3mtr" },
+    "bes": { "url": "https://www.bes.co.uk/15-mm-x-3-m-copper-tube" },
+    "plumbworld": { "none": "No copper pipe on their website" },
+    "ufhstore": { "none": "No copper pipe on their website" }
+   }
+  },
+  {
+   "id": "cu22", "group": "copper", "name": "22mm copper pipe, 3m", "short": "22mm", "sub": "3m length", "size": "22mm x 3m", "len": 3,
+   "q": "22mm copper pipe 3m",
+   "has": ["(?:^|[^\\d.])22\\s?mm\\b", "copper"],
+   "not": "chrome|pvc|coated|plastic|pe-?x\\b|speedfit|microbore|\\b(?:[2-9]|\\d\\d+)\\s?(?:pack|pk)\\b|pack of (?:[2-9]|\\d\\d+)|\\bpk\\s?(?:[2-9]|\\d\\d+)",
+   "perM": [3, 50],
+   "at": {
+    "screwfix": { "url": "https://www.screwfix.com/p/wednesbury-copper-pipe-22mm-x-3m/77741" },
+    "toolstation": { "url": "https://www.toolstation.com/wednesbury-copper-pipe/p39919" },
+    "wickes": { "url": ["https://www.wickes.co.uk/Wednesbury-Copper-Pipe---22mm-x-3m/p/9000279729", "https://www.wickes.co.uk/Wednesbury-Copper-Pipe---22mm-x-3m/p/420005"] },
+    "bq": { "url": "https://www.diy.com/departments/wednesbury-copper-compression-pipe-l-3m-dia-22mm/33951_BQ.prd" },
+    "travisperkins": { "url": "https://www.travisperkins.co.uk/copper-pipe/wednesbury-copper-tube-plain-lengths-22mm-x-3m/p/119745" },
+    "jewson": { "url": "https://www.jewson.co.uk/p/wednesbury-table-plain-copper-tube-3m-x-22mm-TXZZ2203" },
+    "cityplumbing": { "url": "https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-22mm-x-3m/p/119745" },
+    "selco": { "url": "https://www.selcobw.com/copper-pipe-22mm-x-3m" },
+    "builderdepot": { "url": "https://www.builderdepot.co.uk/copper-tube-22mm-x-3m" },
+    "amazon": { "none": "No single 3m length found on Amazon" },
+    "plumbase": {},
+    "wolseley": {},
+    "plumbingsuperstore": { "url": "https://www.plumbingsuperstore.co.uk/product/kitemarked-copper-pipe-and-tube.html", "options": { "Pipe Size": "22mm", "Pipe Length": "3m", "Pipe Pack Size": "Singles" }, "has": ["copper"] },
+    "ukplumbingsupplies": { "none": "No 3m copper pipe found on their website" },
+    "graham": { "url": "https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ2203/plain-copper-tube-22mm-x-3mtr" },
+    "bes": { "url": "https://www.bes.co.uk/copper-tube-22mm-x-3m-10312/" },
+    "plumbworld": { "none": "No copper pipe on their website" },
+    "ufhstore": { "none": "No copper pipe on their website" }
+   }
+  }
+ ]
+}

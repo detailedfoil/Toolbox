@@ -1,0 +1,88 @@
+# Price Compare for the Toolbox "Price Compare" page: reads every store's page for every product on the list
+# (tools/price-compare/data/compare.json) through jina, about 10 minutes, and saves tools/price-compare/data/prices.json.
+#
+# Runs twice a day, and on a push that changes the list or the reading code (that only reads stores and products it
+# hasn't priced yet; when there's nothing new it's a 3 page smoke test that saves nothing).
+#
+# To run it by hand: Actions tab > Price compare > Run workflow.
+#   all   read every store now
+#   new   only stores and products with no price yet
+#   test  3 pages, save nothing
+#   raw   save every page as it came back to the diag-compare branch (for working out a new store's page layout);
+#         "extra" can add more addresses to save, separated by spaces
+name: Price compare
+
+on:
+  schedule:
+    # GitHub reads these as UTC: 05:41 and 12:41 in winter (GMT), 06:41 and 13:41 in summer (BST)
+    - cron: '41 5 * * *'
+    - cron: '41 12 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/price-compare/read.js'
+      - 'tools/price-compare/data/compare.json'
+      - '.github/price-compare/**'
+      - '.github/workflows/price-compare.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'all = read every store now, new = only ones with no price yet, test = 3 pages and save nothing, raw = save the pages to the diag-compare branch'
+        type: choice
+        default: all
+        options: [all, new, test, raw]
+      extra:
+        description: 'raw only: more addresses to save, separated by spaces'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: price-compare
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Read the prices
+        timeout-minutes: 40
+        env:
+          MODE: ${{ inputs.mode }}
+          RAW_EXTRA: ${{ inputs.extra }}
+          GAP_MS: '6000'        # one request every 6 s or so through jina (it allows 20 a minute)
+        run: node .github/price-compare/check.mjs
+
+      - name: Save the results
+        if: always() && inputs.mode != 'raw'
+        run: |
+          if [ ! -f tools/price-compare/data/prices.json ]; then echo "Nothing to save"; exit 0; fi
+          git add tools/price-compare/data/prices.json
+          if git diff --cached --quiet; then echo "Nothing new to save"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          if [ -f "$RUNNER_TEMP/compare-commit.txt" ]; then git commit -q -F "$RUNNER_TEMP/compare-commit.txt"; else git commit -q -m "Price compare results (run stopped early)"; fi
+          for i in 1 2 3; do git push -q && exit 0; sleep 5; git pull -q --rebase; done
+          exit 1
+
+      - name: Save the raw pages to the diag-compare branch
+        if: inputs.mode == 'raw'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          cd "$RUNNER_TEMP/raw"
+          git init -q -b diag-compare
+          git add -A
+          git commit -q -m "Raw store pages for Price Compare"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" diag-compare
