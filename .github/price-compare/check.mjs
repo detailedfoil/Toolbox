@@ -269,6 +269,7 @@ for (const job of order) {
     row.name = r.name;
     row.url = r.url;
     if (r.was) row.was = r.was; else delete row.was;
+    if (r.others && r.others.length) row.others = r.others; else delete row.others;
     delete row.fail;
     delete row.pending;
   } else {
@@ -298,7 +299,7 @@ const out = mode === 'all' ? { checked: NOW, run: thisRun, items: keep }
   : { checked: saved.checked || NOW, run: saved.run || thisRun, last: thisRun, items: keep };
 
 // each row's fields in the same order every time, so a commit's diff only shows what really changed
-const ORDER = ['price', 'was', 'name', 'url', 'since', 'moves', 'pending', 'fail'];
+const ORDER = ['price', 'was', 'name', 'others', 'url', 'since', 'moves', 'pending', 'fail'];
 const tidy = (r) => Object.fromEntries([...ORDER.filter((k) => r[k] !== undefined).map((k) => [k, r[k]]), ...Object.entries(r).filter(([k]) => !ORDER.includes(k))]);
 function write(file, data) {
   const { items: its, ...head } = data;

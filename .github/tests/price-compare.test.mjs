@@ -110,6 +110,8 @@ test('price compare: each group is compared at its own stores, and the cheapest 
   for (const item of ['cu15', 'dewalt5', 'te25']) assert.ok(at(item).includes('screwfix'), item + ' includes Screwfix');
   const r = R.cheapest([{ ok: true, price: 96.99, name: 'Prysmian' }, { ok: false, why: 'gone' }, { ok: true, price: 93.99, name: 'Time' }]);
   assert.deepEqual([r.price, r.name], [93.99, 'Time']);
+  assert.equal(JSON.stringify(r.others), JSON.stringify([{ name: 'Prysmian', price: 96.99 }]), 'the dearer brand is kept as a note');
+  assert.equal(R.cheapest([{ ok: true, price: 5, name: 'One' }]).others, undefined);
   assert.equal(R.cheapest([{ ok: false, why: 'the store says the page has gone (404)' }]).why, 'the store says the page has gone (404)');
 });
 

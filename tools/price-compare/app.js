@@ -80,11 +80,11 @@
       // GitHub's reading: as of the last run, or (if it failed since) from before then
       var ghAt = gh && gh.price != null ? (gh.fail ? ms(gh.fail.since) - 1 : Math.max(checked, ms(gh.since))) : 0;
       if (lv && lv.price != null && lv.at > ghAt) {
-        row.price = lv.price; row.was = lv.was; row.name = lv.name; row.url = lv.url || row.url; row.at = lv.at; row.src = 'phone';
+        row.price = lv.price; row.was = lv.was; row.others = lv.others; row.name = lv.name; row.url = lv.url || row.url; row.at = lv.at; row.src = 'phone';
         if (gh && gh.price != null && Math.abs(gh.price - lv.price) >= 0.005) row.moved = { from: gh.price, on: lv.at };
         if (gh && gh.moves) row.moves = gh.moves;
       } else if (gh && gh.price != null) {
-        row.price = gh.price; row.was = gh.was; row.name = gh.name; row.url = gh.url || row.url; row.at = ghAt; row.src = 'github';
+        row.price = gh.price; row.was = gh.was; row.others = gh.others; row.name = gh.name; row.url = gh.url || row.url; row.at = ghAt; row.src = 'github';
         row.moves = gh.moves;
         if (gh.fail) row.fail = gh.fail;
         if (gh.pending) row.pending = gh.pending;
@@ -150,6 +150,10 @@
       if (r.fail && !r.pending) meta.push('<i class="is-old">couldn\'t read since ' + esc(when(ms(r.fail.since))) + '</i>');
       else if (r.src === 'phone') meta.push('checked on this phone ' + esc(when(r.at)));
       if (r.was) meta.push('<i class="is-offer">on offer, was ' + money(r.was) + '</i>');
+      // another brand sold at the same store (Screwfix has Time and Prysmian cable): the dearer one's price, as a note
+      (r.others || []).forEach(function (o) {
+        meta.push('<i class="is-other">' + esc(String(o.name || 'Other brand').split(/\s+/)[0]) + ' ' + money(o.price) + '</i>');
+      });
       var note = '';
       if (r.moved && Date.now() - r.moved.on < 14 * 864e5) {
         var up = r.price > r.moved.from;
@@ -373,7 +377,7 @@
         run.done++;
         if (r.ok) {
           run.read++;
-          (state.live[job.item.id] = state.live[job.item.id] || {})[job.store.id] = { price: r.price, was: r.was || null, name: r.name, url: r.url, at: Date.now(), how: r.how };
+          (state.live[job.item.id] = state.live[job.item.id] || {})[job.store.id] = { price: r.price, was: r.was || null, others: r.others || null, name: r.name, url: r.url, at: Date.now(), how: r.how };
           save(LIVE_KEY, state.live);
         } else state.liveFail[job.key] = r.why;
         $('barFill').style.width = Math.round(run.done / run.total * 100) + '%';

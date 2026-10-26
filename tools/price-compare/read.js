@@ -24,7 +24,7 @@
    All prices are numbers in pounds, including VAT, rounded to the penny. */
 (function (root) {
   'use strict';
-  var VERSION = '2026-10-26c';
+  var VERSION = '2026-10-26d';
   var VAT = 1.2;
   var NEAR = 0.0105;          // a price with VAT is the price without VAT x 1.2, give or take rounding to the penny
 
@@ -392,7 +392,12 @@
   /* the lowest of several reads of one product at one store (an entry with cheapest: true) */
   function cheapest(reads) {
     var ok = reads.filter(function (r) { return r && r.ok; }).sort(function (a, b) { return a.price - b.price; });
-    return ok[0] || reads.filter(Boolean)[0] || fail('no address to read');
+    if (!ok.length) return reads.filter(Boolean)[0] || fail('no address to read');
+    // the dearer brands too, so the page can show what else is on sale there
+    var best = {}, k;
+    for (k in ok[0]) best[k] = ok[0][k];
+    if (ok.length > 1) best.others = ok.slice(1).map(function (r) { return { name: r.name, price: r.price }; });
+    return best;
   }
 
   var api = { VERSION: VERSION, VAT: VAT, jobs: jobs, storesFor: storesFor, cheapest: cheapest, links: links, text: text, html: html, agrees: agrees, nameOk: nameOk, unitPrice: unitPrice, siteSearch: siteSearch, decode: decode, pageText: pageText };
