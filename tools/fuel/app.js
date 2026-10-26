@@ -6,10 +6,15 @@
      (r.jina.ai), petrol and diesel, with the same reader as the GitHub backup (fuel/parse.js). That page shows the
      UK Government Fuel Finder feed.
    - Leighton Buzzard also has a GitHub backup every 3 hours (tools/fuel/data/prices.json, read from the site and
-     from raw.githubusercontent.com), shown when the live check can't get through and used for "what changed".
+     from raw.githubusercontent.com), shown when the live check can't get through.
    - The last prices seen for each town stay on this device (fu-town-v2:<place>; one slot, fu-town-v2:here, for the
-     latest 'closest to me' spot), so the page has something to show
-     straight away and can tell you what moved since you last looked. */
+     latest 'closest to me' spot), so the page has something to show straight away.
+   - Only the price is shown, not how it moved: the history lines ("down 2.0p by ...") were removed on 26 Oct 2026 at
+     detailedfoil's say. merge() still keeps prev / prevSince in the saved data (the GitHub backup check uses it).
+   - A strip under the Petrol/Diesel switch compares this area's average with the UK average for the chosen fuel. The UK
+     figure is the government's WEEKLY road fuel average (not live), read once per page open from
+     petrolprices.co.uk/fuel-price-index.php through jina (FuelParse.parseAverage), in parallel with the forecourts, and
+     kept on this device (fu-avg-v1). If it can't be read the strip just stays hidden. */
 (function () {
   'use strict';
   var F = window.FuelParse;
@@ -18,7 +23,7 @@
   var LITRES = 55, STALE_DAYS = 3;
   var NAMES = { petrol: 'petrol', diesel: 'diesel' };
   var $ = function (id) { return document.getElementById(id); };
-  var state = { hide: [], fuel: 'petrol', mode: 'store', locating: 0, store: null, shown: null, kind: '', run: 0, checking: false, hiddenAt: 0 };
+  var state = { hide: [], fuel: 'petrol', mode: 'store', locating: 0, store: null, shown: null, kind: '', run: 0, checking: false, hiddenAt: 0, avg: null, avgBusy: false, mean: null };
 
   function load(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
@@ -82,6 +87,44 @@
       .finally(function () { clearTimeout(timer); });
   }
 
+  /* the UK weekly average pump prices (same for every store): read once per page open, and again on Check again only
+     if the saved copy is over 6 hours old. Never delays the forecourts; if it fails the strip just stays hidden. */
+  function readAverage() {
+    var ctl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 45000);
+    return fetch(JINA + F.AVERAGE_URL, { headers: { Accept: 'text/plain', 'X-Timeout': '20', 'X-Cache-Tolerance': '300' }, signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (text) { return F.parseAverage(text); })
+      .finally(function () { clearTimeout(timer); });
+  }
+  function loadAverage(force) {
+    if (state.avgBusy) return;
+    if (!state.avg) { var kept = load('fu-avg-v1'); if (kept && kept.petrol && kept.diesel) { state.avg = kept; renderAvg(); } }
+    if (state.avg && !force && Date.now() - ms(state.avg.read) < 6 * 3600000) return;
+    state.avgBusy = true;
+    readAverage().then(function (a) {
+      if (!a) return;
+      a.read = new Date().toISOString();
+      state.avg = a;
+      save('fu-avg-v1', a);
+      renderAvg();
+    }).catch(function () { /* leave the strip as it was (or hidden) */ })
+      .finally(function () { state.avgBusy = false; });
+  }
+  /* "Your area averages 172.3p, 2.1p below the UK average of 174.6p" for the fuel picked */
+  function renderAvg() {
+    var el = $('avg'), a = state.avg, f = state.fuel, m = state.mean && state.mean[f];
+    if (!a || !a[f] || m == null) { el.hidden = true; return; }
+    var diff = Math.round((m - a[f]) * 100) / 100, cls = Math.abs(diff) <= 0.05 ? 'level' : diff < 0 ? 'below' : 'above';
+    var day = a.date ? new Date(a.date + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '';
+    el.className = 'fu-avg is-' + cls;
+    el.innerHTML = 'Your area averages <b>' + money(m) + '</b>, ' +
+      (cls === 'level' ? '<b>level with</b>' : '<b>' + Math.abs(diff).toFixed(1) + 'p ' + (cls === 'below' ? 'below' : 'above') + '</b>') +
+      ' the UK average of ' + money(a[f]) +
+      '<small>UK average ' + money(a[f]) + (day ? ', week of ' + esc(day) : '') + ' (government weekly figure, not live)</small>';
+    el.hidden = false;
+  }
+
   /* a loading bar: not a real measure, it eases towards 92% while the prices load, then fills and fades out */
   var barTimer = 0;
   function barStart() {
@@ -115,11 +158,12 @@
     $('again').disabled = true;
     $('error').hidden = true;
     setStatus(state.shown ? 'Checking for newer prices' : 'Getting the latest prices', true);
+    loadAverage(false);
     var device = lastSeen(store);
     var backup = place === BACKUP.place ? loadBackup() : Promise.resolve(null);
     backup.then(function (gh) {
       if (!mine()) return;
-      // what to compare against for "what changed": whichever of GitHub's and this device's copy is newer
+      // what to merge the fresh prices into: whichever of GitHub's and this device's copy is newer
       var base = gh && (!device || ms(gh.checked) > ms(device.checked)) ? gh : device;
       if (gh && base === gh && state.kind !== 'live') show(gh, 'backup', true);
       return Promise.all([readFuel(place, 'petrol'), readFuel(place, 'diesel')]).then(function (two) {
@@ -173,7 +217,7 @@
 
   function render() {
     var data = state.shown;
-    if (!data) return;
+    if (!data) { state.mean = null; renderAvg(); return; }
     var f = state.fuel, every = Object.keys(data.stations).map(function (k) { var s = data.stations[k]; s.key = k; return s; });
     var held = [], all = every.filter(function (s) {
       var rule = state.hide.filter(function (r) { return F.isHidden(s, r); })[0];
@@ -186,6 +230,9 @@
       .sort(function (a, b) { return a[f].p - b[f].p || (a.miles || 0) - (b.miles || 0); });
     var none = all.filter(function (s) { return !s[f] || s[f].p == null; });
     $('view').hidden = false;
+    state.mean = state.mean || {};
+    state.mean[f] = priced.length ? priced.reduce(function (t, s) { return t + s[f].p; }, 0) / priced.length : null;
+    renderAvg();
     if (!priced.length) {
       $('best').hidden = true;
       $('list').innerHTML = '<li class="fu-none">No ' + NAMES[f] + ' prices reported around here right now.</li>';
@@ -217,7 +264,7 @@
         '<span class="fu-who"><b>' + esc(s.brand) + '</b><span>' + esc(s.address) + '</span>' +
         '<span class="fu-meta">' + (s.miles != null ? s.miles + ' mi' : '') +
         (r ? ' · <i class="' + (r.days > STALE_DAYS ? 'is-old' : '') + '">' + (r.days > STALE_DAYS ? 'price from ' : 'reported ') + esc(r.text) + '</i>' : '') + '</span>' +
-        moved(s[f]) + '</span>' +
+        '</span>' +
         '<span class="fu-price"><b>' + money(s[f].p) + '</b><span>' + (gap === 0 ? 'Cheapest' : '+' + gap.toFixed(1) + 'p') + '</span></span>' +
         '</a></li>';
     }).join('') + none.map(function (s) {
@@ -227,13 +274,6 @@
     }).join('');
   }
 
-  /* "▼ down 1.0p at 12:23 today (was 168.9p)" when a price changed in the last two days */
-  function moved(x) {
-    if (x.prev == null || x.p == null || Date.now() - ms(x.since) > 48 * 3600000) return '';
-    var d = x.p - x.prev, up = d > 0;
-    return '<span class="fu-moved ' + (up ? 'is-up' : 'is-down') + '">' + (up ? '▲ up ' : '▼ down ') + Math.abs(d).toFixed(1) + 'p' +
-      (ms(x.since) ? ' by ' + esc(when(x.since)) : '') + ' (was ' + money(x.prev) + ')</span>';
-  }
   function firstBit(a) { return String(a || '').split(',')[0]; }
   function maps(s) { return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(s.brand + ', ' + (s.raw || s.address)); }
 
@@ -269,6 +309,8 @@
     document.title = 'Fuel near ' + store.town;
     if (samePlace) { refresh(); return; }
     state.shown = null;
+    state.mean = null;
+    renderAvg();
     state.kind = '';
     $('view').hidden = true;
     $('error').hidden = true;

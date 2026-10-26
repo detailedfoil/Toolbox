@@ -40,6 +40,15 @@ body[data-fuel="diesel"] .fu{--fuel:var(--diesel);--fuel-ink:var(--diesel-ink);-
 .fu-switch button[aria-selected="true"]{background:var(--fuel);color:var(--fuel-ink)}
 .fu-switch button[aria-selected="true"] .fu-dot{background:var(--fuel-ink);box-shadow:none}
 
+.fu-avg{margin:14px 0 0;padding:11px 14px;border-radius:14px;background:var(--card);border:1px solid var(--border);border-left-width:5px;font-size:.9rem;line-height:1.35}
+.fu-avg b{font-weight:700}
+.fu-avg small{display:block;margin-top:3px;color:var(--muted);font-size:.76rem}
+.fu-avg.is-below{border-left-color:var(--down)}
+.fu-avg.is-below b{color:var(--down)}
+.fu-avg.is-above{border-left-color:var(--up)}
+.fu-avg.is-above b{color:var(--up)}
+.fu-avg.is-level{border-left-color:var(--old)}
+.fu-avg.is-level b{color:var(--old)}
 .fu-status{display:flex;align-items:center;gap:8px;min-height:22px;margin:14px 4px 12px;color:var(--muted);font-size:.86rem}
 .fu-pulse{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none;opacity:.5}
 .fu-status.is-live .fu-pulse{background:var(--down);opacity:1}
@@ -78,9 +87,6 @@ body[data-fuel="diesel"] .fu-best-go{background:rgba(127,127,127,.18)}
 .fu-who .fu-meta{font-size:.78rem}
 .fu-meta i{font-style:normal}
 .fu-meta i.is-old{color:var(--old);font-weight:650}
-.fu-who .fu-moved{white-space:normal;font-size:.78rem;font-weight:600}
-.fu-moved.is-up{color:var(--up)}
-.fu-moved.is-down{color:var(--down)}
 .fu-price{display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right}
 .fu-price b{font-size:1.25rem;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .fu-price span{color:var(--muted);font-size:.78rem;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}

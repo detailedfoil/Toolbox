@@ -37,6 +37,12 @@ explain changes in plain English and say what they'll see.
     it (needs `X-Timeout`, or the list hasn't filled in). The government's own feed blocks GitHub's servers. Shared by
     the page (live on every open) and the Leighton Buzzard backup on GitHub. `data/hidden.json` lists forecourts to
     leave out for everyone (closed, say): each is hidden until it reports a price dated after its `hiddenOn`.
+    The "went down 2.0p by ..." history lines under each forecourt were removed on 26 Oct 2026 (detailedfoil: "just want the
+    cost"); `merge()` still keeps `prev` / `prevSince` for the GitHub backup, they're just not shown. A strip under the
+    Petrol/Diesel switch compares the listed forecourts' plain average with the UK average for that fuel: the government's
+    WEEKLY figure (not live) from petrolprices.co.uk/fuel-price-index.php through jina, read by `parseAverage` in `parse.js`
+    (tested on the real page, `fixtures/fuel-average.txt`), once per page open and again on Check again only if the saved
+    one (`fu-avg-v1`) is over 6 hours old. It loads alongside the forecourts and stays hidden if it can't be read.
   - `till-count`: Photo Coin Counter (was Till Count), every store. Notes take a value; coins take a value, a number of coins or a photo
     of a pile of one coin (whichever was changed last wins). A £50 or £75 float (remembered per phone) comes off
     the total. Counts last while the page is open (sessionStorage) and photos only in memory: nothing is sent

@@ -18,6 +18,7 @@ vm.runInNewContext(fs.readFileSync(path.join(REPO, 'tools/fuel/parse.js'), 'utf8
 const F = sandbox.FuelParse;
 const fixture = (f) => fs.readFileSync(path.join(HERE, 'fixtures', 'fuel-' + f + '.txt'), 'utf8');
 const LBP = fixture('lb-petrol'), LBD = fixture('lb-diesel'), LUTON = fixture('luton-petrol');
+const AVG = fixture('average');
 const NOW = '2026-10-19T12:00:00.000Z';
 const plain = (x) => JSON.parse(JSON.stringify(x));
 
@@ -188,4 +189,24 @@ test("fuel backup: a map that won't fill in is tried twice, and only fails the r
     s.server.close();
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('fuel: the UK weekly average is read from the real fuel-price-index page, and only when both figures are there', () => {
+  assert.deepEqual(plain(F.parseAverage(AVG)), { petrol: 174.6, diesel: 199.3, date: '2026-10-19' });
+  assert.equal(F.parseAverage(AVG.replace(/Diesel\n\n199\.3p per litre/, 'Diesel\n\nn/a')), null, 'no diesel figure -> nothing');
+  assert.equal(F.parseAverage(AVG.replace('Unleaded Petrol\n\n174.6p per litre', '')), null, 'the 52-week lines are not mistaken for the petrol figure');
+  assert.equal(F.parseAverage(''), null);
+  assert.equal(F.parseAverage(null), null);
+  assert.equal(F.parseAverage('Unleaded Petrol\n\n12.5p per litre\n\nDiesel\n\n199.3p per litre'), null, 'a silly figure is refused');
+  assert.match(F.AVERAGE_URL, /petrolprices\.co\.uk\/fuel-price-index\.php$/);
+});
+
+test('fuel: the average still reads with small layout changes, and the update date is read as day/month/year', () => {
+  const crlf = AVG.replace(/\n/g, '\r\n');
+  assert.deepEqual(plain(F.parseAverage(crlf)), { petrol: 174.6, diesel: 199.3, date: '2026-10-19' });
+  const tight = 'Unleaded Petrol\n174.60p per litre\nDiesel\n199.30p per litre\nUpdated: 3/11/2026';
+  assert.deepEqual(plain(F.parseAverage(tight)), { petrol: 174.6, diesel: 199.3, date: '2026-11-03' });
+  const inline = '## Unleaded: 150.2p\n## Diesel: 160.9p per litre';
+  assert.deepEqual(plain(F.parseAverage(inline)), { petrol: 150.2, diesel: 160.9, date: null });
+  assert.equal(F.parseAverage('Unleaded Petrol\n\n174.6p\n\nDiesel\n\n199.3p\n\nUpdated: 45/13/2026').date, null, 'an impossible date is dropped');
 });

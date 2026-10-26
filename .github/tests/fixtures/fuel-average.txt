@@ -1,0 +1,47 @@
+Official UK weekly average petrol and diesel prices, derived from UK Government statistics.
+
+## UK Average Fuel Prices (Latest Weekly Update)
+
+Based on UK Government weekly fuel price statistics.
+
+Unleaded Petrol
+
+174.6p per litre
+
+-0.71p vs last week
+
+Diesel
+
+199.3p per litre
+
+-0.71p vs last week
+
+Updated: 19/10/2026 · Source: [UK Government](https://www.gov.uk/government/statistical-data-sets/oil-and-petroleum-products-weekly-statistics)
+
+Weekly UK average prices · Not live forecourt prices
+
+## Summary Statistics
+
+Unleaded 52-wk High
+
+175.28p
+
+Unleaded 52-wk Low
+
+131.46p
+
+Diesel 52-wk High
+
+200.04p
+
+Diesel 52-wk Low
+
+140.72p
+
+Unleaded 52-wk Average
+
+149.40p
+
+Diesel 52-wk Average
+
+167.58p

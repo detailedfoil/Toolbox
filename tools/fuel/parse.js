@@ -10,6 +10,9 @@
      last pulled the government feed (ISO, UK time); count is the page's own "of N stations" figure (or null).
    ok(result) -> '' when the read looks complete, otherwise why not.
    combine(petrol, diesel) -> [{key, brand, address, miles, petrol: {p, date} | null, diesel: ...}]
+   AVERAGE_URL, parseAverage(text) -> {petrol, diesel, date: 'YYYY-MM-DD'} | null: the UK weekly average pump prices
+     (government figures, not live) from PetrolPrices.co.uk's fuel-price-index.php as jina renders it. null unless both
+     figures are found; date is null if the "Updated: 19/10/2026" line is missing.
    merge(saved, combined, synced, nowISO, place) -> {data, changes, changed}: the saved file with the fresh prices in, keeping
      the previous price and when it changed, so the page can show what moved. */
 (function (root) {
@@ -108,6 +111,24 @@
     return { stations: stations, count: count ? +(count[1] || count[2]) : null, synced: synced };
   }
 
+  var AVERAGE_URL = 'https://www.petrolprices.co.uk/fuel-price-index.php';
+  /* "Unleaded Petrol / 174.6p per litre / -0.71p vs last week / Diesel / 199.3p per litre ... / Updated: 19/10/2026".
+     Only the "Latest Weekly Update" part is read (the 52-week stats and the weekly table further down are cut off). */
+  function parseAverage(text) {
+    text = String(text || '').replace(/\r/g, '');
+    var cut = text.search(/Summary Statistics|Price Trend|Weekly Price Data/i);
+    if (cut > 0) text = text.slice(0, cut);
+    function fig(names) {
+      var m = new RegExp('(?:^|\\n)\\s*(?:#+\\s*)?(?:' + names + ')\\s*[:\\s]\\s*(\\d{2,3}(?:\\.\\d+)?)\\s*p\\b', 'i').exec(text);
+      return m ? pence(m[1]) : null;
+    }
+    var petrol = fig('Unleaded(?:\\s+Petrol)?|Petrol'), diesel = fig('Diesel');
+    if (petrol === null || diesel === null) return null;
+    var date = null, d = /Updated:?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i.exec(text);
+    if (d && +d[2] >= 1 && +d[2] <= 12 && +d[1] >= 1 && +d[1] <= 31) date = d[3] + '-' + d[2].padStart(2, '0') + '-' + d[1].padStart(2, '0');
+    return { petrol: petrol, diesel: diesel, date: date };
+  }
+
   function ok(r) {
     if (!r || !r.stations.length) return 'no forecourts found on the page';
     if (r.count !== null && r.count > r.stations.length) return 'the page has ' + r.count + ' forecourts but only ' + r.stations.length + ' could be read';
@@ -159,5 +180,5 @@
     return { data: { place: place || saved.place || null, radius: RADIUS, synced: synced || saved.synced || null, checked: now, stations: stations }, changes: changes, changed: changes.length > 0 };
   }
 
-  root.FuelParse = { STORES: STORES, tidy: tidy, RADIUS: RADIUS, mapURL: mapURL, parse: parse, ok: ok, combine: combine, merge: merge, isHidden: isHidden, ukDate: function (d) { return ukParts(d || new Date()).date; } };
+  root.FuelParse = { STORES: STORES, tidy: tidy, RADIUS: RADIUS, mapURL: mapURL, AVERAGE_URL: AVERAGE_URL, parseAverage: parseAverage, parse: parse, ok: ok, combine: combine, merge: merge, isHidden: isHidden, ukDate: function (d) { return ukParts(d || new Date()).date; } };
 })(typeof window !== 'undefined' ? window : globalThis);
