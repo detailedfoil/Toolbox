@@ -125,3 +125,11 @@ test('a relay that just gave a good answer is not demoted by one bad one', async
   assert.equal(Object.keys(sl.state().resting).length, 0);
   assert.equal(sl.state().order[0], 'jina');
 });
+
+test("Screwfix's Human Verification page (jina's error 405) is its own outcome, so the pages can queue it for later", async () => {
+  const hv = 'Title: Human Verification\n\nURL Source: https://www.screwfix.com/p/product/812fm\n\nWarning: Target URL returned error 405: Method Not Allowed\n\nMarkdown Content:\nVerify';
+  const f = answers([[200, hv], [200, hv]]);
+  const r = await loadLookup(f).lookup('812FM', { only: ['jina'], retries: 1 });
+  assert.equal(r.status, 'blocked');
+  assert.equal(r.trace[0].outcome, 'verify');
+});

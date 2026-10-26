@@ -12,7 +12,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = '2026-10-20a';           // shown in error reports, so a stale copy on a phone is easy to spot
+  var VERSION = '2026-10-26a';           // shown in error reports, so a stale copy on a phone is easy to spot
 
   var PROXIES = [
     { id: 'codetabs',   build: function (u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
@@ -352,6 +352,9 @@
       // jina answers 200 with "Target URL returned error 502: Bad Gateway" when Screwfix itself hiccups: worth another go
       // soon, and no reason to demote jina
       if (r.status === 'blocked' && /Target URL returned error 5\d\d/.test(String(res.text || '').slice(0, 400))) outcome = 'upstream';
+      // 26 Oct: Screwfix sometimes shows jina its "Human Verification" page (jina reports it as error 405) for a few minutes,
+      // then lets the same code through. Retrying within seconds doesn't help; the pages queue it for later instead.
+      if (r.status === 'blocked' && /Human Verification|Target URL returned error 405/i.test(String(res.text || '').slice(0, 400))) outcome = 'verify';
       var t = { via: proxy.id, outcome: outcome, ms: now() - t0, http: res.status, result: r, len: (res.text || '').length, mode: full && proxy.full ? 'page' : 'text' };
       // what came back instead of the product page, for error reports
       if (outcome === 'limited') t.retryAfter = retryAfterOf(res.text);

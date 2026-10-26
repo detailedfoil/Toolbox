@@ -159,6 +159,8 @@ function readOf(got, code) {
     return { limited: true, wait: Math.min(Math.max(m ? Number(m[1]) : 0, 5), 60) * 1000 };
   }
   if (!got.http) return { why: 'jina: no answer (' + got.err + ')' };
+  // Screwfix sometimes shows jina its "Human Verification" page (error 405) for a while; the same code reads fine later
+  if (/Human Verification|Target URL returned error 405/i.test(got.text.slice(0, 400))) return { why: "jina: Screwfix's human verification page (405), try again later", verify: true };
   let r;
   try { r = JSON.parse(JSON.stringify(SL.interpret({ status: got.http, text: got.text }, code))); } catch (e) { return { why: 'jina: page could not be read (' + errText(e) + ')' }; }
   return { r };
@@ -169,6 +171,7 @@ function readOf(got, code) {
 async function viaJina(code, before) {
   const a = readOf(await jinaGet(code, false), code);
   if (a.limited) return { kind: 'limited', pause: a.wait };
+  if (a.verify) return { kind: 'fail', why: a.why };   // no point asking Screwfix directly: it is the one turning us away
   if (a.why) return { kind: 'fail', why: a.why, relay: true };
   const r = a.r;
   if (r.status === 'notfound') return { kind: 'missing' };

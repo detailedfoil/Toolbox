@@ -797,7 +797,7 @@
     var run = r || { started: new Date().toISOString(), total: codes.length, got: 0, fails: 0, codes: codes };
     phone = { queue: codes.slice(), total: run.total, got: run.got || 0, fails: run.fails || 0, failed: (r && r.failed) || [],
               seen: (r && r.seen) || {}, started: run.started, retry: !!(r && r.retry), streak: 0, current: '', attempt: '',
-              t0: Date.now(), relays: {}, spent: 0, doneN: 0, live: {} };
+              t0: Date.now(), relays: {}, spent: 0, doneN: 0, live: {}, later: {}, tried: {} };
     deadBefore().forEach(function (id) { phone.relays[id] = { ok: 0, hard: 2 }; });
     phone.tick = setInterval(progress, 1000);
     saveRun();
@@ -837,8 +837,12 @@
     if (!phone) return;
     if (!phone.queue.length) { finishPhone('done'); return; }
     var me = phone, t0 = Date.now(), code = null;
-    for (var qi = 0; qi < phone.queue.length; qi++) if (!phone.live[phone.queue[qi]]) { code = phone.queue[qi]; break; }
-    if (!code) return;                                   // the rest are being read by the other readers
+    for (var qi = 0; qi < phone.queue.length; qi++) {
+      var qc = phone.queue[qi];
+      if (!phone.live[qc] && !(phone.later[qc] > Date.now())) { code = qc; break; }
+    }
+    // the rest are being read by the other readers, or waiting a few minutes for Screwfix's human verification to pass
+    if (!code) { setTimeout(nextPhone, 8000); return; }
     var before = L.filter(function (l) { return l.code === code; })[0];
     var item = { code: code, at: new Date(t0).toISOString(), last: before ? before.price : null, ticket: before ? before.shelf : null, steps: [] };
     var live = phone.live[code] = { t0: t0, attempt: '' };
@@ -857,7 +861,7 @@
       noteRelays(r.trace);
       item.steps.push(stepOf('text', r));
       var read = (r.status === 'found' || r.status === 'partial') && !r.unsure && pounds(r.price) != null;
-      if (!read) return { r: r, price: null, why: missWhy(r) };
+      if (!read) return { r: r, price: null, why: missWhy(r), verify: (r.trace || []).some(function (t) { return t.outcome === 'verify'; }) };
       var price = readPrice(r, before);
       if (price != null) return { r: r, price: price };
       return SL.lookup(code, { full: true, only: ['jina'], retries: 0, onAttempt: onAttempt }).then(function (r2) {
@@ -882,6 +886,15 @@
         phone.useAll = false;
         item.result = same(res.price, item.last != null ? item.last : item.ticket) ? 'same' : 'changed';
         item.price = res.price;
+      } else if (res.verify && !phone.tried[code]) {
+        // Screwfix showed jina its "Human Verification" page: the same code usually reads fine a few minutes later, so
+        // it goes to the back of the line for a second go instead of counting as missed
+        phone.tried[code] = true;
+        phone.later[code] = Date.now() + 150000;
+        phone.queue.splice(phone.queue.indexOf(code), 1);
+        phone.queue.push(code);
+        item.result = 'later';
+        item.why = res.why;
       } else {
         // read but not confirmed: keep what Screwfix showed, so the Couldn't be read list can offer it
         if (res.seen != null) phone.seen[code] = res.seen;
@@ -907,7 +920,7 @@
       phone.doneN++;
       delete phone.live[code];
       var qx = phone.queue.indexOf(code);
-      if (qx >= 0) phone.queue.splice(qx, 1);
+      if (qx >= 0 && item.result !== 'later') phone.queue.splice(qx, 1);
       if (phone.streak >= 6) {
         // nothing's getting through: put those six back so Carry on tries them again
         phone.queue = phone.failed.splice(-6, 6).concat(phone.queue);
