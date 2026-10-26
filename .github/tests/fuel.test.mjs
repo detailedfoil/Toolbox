@@ -93,8 +93,10 @@ test('fuel: a changed price keeps the old one and when it changed; an unchanged 
 });
 
 test('fuel: a hidden forecourt stays out until it reports something newer, and the hide list matches the real page', () => {
-  const rules = JSON.parse(fs.readFileSync(path.join(REPO, 'tools/fuel/data/hidden.json'), 'utf8')).stations;
-  assert.ok(rules.length && rules.every((r) => r.key && r.name && /^\d{4}-\d\d-\d\d$/.test(r.hiddenOn)));
+  // the live list can be empty (Sainsbury's Dunstable reopened on 26 Oct 2026), so the rule logic is tested on a rule of its own
+  const live = JSON.parse(fs.readFileSync(path.join(REPO, 'tools/fuel/data/hidden.json'), 'utf8')).stations;
+  assert.ok(Array.isArray(live) && live.every((r) => r.key && r.name && /^\d{4}-\d\d-\d\d$/.test(r.hiddenOn)));
+  const rules = [{ key: '2 8 LUTON ROAD DUNSTABLE', name: 'Sainsburys, 2-8 Luton Road, Dunstable', reason: 'Temporarily closed', hiddenOn: '2026-10-19' }];
   const luton = F.parse(LUTON, { now: NOW }).stations;
   const sains = luton.find((s) => /2-8 Luton Road/.test(s.address));
   assert.equal(sains.key, rules[0].key, "the hide rule's key is the one the page really produces for Sainsbury's Luton Road");
