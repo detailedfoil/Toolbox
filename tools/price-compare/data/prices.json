@@ -1,6 +1,7 @@
 {
  "checked": "2026-10-26T06:10:57.014Z",
  "run": {"mode":"all","started":"2026-10-26T06:10:57.015Z","took":279,"tried":20,"read":18,"failed":2},
+ "last": {"mode":"new","started":"2026-10-26T11:41:33.347Z","took":160,"tried":2,"read":0,"failed":2},
  "items": {
   "cu15": {
    "screwfix": {"price":15.6,"name":"Wednesbury Copper Pipe 15mm x 3m(98683)","url":"https://www.screwfix.com/p/wednesbury-copper-pipe-15mm-x-3m/98683","since":"2026-10-26T02:14:27.045Z"},
@@ -11,7 +12,7 @@
    "cityplumbing": {"price":15.59,"name":"Wednesbury Plain Copper Tube Length 15mm x 3m X015L-3","url":"https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-15mm-x-3m/p/313813","since":"2026-10-26T02:14:27.045Z"},
    "selco": {"price":14.4,"name":"Copper Pipe 15mm x 3m","url":"https://www.selcobw.com/copper-pipe-15mm-x-3m","since":"2026-10-26T02:14:27.045Z"},
    "builderdepot": {"price":14.1,"name":"Copper Tube 15mm x 3m","url":"https://www.builderdepot.co.uk/copper-tube-15mm-x-3m","since":"2026-10-26T02:57:48.529Z"},
-   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":5}},
+   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":6}},
    "bes": {"price":17.66,"name":"Copper Tube - 15mm x 3m","url":"https://www.bes.co.uk/15-mm-x-3-m-copper-tube","since":"2026-10-26T02:57:48.529Z"}
   },
   "cu22": {
@@ -23,7 +24,7 @@
    "cityplumbing": {"price":31.28,"name":"Wednesbury Plain Copper Tube Length 22mm x 3m X022L-3","url":"https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-22mm-x-3m/p/119745","since":"2026-10-26T02:14:27.045Z"},
    "selco": {"price":29.24,"name":"Copper Pipe 22mm x 3m","url":"https://www.selcobw.com/copper-pipe-22mm-x-3m","since":"2026-10-26T02:14:27.045Z"},
    "builderdepot": {"price":28.5,"name":"Copper Tube 22mm x 3m","url":"https://www.builderdepot.co.uk/copper-tube-22mm-x-3m","since":"2026-10-26T02:57:48.529Z"},
-   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":5}},
+   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":6}},
    "bes": {"price":35.3,"name":"Copper Tube - 22mm x 3m","url":"https://www.bes.co.uk/copper-tube-22mm-x-3m-10312/","since":"2026-10-26T02:57:48.529Z"}
   }
  }
