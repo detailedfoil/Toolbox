@@ -2,7 +2,7 @@
  * you type, shows results a screenful at a time and each result's photo as it scrolls into view. Tapping a result
  * opens it to show its description (descriptions/<CODE>.json, saved by the GitHub check, loaded only when tapped).
  * Stock levels pasted from the stock system (stock.js) show on each result, for the visit only.
- * product-search-sw.js lets the page open with no signal; "Save for no signal" keeps the SKU codes and names (no photos or descriptions). */
+ * product-search-sw.js lets the page open with no signal; the three "Download" buttons keep names, descriptions and images for use with no signal. */
 (function () {
   'use strict';
 
@@ -285,55 +285,78 @@
   stockText.addEventListener('input', function () { if (stockText.value.length > 20) useStock(stockText.value); });
   showStockBar();
 
-  /* ---------- working with no signal: product-search-sw.js, and "Save for no signal" ---------- */
+  /* ---------- working with no signal: product-search-sw.js, and the three downloads ---------- */
 
   var CACHE = 'product-search-v1';          // the same cache product-search-sw.js keeps things in
-  var saveBox = $('save'), saveAll = $('saveAll'), saveDel = $('saveDel'), saveRun = $('saveRun');
-  var saveProg = $('saveProg'), saveMsg = $('saveMsg'), saveDone = $('saveDone'), saving = false;
+  var saveBox = $('save'), saveDel = $('saveDel'), saveRun = $('saveRun');
+  var saveProg = $('saveProg'), saveMsg = $('saveMsg'), saving = false;
   var canSave = 'serviceWorker' in navigator && 'caches' in window;
+  var PARTS = ['names', 'descs', 'photos'];
   if (canSave) {
     // scope "product-search": only this page and its files, never the other tools
     navigator.serviceWorker.register('product-search-sw.js', { scope: 'product-search' }).catch(function () { /* opens online only */ });
   } else {
     saveBox.querySelector('p').textContent = "This browser can't save the site for use with no signal.";
-    saveAll.hidden = true;
+    PARTS.forEach(function (k) { $('save-' + k).hidden = true; });
   }
 
-  // everything there is to save: the page, its files and the ILS list of SKU codes and names (no photos or descriptions, detailedfoil 26 Oct 2026)
-  function everything() {
-    var files = [location.pathname, LIST_URL,
-      'product-search/stock-help.png', 'posters/fonts/BarlowSemiCondensed-ExtraBold.ttf', '../manifest.json'];
-    Array.prototype.forEach.call(document.querySelectorAll('script[src], link[rel="stylesheet"]'), function (el) {
-      files.push(el.getAttribute('src') || el.getAttribute('href'));
-    });
-    return { files: files };
+  // three separate downloads (detailedfoil, 26 Oct 2026):
+  //  names: the page, its code and the ILS list of SKU codes and names (about 1 MB)
+  //  descs: descriptions, the words they're searched by, and the Screwfix names/age notices (about 6 MB)
+  //  photos: the 120 px photos (about 22 MB)
+  function partFiles(kind) {
+    var names = (web && web.products) || {}, out = [];
+    if (kind === 'names') {
+      out = [location.pathname, LIST_URL, 'product-search/stock-help.png', 'posters/fonts/BarlowSemiCondensed-ExtraBold.ttf', '../manifest.json'];
+      Array.prototype.forEach.call(document.querySelectorAll('script[src], link[rel="stylesheet"]'), function (el) {
+        var u = el.getAttribute('src') || el.getAttribute('href');
+        if (!/^(?:[a-z]+:)?\/\//i.test(u)) out.push(u);       // this site's files only (not the visitor-stats script)
+      });
+    } else if (kind === 'descs') {
+      out = [WEB_URL, DESC_WORDS_URL];
+      Object.keys(names).forEach(function (k) { if (names[k].d === 1) out.push(DESC_URL + encodeURIComponent(k) + '.json'); });
+    } else {
+      Object.keys(names).forEach(function (k) { if (names[k].p) out.push('product-search/photos/' + encodeURIComponent(k) + '.jpg'); });
+    }
+    return out;
   }
-  // the page, its code and the ILS product list only
+  // measured 26 Oct 2026: a photo about 2 KB, a description about 0.4 KB, the lists about 2.9 MB, the page and names about 1 MB
   function showSaveSize() {
-    $('saveSize').textContent = '1 MB';
+    var d = partFiles('descs').length - 2, p = partFiles('photos').length;
+    $('size-names').textContent = '1 MB';
+    $('size-descs').textContent = Math.max(1, Math.round(2.9 + d * 0.41 / 1024)) + ' MB';
+    $('size-photos').textContent = Math.max(1, Math.round(p * 1.96 / 1024)) + ' MB';
+  }
+  function readSaved() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem('ps-saved2') || 'null'); } catch (e) { s = null; }
+    return s || {};
   }
   function showSaved() {
-    var s = null;
-    try { s = JSON.parse(localStorage.getItem('ps-saved') || 'null'); } catch (e) { s = null; }
-    saveDone.hidden = !s;
-    saveDel.hidden = !s;
-    saveAll.textContent = s ? 'Save again (adds anything new)' : 'Save for no signal';
-    if (s) {
-      var d = new Date(s.at);
-      saveDone.textContent = 'Saved ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' at ' +
-        d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ': ' + n(s.products) + ' products (SKU codes and names). Works with no Wi-Fi or signal.' + (s.missed ? ' (' + n(s.missed) + " couldn't be saved: press Save again later.)" : '');
-    }
+    var s = readSaved(), any = false;
+    PARTS.forEach(function (k) {
+      var e = s[k], done = $('done-' + k), btn = $('btn-' + k);
+      if (e) any = true;
+      done.hidden = !e;
+      btn.textContent = e ? 'Save again' : 'Download';
+      if (e) {
+        var d = new Date(e.at);
+        done.textContent = 'Saved ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' at ' +
+          d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + (e.missed ? ' (' + n(e.missed) + " couldn't be saved: press Save again later)" : '');
+      }
+    });
+    saveDel.hidden = !any;
   }
 
-  function saveEverything() {
+  function saveEverything(kind) {
     if (saving || !canSave) return;
     if (!list) { toast('Wait for the product list to load first'); return; }
     saving = true;
-    saveAll.disabled = true; saveDel.disabled = true;
-    saveRun.hidden = false; saveDone.hidden = true;
-    var all = everything(), cache, done = 0, missed = 0;
-    var jobs = all.files.map(function (u) { return { url: u, always: true }; })
-      ;
+    PARTS.forEach(function (k) { $('btn-' + k).disabled = true; });
+    saveDel.disabled = true;
+    saveRun.hidden = false;
+    var cache, done = 0, missed = 0;
+    var jobs = partFiles(kind).map(function (u) { return { url: u, always: kind !== 'photos' && kind !== 'descs' || /\/data\/|desc-words|web-names/.test(u) }; });
     var total = jobs.length;
     function shown() { saveProg.value = total ? done / total : 1; saveMsg.textContent = 'Saving ' + n(done) + ' of ' + n(total) + '...'; }
     shown();
@@ -345,7 +368,7 @@
       function next() {
         if (at >= jobs.length) return Promise.resolve();
         var job = jobs[at++], url = new URL(job.url, location.href);
-        // a description already kept is left as it is (checked one at a time: listing 20,000 at once can fail)
+        // a photo or description already kept is left as it is (checked one at a time: listing 20,000 at once can fail)
         return (job.always ? Promise.resolve(null) : cache.match(url.href)).then(function (hit) {
           if (hit) return;
           return get(url.href, 0).then(function (res) {
@@ -362,14 +385,17 @@
       return Promise.all([next(), next(), next(), next()]);
     }).then(function () {
       try {
-        localStorage.setItem('ps-saved', JSON.stringify({ at: Date.now(), products: list.items.length, missed: missed }));
+        var s = readSaved();
+        s[kind] = { at: Date.now(), missed: missed };
+        localStorage.setItem('ps-saved2', JSON.stringify(s));
       } catch (e) { /* private mode: still saved */ }
       toast(missed ? 'Saved, apart from ' + n(missed) : 'Saved on this device');
     }, function () {
       toast("Couldn't save: the device may be out of space");
     }).then(function () {
       saving = false;
-      saveAll.disabled = false; saveDel.disabled = false;
+      PARTS.forEach(function (k) { $('btn-' + k).disabled = false; });
+      saveDel.disabled = false;
       saveRun.hidden = true;
       showSaved();
     });
@@ -384,11 +410,11 @@
       return null;
     });
   }
-  saveAll.addEventListener('click', saveEverything);
+  PARTS.forEach(function (k) { $('btn-' + k).addEventListener('click', function () { saveEverything(k); }); });
   saveDel.addEventListener('click', function () {
     if (saving) return;
     caches.delete(CACHE).then(function () {
-      try { localStorage.removeItem('ps-saved'); } catch (e) { /* nothing kept */ }
+      try { localStorage.removeItem('ps-saved2'); localStorage.removeItem('ps-saved'); } catch (e) { /* nothing kept */ }
       showSaved();
       toast('Saved copy deleted');
     });

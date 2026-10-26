@@ -133,6 +133,10 @@ html:has(body.sx){background:var(--sx-bg,#f4f4f4);color-scheme:light}
 .sx-save{margin:0 0 14px;padding:0 0 14px;border-bottom:1px solid var(--sx-line)}
 .sx-save h3{margin:0 0 6px;font-size:1rem;color:var(--sx-navy)}
 .sx-save p{margin:0 0 10px;font-size:.9rem;line-height:1.4}
+.sx-save-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 10px;font-size:.9rem;line-height:1.4}
+.sx-save-row>div{flex:1;min-width:0}
+.sx-save-row .sx-save-done{flex-basis:100%;margin:0}
+.sx-save-size{color:var(--sx-muted)}
 .sx-save-btns{display:flex;gap:8px;flex-wrap:wrap}
 .sx-save-run{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:.85rem;color:var(--sx-muted)}
 .sx-save-run[hidden],.sx-save-done[hidden]{display:none}

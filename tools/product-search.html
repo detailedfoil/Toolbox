@@ -9,7 +9,7 @@
 <title>Product Search</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="product-search/product-search.css?v=c4cbc5538b">
+<link rel="stylesheet" href="product-search/product-search.css?v=24e7fb8348">
 <script src="../analytics.js?v=f5e6d397aa"></script>
 </head>
 <body class="sx">
@@ -81,18 +81,30 @@
   <section class="sx-settings" id="settings">
     <h2>Settings</h2>
     <div class="sx-save" id="save">
-      <h3>Save the site on this device</h3>
-      <p>Saves every product&#8217;s SKU code and ILS name (no photos or descriptions) on this device, so the site opens and works even with no Wi-Fi or
-        signal. It&#8217;s about <b id="saveSize">1 MB</b>. It only takes a moment.</p>
-      <div class="sx-save-btns">
-        <button type="button" class="sx-btn" id="saveAll">Save for no signal</button>
-        <button type="button" class="sx-btn sx-btn-quiet" id="saveDel" hidden>Delete saved copy</button>
+      <h3>Download for no Wi-Fi or signal</h3>
+      <p>Pick what to keep on this device so the site still works with no Wi-Fi or signal. Do these on Wi-Fi, and keep this page open until it says it&#8217;s saved. Start with the names: that&#8217;s all you need to look products up.</p>
+      <div class="sx-save-row" id="save-names">
+        <div><b>Download names</b> <span class="sx-save-size">(about <span id="size-names">1 MB</span>)</span><br>The site, every SKU code and its ILS name.</div>
+        <button type="button" class="sx-btn" id="btn-names">Download</button>
+        <p class="sx-save-done" id="done-names" hidden></p>
+      </div>
+      <div class="sx-save-row" id="save-descs">
+        <div><b>Download descriptions</b> <span class="sx-save-size">(about <span id="size-descs">1 MB</span>)</span><br>Product descriptions, and searching by description.</div>
+        <button type="button" class="sx-btn" id="btn-descs">Download</button>
+        <p class="sx-save-done" id="done-descs" hidden></p>
+      </div>
+      <div class="sx-save-row" id="save-photos">
+        <div><b>Download images</b> <span class="sx-save-size">(about <span id="size-photos">1 MB</span>)</span><br>Every product photo.</div>
+        <button type="button" class="sx-btn" id="btn-photos">Download</button>
+        <p class="sx-save-done" id="done-photos" hidden></p>
       </div>
       <div class="sx-save-run" id="saveRun" hidden>
         <progress id="saveProg" max="1" value="0"></progress>
         <span id="saveMsg"></span>
       </div>
-      <p class="sx-save-done" id="saveDone" hidden></p>
+      <div class="sx-save-btns">
+        <button type="button" class="sx-btn sx-btn-quiet" id="saveDel" hidden>Delete saved copy</button>
+      </div>
     </div>
     <label class="sx-switch">
       <input type="checkbox" id="nophotos">
@@ -106,7 +118,7 @@
 
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="product-search/stock.js?v=622e06e7f3"></script>
-<script src="product-search/photos.js?v=e38f0ad24e"></script>
-<script src="product-search/app.js?v=5b8535278b"></script>
+<script src="product-search/photos.js?v=ae78ea0340"></script>
+<script src="product-search/app.js?v=2349619c8b"></script>
 </body>
 </html>

@@ -8,7 +8,7 @@
  *  - the page, its code and the lists: the site first (so updates come through), the kept copy when there's no
  *    answer in 4 seconds or no connection
  *  - photos and descriptions: the kept copy first (they hardly change), the site otherwise
- * The "Save for no signal" button (app.js) puts just the page and the ILS product list (no photos or descriptions) into the same cache in one go.
+ * The three Download buttons (app.js: names, descriptions, images) put those files into the same cache in one go.
  */
 'use strict';
 
