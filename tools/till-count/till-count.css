@@ -6,6 +6,9 @@
 .tc-sub{margin:0 0 12px;color:var(--muted)}
 .tc-tip{display:flex;gap:12px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:16px;background:var(--accent-soft);color:var(--text)}
 .tc-tip svg{width:26px;height:26px;flex:none;margin-top:1px;color:var(--accent)}
+.tc-private{display:flex;gap:8px;align-items:flex-start;margin:-4px 2px 14px;color:var(--muted);font-size:.84rem;line-height:1.4}
+.tc-private svg{width:16px;height:16px;flex:none;margin-top:1px;color:var(--ok)}
+.tc-private b{color:var(--text);font-weight:650}
 .tc-tip p{margin:0;font-size:.9rem;line-height:1.45}
 
 /* the total, always in view */
