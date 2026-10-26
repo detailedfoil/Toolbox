@@ -1,4 +1,4 @@
-// Makes a test photo for the Z Report reader from a real photo of a Z report, with every amount on it changed:
+// Makes a test photo for the Z report reader (tools/till-count/zreport.js) from a real photo of a Z report, with every amount on it changed:
 //   node .github/z-report/make-fixture.mjs truth.json real.jpg out.jpg
 // truth.json is the real receipt's rows, as for train.mjs ({ "rows": [...] } or [{ "rows": [...] }]): it stays on your
 // own computer, with the real photo. The repo is public, so real Z reports never go in it. This keeps the real photo's
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const jpeg = require('jpeg-js');
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const Z = require(path.join(REPO, 'tools/z-report/reader.js'));
+const Z = require(path.join(REPO, 'tools/till-count/zreport.js'));
 
 // the made-up receipt: overall end of day total 712.32, Worldline TradeUK 27.06
 export const FAKE = [

@@ -3,6 +3,11 @@
 @media (prefers-color-scheme:light){.tc{--check:#a86400;--bad:#c8372b;--added:#2d6df6;--ok:#13874f}}
 .tc [hidden]{display:none!important}
 .tc h1{margin-bottom:4px}
+/* the two tabs: Till count and Z report */
+.tc-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:6px 0 16px;padding:4px;border-radius:14px;background:var(--card);border:1px solid var(--border)}
+.tc-tabs button{height:44px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:.95rem;font-weight:700;cursor:pointer}
+.tc-tabs button[aria-selected="true"]{background:var(--accent);color:#fff}
+.tc-tabs button:active{transform:scale(.98)}
 .tc-sub{margin:0 0 12px;color:var(--muted)}
 .tc-tip{display:flex;gap:12px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:16px;background:var(--accent-soft);color:var(--text)}
 .tc-tip svg{width:26px;height:26px;flex:none;margin-top:1px;color:var(--accent)}
@@ -99,4 +104,85 @@
   .tc-coinrow{grid-template-columns:40px 1fr 1fr;gap:8px}
   .tc-box{padding:0 9px}
   .tc-net{font-size:2.25rem}
+}
+
+/* Z report tab */
+.zr{max-width:620px;--ok:#22c55e;--check:#ffb020;--bad:#ff7a6b}
+@media (prefers-color-scheme:light){.zr{--ok:#13874f;--check:#a86400;--bad:#c8372b}}
+.zr [hidden]{display:none!important}
+.zr-sub{margin:0 0 14px;color:var(--muted)}
+
+/* the answer */
+.zr-result{padding:14px 16px;border-radius:20px;background:var(--card);border:1px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+@media (prefers-color-scheme:light){.zr-result{box-shadow:0 8px 24px rgba(20,23,31,.1)}}
+.zr-result-k{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.zr-net{display:block;margin-top:2px;font-size:2.6rem;font-weight:800;letter-spacing:-.025em;line-height:1.1;font-variant-numeric:tabular-nums}
+.zr-net.is-empty{color:var(--muted)}
+.zr-net.is-neg{color:var(--bad)}
+.zr-sum{margin:2px 0 0;color:var(--muted);font-size:.86rem}
+.zr-sum b{color:var(--text);font-weight:650;font-variant-numeric:tabular-nums}
+
+.zr-tip{display:flex;gap:12px;align-items:flex-start;margin:14px 0 12px;padding:12px 14px;border-radius:16px;background:var(--accent-soft);color:var(--text)}
+.zr-tip svg{width:26px;height:26px;flex:none;margin-top:1px;color:var(--accent)}
+.zr-tip p{margin:0;font-size:.9rem;line-height:1.45}
+
+.zr-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.zr-acts button,.zr-photo-acts button{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 14px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--accent);font:inherit;font-size:.92rem;font-weight:650;cursor:pointer}
+.zr-acts .zr-cam{background:var(--accent);border-color:transparent;color:#fff}
+.zr-acts svg,.zr-photo-acts svg{width:19px;height:19px;flex:none}
+.zr-acts button:active,.zr-photo-acts button:active{transform:scale(.97)}
+.zr-acts button[disabled]{opacity:.55}
+
+.zr-private{display:flex;gap:8px;align-items:flex-start;margin:10px 2px 0;color:var(--muted);font-size:.84rem;line-height:1.4}
+.zr-private svg{width:16px;height:16px;flex:none;margin-top:1px;color:var(--ok)}
+.zr-private b{color:var(--text);font-weight:650}
+.zr-msg{margin:12px 2px 0;color:var(--check);font-size:.88rem;font-weight:600;line-height:1.45}
+.zr-msg.is-busy{display:flex;align-items:center;gap:8px;color:var(--muted)}
+.zr-msg.is-good{color:var(--ok)}
+.zr-spin{width:15px;height:15px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:zr-spin .8s linear infinite;flex:none}
+@keyframes zr-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.zr-spin{animation-duration:2.4s}}
+
+/* the two numbers */
+.zr-fields{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.zr-field{padding:12px;border-radius:16px;background:var(--card);border:1px solid var(--border)}
+.zr-field.is-ok{border-color:color-mix(in srgb,var(--ok) 55%,transparent)}
+.zr-field.is-check{border-color:color-mix(in srgb,var(--check) 60%,transparent)}
+.zr-field-top{display:grid;grid-template-columns:1fr minmax(8.5em,40%);align-items:center;gap:10px}
+.zr-label{font-weight:650;font-size:.98rem;line-height:1.25}
+.zr-label small{display:block;margin-top:2px;color:var(--muted);font-size:.8rem;font-weight:500}
+.zr-box{display:flex;align-items:center;gap:4px;min-width:0;height:48px;padding:0 12px;border-radius:12px;background:var(--bg);border:1px solid var(--border);cursor:text}
+.zr-box:focus-within{border-color:var(--accent)}
+.zr-box span{color:var(--muted);font-weight:600}
+.zr-box input{flex:1;min-width:0;width:100%;height:100%;padding:0;border:0;background:transparent;color:var(--text);font:inherit;font-size:1.15rem;font-weight:650;font-variant-numeric:tabular-nums;text-align:right;outline:none}
+.zr-box input::placeholder{color:var(--muted);opacity:.5;font-weight:500}
+.zr-seen{display:flex;align-items:center;gap:10px;margin-top:10px}
+.zr-seen canvas{display:block;height:46px;width:auto;max-width:70%;border-radius:8px;background:#fff;border:2px solid var(--ok)}
+.zr-field.is-check .zr-seen canvas{border-color:var(--check)}
+.zr-seen span{color:var(--muted);font-size:.8rem;line-height:1.35}
+.zr-state{margin:8px 2px 0;font-size:.84rem;font-weight:600;line-height:1.4;color:var(--muted)}
+.zr-state.is-ok{color:var(--ok)}
+.zr-state.is-check{color:var(--check)}
+
+/* the photo */
+.zr-photo{margin-top:16px}
+.zr-shot{display:block;width:100%;height:auto;border-radius:14px;background:#000}
+.zr-key{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 2px 8px;padding:0;list-style:none;color:var(--muted);font-size:.8rem}
+.zr-key li{display:flex;align-items:center;gap:6px}
+.zr-key i{width:16px;height:11px;border-radius:3px;border:2.5px solid}
+.zr-key .k-ok{border-color:#22c55e}
+.zr-key .k-check{border-color:#f59e0b}
+.zr-photo-acts{display:flex;flex-wrap:wrap;gap:8px}
+.zr-photo-acts button{height:40px}
+
+.zr-foot{margin-top:26px;color:var(--muted);font-size:.84rem}
+.zr-foot p{margin:10px 2px 0;line-height:1.45}
+.zr-reset{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 18px;border-radius:14px;border:1px solid var(--border);background:var(--card);color:var(--text);font:inherit;font-weight:650;cursor:pointer}
+.zr-reset svg{width:18px;height:18px}
+.zr-reset:active{transform:scale(.98)}
+
+@media (max-width:360px){
+  .zr-net{font-size:2.25rem}
+  .zr-field-top{grid-template-columns:1fr 8em}
+  .zr-acts button{font-size:.86rem;padding:0 10px}
 }

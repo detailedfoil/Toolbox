@@ -1,11 +1,11 @@
-// Teaches the Z Report reader (tools/z-report/reader.js) the card machine printer's digits.
+// Teaches the Z report reader (tools/till-count/zreport.js, Photo Coin Counter's Z report tab) the card machine printer's digits.
 //   node .github/z-report/train.mjs truth.json
 // truth.json: [{ "photos": ["a.jpg", "b.jpg"], "rows": [["317.65", "0.00", "48.20", "269.45"], ...] }, ...]
 // "rows" are the receipt's 13 rows of numbers from the top (Visa) to the bottom (OVERALL END OF DAY TOTAL),
 // each Sale, Cashback, Refund, Total, exactly as printed; every photo listed is a photo of that receipt.
 // Photos of real Z reports stay off GitHub (the repo is public): keep them on your own computer.
 // It reads every photo with the reader, keeps each digit it found where the receipt says that digit is, makes one
-// average shape per digit (each lined up to the others first), and writes them into reader.js between
+// average shape per digit (each lined up to the others first), and writes them into zreport.js between
 // FONT START and FONT END. It also tests itself: each photo read with shapes learnt from the other photos only.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const jpeg = require('jpeg-js');
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const READER = path.join(REPO, 'tools/z-report/reader.js');
+const READER = path.join(REPO, 'tools/till-count/zreport.js');
 const Z = require(READER);
 
 const truthFile = process.argv[2];
@@ -96,6 +96,6 @@ if (Object.keys(F).length < 10) console.log('warning: not every digit 0 to 9 was
 const text = 'var FONT = {\n' + Object.keys(F).map(d => `    '${d}': [[${F[d][0].map(x => x.toFixed(3).replace(/^(-?)0\./, '$1.')).join(',')}]]`).join(',\n') + '\n  };';
 const src = fs.readFileSync(READER, 'utf8');
 const a = src.indexOf('/* FONT START */'), b = src.indexOf('/* FONT END */');
-if (a < 0 || b < 0) throw new Error('FONT markers not found in reader.js');
+if (a < 0 || b < 0) throw new Error('FONT markers not found in zreport.js');
 fs.writeFileSync(READER, src.slice(0, a) + '/* FONT START */\n  // made by .github/z-report/train.mjs from photos of real Z reports\n  ' + text + '\n  ' + src.slice(b));
-console.log('written to tools/z-report/reader.js');
+console.log('written to tools/till-count/zreport.js');

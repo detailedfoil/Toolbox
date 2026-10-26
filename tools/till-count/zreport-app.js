@@ -1,15 +1,35 @@
-/* Z Report Calculator page. A photo of the card machine's Z report is read on the phone by reader.js
-   (window.ZReport): the overall end of day total and the Worldline TradeUK total go in the two boxes and the
-   answer is one minus the other. Either box can be typed in instead. The numbers last while the page is open
-   (sessionStorage, so they survive the phone reloading the page after using the camera); the photo is only ever
-   kept in the page's memory and never sent anywhere. Start again clears it all. */
+/* Photo Coin Counter's Z report tab, and the switch between its two tabs (Till count and Z report).
+   A photo of the card machine's Z report is read on the phone by zreport.js (window.ZReport): the overall end of day
+   total and the Worldline TradeUK total go in the two boxes and the answer is one minus the other. Either box can be
+   typed in instead. The numbers last while the page is open (sessionStorage, so they survive the phone reloading the
+   page after using the camera); the photo is only ever kept in the page's memory and never sent anywhere. The tab's
+   Start again clears it all. Everything on the tab has an id starting zr- so nothing clashes with the till count. */
 (function () {
   'use strict';
+
+  /* ---------- the two tabs: the last one used opens (or the Z report, for an address ending #z-report) ---------- */
+  var TAB_KEY = 'tc-tab';
+  function showTab(which, remember) {
+    ['till', 'zr'].forEach(function (k) {
+      var on = k === which;
+      document.getElementById('tab-' + k).setAttribute('aria-selected', on ? 'true' : 'false');
+      document.getElementById('pane-' + k).hidden = !on;
+    });
+    if (!remember) return;
+    try { sessionStorage.setItem(TAB_KEY, which); } catch (e) {}
+    try { history.replaceState(null, '', which === 'zr' ? '#z-report' : location.pathname + location.search); } catch (e) {}
+  }
+  var saved = null;
+  try { saved = sessionStorage.getItem(TAB_KEY); } catch (e) {}
+  showTab(location.hash === '#z-report' || saved === 'zr' ? 'zr' : 'till', false);
+  document.getElementById('tab-till').addEventListener('click', function () { showTab('till', true); });
+  document.getElementById('tab-zr').addEventListener('click', function () { showTab('zr', true); });
+
   var Z = window.ZReport, KEY = 'zr-state-v1';
   var READ_SIDE = 2800; // the photo is read at up to this size (long side): plenty for the small print
   var SHOW_SIDE = 1400; // and shown at up to this
   var FIELDS = ['overall', 'trade'], NAMES = { overall: 'Overall', trade: 'TradeUK' };
-  var $ = function (id) { return document.getElementById(id); };
+  var $ = function (id) { return document.getElementById('zr-' + id); }; // everything on the Z report tab is zr-...
   // per number: val (the text in its box), src ('photo' or 'typed'), how ('ok', 'check' or 'missing', from a photo),
   // why (what checked it); photo: in memory only, { show: canvas, crops: {overall, trade}, res }
   var state = {}, photo = null, busy = false;
@@ -168,10 +188,10 @@
 
   function readPhoto(file) {
     busy = true;
-    document.querySelectorAll('[data-act="camera"], [data-act="gallery"]').forEach(function (b) { b.disabled = true; });
+    document.querySelectorAll('[data-zr="camera"], [data-zr="gallery"]').forEach(function (b) { b.disabled = true; });
     setMsg('Reading the receipt…', 'busy');
     var url = URL.createObjectURL(file), img = new Image();
-    var done = function () { busy = false; document.querySelectorAll('[data-act]').forEach(function (b) { b.disabled = false; }); };
+    var done = function () { busy = false; document.querySelectorAll('[data-zr]').forEach(function (b) { b.disabled = false; }); };
     var fail = function (why) { done(); setMsg(why, 'check'); };
     img.onload = function () {
       setTimeout(function () { // let "Reading" show before the phone gets busy
@@ -249,7 +269,7 @@
     FIELDS.forEach(function (f) { state[f] = { val: '', src: '', how: '', why: '' }; $('v-' + f).value = ''; });
     setMsg('');
     save(); render();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('tab-zr').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /* ---------- typing ---------- */
@@ -265,7 +285,7 @@
 
   load();
   render();
-  var page = document.querySelector('.zr');
+  var page = document.getElementById('pane-zr');
   page.addEventListener('input', function (e) { if (e.target.matches('input[data-field]')) onType(e.target); });
   page.addEventListener('focusout', function (e) { if (e.target.matches('input[data-field]')) onLeave(e.target); });
   page.addEventListener('focusin', function (e) {
@@ -275,12 +295,12 @@
   page.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' || !e.target.matches('input[data-field]')) return;
     e.preventDefault();
-    if (e.target.id === 'v-overall') $('v-trade').focus(); else e.target.blur();
+    if (e.target.id === 'zr-v-overall') $('v-trade').focus(); else e.target.blur();
   });
   page.addEventListener('click', function (e) {
     var b = e.target.closest('button');
     if (!b) return;
-    var act = b.getAttribute('data-act');
+    var act = b.getAttribute('data-zr');
     if (act === 'camera') pick(false);
     else if (act === 'gallery') pick(true);
     else if (act === 'remove') removePhoto();

@@ -56,24 +56,28 @@ explain changes in plain English and say what they'll see.
     wood cut from a real phone photo).
     A line under the photo tip says nothing is uploaded and counts clear when the page closes (detailedfoil, 26 Oct 2026).
   - Photo Coin Counter 2 (mixed coins, `coin-counter-2`) was a test, built and removed 22 Oct 2026 at detailedfoil's say.
-  - `z-report`: Z Report Calculator, every store (built 26 Oct 2026). A photo of the card machine's Z report gives the
-    OVERALL END OF DAY TOTAL row's Total minus the Worldline TradeUK row's Total (detailedfoil: the bottom circled number
-    minus the upper one). Either can be typed instead (typing wins). The two numbers last while the page is open
+  - Photo Coin Counter's **Z report tab** (`till-count.html#z-report`; built 26 Oct 2026 as its own tool and moved into this
+    page the same evening, detailedfoil: "I wanted that z report calculator inside the coin counter app"). Two tabs at the
+    top, Till count and Z report (the last used opens, `tc-tab` in sessionStorage). A photo of the card machine's Z report
+    gives the OVERALL END OF DAY TOTAL row's Total minus the Worldline TradeUK row's Total (detailedfoil: the bottom circled
+    number minus the upper one). Either can be typed instead (typing wins). The two numbers last while the page is open
     (sessionStorage `zr-state-v1`), the photo only in memory; a line under the photo buttons says nothing is uploaded or
-    saved (detailedfoil asked). `reader.js` reads the receipt with no libraries: Tesseract was tried and can't read this
+    saved (detailedfoil asked). Everything on the tab has an id starting `zr-` and its buttons `data-zr`, so nothing clashes
+    with the till count's ids and `data-act` buttons. `zreport-app.js` is the tab (and the tab switch), `zreport.js` reads
+    the receipt with no libraries: Tesseract was tried and can't read this
     printer's slashed zeros (0.00 came out as U.UU, and other digits misread). Ink is judged against the paper around it; characters
     are blobs (pieces of one joined up, digits that print joined split by the fixed character width); money is digits, an
     empty cell, two digits (the full stop prints too faint to rely on; a faint digit is found from the darkness in its cell);
     rows are matched to the four 10-character columns (the Total column line goes through rows showing all four numbers) and
     named from the bottom by their gaps (the two end of day rows each sit twice a card row's gap below the row above); a
     tilt over 3 degrees is straightened first. Each digit is compared, at 9 small shifts, with the printer's own digits
-    (`FONT`, one 10 x 16 shape per digit, made by `.github/z-report/train.mjs` from photos of real Z reports, kept off GitHub;
+    (`FONT` in zreport.js, one 10 x 16 shape per digit, made by `.github/z-report/train.mjs` from photos of real Z reports, kept off GitHub;
     the test photos and `FAKE` in make-fixture.mjs can train it too). Checks: Sale + Cashback - Refund = Total on each row,
     and the overall total against the current one; when a row doesn't add up and changing exactly one unsure digit to its
     runner-up fixes it, that's used. Green = checked, amber = compare with the receipt. The page turns a photo that gives no
     numbers (sideways, upside down) and reads it again. Tests: `.github/tests/z-report.test.mjs` on `fixtures/zreport-*.jpg`,
     real photos with every amount changed and the heading blurred by `.github/z-report/make-fixture.mjs` (made-up receipt:
-    712.32 overall, 27.06 TradeUK): any change to reader.js must keep those exact. Change GX/GY or the sampling and the
+    712.32 overall, 27.06 TradeUK): any change to zreport.js must keep those exact. Change GX/GY or the sampling and the
     shapes must be made again with train.mjs. Untested so far: totals of 1,000 or more (a comma is allowed for, but no
     receipt with one has been seen) and a negative total (a minus sign is looked for).
   - `product-search`: Product Search, every store (the "Under construction" tile badge and page banner were removed on 21 Oct 2026,

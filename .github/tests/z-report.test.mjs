@@ -1,4 +1,4 @@
-// Z Report Calculator: the receipt reader (tools/z-report/reader.js) on three photos of a real Z report with every
+// Photo Coin Counter's Z report tab: the receipt reader (tools/till-count/zreport.js) on three photos of a real Z report with every
 // amount on it changed, the heading blurred (made by .github/z-report/make-fixture.mjs; real Z reports stay off
 // GitHub). The made-up receipt's overall end of day total is 712.32 and its Worldline TradeUK total 27.06.
 //   a: fingers over the left, pencil circles round both totals     b: blurry close-up of the bottom half
@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 const jpeg = require('jpeg-js');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // loaded straight in rather than in a sandbox (loadModule): reading a photo is about 20 times quicker
-const Z = require('../../tools/z-report/reader.js');
+const Z = require('../../tools/till-count/zreport.js');
 const photo = (f) => jpeg.decode(fs.readFileSync(path.join(HERE, 'fixtures', f)), { useTArray: true, formatAsRGBA: true });
 const PHOTOS = ['zreport-a.jpg', 'zreport-b.jpg', 'zreport-c.jpg'];
 
@@ -97,7 +97,7 @@ test('z report: a photo with no receipt in it finds nothing', () => {
 });
 
 test('z report: the reader knows all ten of the printer\'s digits', () => {
-  const src = fs.readFileSync(path.join(HERE, '../../tools/z-report/reader.js'), 'utf8');
+  const src = fs.readFileSync(path.join(HERE, '../../tools/till-count/zreport.js'), 'utf8');
   const font = src.slice(src.indexOf('/* FONT START */'), src.indexOf('/* FONT END */'));
   for (let d = 0; d <= 9; d++) assert.match(font, new RegExp(`'${d}': \\[\\[`), 'digit ' + d);
   assert.match(src, /var GX = 10, GY = 16;/, 'the digit grid the shapes were made at (retrain if it changes)');

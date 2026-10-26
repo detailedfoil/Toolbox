@@ -9,7 +9,7 @@
 <title>Photo Coin Counter</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="till-count/till-count.css?v=7ff21cd73d">
+<link rel="stylesheet" href="till-count/till-count.css?v=4a6ff2df4b">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -18,47 +18,130 @@
 <div class="wrap tc">
   <a class="back" href="../index.html">&larr; Toolbox</a>
   <h1>Photo Coin Counter</h1>
-  <p class="tc-sub">Add up a till by note and coin.</p>
-  <div class="tc-tip">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
-    <p><b>Photograph a pile of coins and it counts them.</b> <b>Coins must be flat and not overlapping.</b></p>
+  <div class="tc-tabs" role="tablist" aria-label="What to work out">
+    <button type="button" role="tab" id="tab-till" aria-controls="pane-till" aria-selected="true">🪙 Till count</button>
+    <button type="button" role="tab" id="tab-zr" aria-controls="pane-zr" aria-selected="false">🧾 Z report</button>
   </div>
-  <p class="tc-private"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span><b>Nothing is uploaded.</b> Photos are read on this phone and never leave it, and your counts are cleared when you close this page.</span></p>
 
-  <section class="tc-total" id="totalBar" aria-label="Till total">
-    <div class="tc-total-top">
-      <span class="tc-total-k">Total less float</span>
-      <div class="tc-float" role="radiogroup" aria-label="Float to take off">
-        <span>Float</span>
-        <button type="button" role="radio" data-float="5000" aria-checked="false">£50</button>
-        <button type="button" role="radio" data-float="7500" aria-checked="true">£75</button>
+  <div id="pane-till" role="tabpanel" aria-labelledby="tab-till">
+    <p class="tc-sub">Add up a till by note and coin.</p>
+    <div class="tc-tip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      <p><b>Photograph a pile of coins and it counts them.</b> <b>Coins must be flat and not overlapping.</b></p>
+    </div>
+    <p class="tc-private"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span><b>Nothing is uploaded.</b> Photos are read on this phone and never leave it, and your counts are cleared when you close this page.</span></p>
+
+    <section class="tc-total" id="totalBar" aria-label="Till total">
+      <div class="tc-total-top">
+        <span class="tc-total-k">Total less float</span>
+        <div class="tc-float" role="radiogroup" aria-label="Float to take off">
+          <span>Float</span>
+          <button type="button" role="radio" data-float="5000" aria-checked="false">£50</button>
+          <button type="button" role="radio" data-float="7500" aria-checked="true">£75</button>
+        </div>
+      </div>
+      <output class="tc-net" id="net" aria-live="polite">£0.00</output>
+      <p class="tc-gross" id="grossLine"><b id="gross">£0.00</b> counted, minus <b id="floatTxt">£75.00</b> float</p>
+      <p class="tc-gross" id="emptyLine" hidden>Nothing counted yet. The <b id="floatTxt2">£75.00</b> float comes off as you count.</p>
+    </section>
+
+    <h2 class="tc-h">Notes <span id="notesTotal">£0.00</span></h2>
+    <div class="tc-list" id="notes"></div>
+
+    <h2 class="tc-h">Coins <span id="coinsTotal">£0.00</span></h2>
+    <div class="tc-list" id="coins"></div>
+
+    <div class="tc-foot">
+      <button type="button" class="tc-reset" id="reset">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        Start again
+      </button>
+      <p>Nothing is saved anywhere: your counts stay while this page is open, and Start again clears them all.</p>
+      <p><b>For a good photo:</b> one type of coin at a time, laid flat on a plain surface, spread out so none are on top of each other, taken from straight above with every coin in the shot.</p>
+    </div>
+  </div>
+
+  <div id="pane-zr" class="zr" role="tabpanel" aria-labelledby="tab-zr" hidden>
+    <p class="zr-sub">The card machine's overall end of day total, minus Worldline TradeUK.</p>
+
+    <section class="zr-result" aria-label="Result">
+      <span class="zr-result-k">Total less TradeUK</span>
+      <output class="zr-net" id="zr-net" aria-live="polite">£0.00</output>
+      <p class="zr-sum" id="zr-sumLine"><b id="zr-sumOverall">£0.00</b> overall end of day total, minus <b id="zr-sumTrade">£0.00</b> TradeUK</p>
+      <p class="zr-sum" id="zr-emptyLine" hidden>Photograph the Z report, or type the two numbers below.</p>
+    </section>
+
+    <div class="zr-tip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      <p><b>Photograph the Z report and it finds both numbers.</b> <b>Lay it flat, straight on, with the bottom half of the receipt in the photo.</b></p>
+    </div>
+
+    <div class="zr-acts">
+      <button type="button" class="zr-cam" data-zr="camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <span>Take photo</span>
+      </button>
+      <button type="button" class="zr-gal" data-zr="gallery">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
+        <span>Choose photo</span>
+      </button>
+    </div>
+    <p class="zr-private"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span><b>Nothing is uploaded or saved.</b> The photo is read on this phone and never leaves it, and the numbers are cleared when you close this page.</span></p>
+    <p class="zr-msg" id="zr-msg" hidden></p>
+
+    <div class="zr-fields">
+      <div class="zr-field" id="zr-f-overall">
+        <div class="zr-field-top">
+          <label class="zr-label" for="zr-v-overall">Overall end of day total<small>The last row's Total</small></label>
+          <label class="zr-box"><span>£</span><input id="zr-v-overall" data-field="overall" inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="0.00"></label>
+        </div>
+        <div class="zr-seen" id="zr-seen-overall" hidden></div>
+        <p class="zr-state" id="zr-st-overall" hidden></p>
+      </div>
+      <div class="zr-field" id="zr-f-trade">
+        <div class="zr-field-top">
+          <label class="zr-label" for="zr-v-trade">Worldline TradeUK<small>That row's Total</small></label>
+          <label class="zr-box"><span>£</span><input id="zr-v-trade" data-field="trade" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0.00"></label>
+        </div>
+        <div class="zr-seen" id="zr-seen-trade" hidden></div>
+        <p class="zr-state" id="zr-st-trade" hidden></p>
       </div>
     </div>
-    <output class="tc-net" id="net" aria-live="polite">£0.00</output>
-    <p class="tc-gross" id="grossLine"><b id="gross">£0.00</b> counted, minus <b id="floatTxt">£75.00</b> float</p>
-    <p class="tc-gross" id="emptyLine" hidden>Nothing counted yet. The <b id="floatTxt2">£75.00</b> float comes off as you count.</p>
-  </section>
 
-  <h2 class="tc-h">Notes <span id="notesTotal">£0.00</span></h2>
-  <div class="tc-list" id="notes"></div>
+    <section class="zr-photo" id="zr-photo" hidden aria-label="Your photo">
+      <canvas class="zr-shot" id="zr-shot" role="img" aria-label="Your photo with the two numbers it read boxed"></canvas>
+      <ul class="zr-key">
+        <li><i class="k-ok"></i>Read and checked</li>
+        <li><i class="k-check"></i>Read, check it</li>
+      </ul>
+      <div class="zr-photo-acts">
+        <button type="button" data-zr="camera">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <span>Retake</span>
+        </button>
+        <button type="button" data-zr="remove">Remove photo</button>
+      </div>
+    </section>
 
-  <h2 class="tc-h">Coins <span id="coinsTotal">£0.00</span></h2>
-  <div class="tc-list" id="coins"></div>
-
-  <div class="tc-foot">
-    <button type="button" class="tc-reset" id="reset">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-      Start again
-    </button>
-    <p>Nothing is saved anywhere: your counts stay while this page is open, and Start again clears them all.</p>
-    <p><b>For a good photo:</b> one type of coin at a time, laid flat on a plain surface, spread out so none are on top of each other, taken from straight above with every coin in the shot.</p>
+    <div class="zr-foot">
+      <button type="button" class="zr-reset" id="zr-reset">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        Start again
+      </button>
+      <p>Start again clears the photo and both numbers. Closing this page does too: nothing is kept.</p>
+      <p>Each number it reads is checked against the receipt's own sums (Sale + Cashback &minus; Refund = Total on every row, and the overall total against the current one above it). If a number can't be checked it says so: compare it with the receipt.</p>
+    </div>
   </div>
 </div>
 
 <input type="file" accept="image/*" capture="environment" id="camera" hidden>
 <input type="file" accept="image/*" id="gallery" hidden>
+<input type="file" accept="image/*" capture="environment" id="zr-camera" hidden>
+<input type="file" accept="image/*" id="zr-gallery" hidden>
 <script src="till-count/money.js?v=e01266c5f6"></script>
 <script src="till-count/coins.js?v=cf565532a7"></script>
+<script src="till-count/zreport.js?v=e49dccc712"></script>
+<script src="till-count/zreport-app.js?v=583718518a"></script>
 <script src="till-count/app.js?v=bde613be7c"></script>
 </body>
 </html>

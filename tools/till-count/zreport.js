@@ -1,4 +1,4 @@
-/* Z Report Calculator: reads the card machine's Z report from a photo and finds two numbers on it, the Total
+/* Photo Coin Counter's Z report tab: reads the card machine's Z report from a photo and finds two numbers on it, the Total
    of the "Worldline TradeUK" row and the Total of the "OVERALL END OF DAY TOTAL" row (the last row of all).
    No libraries, so it's small, quick and works with no signal. The receipt's printer has its own font (zeros
    with a slash through them) that general text readers get wrong, so this reads only that font:
