@@ -869,7 +869,12 @@
   function nextPhone() {
     if (!phone) return;
     if (!phone.queue.length) { finishPhone('done'); return; }
-    var me = phone, code = phone.queue[0], t0 = Date.now(), ref = refFor(code);
+    var me = phone, code = null, t0 = Date.now();
+    if (!me.later) me.later = {}; if (!me.tried) me.tried = {};
+    // a line Screwfix showed its "Human Verification" page for waits a few minutes at the back of the line
+    for (var qi = 0; qi < me.queue.length; qi++) if (!(me.later[me.queue[qi]] > t0)) { code = me.queue[qi]; break; }
+    if (!code) { setTimeout(nextPhone, 8000); return; }
+    var ref = refFor(code);
     var item = { code: code, at: new Date(t0).toISOString(), ref: ref, steps: [] };
     phone.current = code;
     phone.t0 = t0;
@@ -889,7 +894,7 @@
       noteRelays(r.trace);
       item.steps.push(stepOf('text', r));
       var price = (r.status === 'found' || r.status === 'partial') && !r.unsure ? pounds(r.price) : null;
-      if (price == null) return { r: r, price: null, why: whyNot(r) };
+      if (price == null) return { r: r, price: null, why: whyNot(r), verify: (r.trace || []).some(function (t) { return t.outcome === 'verify'; }) };
       if (r.ld && r.ldSure) return { r: r, price: pounds(r.ld) };
       if (ref == null || Math.abs(ref - price) <= 0.001) return { r: r, price: price };
       return SL.lookup(code, { full: true, only: ['jina'], retries: 0, onAttempt: onAttempt }).then(function (r2) {
@@ -923,6 +928,14 @@
         me.useAll = false;
         item.result = ref != null && Math.abs(ref - price) > 0.001 ? 'changed' : 'same';
         item.price = price;
+      } else if (res.verify && !me.tried[code]) {
+        // Screwfix's human verification page: the same code usually reads fine a few minutes later, so it gets a second go
+        me.tried[code] = true;
+        me.later[code] = Date.now() + 150000;
+        me.queue.splice(me.queue.indexOf(code), 1);
+        me.queue.push(code);
+        item.result = 'later';
+        item.why = res.why;
       } else {
         // a failed read is never a price change: the line keeps its last price
         me.failed.push({ c: code, why: res.why, pick: 'retry' });
@@ -945,7 +958,7 @@
       if (phone !== me) return;
       me.spent = (me.spent || 0) + item.ms;
       me.doneN = (me.doneN || 0) + 1;
-      me.queue.shift();
+      if (item.result !== 'later') { var qx = me.queue.indexOf(code); if (qx >= 0) me.queue.splice(qx, 1); }
       if (me.streak >= 6) {
         // nothing's getting through: put those six back so Carry on tries them again
         me.queue = me.failed.splice(-6, 6).map(function (f) { return f.c; }).concat(me.queue);

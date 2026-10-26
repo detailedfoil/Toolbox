@@ -134,7 +134,7 @@ let queue = [...targets];
 for (let pass = 1; pass <= 3 && queue.length && !stop; pass++) {
   if (pass > 1) {
     log(`\nPass ${pass}: trying ${queue.length} line${queue.length === 1 ? '' : 's'} again after a pause.`);
-    await sleep(pass === 2 ? 60000 : 180000);
+    await sleep(pass === 2 ? 300000 : 600000);   // Screwfix's human verification spell passes in a few minutes
   }
   const todo = queue;
   queue = [];
