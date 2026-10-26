@@ -362,6 +362,7 @@
           save(LIVE_KEY, state.live);
         } else state.liveFail[job.key] = r.why;
         $('barFill').style.width = Math.round(run.done / run.total * 100) + '%';
+        $('againText').textContent = 'Stop (' + run.done + ' of ' + run.total + ' checked)';
         render();
         return worker();
       });
