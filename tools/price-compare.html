@@ -9,7 +9,7 @@
 <title>Price Compare</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="price-compare/compare.css?v=0a1f6813ea">
+<link rel="stylesheet" href="price-compare/compare.css?v=8b34eb1d8b">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -27,6 +27,11 @@
   </label>
 
   <div class="pc-switch" id="items" role="tablist" aria-label="Size"></div>
+  <div class="pc-vat" role="group" aria-label="Show prices">
+    <span>Prices</span>
+    <button type="button" data-vat="inc" aria-pressed="true">Inc VAT</button>
+    <button type="button" data-vat="ex" aria-pressed="false">Ex VAT</button>
+  </div>
 
   <p class="pc-status is-busy" id="status" role="status" aria-live="polite"><span class="pc-pulse" aria-hidden="true"></span><span id="statusText">Loading prices</span></p>
   <div class="pc-bar" id="bar" aria-hidden="true" hidden><span id="barFill"></span></div>
@@ -47,10 +52,10 @@
       <span id="againText">Check now on this phone</span>
     </button>
     <p>Check now reads every store's website live, which takes a couple of minutes. Keep this page open while it runs.</p>
-    <p>GitHub checks every store each morning and afternoon. Prices are each store's own website price, including VAT. Trade merchants can be cheaper on a trade account, and some prices vary by branch. Tap a store to open the product on its website.</p>
+    <p>GitHub checks every store each morning and afternoon. Prices are each store's own website price, the same for every store whichever way round its site shows them: Inc VAT, or Ex VAT (copper pipe carries 20% VAT). Trade merchants can be cheaper on a trade account, and some prices vary by branch. Tap a store to open the product on its website.</p>
   </div>
 </div>
-<script src="price-compare/read.js?v=edc7f6ed2d"></script>
-<script src="price-compare/app.js?v=05e14d6ec2"></script>
+<script src="price-compare/read.js?v=ceda221078"></script>
+<script src="price-compare/app.js?v=f3812487a1"></script>
 </body>
 </html>

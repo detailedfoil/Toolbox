@@ -25,6 +25,26 @@ const price = (r) => (r.ok ? r.price : r.why);
 
 /* ---------- reading the text jina sends back ---------- */
 
+// trimmed copies of the real pages as jina sent them on 26 Oct 2026 (fixtures/compare-<store>-<item>.txt)
+test('price compare: reads the real store pages, each one the price including VAT', () => {
+  const real = (f) => fs.readFileSync(path.join(HERE, 'fixtures', 'compare-' + f + '.txt'), 'utf8');
+  const want = {
+    'screwfix-cu15': 15.6, 'screwfix-cu22': 31.31, 'toolstation-cu15': 15.6, 'wickes-cu15': 16, 'bq-cu15': 15.6,
+    'travisperkins-cu15': 17.24,       // "Retail price £17.24 per length £14.37 ex. vat", under the reviews heading
+    'cityplumbing-cu15': 15.59,        // the price is a heading of its own ("## £15.59"), its Inc. VAT label lines later
+    'selco-cu15': 14.4,                // "£12.00 Ex VAT£4.00 per m£14.40 Inc VAT"
+    'builderdepot-cu15': 14.1,         // jina warns of a 403, but the real page is under it
+    'bes-cu15': 17.66, 'bes-cu22': 35.3 // the price sits above the heading, after a bulk price ("20+£15.37£12.81")
+  };
+  for (const [f, v] of Object.entries(want)) {
+    const [store, item] = f.split('-');
+    const r = R.text(real(f), job(item + '/' + store));
+    assert.equal(r.ok ? r.price : r.why, v, f);
+  }
+  // Jewson shows a price only once a branch is picked: its delivery thresholds (orders over £150, between £100-£150) aren't it
+  assert.equal(R.text(real('jewson-cu15'), job('cu15/jewson')).why, 'no price on the page');
+});
+
 test('price compare: reads each store layout, and the price with VAT whichever way round the page shows it', () => {
   // Screwfix: "£13.88Inc Vat"
   assert.equal(price(R.text(page('Wednesbury Copper Pipe 15mm x 3m (98683) | Screwfix.com', '# Wednesbury Copper Pipe 15mm x 3m (98683)\n\n£13.88Inc Vat\n\n£11.57Ex Vat'), job('cu15/screwfix'))), 13.88);
@@ -71,6 +91,9 @@ test("price compare: another size, length or pack, a price that isn't believable
 });
 
 test("price compare: the store's bot check, an error page and a page that's gone are told apart", () => {
+  // jina's error warning over a real, whole page (Builder Depot) is read as the page
+  const long = 'Words about this copper pipe and how good it is for plumbing jobs. '.repeat(60);
+  assert.equal(price(R.text('Title: Copper Tube 15mm x 3m\n\nURL Source: x\n\nWarning: Target URL returned error 403: Forbidden\n\nMarkdown Content:\n# Copper Tube 15mm x 3m\n\n£14.10 Inc VAT\n\n' + long, job('cu15/builderdepot'))), 14.1);
   const bot = R.text('Title: Just a moment...\n\nURL Source: x\n\nMarkdown Content:\nChecking your browser before accessing the site, this takes a few seconds.', job('cu15/wickes'));
   assert.deepEqual(plain([bot.ok, bot.why, bot.gone]), [false, "the store's bot check", false]);
   const gone = R.text('Title: \n\nURL Source: x\n\nWarning: Target URL returned error 404: Not Found\n\nMarkdown Content:\nThe page you were looking for has gone.', job('cu15/wickes'));
@@ -96,22 +119,17 @@ test('price compare: a whole page gives its product data, with VAT added when th
   const bare = '<html><head><title>Copper Tube 22mm x 3m | Builder Depot</title><style>.x{}</style></head><body><nav>Basket £0.00</nav><h1>Copper Tube 22mm x 3m</h1><div class="price"><span>£35.21</span> <span>£29.34</span></div></body></html>';
   const b = R.html(bare, job('cu22/builderdepot'));
   assert.deepEqual(plain([b.price, b.how]), [35.21, 'page']);
-});
-
-test("price compare: a page where you pick the size first gives that size's own price", () => {
-  const cfg = { attributes: {
-    93: { id: '93', code: 'pipe_size', label: 'Pipe Size', options: [{ id: '1', label: '15mm', products: ['101', '102', '103'] }, { id: '2', label: '22mm', products: ['201', '202'] }] },
-    94: { id: '94', code: 'pipe_length', label: 'Pipe Length', options: [{ id: '5', label: '2m', products: ['101', '201'] }, { id: '6', label: '3m', products: ['102', '103', '202'] }] },
-    95: { id: '95', code: 'pack', label: 'Pipe Pack Size', options: [{ id: '7', label: 'Singles', products: ['101', '102', '201', '202'] }, { id: '8', label: 'Pack of 10', products: ['103'] }] } },
-  optionPrices: { 101: { basePrice: { amount: 8.53 }, finalPrice: { amount: 10.24 } }, 102: { basePrice: { amount: 12.5 }, finalPrice: { amount: 15 } },
-                  202: { basePrice: { amount: 25.5 }, finalPrice: { amount: 30.6 }, oldPrice: { amount: 33 } } } };
-  const html = `<html><head><title>JTM Copper Pipe</title></head><body><h1>JTM Copper Pipe</h1><p>from £8.53</p><script type="text/x-magento-init">${JSON.stringify({ '#form': { configurable: { spConfig: cfg } } })}</script></body></html>`;
-  assert.equal(price(R.html(html, job('cu15/plumbingsuperstore'))), 15);
-  const big = R.html(html, job('cu22/plumbingsuperstore'));
-  assert.deepEqual(plain([big.price, big.was, big.how]), [30.6, 33, 'options']);
-  const noSingles = JSON.parse(JSON.stringify(cfg));
-  noSingles.attributes[95].options[0].products = ['101'];
-  assert.match(price(R.html(html.replace(JSON.stringify(cfg), JSON.stringify(noSingles)), job('cu15/plumbingsuperstore'))), /isn't on sale/);
+  // Selco: a second copy of its data without a product code, priced without VAT, isn't the one
+  const two = '<html><head><title>Copper Pipe 15mm x 3m</title>' +
+    `<script type="application/ld+json">${JSON.stringify({ '@type': 'Product', name: 'Copper Pipe 15mm x 3m', offers: { price: 12 } })}</script>` +
+    `<script type="application/ld+json">${JSON.stringify({ '@type': 'Product', name: 'Copper Pipe 15mm x 3m', sku: '344680001', offers: { price: '14.40' } })}</script></head><body><h1>Copper Pipe 15mm x 3m</h1></body></html>`;
+  const sel = R.html(two, job('cu15/selco'));
+  assert.equal(sel.price, 14.4);
+  // a price read from the text is backed up by the page's data, with or without VAT, and not by another number
+  assert.equal(R.agrees(sel, 14.4), true);
+  assert.equal(R.agrees(R.html(ldPage('Wednesbury Copper Tube Plain Lengths 15mm x 3m', 14.37), job('cu15/travisperkins')), 17.24), true, 'Travis Perkins data is without VAT');
+  assert.equal(R.agrees(sel, 19.99), false);
+  assert.equal(R.agrees(null, 14.4), false);
 });
 
 /* ---------- the list ---------- */
@@ -266,7 +284,7 @@ test('price compare check: a price change is kept with what it was, a failed rea
     assert.deepEqual(plain([t15.price, t15.since, t15.moves]), [15.99, '2026-10-26T12:41:00.000Z', [{ on: '2026-10-26T12:41:00.000Z', from: 15.6, to: 15.99 }]]);
     const m22 = r.data.items.cu22.merch;
     assert.deepEqual(plain([m22.price, m22.fail.since, m22.fail.n]), [29.24, '2026-10-26T12:41:00.000Z', 1]);
-    assert.match(m22.fail.why, /bot check.*straight from the store: direct HTTP 403/);
+    assert.deepEqual(plain([m22.fail.why, m22.fail.direct]), ["the store's bot check", "the store's bot check (error 403)"]);
     const h22 = r.data.items.cu22.home;
     assert.deepEqual(plain([h22.price, h22.pending]), [28, { price: 39, on: '2026-10-26T12:41:00.000Z' }]);
     assert.match(h22.fail.why, /new price £39\.00 \(was £28\.00\) not confirmed yet/);
@@ -318,6 +336,20 @@ test("price compare check: jina blocked but the store answers directly; a push r
     assert.match(r.stdout, /Smoke test: nothing saved/);
     assert.equal(fs.readFileSync(path.join(dir, 'prices.json'), 'utf8'), before);
     assert.equal(r.commit, '');
+  } finally {
+    s.server.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("price compare check: a site jina can't open, and why, in plain words", async () => {
+  const pages = shop(), s = await pretend(pages), dir = setup();
+  try {
+    pages['https://merch.example/15'] = { text: { status: 422, body: JSON.stringify({ data: null, code: 422, name: 'AssertionFailureError', readableMessage: 'AssertionFailureError: Failed to goto https://merch.example/15: Error: net::ERR_CERT_DATE_INVALID at https://merch.example/15' }) },
+      direct: { status: 200, body: '<html><head><title>JavaScript is disabled</title></head><body>Please enable JavaScript to continue using this website, thanks very much indeed.</body></html>' } };
+    const r = await check(s, dir);
+    assert.equal(r.data.items.cu15.merch.fail.why, "their website's security certificate has run out");
+    assert.match(r.stdout, /::warning title=Not read::Merchant 15mm: their website's security certificate has run out \(straight from the store: /);
   } finally {
     s.server.close();
     fs.rmSync(dir, { recursive: true, force: true });

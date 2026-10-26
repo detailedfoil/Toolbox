@@ -17,8 +17,9 @@
 // MODE: all = every row (the schedule), new = only rows never read or whose address changed (a push; when there's
 // nothing new it's a 3 page smoke test that saves nothing), test = 3 pages, saves nothing, raw = every page with an
 // address saved as it came back (to RAW_DIR, for working out a new store's layout), plus RAW_EXTRA addresses.
+// JINA_TOLERANCE: how old a copy of a page jina may hand back, in seconds (default 1800).
 // Test hooks: JINA_URL (the jina relay), DIRECT_VIA (put in front of a store address when going direct), GAP_MS,
-// PC_DIR (the data folder), PC_NOW (pretend time), RAW_DIR.
+// PC_DIR (the data folder), PC_NOW (pretend time), RAW_DIR, RAW_STORES.
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -33,6 +34,10 @@ const LIST = path.join(DIR, 'compare.json'), FILE = path.join(DIR, 'prices.json'
 const JINA = process.env.JINA_URL || 'https://r.jina.ai/';
 const DIRECT = process.env.DIRECT_VIA || '';
 const GAP = Number(process.env.GAP_MS || 6000);
+// how old a copy of a page jina may hand back (seconds). jina keeps copies of pages it has opened for anyone; a store's
+// price can change overnight, so an older copy means opening the page again (a normal first read, not X-No-Cache).
+// The whole page is asked for straight after its text read, so it comes from that fresh copy.
+const TOLERANCE = String(process.env.JINA_TOLERANCE || '1800');
 const TEMP = process.env.RUNNER_TEMP || '';
 const RAW = process.env.RAW_DIR || (TEMP ? path.join(TEMP, 'raw') : path.join(process.cwd(), 'price-compare-raw'));
 const BIG = 0.25;
@@ -41,6 +46,16 @@ const NOW = now().toISOString();
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
 const money = (v) => '£' + Number(v).toFixed(2);
 const errText = (e) => String((e && e.cause && (e.cause.code || e.cause.message)) || (e && (e.name === 'TimeoutError' ? 'no answer in time' : e.message)) || e).split('\n')[0].slice(0, 100);
+/* a failure in plain words (jina's errors come as JSON: {"code":422,"readableMessage":"... net::ERR_CERT_DATE_INVALID ..."}) */
+function plainWhy(text, fallback) {
+  let msg = String(text || '');
+  try { const j = JSON.parse(msg); msg = String(j.readableMessage || j.message || j.name || msg); } catch { /* not JSON */ }
+  if (/ERR_CERT|CERT_HAS_EXPIRED|CERT_|certificate/i.test(msg)) return "their website's security certificate has run out";
+  if (/ERR_NAME_NOT_RESOLVED|ENOTFOUND/i.test(msg)) return "their website's address doesn't work";
+  if (/ERR_CONNECTION|ECONNREFUSED|ECONNRESET|socket hang up/i.test(msg)) return "their website didn't answer";
+  if (/timeout|timed out|no answer in time/i.test(msg)) return 'their page took too long to open';
+  return fallback;
+}
 
 const list = JSON.parse(fs.readFileSync(LIST, 'utf8'));
 let saved = { items: {} };
@@ -66,13 +81,15 @@ async function jina(url, whole) {
   for (let go = 0; go < 4; go++) {
     await pace();
     try {
-      const res = await fetch(JINA + url, { headers: whole ? { 'X-Return-Format': 'html' } : {}, signal: AbortSignal.timeout(90000) });
+      const headers = { 'X-Cache-Tolerance': TOLERANCE };
+      if (whole) headers['X-Return-Format'] = 'html';
+      const res = await fetch(JINA + url, { headers, signal: AbortSignal.timeout(90000) });
       const body = await res.text();
       if (res.status === 429) { last = 'jina said too many requests'; await sleep((retryAfter(body) || 20) * 1000 + 3000); continue; }
-      if (!res.ok && !/Target URL returned error/i.test(body.slice(0, 2000))) return { err: 'jina HTTP ' + res.status + ' ' + body.replace(/\s+/g, ' ').slice(0, 80) };
+      if (!res.ok && !/Target URL returned error/i.test(body.slice(0, 2000))) return { err: plainWhy(body, "jina couldn't open the page (HTTP " + res.status + ')') };
       return { http: res.status, body };
     } catch (e) {
-      last = 'jina: ' + errText(e);
+      last = plainWhy(errText(e), 'jina: ' + errText(e));
       if (go >= 1) break;
     }
   }
@@ -93,16 +110,17 @@ async function direct(url) {
     });
     const body = await res.text();
     if (res.status === 404 || res.status === 410) return { http: res.status, body: 'Warning: Target URL returned error ' + res.status + '\n' + body.slice(0, 500) };
-    if (!res.ok) return { err: 'direct HTTP ' + res.status };
+    if (!res.ok) return { err: res.status === 403 || res.status === 429 ? "the store's bot check (error " + res.status + ')' : 'HTTP ' + res.status };
     return { http: res.status, body };
   } catch (e) {
-    return { err: 'direct: ' + errText(e) };
+    return { err: plainWhy(errText(e), errText(e)) };
   }
 }
 
-/* one store's price for one product -> {ok, price, was, name, url, how} or {ok: false, why, seen} */
+/* one store's price for one product -> {ok, price, was, name, url, how} or {ok: false, why, direct, seen}
+   (why: through jina, the main reason; direct: what the store itself said, for working out what's wrong) */
 async function readJob(job) {
-  const whys = [];
+  const whys = [], directs = [];
   let seen = null;
   for (const url of job.urls) {
     const t = await jina(url, false);
@@ -119,18 +137,18 @@ async function readJob(job) {
     const d = await direct(url);
     const r3 = d.err ? { ok: false, why: d.err } : R.html(d.body, job);
     if (r3.ok) return { ...r3, url, how: r3.how + ' (direct)' };
-    whys.push(r.why + (r3.why && r3.why !== r.why ? '; straight from the store: ' + r3.why : ''));
+    whys.push(r.why);
+    if (r3.why) directs.push(r3.why);
     if (r3.seen != null) seen = r3.seen;
   }
-  return { ok: false, why: [...new Set(whys)].join('; ') || 'no address to read', seen };
+  return { ok: false, why: [...new Set(whys)].join('; ') || 'no address to read', direct: [...new Set(directs)].join('; '), seen };
 }
 
-/* a big jump is believed if the page's own product data says the same */
+/* a big jump is believed if the page's own product data says the same (with or without VAT) */
 async function confirm(job, r) {
   if (r.how !== 'text') return true;
   const h = await jina(r.url, true);
-  const d = h.err ? null : R.html(h.body, job);
-  return !!(d && d.ok && d.how !== 'page' && Math.abs(d.price - r.price) < 0.011);
+  return R.agrees(h.err ? null : R.html(h.body, job), r.price);
 }
 
 /* ---------- what to read ---------- */
@@ -140,7 +158,9 @@ const rowOf = (j) => (saved.items[j.item.id] || {})[j.store.id];
 // a store's two pages apart: every store for the first product, then every store for the next
 const readable = all.filter((j) => j.urls.length && !j.none);
 let todo;
-if (mode === 'raw') todo = all.filter((j) => j.urls.length);
+// raw mode: RAW_STORES (store ids, comma separated) narrows it to those stores
+const only = String(process.env.RAW_STORES || '').split(/[\s,]+/).filter(Boolean);
+if (mode === 'raw') todo = all.filter((j) => j.urls.length && (!only.length || only.includes(j.store.id)));
 else if (mode === 'test') todo = readable.slice(0, 3);
 else if (mode === 'new') {
   todo = readable.filter((j) => { const r = rowOf(j); return !r || r.price == null || !j.urls.includes(r.url); });
@@ -186,17 +206,40 @@ if (mode === 'raw') {
 const started = Date.now(), startedAt = process.env.PC_NOW ? NOW : new Date(started).toISOString();
 const changes = [], fresh = [], fails = [], results = {};
 const items = JSON.parse(JSON.stringify(saved.items));
-for (const job of [...todo].sort((a, b) => list.items.indexOf(a.item) - list.items.indexOf(b.item))) {
-  const label = `${job.store.name} ${job.item.short || job.item.name}`;
-  let r = await readJob(job);
-  const old = rowOf(job);
-  const row = { ...(old || {}) };
-  if (r.ok && old && old.price != null && Math.abs(r.price - old.price) / old.price > BIG) {
-    const again = old.pending && Math.abs(old.pending.price - r.price) < 0.011;
-    if (!again && !(await confirm(job, r))) {
-      r = { ok: false, why: `new price ${money(r.price)} (was ${money(old.price)}) not confirmed yet`, pending: r.price };
+// a read that failed for a reason that may pass (a bot check, no answer, an error page) gets one more go at the end,
+// a couple of minutes later. One that found another product, an unbelievable price or a missing page doesn't.
+const RETRY_PAUSE = Number(process.env.RETRY_PAUSE_MS || 120000);
+const lasting = (r) => r.ok || r.pending != null || /different (?:product|length)|doesn't look like|has gone/.test(r.why || '');
+async function readAll(jobs) {
+  const got = new Map();
+  for (const job of jobs) got.set(job, await readOne(job));
+  const again = jobs.filter((j) => !lasting(got.get(j)));
+  if (again.length && mode !== 'test') {
+    console.log(`Trying ${again.length} again in ${Math.round(RETRY_PAUSE / 1000)} s: ${again.map((j) => j.key).join(', ')}`);
+    await sleep(RETRY_PAUSE);
+    for (const job of again) {
+      const r = await readOne(job);
+      if (r.ok || r.pending != null) got.set(job, r);
     }
   }
+  return got;
+}
+async function readOne(job) {
+  const r = await readJob(job), old = rowOf(job);
+  if (r.ok && old && old.price != null && Math.abs(r.price - old.price) / old.price > BIG) {
+    const again = old.pending && Math.abs(old.pending.price - r.price) < 0.011;
+    if (!again && !(await confirm(job, r))) return { ok: false, why: `new price ${money(r.price)} (was ${money(old.price)}) not confirmed yet`, pending: r.price };
+  }
+  return r;
+}
+
+const order = [...todo].sort((a, b) => list.items.indexOf(a.item) - list.items.indexOf(b.item));
+const got = await readAll(order);
+for (const job of order) {
+  const label = `${job.store.name} ${job.item.short || job.item.name}`;
+  const r = got.get(job);
+  const old = rowOf(job);
+  const row = { ...(old || {}) };
   results[job.key] = r;
   if (r.ok) {
     if (row.price == null) { row.since = NOW; fresh.push(`${label} ${money(r.price)}`); }
@@ -213,9 +256,10 @@ for (const job of [...todo].sort((a, b) => list.items.indexOf(a.item) - list.ite
     delete row.pending;
   } else {
     row.fail = { since: (old && old.fail && old.fail.since) || NOW, why: r.why, n: ((old && old.fail && old.fail.n) || 0) + 1 };
+    if (r.direct && r.direct !== r.why) row.fail.direct = r.direct;
     if (r.pending != null) row.pending = { price: r.pending, on: (old && old.pending && Math.abs(old.pending.price - r.pending) < 0.011 && old.pending.on) || NOW };
     else delete row.pending;
-    fails.push(`${label}: ${r.why}`);
+    fails.push(`${label}: ${r.why}${r.direct && r.direct !== r.why ? ' (straight from the store: ' + r.direct + ')' : ''}`);
   }
   (items[job.item.id] ||= {})[job.store.id] = row;
   console.log(`${label}: ${r.ok ? money(r.price) + ' (' + r.how + ')' : 'not read, ' + r.why}`);

@@ -7,7 +7,8 @@
      check uses (read.js). What it finds stays on this phone (pc-live-v1, a week) and is shown wherever it's newer
      than GitHub's copy. A price more than 25% away from the one showing is only believed once the page's own product
      data agrees.
-   - The product shown is remembered on this phone (pc-item-v1, pc-group-v1). */
+   - The product shown, and Inc / Ex VAT, are remembered on this phone (pc-item-v1, pc-group-v1, pc-vat-v1). Every price
+     is kept including VAT; Ex VAT shows it divided by 1.2 (copper pipe carries 20% VAT). */
 (function () {
   'use strict';
   var R = window.PriceRead;
@@ -15,14 +16,16 @@
   var JINA = 'https://r.jina.ai/', JINA_EVERY = 3300, WORKERS = 2;
   var LIVE_KEY = 'pc-live-v1', LIVE_DAYS = 7, BIG = 0.25, OLD_DAYS = 14;
   var $ = function (id) { return document.getElementById(id); };
-  var state = { list: null, prices: null, live: {}, group: null, item: null, checking: false, run: null, liveFail: {}, busy: {} };
+  var state = { list: null, prices: null, live: {}, group: null, item: null, checking: false, run: null, liveFail: {}, busy: {}, vat: 'inc' };
 
   function load(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function ms(iso) { var t = iso ? Date.parse(iso) : NaN; return isNaN(t) ? 0 : t; }
-  function money(v) { return '£' + Number(v).toFixed(2); }
-  function diff(v) { v = Math.abs(v); return v < 1 ? Math.round(v * 100) + 'p' : '£' + v.toFixed(2); }
+  /* prices are kept including VAT; shown with or without it, as picked */
+  function shown(v) { return state.vat === 'ex' ? v / R.VAT : v; }
+  function money(v) { return '£' + Number(shown(v)).toFixed(2); }
+  function diff(v) { v = Math.abs(shown(v)); return Math.round(v * 100) < 100 ? Math.round(v * 100) + 'p' : '£' + v.toFixed(2); }
   function ukDay(t) { return new Date(t).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }); }
   /* "05:41 today", "12:41 yesterday", "05:41 Sat 24 Oct", UK time */
   function when(t) {
@@ -185,10 +188,11 @@
       else if (home.unit === min) homeLine = cheapest.length > 1 ? homeStore.name + ' is joint cheapest' : homeStore.name + ' is the cheapest of ' + priced.length;
       else {
         var place = priced.filter(function (r) { return r.unit < home.unit; }).length + 1;
-        homeLine = homeStore.name + ' ' + money(home.price) + ' is ' + nth(place) + ' of ' + priced.length + ', ' + diff(home.price - priced[0].price) + ' more than ' + esc(cheapest[0].store.name);
+        var joint = priced.filter(function (r) { return r.unit === home.unit; }).length > 1;
+        homeLine = homeStore.name + ' ' + money(home.price) + ' is ' + (joint ? 'joint ' : '') + nth(place) + ' of ' + priced.length + ', ' + diff(home.price - priced[0].price) + ' more than ' + esc(cheapest[0].store.name);
       }
     }
-    best.innerHTML = '<span class="pc-best-k">Cheapest ' + esc(item.size || item.name) + '</span>' +
+    best.innerHTML = '<span class="pc-best-k">Cheapest ' + esc(item.size || item.name) + (state.vat === 'ex' ? ', ex VAT' : ', inc VAT') + '</span>' +
       '<span class="pc-best-p">' + money(priced[0].price) + '</span>' +
       '<span class="pc-best-n">' + cheapest.map(function (r) { return esc(r.store.name); }).join(', ') + '</span>' +
       (dear.unit > min ? '<span class="pc-best-s">' + diff(dear.price - priced[0].price) + ' less than the dearest (' + esc(dear.store.name) + ' ' + money(dear.price) + ')</span>' : '<span class="pc-best-s">Every store is the same price</span>') +
@@ -199,12 +203,25 @@
 
   function groupItems() { return state.list.items.filter(function (i) { return i.group === state.group.id; }); }
 
+  function subtitle() {
+    var g = state.group;
+    $('sub').textContent = g.name + ' at every major store, cheapest first. ' + (g.about || '') + (state.vat === 'ex' ? ' Prices without VAT.' : ' Prices include VAT.');
+  }
+
+  function pickVat(vat) {
+    state.vat = vat === 'ex' ? 'ex' : 'inc';
+    save('pc-vat-v1', state.vat);
+    Array.prototype.forEach.call(document.querySelectorAll('.pc-vat button'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.vat === state.vat)); });
+    if (state.group) subtitle();
+    render();
+  }
+
   function pickGroup(id) {
     var g = state.list.groups.filter(function (x) { return x.id === id; })[0] || state.list.groups[0];
     state.group = g;
     save('pc-group-v1', g.id);
     $('group').value = g.id;
-    $('sub').textContent = g.name + ' at every major store, cheapest first. ' + (g.about || '');
+    subtitle();
     var items = groupItems();
     $('items').innerHTML = items.map(function (i) {
       return '<button type="button" role="tab" data-item="' + esc(i.id) + '" aria-selected="false"><b>' + esc(i.short || i.name) + '</b>' + (i.sub ? '<small>' + esc(i.sub) + '</small>' : '') + '</button>';
@@ -252,7 +269,7 @@
               jinaNext = Math.max(jinaNext, Date.now() + Math.min(wait, 60) * 1000 + 600);
               return jina(url, whole, go + 1);
             }
-            if (!res.ok && !/Target URL returned error/i.test(body.slice(0, 2000))) return { err: res.status === 429 ? 'too many checks at once' : 'HTTP ' + res.status };
+            if (!res.ok && !/Target URL returned error/i.test(body.slice(0, 2000))) return { err: res.status === 429 ? 'too many checks at once' : plainWhy(body, "jina couldn't open the page (HTTP " + res.status + ')') };
             return { body: body };
           });
         }, function (e) {
@@ -261,6 +278,17 @@
         })
         .finally(function () { clearTimeout(timer); });
     });
+  }
+
+  /* jina's error answers in plain words ({"readableMessage": "... net::ERR_CERT_DATE_INVALID ..."}), as the GitHub check says them */
+  function plainWhy(text, fallback) {
+    var msg = String(text || '');
+    try { var j = JSON.parse(msg); msg = String(j.readableMessage || j.message || j.name || msg); } catch (e) { /* not JSON */ }
+    if (/ERR_CERT|certificate/i.test(msg)) return "their website's security certificate has run out";
+    if (/ERR_NAME_NOT_RESOLVED/i.test(msg)) return "their website's address doesn't work";
+    if (/ERR_CONNECTION/i.test(msg)) return "their website didn't answer";
+    if (/timeout|timed out/i.test(msg)) return 'their page took too long to open';
+    return fallback;
   }
 
   function readLive(job, shown) {
@@ -288,8 +316,7 @@
     r.url = url;
     if (shown == null || Math.abs(r.price - shown) / shown <= BIG || r.how !== 'text') return Promise.resolve(r);
     return jina(url, true).then(function (h) {
-      var d = h.err ? null : R.html(h.body, job);
-      if (d && d.ok && d.how !== 'page' && Math.abs(d.price - r.price) < 0.011) return r;
+      if (R.agrees(h.err ? null : R.html(h.body, job), r.price)) return r;
       return { ok: false, why: 'showed ' + money(r.price) + " but that couldn't be confirmed" };
     });
   }
@@ -377,6 +404,10 @@
   }
 
   $('group').addEventListener('change', function () { pickGroup(this.value); });
+  Array.prototype.forEach.call(document.querySelectorAll('.pc-vat button'), function (b) {
+    b.addEventListener('click', function () { pickVat(b.dataset.vat); });
+  });
+  pickVat(load('pc-vat-v1'));
   $('again').addEventListener('click', checkNow);
   // back on the page after a while: pick up a newer GitHub check
   var hiddenAt = 0;

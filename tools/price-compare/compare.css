@@ -25,6 +25,11 @@
 .pc-switch small{font-size:.72rem;font-weight:600;opacity:.8}
 .pc-switch button[aria-selected="true"]{background:var(--cu);color:var(--cu-ink)}
 
+.pc-vat{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:10px 2px 0}
+.pc-vat span{color:var(--muted);font-size:.8rem;font-weight:600;margin-right:2px}
+.pc-vat button{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--muted);font:inherit;font-size:.85rem;font-weight:650;cursor:pointer;transition:background .15s,color .15s}
+.pc-vat button[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--bg)}
+
 .pc-status{display:flex;align-items:center;gap:8px;min-height:22px;margin:14px 4px 12px;color:var(--muted);font-size:.86rem}
 .pc-pulse{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none;opacity:.5}
 .pc-status.is-live .pc-pulse{background:var(--down);opacity:1}

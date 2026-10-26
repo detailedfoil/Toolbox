@@ -8,26 +8,20 @@
    "toolstation": {"price":15.6,"name":"Wednesbury Copper Pipe 15mm x 3m","url":"https://www.toolstation.com/wednesbury-copper-pipe/p82026","since":"2026-10-26T02:14:27.045Z"},
    "wickes": {"price":16,"name":"Wednesbury Copper Pipe - 15mm x 3m","url":"https://www.wickes.co.uk/Wednesbury-Copper-Pipe---15mm-x-3m/p/9000279730","since":"2026-10-26T02:14:27.045Z"},
    "bq": {"price":15.6,"name":"Wednesbury Copper Compression Pipe (L)3m (Dia)15mm","url":"https://www.diy.com/departments/wednesbury-copper-compression-pipe-l-3m-dia-15mm/33952_BQ.prd","since":"2026-10-26T02:14:27.045Z"},
-   "travisperkins": {"price":14.37,"name":"Wednesbury Copper Tube Plain Lengths 15mm x 3m","url":"https://www.travisperkins.co.uk/copper-pipe/wednesbury-copper-tube-plain-lengths-15mm-x-3m/p/313813","since":"2026-10-26T02:30:49.568Z"},
    "cityplumbing": {"price":15.59,"name":"Wednesbury Plain Copper Tube Length 15mm x 3m X015L-3","url":"https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-15mm-x-3m/p/313813","since":"2026-10-26T02:14:27.045Z"},
    "selco": {"price":14.4,"name":"Copper Pipe 15mm x 3m","url":"https://www.selcobw.com/copper-pipe-15mm-x-3m","since":"2026-10-26T02:14:27.045Z"},
    "builderdepot": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"the store's bot check (error 403); straight from the store: direct HTTP 403","n":2}},
-   "plumbingsuperstore": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"no price on the page; straight from the store: a different product (\"JavaScript is disabled\")","n":2}},
-   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"jina HTTP 422 {\"data\":null,\"cause\":{\"log\":[\" - navigating to \\\"https://www.grahamplumbersmerch; straight from the store: direct: CERT_HAS_EXPIRED","n":2}},
-   "bes": {"price":14.72,"name":"Copper Tube - 15mm x 3m","url":"https://www.bes.co.uk/15-mm-x-3-m-copper-tube","since":"2026-10-26T02:14:27.045Z"}
+   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"jina HTTP 422 {\"data\":null,\"cause\":{\"log\":[\" - navigating to \\\"https://www.grahamplumbersmerch; straight from the store: direct: CERT_HAS_EXPIRED","n":2}}
   },
   "cu22": {
    "screwfix": {"price":31.31,"name":"Wednesbury Copper Pipe 22mm x 3m(77741)","url":"https://www.screwfix.com/p/wednesbury-copper-pipe-22mm-x-3m/77741","since":"2026-10-26T02:14:27.045Z"},
    "toolstation": {"price":31.31,"name":"Wednesbury Copper Pipe 22mm x 3m","url":"https://www.toolstation.com/wednesbury-copper-pipe/p39919","since":"2026-10-26T02:14:27.045Z"},
    "wickes": {"price":32.5,"name":"Wednesbury Copper Pipe - 22mm x 3m","url":"https://www.wickes.co.uk/Wednesbury-Copper-Pipe---22mm-x-3m/p/9000279729","since":"2026-10-26T02:14:27.045Z"},
    "bq": {"price":31.31,"name":"Wednesbury Copper Compression Pipe (L)3m (Dia)22mm","url":"https://www.diy.com/departments/wednesbury-copper-compression-pipe-l-3m-dia-22mm/33951_BQ.prd","since":"2026-10-26T02:14:27.045Z"},
-   "travisperkins": {"price":29.91,"name":"Wednesbury Copper Tube Plain Lengths 22mm x 3m","url":"https://www.travisperkins.co.uk/copper-pipe/wednesbury-copper-tube-plain-lengths-22mm-x-3m/p/119745","since":"2026-10-26T02:30:49.568Z"},
    "cityplumbing": {"price":31.28,"name":"Wednesbury Plain Copper Tube Length 22mm x 3m X022L-3","url":"https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-22mm-x-3m/p/119745","since":"2026-10-26T02:14:27.045Z"},
    "selco": {"price":29.24,"name":"Copper Pipe 22mm x 3m","url":"https://www.selcobw.com/copper-pipe-22mm-x-3m","since":"2026-10-26T02:14:27.045Z"},
    "builderdepot": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"the store's bot check (error 403); straight from the store: direct HTTP 403","n":2}},
-   "plumbingsuperstore": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"no price on the page; straight from the store: a different product (\"JavaScript is disabled\")","n":2}},
-   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"jina HTTP 422 {\"data\":null,\"cause\":{\"log\":[\" - navigating to \\\"https://www.grahamplumbersmerch; straight from the store: direct: CERT_HAS_EXPIRED","n":2}},
-   "bes": {"price":29.42,"name":"Copper Tube - 22mm x 3m","url":"https://www.bes.co.uk/copper-tube-22mm-x-3m-10312/","since":"2026-10-26T02:14:27.045Z"}
+   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"jina HTTP 422 {\"data\":null,\"cause\":{\"log\":[\" - navigating to \\\"https://www.grahamplumbersmerch; straight from the store: direct: CERT_HAS_EXPIRED","n":2}}
   }
  }
 }

@@ -11,15 +11,15 @@
      (Inc / Ex VAT), and an unlabelled price is taken as including VAT (store.vat: 'ex' says otherwise).
      gone: the store says the page doesn't exist (404), so the next address in the list is worth trying.
    html(page, job) -> the same, from the whole page (jina's X-Return-Format: html, or the page fetched directly):
-     the product data built into the page (JSON-LD), the price meta tags, or, for a page where you pick a size
-     first (entry.options), that size's own price in the page's option data. Then the page's text as a last go.
-     JSON-LD prices are taken as including VAT unless the data says otherwise or store.ld is 'ex'.
+     the product data built into the page (JSON-LD), else the price meta tags, else the page's text. JSON-LD prices
+     are taken as including VAT unless the data says otherwise or store.ld is 'ex' (BES, Travis Perkins).
+   agrees(htmlResult, price) -> whether the page's data backs up a price read from its text (big jumps need it).
    nameOk(name, job) -> '' or why the page isn't this product (another size, a pack of 10, chrome...).
    unitPrice(price, job) -> the price per metre, for ranking (an entry can have its own len, or a pack count).
    All prices are numbers in pounds, including VAT, rounded to the penny. */
 (function (root) {
   'use strict';
-  var VERSION = '2026-10-26a';
+  var VERSION = '2026-10-26b';
   var VAT = 1.2;
   var NEAR = 0.0105;          // a price with VAT is the price without VAT x 1.2, give or take rounding to the penny
 
@@ -92,6 +92,10 @@
   function blocked(page, isHtml) {
     var s = String(page || '');
     var err = /Target URL returned error (\d{3})/i.exec(s.slice(0, 2000));
+    // jina sometimes warns of an error yet sends the real page under it (Builder Depot: 403, then the whole page):
+    // only a short page is the error itself
+    var content = isHtml ? '' : s.slice(Math.max(0, s.search(/^Markdown Content:/m)));
+    if (err && !isHtml && squash(content).length > 3000) err = null;
     if (err) {
       if (err[1] === '404' || err[1] === '410') return { why: 'the store says the page has gone (' + err[1] + ')', gone: true };
       if (/^(403|405|429)$/.test(err[1])) return { why: "the store's bot check (error " + err[1] + ')' };
@@ -116,7 +120,7 @@
 
   var PRICE = /£\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{2}))?(?!\d)/g;
   // just before a price: a was price, a saving, finance, a delivery or spend threshold
-  var SKIP_BEFORE = /(?:\bwas|\brrp|\bsave|\bsaving|\bfrom|\bover|\bunder|\bspend|\borders?|\bdelivery|\bdelivered|\bklarna|\bpaypal|\bclearpay|\bpay\b|\bpayments?|\binstal\w*|\bdeposit|\bcredit|\bvoucher|\bgift|\bearn|\bpoints?|\breward\w*|\bfree\b|\bminimum|\bmin\.?|\bplus|\bextra|\bsub-?total|\btotal|\bbasket|\btrolley|\bcart|\bfinance)\b[^£\d]{0,14}$/i;
+  var SKIP_BEFORE = /(?:\bwas|\brrp|\bsave|\bsaving|\bfrom|\bover|\bunder|\bspend|\borders?|\bdelivery|\bdelivered|\bklarna|\bpaypal|\bclearpay|\bpay\b|\bpayments?|\binstal\w*|\bdeposit|\bcredit|\bvoucher|\bgift|\bearn|\bpoints?|\breward\w*|\bfree\b|\bminimum|\bmin\.?|\bplus|\bextra|\bsub-?total|\btotal|\bbasket|\btrolley|\bcart|\bfinance|\bmore than|\bless than|\bup to|\babove|\bbelow|\bbetween|\bexceeding)\b[^£\d]{0,14}$/i;
   // just after a price: per metre, a saving, finance
   var SKIP_AFTER = /^\s*(?:\(?\s*(?:per|\/|a)\s*(?:m|metre|meter|mtr|lin(?:ear)?\.?\s*m)\b|p\/m\b|off\b|delivery|to spend|or more|(?:a|per|\/)\s*(?:month|mo)\b|monthly|x\s*\d|interest|deposit|when you spend|in (?:points|rewards))/i;
   var INC = /\b(?:inc(?:l(?:uding|usive)?)?\.?\s*(?:of\s*)?vat|vat\s*inc(?:l(?:uded|usive)?)?\.?)(?![a-z])/i;
@@ -125,7 +129,14 @@
 
   // a short line of its own just above a price, labelling it ("Was" / "Save" on one line, the price on the next)
   var WAS_LINE = /^(?:was|rrp|previously|before)\b[^£\d]{0,12}$/i;
-  var OTHER_LINE = /^(?:save|saving|you save|from|pay|delivery|spend|finance)\b[^£\d]{0,12}$/i;
+  var OTHER_LINE = /^(?:save|saving|you save|from|pay|delivery|spend|finance|(?:[2-9]|\d{2,})\s*(?:\+|&\s*over|and\s*over|or\s*more|and\s*more)|qty\b|quantity\b)[^£\d]{0,12}$/i;
+  // a price for buying several ("10+£15.12", "10 & Over£13.38", "5 and more"), not one length; "1-9" is the single price
+  var TIER = /(?:^|[^\d.,£])(?:[2-9]|\d{2,})\s*(?:\+|&\s*over|and\s*over|or\s*more|and\s*more|-\s*\d+)\s*$/i;
+  function labelAt(text) {
+    var i = text.search(INC), e = text.search(EX);
+    if (i < 0 && e < 0) return '';
+    return e < 0 || (i >= 0 && i < e) ? 'inc' : 'ex';
+  }
 
   function candidates(region) {
     var out = [], m;
@@ -141,18 +152,21 @@
       if (above.length > 24 || /£/.test(above)) above = '';
       var after = region.slice(end, nextPound < 0 ? end + 45 : Math.min(end + 45, nextPound));
       var c = { at: m.index, end: end, v: v, skip: '', label: '' };
+      var prev = out[out.length - 1];
       if (!(v > 0)) c.skip = 'zero';
       else if (/~~$/.test(before) || /^~~/.test(after)) c.skip = 'was';          // ~~£33.00~~: struck through
       else if (/\b(?:was|rrp)\b[^£\d]{0,14}$/i.test(line) || (!line.trim() && WAS_LINE.test(above))) c.skip = 'was';
-      else if (SKIP_BEFORE.test(line) || (!line.trim() && OTHER_LINE.test(above))) c.skip = 'other';
+      else if (SKIP_BEFORE.test(line) || TIER.test(line) || (!line.trim() && OTHER_LINE.test(above))) c.skip = 'other';
       else if (SKIP_AFTER.test(after)) c.skip = 'other';
+      // stuck straight onto a price that isn't the one ("20+£15.37£12.81": the bulk price without VAT too; "£100-£150")
+      else if (prev && prev.skip && prev.skip !== 'zero' && /^[\s*_|\-–]*(?:to|and)?[\s]*$/i.test(region.slice(prev.end, m.index))) c.skip = prev.skip;
       if (!c.skip) {
         var lb = /(?:inc(?:l(?:uding)?)?\.?\s*vat|ex(?:c(?:l(?:uding)?)?)?\.?\s*vat)\s*:?\s*$/i.exec(before.slice(-22));
-        // a label straight after the price, unless it's on the same line as the next price ("£15.60 ex. VAT £13.00"
-        // labels the £13.00)
+        // a label after the price (before the next one, within a few lines), unless it's on the same line as the next
+        // price ("£15.60 ex. VAT £13.00" labels the £13.00)
+        var gap = region.slice(end, nextPound < 0 ? end + 160 : Math.min(end + 160, nextPound));
         var labelNext = nextPound >= 0 && nextPound - end < 45 && !/\n/.test(region.slice(end, nextPound)) && /vat\s*:?\s*$/i.test(region.slice(end, nextPound));
-        if (!labelNext && INC.test(after)) c.label = 'inc';
-        else if (!labelNext && EX.test(after)) c.label = 'ex';
+        if (!labelNext && labelAt(gap)) c.label = labelAt(gap);
         else if (lb) c.label = /^inc/i.test(lb[0]) ? 'inc' : 'ex';
       }
       out.push(c);
@@ -162,10 +176,18 @@
 
   /* the selling price among a region's prices -> {price, was, sure} or null. sure: the VAT basis was known (a pair or a
      label), not just assumed. */
-  function pick(cands, vatDefault) {
+  function pick(cands, vatDefault, sureOnly) {
     var c = cands.filter(function (x) { return !x.skip; });
-    if (!c.length) return null;
-    var first = c[0], next = c[1], inc = null, sure = true;
+    for (var k = 0; k < c.length; k++) {
+      var got = pickAt(cands, c, k, vatDefault);
+      if (got && (got.sure || !sureOnly)) return got;
+      if (!sureOnly) return got;
+    }
+    return null;
+  }
+  function pickAt(cands, c, k, vatDefault) {
+    var first = c[k], next = c[k + 1], inc = null, sure = true;
+    if (!first) return null;
     if (next && next.at - first.end < 220) {
       if (Math.abs(next.v * VAT - first.v) < NEAR) inc = first.v;
       else if (Math.abs(first.v * VAT - next.v) < NEAR) inc = next.v;
@@ -202,34 +224,46 @@
       .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
       .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
       .replace(/\\([\\`*_{}\[\]()#+\-.!|>~])/g, '$1'));
-    var heads = [], m, re = /^(#{1,3})[ \t]+(.+?)[ \t]*#*[ \t]*$/gm;
-    while ((m = re.exec(md))) heads.push({ at: m.index, end: re.lastIndex, level: m[1].length, text: clean(m[2]) });
-    var re2 = /^([^\n#][^\n]{3,200})\n=+[ \t]*$/gm;
-    while ((m = re2.exec(md))) heads.push({ at: m.index, end: re2.lastIndex, level: 1, text: clean(m[1]) });
-    heads.sort(function (a, b) { return a.at - b.at; });
-    var head = null;
-    for (var i = 0; i < heads.length && !head; i++) if (!nameOk(heads[i].text, job)) head = heads[i];
-    var name = head ? head.text : title;
-    if (!head && nameOk(title, job)) {
+    // every line naming this product: its heading, and a breadcrumb or plain name line (B&Q's name isn't a heading,
+    // BES puts its price under a name line above the heading)
+    var lines = [], m, re = /^(.*)$/gm;
+    while ((m = re.exec(md))) {
+      if (m.index === re.lastIndex) re.lastIndex++;
+      var t = m[1].trim();
+      if (!t || t.length > 220) continue;
+      var h = /^(#{1,6})[ \t]+(.+?)[ \t]*#*$/.exec(t);
+      lines.push({ at: m.index, end: m.index + m[0].length, level: h ? h[1].length : 0, text: clean(h ? h[2] : t.replace(/^[*\-+>|]+\s*/, '')) });
+    }
+    var named = lines.filter(function (l) { return l.text.length > 3 && !nameOk(l.text, job); });
+    // nothing from "You may also like" (or the like) on is this product, even a heading that names the same size
+    var relRe = new RegExp(RELATED.source, 'gim');
+    relRe.lastIndex = named.length ? named[0].at : 0;
+    var relHit = relRe.exec(md), relAt = relHit ? relHit.index : md.length;
+    named = named.filter(function (l) { return l.at < relAt; });
+    var heading = named.filter(function (l) { return l.level; })[0];
+    var name = heading ? heading.text : named.length ? named[0].text : title;
+    if (!named.length && nameOk(title, job)) {
       // say what the page is instead: its main heading if it has one, else its title
-      var h1 = heads.filter(function (h) { return h.level === 1; })[0];
+      var h1 = lines.filter(function (l) { return l.level === 1; })[0];
       var shown = h1 ? h1.text : title;
       return fail(shown ? nameOk(shown, job) : 'no product name on the page', { name: shown });
     }
-    var from = head ? head.end : Math.max(0, md.search(/\S/));
-    var tail = md.slice(from, from + 6000);
-    var rel = tail.search(RELATED);
-    if (rel >= 0) tail = tail.slice(0, rel);
-    var nextHead = tail.search(/^#{1,2}[ \t]/m);
     var vatDefault = (job.store && job.store.vat) || 'inc';
-    // the product's own block (up to the next main heading) first; past that only a price that says what it is
-    var got = pick(candidates(nextHead >= 0 ? tail.slice(0, nextHead) : tail), vatDefault);
-    if (!got && nextHead >= 0) {
-      got = pick(candidates(tail.slice(0, 2500)), vatDefault);
-      if (got && !got.sure) got = null;
+    // a main heading that's neither a price ("## £15.59") nor this product's name again ends the product's block
+    var ends = lines.filter(function (l) { return l.level && l.level <= 2 && !/^£\s?[\d,.]+$/.test(l.text) && nameOk(l.text, job); });
+    function block(from, upTo) { return md.slice(from, Math.max(from, Math.min(from + upTo, relAt))); }
+    // the product's own block (from a line naming it to the next main heading), each in turn
+    for (var i = 0; i < named.length; i++) {
+      var from = named[i].end, stop = ends.filter(function (l) { return l.at >= from; })[0];
+      var got = pick(candidates(block(from, Math.min(5000, stop ? stop.at - from : 5000))), vatDefault);
+      if (got) return sane({ ok: true, price: got.price, was: got.was, name: name, how: 'text', sure: got.sure }, job);
     }
-    if (!got) return fail('no price on the page', { name: name });
-    return sane({ ok: true, price: got.price, was: got.was, name: name, how: 'text', sure: got.sure }, job);
+    // past that (or with only the page title to go on), only a price that says what it is: one with its VAT label,
+    // or a pair with and without VAT (Travis Perkins: the price under the reviews, its name only in the title)
+    var start = named.length ? named[0].end : Math.max(0, md.search(/\S/));
+    var sure = pick(candidates(block(start, 12000)), vatDefault, true);
+    if (sure) return sane({ ok: true, price: sure.price, was: sure.was, name: name, how: 'text', sure: true }, job);
+    return fail('no price on the page', { name: name });
   }
 
   /* ---------- the price in a whole page (html) ---------- */
@@ -279,50 +313,11 @@
     return null;
   }
 
-  /* one JSON object in a page, found by its key ("jsonConfig": {...}), braces counted so nested ones are kept */
-  function grabJSON(s, key) {
-    var i = s.indexOf('"' + key + '"');
-    while (i >= 0) {
-      var j = s.indexOf('{', i);
-      if (j < 0) return null;
-      if (/^\s*:\s*$/.test(s.slice(i + key.length + 2, j))) {
-        var depth = 0, inStr = false, esc = false;
-        for (var k = j; k < s.length && k < j + 3e6; k++) {
-          var c = s.charAt(k);
-          if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
-          if (c === '"') inStr = true;
-          else if (c === '{') depth++;
-          else if (c === '}' && !--depth) { try { return JSON.parse(s.slice(j, k + 1)); } catch (e) { break; } }
-        }
-      }
-      i = s.indexOf('"' + key + '"', i + 1);
-    }
-    return null;
-  }
-
-  /* a page where you pick a size first (Magento's option data): the price of the product with every option asked for */
-  function optionPrice(html, want, job) {
-    var cfg = grabJSON(html, 'jsonConfig') || grabJSON(html, 'spConfig');
-    if (!cfg || !cfg.attributes) return fail('no size options found on the page');
-    var norm = function (s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9.]+/g, ''); };
-    var attrs = Object.keys(cfg.attributes).map(function (k) { return cfg.attributes[k]; }), ids = null;
-    for (var label in want) {
-      var a = attrs.filter(function (x) { return norm(x.label) === norm(label) || norm(x.code) === norm(label); })[0];
-      if (!a) return fail('no "' + label + '" choice on the page');
-      var o = (a.options || []).filter(function (x) { return norm(x.label) === norm(want[label]); })[0];
-      if (!o) return fail(want[label] + " isn't one of the " + label.toLowerCase() + ' choices');
-      var ps = (o.products || []).map(String);
-      ids = ids ? ids.filter(function (x) { return ps.indexOf(x) >= 0; }) : ps;
-    }
-    if (!ids || !ids.length) return fail("that size isn't on sale");
-    var p = cfg.optionPrices && cfg.optionPrices[ids[0]];
-    var amount = function (x) { return x && x.amount != null && isFinite(Number(x.amount)) ? Number(x.amount) : null; };
-    var fin = p && amount(p.finalPrice), base = p && amount(p.basePrice), old = p && amount(p.oldPrice);
-    if (fin == null) return fail('no price for that size');
-    var exOnly = (job.store && job.store.vat === 'ex') && !(base != null && Math.abs(base * VAT - fin) < NEAR);
-    var price = exOnly ? r2(fin * VAT) : r2(fin);
-    var was = old != null && old > fin + 0.005 ? r2(exOnly ? old * VAT : old) : null;
-    return { ok: true, price: price, was: was };
+  /* does a whole page's own data back up a price read from its text? (its data price, with or without VAT) */
+  function agrees(d, price) {
+    return !!(d && d.ok && d.how !== 'page' && [d.price].concat(d.all || []).some(function (v) {
+      return Math.abs(v - price) < 0.011 || Math.abs(r2(v * VAT) - price) < 0.011;
+    }));
   }
 
   /* a whole page as rough markdown (headings kept), so the text reader can have a go at a page fetched directly */
@@ -346,19 +341,17 @@
     var og = clean((/<meta\b[^>]*property\s*=\s*["']og:title["'][^>]*content\s*=\s*["']([^"']*)["']/i.exec(t) || [])[1] || '');
     var names = [h1, og, title].filter(Boolean);
     var name = names.filter(function (n) { return !nameOk(n, job); })[0] || '';
-    if (entry.options) {
-      if (!name) return fail(nameOk(names[0] || '', job), { name: names[0] || '' });
-      var o = optionPrice(t, entry.options, job);
-      if (!o.ok) { o.name = name; return o; }
-      return sane({ ok: true, price: o.price, was: o.was, name: name, how: 'options', sure: true }, job);
-    }
-    var lds = ldProducts(t).filter(function (p) { return p.name ? !nameOk(p.name, job) : !!name; });
+    // this product's data: ones with a product code first (Selco's page carries a second copy without one, priced
+    // without VAT). all: every price the page's data gives, for confirming a price read from the text
+    var lds = ldProducts(t).filter(function (p) { return p.name ? !nameOk(p.name, job) : !!name; })
+      .sort(function (a, b) { return (b.sku ? 1 : 0) - (a.sku ? 1 : 0); });
+    var meta = metaPrice(t);
+    var all = lds.map(function (p) { return p.price; }).concat(meta != null ? [meta] : []);
     if (lds.length) {
       var p = lds[0], ex = p.vat === false || (p.vat == null && store.ld === 'ex');
-      return sane({ ok: true, price: ex ? r2(p.price * VAT) : r2(p.price), was: null, name: p.name || name, how: 'data', sure: p.vat != null || !!store.ld }, job);
+      return sane({ ok: true, price: ex ? r2(p.price * VAT) : r2(p.price), was: null, name: p.name || name, how: 'data', sure: p.vat != null || !!store.ld, all: all }, job);
     }
-    var meta = metaPrice(t);
-    if (meta != null && name) return sane({ ok: true, price: store.ld === 'ex' ? r2(meta * VAT) : r2(meta), was: null, name: name, how: 'data', sure: !!store.ld }, job);
+    if (meta != null && name) return sane({ ok: true, price: store.ld === 'ex' ? r2(meta * VAT) : r2(meta), was: null, name: name, how: 'data', sure: !!store.ld, all: all }, job);
     var r = text('Title: ' + title + '\n\nMarkdown Content:\n' + pageText(t), job);
     if (r.ok) r.how = 'page';
     return r;
@@ -369,7 +362,7 @@
     return 'https://www.google.com/search?q=' + encodeURIComponent('site:' + store.site + ' ' + (item.q || item.name));
   }
 
-  var api = { VERSION: VERSION, VAT: VAT, jobs: jobs, links: links, text: text, html: html, nameOk: nameOk, unitPrice: unitPrice, siteSearch: siteSearch, decode: decode, pageText: pageText };
+  var api = { VERSION: VERSION, VAT: VAT, jobs: jobs, links: links, text: text, html: html, agrees: agrees, nameOk: nameOk, unitPrice: unitPrice, siteSearch: siteSearch, decode: decode, pageText: pageText };
   root.PriceRead = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

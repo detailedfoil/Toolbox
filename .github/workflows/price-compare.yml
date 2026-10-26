@@ -35,6 +35,14 @@ on:
         description: 'raw only: more addresses to save, separated by spaces'
         required: false
         default: ''
+      stores:
+        description: 'raw only: just these stores (ids from compare.json, separated by commas)'
+        required: false
+        default: ''
+      tolerance:
+        description: "how old a copy of a page jina may hand back, in seconds (blank = 1800)"
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -61,6 +69,8 @@ jobs:
         env:
           MODE: ${{ inputs.mode }}
           RAW_EXTRA: ${{ inputs.extra }}
+          RAW_STORES: ${{ inputs.stores }}
+          JINA_TOLERANCE: ${{ inputs.tolerance }}
           GAP_MS: '6000'        # one request every 6 s or so through jina (it allows 20 a minute)
         run: node .github/price-compare/check.mjs
 
