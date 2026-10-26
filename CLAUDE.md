@@ -86,11 +86,10 @@ explain changes in plain English and say what they'll see.
     Working with no signal (detailedfoil, 26 Oct 2026): `tools/product-search-sw.js` is a service worker registered by
     app.js with scope "product-search", so it only looks after this page and its files (never the other tools). It keeps
     every Toolbox file the page fetches (page, code and lists site-first with a 4 s fallback to the kept copy; photos
-    and descriptions kept-first); never anything from another site. Settings has three separate downloads into the same cache (`product-search-v1`), 4 files at a time
-    (detailedfoil, 26 Oct 2026): "Download names" (the page, its code and `products.json`: SKU code + ILS name, about 1 MB),
-    "Download descriptions" (`descriptions/*.json`, `desc-words.json`, `web-names.json`, about 6 MB) and "Download images"
-    (`photos/*.jpg`, about 22 MB); each shows its size (worked out from the counts) and when it was saved (`ps-saved2`).
-    Without the descriptions download, descriptions and description search don't work offline; without images, photos show their placeholder. Saved files are checked one at a time
+    and descriptions kept-first); never anything from another site. Settings has one "Download names" button (detailedfoil, 26 Oct 2026: "just names are ok"; descriptions
+    and images were offered as separate downloads for a few hours, then taken out): it puts the page, its code and `products.json`
+    (SKU code + ILS name) into the same cache (`product-search-v1`), about 1 MB, a moment; when it was saved is in `ps-saved2`.
+    Offline, photos show their placeholder and descriptions / description search don't work. Saved files are checked one at a time
     (`cache.match`): listing 20,000 with `cache.keys()` can fail in Chrome. The page has to be opened once with signal.
     Grouping sizes of the same product into one result with a size switcher (buttons or a drop-down) was built and
     removed on 22 Oct 2026 at detailedfoil's say (he didn't like it): every size is its own result.

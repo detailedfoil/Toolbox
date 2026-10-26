@@ -2,7 +2,7 @@
  * you type, shows results a screenful at a time and each result's photo as it scrolls into view. Tapping a result
  * opens it to show its description (descriptions/<CODE>.json, saved by the GitHub check, loaded only when tapped).
  * Stock levels pasted from the stock system (stock.js) show on each result, for the visit only.
- * product-search-sw.js lets the page open with no signal; the three "Download" buttons keep names, descriptions and images for use with no signal. */
+ * product-search-sw.js lets the page open with no signal; the "Download names" button keeps the SKU codes and names for use with no signal. */
 (function () {
   'use strict';
 
@@ -285,13 +285,13 @@
   stockText.addEventListener('input', function () { if (stockText.value.length > 20) useStock(stockText.value); });
   showStockBar();
 
-  /* ---------- working with no signal: product-search-sw.js, and the three downloads ---------- */
+  /* ---------- working with no signal: product-search-sw.js, and "Download names" ---------- */
 
   var CACHE = 'product-search-v1';          // the same cache product-search-sw.js keeps things in
   var saveBox = $('save'), saveDel = $('saveDel'), saveRun = $('saveRun');
   var saveProg = $('saveProg'), saveMsg = $('saveMsg'), saving = false;
   var canSave = 'serviceWorker' in navigator && 'caches' in window;
-  var PARTS = ['names', 'descs', 'photos'];
+  var PARTS = ['names'];
   if (canSave) {
     // scope "product-search": only this page and its files, never the other tools
     navigator.serviceWorker.register('product-search-sw.js', { scope: 'product-search' }).catch(function () { /* opens online only */ });
@@ -300,33 +300,17 @@
     PARTS.forEach(function (k) { $('save-' + k).hidden = true; });
   }
 
-  // three separate downloads (detailedfoil, 26 Oct 2026):
-  //  names: the page, its code and the ILS list of SKU codes and names (about 1 MB)
-  //  descs: descriptions, the words they're searched by, and the Screwfix names/age notices (about 6 MB)
-  //  photos: the 120 px photos (about 22 MB)
-  function partFiles(kind) {
-    var names = (web && web.products) || {}, out = [];
-    if (kind === 'names') {
-      out = [location.pathname, LIST_URL, 'product-search/stock-help.png', 'posters/fonts/BarlowSemiCondensed-ExtraBold.ttf', '../manifest.json'];
-      Array.prototype.forEach.call(document.querySelectorAll('script[src], link[rel="stylesheet"]'), function (el) {
-        var u = el.getAttribute('src') || el.getAttribute('href');
-        if (!/^(?:[a-z]+:)?\/\//i.test(u)) out.push(u);       // this site's files only (not the visitor-stats script)
-      });
-    } else if (kind === 'descs') {
-      out = [WEB_URL, DESC_WORDS_URL];
-      Object.keys(names).forEach(function (k) { if (names[k].d === 1) out.push(DESC_URL + encodeURIComponent(k) + '.json'); });
-    } else {
-      Object.keys(names).forEach(function (k) { if (names[k].p) out.push('product-search/photos/' + encodeURIComponent(k) + '.jpg'); });
-    }
+  // one download (detailedfoil, 26 Oct 2026: "just names are ok"): the page, its code and the ILS list of SKU codes and names, about 1 MB.
+  // (Descriptions and photos were offered as separate downloads for a few hours and taken out.)
+  function partFiles() {
+    var out = [location.pathname, LIST_URL, 'product-search/stock-help.png', 'posters/fonts/BarlowSemiCondensed-ExtraBold.ttf', '../manifest.json'];
+    Array.prototype.forEach.call(document.querySelectorAll('script[src], link[rel="stylesheet"]'), function (el) {
+      var u = el.getAttribute('src') || el.getAttribute('href');
+      if (!/^(?:[a-z]+:)?\/\//i.test(u)) out.push(u);       // this site's files only (not the visitor-stats script)
+    });
     return out;
   }
-  // measured 26 Oct 2026: a photo about 2 KB, a description about 0.4 KB, the lists about 2.9 MB, the page and names about 1 MB
-  function showSaveSize() {
-    var d = partFiles('descs').length - 2, p = partFiles('photos').length;
-    $('size-names').textContent = '1 MB';
-    $('size-descs').textContent = Math.max(1, Math.round(2.9 + d * 0.41 / 1024)) + ' MB';
-    $('size-photos').textContent = Math.max(1, Math.round(p * 1.96 / 1024)) + ' MB';
-  }
+  function showSaveSize() { $('size-names').textContent = '1 MB'; }
   function readSaved() {
     var s = null;
     try { s = JSON.parse(localStorage.getItem('ps-saved2') || 'null'); } catch (e) { s = null; }
@@ -356,7 +340,7 @@
     saveDel.disabled = true;
     saveRun.hidden = false;
     var cache, done = 0, missed = 0;
-    var jobs = partFiles(kind).map(function (u) { return { url: u, always: kind !== 'photos' && kind !== 'descs' || /\/data\/|desc-words|web-names/.test(u) }; });
+    var jobs = partFiles().map(function (u) { return { url: u, always: true }; });
     var total = jobs.length;
     function shown() { saveProg.value = total ? done / total : 1; saveMsg.textContent = 'Saving ' + n(done) + ' of ' + n(total) + '...'; }
     shown();
