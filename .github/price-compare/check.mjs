@@ -19,7 +19,8 @@
 // address saved as it came back (to RAW_DIR, for working out a new store's layout), plus RAW_EXTRA addresses.
 // JINA_TOLERANCE: how old a copy of a page jina may hand back, in seconds (default 1800).
 // Test hooks: JINA_URL (the jina relay), DIRECT_VIA (put in front of a store address when going direct), GAP_MS,
-// PC_DIR (the data folder), PC_NOW (pretend time), RAW_DIR, RAW_STORES.
+// PC_DIR (the data folder), PC_NOW (pretend time), RAW_DIR, RAW_STORES, RAW_TEXT_ONLY (raw mode: jina's text read only,
+// a third of the requests, for looking through stores' search pages).
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -189,11 +190,12 @@ if (mode === 'raw') {
     };
     const t = await jina(p.url, false);
     save('.txt', t, p.job && !t.err ? R.text(t.body, p.job) : null);
+    console.log(p.name, p.url);
+    if (/^(?:1|true|yes|on)$/i.test(process.env.RAW_TEXT_ONLY || '')) continue;
     const h = await jina(p.url, true);
     save('.html', h, p.job && !h.err ? R.html(h.body, p.job) : null);
     const d = await direct(p.url);
     save('.direct.html', d, p.job && !d.err ? R.html(d.body, p.job) : null);
-    console.log(p.name, p.url);
   }
   fs.writeFileSync(path.join(RAW, 'index.md'), index.join('\n') + '\n' + pages.map((p) => `- ${p.name}: ${p.url}`).join('\n') + '\n');
   summary(index);

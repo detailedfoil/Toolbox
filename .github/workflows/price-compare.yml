@@ -39,6 +39,10 @@ on:
         description: 'raw only: just these stores (ids from compare.json, separated by commas)'
         required: false
         default: ''
+      textonly:
+        description: 'raw only: just the text of each page (quicker, for looking through search pages)'
+        type: boolean
+        default: false
       tolerance:
         description: "how old a copy of a page jina may hand back, in seconds (blank = 1800)"
         required: false
@@ -70,6 +74,7 @@ jobs:
           MODE: ${{ inputs.mode }}
           RAW_EXTRA: ${{ inputs.extra }}
           RAW_STORES: ${{ inputs.stores }}
+          RAW_TEXT_ONLY: ${{ inputs.textonly }}
           JINA_TOLERANCE: ${{ inputs.tolerance }}
           GAP_MS: '6000'        # one request every 6 s or so through jina (it allows 20 a minute)
         run: node .github/price-compare/check.mjs
