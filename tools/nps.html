@@ -9,7 +9,7 @@
 <title>NPS</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="nps/nps.css?v=9d46c3e68b">
+<link rel="stylesheet" href="nps/nps.css?v=5bfd261d14">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -35,8 +35,21 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
       Choose the file
     </button>
-    <input id="loadInput" type="file" accept=".xlsx,.xlsm,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+    <input id="loadInput" type="file" accept=".xlsx,.xlsm,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
     <p class="paste-check" id="loadCheck" aria-live="polite"></p>
+
+    <details class="paste-alt how">
+      <summary>How to get the file</summary>
+      <ol class="how-steps">
+        <li><b>Open the Trade Counter Managers dashboard</b> and go to the <b>Data Export</b> tab.</li>
+        <li><b>Check the filters</b> along the top read <i>Reporting Period: Current fiscal year to date</i> and <i>New Store list 2026: 20</i>.</li>
+        <li>On the <b>Responses</b> table, tap the <b>Export</b> button in its top right corner
+          <span class="how-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M8 11l4 4 4-4"/><path d="M5 19h14"/></svg></span>.</li>
+        <li>Pick <b>.xlsx (Available rows)</b> and tap <b>Export</b>. It saves to your downloads.</li>
+        <li>Come back here, tap <b>Choose the file</b> and pick the file you just downloaded.</li>
+      </ol>
+      <p class="how-note">If the export fails because the table is too big, pick <b>.csv</b> instead. That works here too.</p>
+    </details>
 
     <details class="paste-alt" id="pasteAlt">
       <summary>Or paste the figures as text</summary>
