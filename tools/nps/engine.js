@@ -47,6 +47,64 @@
     return { date: m ? m[0] : "", fileName: fileName || "", stores: stores, area: area || sumArea(stores) };
   }
 
+  /* ---------- the survey export: one row per customer ---------- */
+
+  // Area 20, named the way the old workbook named them, with the other names the exports use.
+  var STORES = [
+    ["Amersham (XA6)"], ["Berkhamsted (CB3)"], ["Biggleswade (ED1)"], ["Bishops Stortford (VA2)"],
+    ["Chesham (SB9)"], ["Dunstable (LB1)"], ["Epping - Thornwood (RB9)", "epping"], ["Flitwick (JM5)"],
+    ["Harlow (AT2)"], ["Hemel Hempstead (IT9)"], ["Hertford (IC6)"], ["Hoddesdon (UB4)"],
+    ["Houghton Regis (DB4)", "dunstable houghton regis"], ["Leighton Buzzard (FA2)"], ["Letchworth (TT8)"],
+    ["Luton - Bilton Way (LT2)", "luton"], ["Luton - Windmill (AL2)", "luton lap", "luton windmill trading est"],
+    ["Royston (ED6)"], ["Saffron Walden (JR8)"], ["St Albans (OA7)", "st albans hatfield road"],
+    ["Stevenage (ET3)"], ["Welwyn Garden City (IT6)"]
+  ];
+  function key(name) { return str(name).toLowerCase().replace(/\([^()]*\)/g, " ").replace(/[^a-z0-9]+/g, " ").trim(); }
+  var BY_KEY = {}, BY_CODE = {};
+  STORES.forEach(function (row) {
+    var m = /\(([A-Z0-9]+)\)$/.exec(row[0]);
+    if (m) BY_CODE[m[1]] = row[0];
+    row.forEach(function (n) { BY_KEY[key(n)] = row[0]; });
+  });
+  function storeName(raw) {
+    var code = /\(([A-Za-z0-9]+)\)\s*$/.exec(str(raw));
+    if (code && BY_CODE[code[1].toUpperCase()]) return BY_CODE[code[1].toUpperCase()];
+    return BY_KEY[key(raw)] || str(raw);
+  }
+
+  // rows: the sheet as rows of cells (first row first). Finds the Store and LTR ("likely to
+  // recommend", 0 to 10) columns and counts 9-10 as promoters, 7-8 passives, 0-6 detractors.
+  // Rows with no score (the customer skipped the question) are left out, as the dashboard does.
+  function parseResponses(rows, fileName) {
+    var h = -1, cs = -1, cl = -1, r, c;
+    for (r = 0; r < Math.min(rows.length, 15) && h < 0; r++) {
+      var row = rows[r] || [];
+      cs = -1; cl = -1;
+      for (c = 0; c < row.length; c++) {
+        var t = str(row[c]).toLowerCase();
+        if (cs < 0 && (t === "store" || t === "branch" || t === "store name")) cs = c;
+        if (cl < 0 && (t === "ltr" || /likely.*recommend/.test(t))) cl = c;
+      }
+      if (cs > -1 && cl > -1) h = r;
+    }
+    if (h < 0) return null;
+
+    var byName = {}, order = [];
+    for (r = h + 1; r < rows.length; r++) {
+      var cells = rows[r] || [], raw = str(cells[cs]), v = str(cells[cl]);
+      if (!raw || !/^\d{1,2}(\.0+)?$/.test(v)) continue;
+      var score = Number(v);
+      if (score < 0 || score > 10) continue;
+      var name = storeName(raw);
+      if (!byName[name]) { byName[name] = { name: name, p: 0, pa: 0, d: 0 }; order.push(name); }
+      byName[name][score >= 9 ? "p" : score >= 7 ? "pa" : "d"] += 1;
+    }
+    if (!order.length) throw new Error("This file has no recommend scores in it.");
+    var stores = order.map(function (n) { return byName[n]; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var m = /(\d{2})\.(\d{2})\.(\d{4})/.exec(fileName || "");
+    return { date: m ? m[0] : "", fileName: fileName || "", stores: stores, area: sumArea(stores), responses: true };
+  }
+
   /* Pasted text, one store per line: the name, then promoters, passives and detractors.
      Lenient on purpose: commas, tabs, pipes or spaces between, a header line, a rank in front,
      a score as a percentage, labels like "P 148" all get through. A date (DD.MM.YYYY) anywhere
@@ -251,7 +309,7 @@
 
   var api = {
     ON_TARGET: ON_TARGET, AMBER: AMBER, GREAT: GREAT, band: band, ladder: ladder,
-    parseWorkbook: parseWorkbook, parseText: parseText, total: total, nps: nps,
+    parseWorkbook: parseWorkbook, parseText: parseText, parseResponses: parseResponses, storeName: storeName, total: total, nps: nps,
     calculate: calculate, overview: overview, rankAmong: rankAmong, perStore: perStore
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

@@ -79,10 +79,12 @@
 
   function showError(msg) { const e = $("error"); e.textContent = msg || ""; e.hidden = !msg; }
 
-  const PASTE_KEY = "toolbox.nps.pasted";
+  // Loaded data lasts for this visit only (sessionStorage: kept through a reload, gone when the tab closes).
+  const SESSION_KEY = "toolbox.nps.session";
+  try { localStorage.removeItem("toolbox.nps.pasted"); } catch (e) {}   // the old keep-on-this-device copy
   const dayNum = (d) => { const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(d || ""); return m ? +(m[3] + m[2] + m[1]) : 0; };
-  const today = () => { const d = new Date(); return ("0" + d.getDate()).slice(-2) + "." + ("0" + (d.getMonth() + 1)).slice(-2) + "." + d.getFullYear(); };
-  function getPasted() { try { const d = JSON.parse(localStorage.getItem(PASTE_KEY) || "null"); return d && Array.isArray(d.stores) && d.stores.length ? d : null; } catch (e) { return null; } }
+  const ddmmyyyy = (d) => ("0" + d.getDate()).slice(-2) + "." + ("0" + (d.getMonth() + 1)).slice(-2) + "." + d.getFullYear();
+  function getLoaded() { try { const d = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"); return d && Array.isArray(d.stores) && d.stores.length ? d : null; } catch (e) { return null; } }
 
   async function loadPublished() {
     let pub = null;
@@ -90,8 +92,8 @@
       const r = await fetch("nps/data/data.json" + bust(), { cache: "no-store" });
       if (r.ok) pub = await r.json();
     } catch (e) {}
-    const pasted = getPasted();
-    if (pasted && (!pub || dayNum(pasted.date) >= dayNum(pub.date))) useData(pasted, "pasted");
+    const mine = getLoaded();
+    if (mine && (!pub || dayNum(mine.date) >= dayNum(pub.date))) useData(mine, "loaded");
     else if (pub) useData(pub, "published");
     else showPaste(false);
     setTrendsImage("nps/data/trends.png" + bust());
@@ -102,22 +104,64 @@
     state.source = source;
     if (state.store && state.store[0] !== "@" && !data.stores.some((s) => s.name === state.store)) state.store = "";
     state.open.clear();
-    $("meta").textContent = (data.date ? "Data from " + data.date : "Latest data") + ", " + data.stores.length + " stores" + (source === "pasted" ? ", on this device" : "") + ".";
+    $("meta").textContent = (data.date ? "Data from " + data.date : "Latest data") + ", " + data.stores.length + " stores.";
     $("pasteOpen").hidden = false;
     $("paste").hidden = true;
     render();
   }
 
-  /* ---------- pasting the data (kept on this device only) ---------- */
+  function keepLoaded(d) {
+    const keep = { date: d.date, fileName: d.fileName || "", stores: d.stores, area: d.area, loaded: new Date().toISOString() };
+    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(keep)); } catch (e) {}
+    $("pasteText").value = "";
+    $("pasteAlt").open = false;
+    useData(keep, "loaded");
+    $("main").scrollIntoView({ block: "start" });
+  }
+
+  /* ---------- loading the data (this visit only) ---------- */
   let pastedData = null;
   function showPaste(hasData) {
     $("paste").hidden = false;
     $("pasteFoot").hidden = !hasData;
-    $("pasteForget").hidden = !getPasted();
+    $("pasteForget").hidden = !getLoaded();
     $("pasteOpen").hidden = true;
-    if (!hasData) { $("meta").textContent = "No NPS data on this device yet."; $("main").hidden = true; }
+    $("loadCheck").textContent = "";
+    if (!hasData) { $("meta").textContent = "No NPS data loaded yet."; $("main").hidden = true; }
     checkPaste();
   }
+
+  // Either export works: the survey responses (one row per customer) or the old dated workbook.
+  function readWorkbook(wb, fileName, modified) {
+    for (const name of wb.SheetNames) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, defval: "" });
+      const d = NPS.parseResponses(rows, fileName);
+      if (d) { if (!d.date) d.date = ddmmyyyy(modified ? new Date(modified) : new Date()); return d; }
+    }
+    if (wb.SheetNames.some((n) => n.trim().toLowerCase() === "store breakdown")) return NPS.parseWorkbook(wb, fileName);
+    const first = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: "" }).slice(0, 6).map((r) => r.join(" ").toLowerCase()).join(" ");
+    if (/responses/.test(first) && /nps/.test(first)) throw new Error("This is the summary, which only has each store's score. Export the version with every response (the one with an LTR column) instead.");
+    throw new Error("Couldn't find the stores and recommend scores in that file. It needs a Store column and an LTR column.");
+  }
+
+  $("loadFile").addEventListener("click", () => $("loadInput").click());
+  $("loadInput").addEventListener("change", async (ev) => {
+    const f = ev.target.files && ev.target.files[0]; ev.target.value = "";
+    if (!f) return;
+    const el = $("loadCheck");
+    el.classList.remove("bad");
+    el.textContent = "Reading " + f.name + "...";
+    try {
+      const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), { type: "array" });
+      const d = readWorkbook(wb, f.name, f.lastModified);
+      el.textContent = "";
+      keepLoaded(d);
+    } catch (e) {
+      el.textContent = e && e.message && !/^[A-Z][a-z]+Error/.test(e.message) ? e.message : "Couldn't read that file. Upload the NPS export (.xlsx).";
+      el.classList.add("bad");
+    }
+  });
+
   function checkPaste() {
     const el = $("pasteCheck"), txt = $("pasteText").value;
     pastedData = null;
@@ -127,7 +171,7 @@
     try {
       const d = NPS.parseText(txt);
       let msg = "Found " + d.stores.length + " stores" + (d.date ? ", dated " + d.date : "") + ".";
-      if (!d.date) { d.date = today(); msg += " No date in it, so it'll show today's."; }
+      if (!d.date) { d.date = ddmmyyyy(new Date()); msg += " No date in it, so it'll show today's."; }
       if (!d.areaMatches) msg += " The area total doesn't match the stores added up, so check nothing is missing.";
       if (d.stores.some((s) => !NPS.total(s))) msg += " " + d.stores.filter((s) => !NPS.total(s)).length + " with no responses.";
       el.textContent = msg;
@@ -139,7 +183,7 @@
     }
   }
   $("pasteText").addEventListener("input", checkPaste);
-  $("pasteOpen").addEventListener("click", () => { showPaste(true); $("pasteText").focus(); });
+  $("pasteOpen").addEventListener("click", () => { showPaste(true); $("paste").scrollIntoView({ block: "nearest" }); });
   $("pasteCancel").addEventListener("click", () => { $("pasteText").value = ""; $("paste").hidden = true; $("pasteOpen").hidden = false; });
   $("pasteClip").addEventListener("click", async () => {
     try {
@@ -153,17 +197,9 @@
       $("pasteText").focus();
     }
   });
-  $("pasteLoad").addEventListener("click", () => {
-    if (!pastedData) return;
-    const d = { date: pastedData.date, fileName: "", stores: pastedData.stores, area: pastedData.area, pasted: new Date().toISOString() };
-    try { localStorage.setItem(PASTE_KEY, JSON.stringify(d)); } catch (e) {}
-    $("pasteText").value = "";
-    useData(d, "pasted");
-    $("main").scrollIntoView({ block: "start" });
-  });
+  $("pasteLoad").addEventListener("click", () => { if (pastedData) keepLoaded(pastedData); });
   $("pasteForget").addEventListener("click", () => {
-    if (!confirm("Remove the NPS data from this device?")) return;
-    try { localStorage.removeItem(PASTE_KEY); } catch (e) {}
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
     state.data = null;
     $("pasteText").value = "";
     loadPublished();

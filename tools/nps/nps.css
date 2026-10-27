@@ -243,3 +243,7 @@
 .link.danger { color: var(--bad); }
 .nps-meta .link { font-size: inherit; padding: 2px 0; }
 .nps-tabs [hidden] { display: none !important; }
+.paste-file { width: 100%; min-height: 52px; }
+.paste-alt { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.paste-alt summary { cursor: pointer; color: var(--accent); font-weight: 650; font-size: .92rem; padding: 4px 0; list-style-position: inside; }
+.paste-alt[open] summary { margin-bottom: 10px; }

@@ -9,7 +9,7 @@
 <title>NPS</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="nps/nps.css?v=bc06adcb7c">
+<link rel="stylesheet" href="nps/nps.css?v=9d46c3e68b">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -25,21 +25,32 @@
   <h1>NPS</h1>
   <p class="nps-sub">See how many promoters it takes to hit your target, and how every store in the area is doing.</p>
 
-  <p class="nps-meta"><span id="meta">Loading the latest data</span> <button class="link" type="button" id="pasteOpen" hidden>Paste new data</button></p>
+  <p class="nps-meta"><span id="meta">Loading the latest data</span> <button class="link" type="button" id="pasteOpen" hidden>Load new data</button></p>
   <p class="nps-error" id="error" role="alert" hidden></p>
 
   <section class="card paste" id="paste" aria-labelledby="pasteTitle" hidden>
-    <h2 id="pasteTitle">Paste the NPS data</h2>
-    <p class="paste-sub">Copy the data text from the NPS chat and paste it here. It's kept on this device only, never put on the site.</p>
-    <textarea id="pasteText" rows="7" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="NPS 22.10.2026&#10;Store | Promoters | Passives | Detractors&#10;Dunstable (LB1) | 148 | 12 | 3&#10;..." aria-describedby="pasteCheck"></textarea>
-    <p class="paste-check" id="pasteCheck" aria-live="polite"></p>
-    <div class="paste-actions">
-      <button class="btn" type="button" id="pasteClip">Paste from clipboard</button>
-      <button class="btn btn-primary" type="button" id="pasteLoad" disabled>Show it</button>
-    </div>
+    <h2 id="pasteTitle">Load the NPS data</h2>
+    <p class="paste-sub">Upload the NPS survey export (.xlsx). It's read on this device only and cleared when you close the page.</p>
+    <button class="btn btn-primary paste-file" type="button" id="loadFile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
+      Choose the file
+    </button>
+    <input id="loadInput" type="file" accept=".xlsx,.xlsm,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+    <p class="paste-check" id="loadCheck" aria-live="polite"></p>
+
+    <details class="paste-alt" id="pasteAlt">
+      <summary>Or paste the figures as text</summary>
+      <textarea id="pasteText" rows="7" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="NPS 22.10.2026&#10;Store | Promoters | Passives | Detractors&#10;Dunstable (LB1) | 148 | 12 | 3&#10;..." aria-describedby="pasteCheck"></textarea>
+      <p class="paste-check" id="pasteCheck" aria-live="polite"></p>
+      <div class="paste-actions">
+        <button class="btn" type="button" id="pasteClip">Paste from clipboard</button>
+        <button class="btn btn-primary" type="button" id="pasteLoad" disabled>Show it</button>
+      </div>
+    </details>
+
     <div class="paste-foot" id="pasteFoot" hidden>
       <button class="link" type="button" id="pasteCancel">Cancel</button>
-      <button class="link danger" type="button" id="pasteForget">Remove the data from this device</button>
+      <button class="link danger" type="button" id="pasteForget">Clear the data</button>
     </div>
   </section>
 
@@ -82,7 +93,7 @@
 </dialog>
 
 <script src="nps/xlsx.mini.min.js?v=3120abba1f"></script>
-<script src="nps/engine.js?v=9845c02b3d"></script>
-<script src="nps/app.js?v=a784c0e4bc"></script>
+<script src="nps/engine.js?v=646ee28851"></script>
+<script src="nps/app.js?v=ea2c47bdfc"></script>
 </body>
 </html>

@@ -42,3 +42,34 @@ test('a wrong area total is flagged, the site\'s own data file is accepted, rubb
   assert.throws(() => NPS.parseText('hello there'), /Couldn't find the stores/);
   assert.throws(() => NPS.parseText('A (X1), 10, 1, 1\nA (X1), 10, 1, 1'), /twice/);
 });
+
+test('the survey export: one row per customer, LTR 9-10 promoter, 7-8 passive, 0-6 detractor, blanks left out', () => {
+  const rows = [
+    ['Filters - Reporting Period: Current fiscal year to date'], [],
+    ['Store', 'KFTT', 'Brand', 'LTR', 'Ease'],
+    ['Dunstable', 'NTS', 'Screwfix', '10', '9'],
+    ['Dunstable', 'NTS', 'Screwfix', '9', ''],
+    ['Dunstable', 'NTS', 'Screwfix', '8', ''],
+    ['Dunstable', 'NTS', 'Screwfix', '6', ''],
+    ['Dunstable', 'NTS', 'Screwfix', '', '10'],
+    ['Dunstable Houghton Regis', 'NTS', 'Screwfix', '0', ''],
+    ['Luton LAP', 'NTS', 'Screwfix', '7', ''],
+    ['Luton', 'NTS', 'Screwfix', '10', '']
+  ];
+  const r = NPS.parseResponses(rows, 'this_one.xlsx');
+  assert.deepEqual(strip(r), [
+    { name: 'Dunstable (LB1)', p: 2, pa: 1, d: 1 },
+    { name: 'Houghton Regis (DB4)', p: 0, pa: 0, d: 1 },
+    { name: 'Luton - Bilton Way (LT2)', p: 1, pa: 0, d: 0 },
+    { name: 'Luton - Windmill (AL2)', p: 0, pa: 1, d: 0 }
+  ]);
+  assert.deepEqual(r.area, { name: 'Area Total', p: 3, pa: 2, d: 2 });
+  assert.equal(NPS.parseResponses([['Store', 'Responses', 'NPS'], ['Dunstable', 149, 86.6]], 'x.xlsx'), null);
+});
+
+test('every way the exports name a store comes back as the one name', () => {
+  for (const [raw, want] of [['St Albans - Hatfield Road', 'St Albans (OA7)'], ['    Luton - Windmill Trading Est (AL2)', 'Luton - Windmill (AL2)'],
+    ['Epping - Thornwood', 'Epping - Thornwood (RB9)'], ['Dunstable (LB1)', 'Dunstable (LB1)'], ['Somewhere New', 'Somewhere New']]) {
+    assert.equal(NPS.storeName(raw), want);
+  }
+});
