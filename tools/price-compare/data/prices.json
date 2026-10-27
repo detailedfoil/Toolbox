@@ -1,6 +1,6 @@
 {
- "checked": "2026-10-26T15:03:33.691Z",
- "run": {"mode":"all","started":"2026-10-26T15:03:33.692Z","took":632,"tried":68,"read":64,"failed":4},
+ "checked": "2026-10-27T06:11:23.648Z",
+ "run": {"mode":"all","started":"2026-10-27T06:11:23.649Z","took":723,"tried":68,"read":64,"failed":4},
  "items": {
   "cu15": {
    "screwfix": {"price":15.6,"name":"Wednesbury Copper Pipe 15mm x 3m(98683)","url":"https://www.screwfix.com/p/wednesbury-copper-pipe-15mm-x-3m/98683","since":"2026-10-26T02:14:27.045Z"},
@@ -11,7 +11,7 @@
    "cityplumbing": {"price":15.59,"name":"Wednesbury Plain Copper Tube Length 15mm x 3m X015L-3","url":"https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-15mm-x-3m/p/313813","since":"2026-10-26T02:14:27.045Z"},
    "selco": {"price":14.4,"name":"Copper Pipe 15mm x 3m","url":"https://www.selcobw.com/copper-pipe-15mm-x-3m","since":"2026-10-26T02:14:27.045Z"},
    "builderdepot": {"price":14.1,"name":"Copper Tube 15mm x 3m","url":"https://www.builderdepot.co.uk/copper-tube-15mm-x-3m","since":"2026-10-26T02:57:48.529Z"},
-   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":9,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ1503/plain-copper-tube-15mm-x-3mtr"}},
+   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":10,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ1503/plain-copper-tube-15mm-x-3mtr"}},
    "bes": {"price":17.66,"name":"Copper Tube - 15mm x 3m","url":"https://www.bes.co.uk/15-mm-x-3-m-copper-tube","since":"2026-10-26T02:57:48.529Z"}
   },
   "cu22": {
@@ -23,7 +23,7 @@
    "cityplumbing": {"price":31.28,"name":"Wednesbury Plain Copper Tube Length 22mm x 3m X022L-3","url":"https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-22mm-x-3m/p/119745","since":"2026-10-26T02:14:27.045Z"},
    "selco": {"price":29.24,"name":"Copper Pipe 22mm x 3m","url":"https://www.selcobw.com/copper-pipe-22mm-x-3m","since":"2026-10-26T02:14:27.045Z"},
    "builderdepot": {"price":28.5,"name":"Copper Tube 22mm x 3m","url":"https://www.builderdepot.co.uk/copper-tube-22mm-x-3m","since":"2026-10-26T02:57:48.529Z"},
-   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":9,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ2203/plain-copper-tube-22mm-x-3mtr"}},
+   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":10,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ2203/plain-copper-tube-22mm-x-3mtr"}},
    "bes": {"price":35.3,"name":"Copper Tube - 22mm x 3m","url":"https://www.bes.co.uk/copper-tube-22mm-x-3m-10312/","since":"2026-10-26T02:57:48.529Z"}
   },
   "cu28": {
@@ -33,7 +33,7 @@
    "cityplumbing": {"price":37.8,"name":"Wednesbury Plain Copper Tube Length 28mm x 3m X028L-3","url":"https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-28mm-x-3m/p/701953","since":"2026-10-26T12:07:01.037Z"},
    "selco": {"price":40.8,"name":"Copper Pipe 28mm x 3m","url":"https://www.selcobw.com/copper-pipe-28mm-x-3m","since":"2026-10-26T12:07:01.037Z"},
    "builderdepot": {"price":34.74,"name":"Copper Tube 28mm x 3m","url":"https://www.builderdepot.co.uk/copper-tube-28mm-x-3m","since":"2026-10-26T12:07:01.037Z"},
-   "graham": {"fail":{"since":"2026-10-26T12:07:01.037Z","why":"their website's security certificate has run out","n":3,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ2803/plain-copper-tube-28mm-x-3mtr"}},
+   "graham": {"fail":{"since":"2026-10-26T12:07:01.037Z","why":"their website's security certificate has run out","n":4,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ2803/plain-copper-tube-28mm-x-3mtr"}},
    "bes": {"price":48.3,"name":"Copper Tube - 28mm x 3m","url":"https://www.bes.co.uk/28-mm-x-3-m-copper-tube","since":"2026-10-26T12:07:01.037Z"}
   },
   "dewalt5": {
@@ -46,7 +46,7 @@
    "angliatoolcentre": {"price":59.99,"name":"DEWALT DCB184-XJ 18v 5.0AH XR LI-ON BATTERIES","url":"https://www.angliatoolcentre.co.uk/dewalt-dcb184-xj-18v-5-0ah-xr-li-ion-battery-pid41213.html","since":"2026-10-26T12:07:01.037Z"},
    "tooledup": {"price":59.95,"name":"DeWalt DCB184 18v XR Cordless Li-ion Battery 5ah","url":"https://www.tooled-up.com/dewalt-dcb184-18v-xr-cordless-li-ion-battery-5ah/prod/220892/","since":"2026-10-26T12:07:01.037Z"},
    "powertoolworld": {"price":49.99,"name":"DeWalt DCB184 18v 5Ah Li-Ion XR Slide Battery","url":"https://www.powertoolworld.co.uk/dewalt-dcb184-18v-5ah-li-ion-xr-slide-battery","since":"2026-10-26T12:07:01.037Z"},
-   "machinemart": {"price":62.39,"was":68.39,"name":"DEWALT DCB184 18V 5Ah XR Li-Ion Battery","url":"https://www.machinemart.co.uk/p/dewalt-dcb184-18v-5ah-xr-li-ion-battery/","since":"2026-10-26T12:07:01.037Z","fail":{"since":"2026-10-26T14:34:18.580Z","why":"the store's bot check (error 403)","n":2}}
+   "machinemart": {"price":62.39,"was":68.39,"name":"DEWALT DCB184 18V 5Ah XR Li-Ion Battery","url":"https://www.machinemart.co.uk/p/dewalt-dcb184-18v-5ah-xr-li-ion-battery/","since":"2026-10-26T12:07:01.037Z","fail":{"since":"2026-10-26T14:34:18.580Z","why":"the store's bot check (error 403)","n":3}}
   },
   "makita5": {
    "screwfix": {"price":69.99,"name":"Makita BL1850B 18V 5.0Ah Li-Ion LXT Battery(676YX)","url":"https://www.screwfix.com/p/makita-bl1850b-18v-5-0ah-li-ion-lxt-battery/676YX","since":"2026-10-26T12:07:01.037Z"},
