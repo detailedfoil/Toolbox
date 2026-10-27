@@ -104,7 +104,7 @@
     state.source = source;
     if (state.store && state.store[0] !== "@" && !data.stores.some((s) => s.name === state.store)) state.store = "";
     state.open.clear();
-    $("meta").textContent = (data.date ? "Data from " + data.date : "Latest data") + ", " + data.stores.length + " stores.";
+    $("meta").textContent = (data.date ? "Data from " + data.date : "Latest data") + ", " + data.stores.length + " stores" + (source === "loaded" ? ", on this device only until you close the page." : ".");
     $("pasteOpen").hidden = false;
     $("paste").hidden = true;
     render();

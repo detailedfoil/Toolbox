@@ -9,7 +9,7 @@
 <title>NPS</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="nps/nps.css?v=bcb87685a0">
+<link rel="stylesheet" href="nps/nps.css?v=b1fb845087">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -30,7 +30,18 @@
 
   <section class="card paste" id="paste" aria-labelledby="pasteTitle" hidden>
     <h2 id="pasteTitle">Load the NPS data</h2>
-    <p class="paste-sub">Upload the NPS survey export (.xlsx). It's read on this device only and cleared when you close the page.</p>
+    <p class="paste-sub">Upload the NPS survey export (.xlsx or .csv).</p>
+    <div class="safe" role="note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <div>
+        <b>No sensitive data is saved or sent anywhere</b>
+        <ul>
+          <li>The file is opened on this device only. It's never uploaded.</li>
+          <li>Only the store names and 0 to 10 scores are read. Customer comments, invoice numbers and everything else in the file are ignored.</li>
+          <li>Nothing is kept. The figures clear when you close the page.</li>
+        </ul>
+      </div>
+    </div>
     <button class="btn btn-primary paste-file" type="button" id="loadFile">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
       Choose the file
@@ -101,6 +112,6 @@
 
 <script src="nps/xlsx.mini.min.js?v=3120abba1f"></script>
 <script src="nps/engine.js?v=646ee28851"></script>
-<script src="nps/app.js?v=e0c6672541"></script>
+<script src="nps/app.js?v=6ec76bad37"></script>
 </body>
 </html>

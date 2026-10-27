@@ -258,3 +258,7 @@
 .how-shot { display: block; margin: 10px 0 2px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: #fff; }
 .how-shot img { display: block; width: 100%; height: auto; }
 .how-shot.narrow { max-width: 320px; }
+.safe { display: flex; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--good) 12%, transparent); border: 1px solid color-mix(in srgb, var(--good) 35%, transparent); font-size: .88rem; line-height: 1.4; }
+.safe > svg { width: 20px; height: 20px; flex: none; color: var(--good); margin-top: 1px; }
+.safe b { display: block; color: var(--good); font-size: .92rem; margin-bottom: 4px; }
+.safe ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; color: var(--text); }
