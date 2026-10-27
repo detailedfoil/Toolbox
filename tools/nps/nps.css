@@ -247,11 +247,14 @@
 .paste-alt { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .paste-alt summary { cursor: pointer; color: var(--accent); font-weight: 650; font-size: .92rem; padding: 4px 0; list-style-position: inside; }
 .paste-alt[open] summary { margin-bottom: 10px; }
-.how summary { color: var(--text); }
 .how-steps { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: .92rem; line-height: 1.45; }
 .how-steps li::marker { color: var(--accent); font-weight: 700; }
 .how-steps i { font-style: normal; color: var(--muted); }
 .how-icon { display: inline-grid; place-items: center; width: 26px; height: 26px; margin-left: 2px; vertical-align: middle; border-radius: 50%; background: var(--field); border: 1px solid var(--border); color: var(--text); }
 .how-icon svg { width: 15px; height: 15px; }
 .how-note { margin: 12px 0 0; color: var(--muted); font-size: .86rem; }
-.how + .paste-alt { margin-top: 10px; }
+.how { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.how h3 { margin: 0 0 12px; font-size: 1rem; font-weight: 650; }
+.how-shot { display: block; margin: 10px 0 2px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: #fff; }
+.how-shot img { display: block; width: 100%; height: auto; }
+.how-shot.narrow { max-width: 320px; }

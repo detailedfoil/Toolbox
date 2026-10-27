@@ -133,7 +133,9 @@ explain changes in plain English and say what they'll see.
     visit only (sessionStorage, gone when the tab closes; never committed). Three ways in: the survey export (one row per
     customer, Store + LTR columns: 9-10 promoter, 7-8 passive, 0-6 detractor, blank LTR left out; `parseResponses`, checked
     against the dashboard summary on 27 Oct 2026, all 22 stores exact), the old dated workbook (Store Breakdown sheet), or
-    figures pasted as text (`parseText`). `STORES` in `engine.js` maps the exports' names to "Name (CODE)" ("Dunstable
+    figures pasted as text (`parseText`, still in engine.js and tested, but the paste box was taken off the page on
+    27 Oct 2026, detailedfoil's say). The load box always shows "How to get the file" steps with his two screenshots of the
+    dashboard's Data Export tab and export window (`nps/how/*.png`, added at his request knowing the repo is public). `STORES` in `engine.js` maps the exports' names to "Name (CODE)" ("Dunstable
     Houghton Regis" = Houghton Regis, "Luton" = Bilton Way, "Luton LAP" = Windmill). The dashboard summary (responses and
     score only) can't give the split, so the page asks for the export instead. Tests: `.github/tests/nps.test.mjs`. The
     real exports hold customer comments and invoice numbers: never commit one. The YTD trends tab hides itself with no chart.

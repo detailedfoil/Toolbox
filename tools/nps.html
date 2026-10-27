@@ -9,7 +9,7 @@
 <title>NPS</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="nps/nps.css?v=5bfd261d14">
+<link rel="stylesheet" href="nps/nps.css?v=bcb87685a0">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -38,28 +38,22 @@
     <input id="loadInput" type="file" accept=".xlsx,.xlsm,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
     <p class="paste-check" id="loadCheck" aria-live="polite"></p>
 
-    <details class="paste-alt how">
-      <summary>How to get the file</summary>
+    <section class="how" aria-labelledby="howTitle">
+      <h3 id="howTitle">How to get the file</h3>
       <ol class="how-steps">
         <li><b>Open the Trade Counter Managers dashboard</b> and go to the <b>Data Export</b> tab.</li>
         <li><b>Check the filters</b> along the top read <i>Reporting Period: Current fiscal year to date</i> and <i>New Store list 2026: 20</i>.</li>
         <li>On the <b>Responses</b> table, tap the <b>Export</b> button in its top right corner
-          <span class="how-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M8 11l4 4 4-4"/><path d="M5 19h14"/></svg></span>.</li>
-        <li>Pick <b>.xlsx (Available rows)</b> and tap <b>Export</b>. It saves to your downloads.</li>
+          <span class="how-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M8 11l4 4 4-4"/><path d="M5 19h14"/></svg></span>.
+          <a class="how-shot" href="nps/how/dashboard.png" target="_blank" rel="noopener"><img src="nps/how/dashboard.png" width="1381" height="308" loading="lazy" alt="The Data Export tab, with the two filters along the top and the Export button at the top right of the Responses table"></a>
+        </li>
+        <li>Pick <b>.xlsx (Available rows)</b> and tap <b>Export</b>. It saves to your downloads.
+          <a class="how-shot narrow" href="nps/how/export.png" target="_blank" rel="noopener"><img src="nps/how/export.png" width="600" height="409" loading="lazy" alt="The Export widget data window with .xlsx (Available rows) selected and the Export button"></a>
+        </li>
         <li>Come back here, tap <b>Choose the file</b> and pick the file you just downloaded.</li>
       </ol>
-      <p class="how-note">If the export fails because the table is too big, pick <b>.csv</b> instead. That works here too.</p>
-    </details>
-
-    <details class="paste-alt" id="pasteAlt">
-      <summary>Or paste the figures as text</summary>
-      <textarea id="pasteText" rows="7" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="NPS 22.10.2026&#10;Store | Promoters | Passives | Detractors&#10;Dunstable (LB1) | 148 | 12 | 3&#10;..." aria-describedby="pasteCheck"></textarea>
-      <p class="paste-check" id="pasteCheck" aria-live="polite"></p>
-      <div class="paste-actions">
-        <button class="btn" type="button" id="pasteClip">Paste from clipboard</button>
-        <button class="btn btn-primary" type="button" id="pasteLoad" disabled>Show it</button>
-      </div>
-    </details>
+      <p class="how-note">Tap a picture to see it bigger. If the export fails because the table is too big, pick <b>.csv</b> instead. That works here too.</p>
+    </section>
 
     <div class="paste-foot" id="pasteFoot" hidden>
       <button class="link" type="button" id="pasteCancel">Cancel</button>
@@ -107,6 +101,6 @@
 
 <script src="nps/xlsx.mini.min.js?v=3120abba1f"></script>
 <script src="nps/engine.js?v=646ee28851"></script>
-<script src="nps/app.js?v=ea2c47bdfc"></script>
+<script src="nps/app.js?v=e0c6672541"></script>
 </body>
 </html>

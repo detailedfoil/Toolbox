@@ -113,14 +113,11 @@
   function keepLoaded(d) {
     const keep = { date: d.date, fileName: d.fileName || "", stores: d.stores, area: d.area, loaded: new Date().toISOString() };
     try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(keep)); } catch (e) {}
-    $("pasteText").value = "";
-    $("pasteAlt").open = false;
     useData(keep, "loaded");
     $("main").scrollIntoView({ block: "start" });
   }
 
   /* ---------- loading the data (this visit only) ---------- */
-  let pastedData = null;
   function showPaste(hasData) {
     $("paste").hidden = false;
     $("pasteFoot").hidden = !hasData;
@@ -128,7 +125,6 @@
     $("pasteOpen").hidden = true;
     $("loadCheck").textContent = "";
     if (!hasData) { $("meta").textContent = "No NPS data loaded yet."; $("main").hidden = true; }
-    checkPaste();
   }
 
   // Either export works: the survey responses (one row per customer) or the old dated workbook.
@@ -162,46 +158,11 @@
     }
   });
 
-  function checkPaste() {
-    const el = $("pasteCheck"), txt = $("pasteText").value;
-    pastedData = null;
-    $("pasteLoad").disabled = true;
-    el.classList.remove("bad");
-    if (!txt.trim()) { el.textContent = ""; return; }
-    try {
-      const d = NPS.parseText(txt);
-      let msg = "Found " + d.stores.length + " stores" + (d.date ? ", dated " + d.date : "") + ".";
-      if (!d.date) { d.date = ddmmyyyy(new Date()); msg += " No date in it, so it'll show today's."; }
-      if (!d.areaMatches) msg += " The area total doesn't match the stores added up, so check nothing is missing.";
-      if (d.stores.some((s) => !NPS.total(s))) msg += " " + d.stores.filter((s) => !NPS.total(s)).length + " with no responses.";
-      el.textContent = msg;
-      pastedData = d;
-      $("pasteLoad").disabled = false;
-    } catch (e) {
-      el.textContent = e.message;
-      el.classList.add("bad");
-    }
-  }
-  $("pasteText").addEventListener("input", checkPaste);
   $("pasteOpen").addEventListener("click", () => { showPaste(true); $("paste").scrollIntoView({ block: "nearest" }); });
-  $("pasteCancel").addEventListener("click", () => { $("pasteText").value = ""; $("paste").hidden = true; $("pasteOpen").hidden = false; });
-  $("pasteClip").addEventListener("click", async () => {
-    try {
-      const t = await navigator.clipboard.readText();
-      if (!t.trim()) throw new Error("empty");
-      $("pasteText").value = t;
-      checkPaste();
-    } catch (e) {
-      $("pasteCheck").textContent = "Couldn't read the clipboard. Press and hold in the box and choose Paste.";
-      $("pasteCheck").classList.add("bad");
-      $("pasteText").focus();
-    }
-  });
-  $("pasteLoad").addEventListener("click", () => { if (pastedData) keepLoaded(pastedData); });
+  $("pasteCancel").addEventListener("click", () => { $("paste").hidden = true; $("pasteOpen").hidden = false; });
   $("pasteForget").addEventListener("click", () => {
     try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
     state.data = null;
-    $("pasteText").value = "";
     loadPublished();
   });
 
