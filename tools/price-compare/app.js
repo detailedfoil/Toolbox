@@ -224,6 +224,7 @@
   function pickGroup(id) {
     var g = state.list.groups.filter(function (x) { return x.id === id; })[0] || state.list.groups[0];
     state.group = g;
+    var page = document.querySelector('.pc'); if (page) page.setAttribute('data-group', g.id);
     save('pc-group-v1', g.id);
     $('group').value = g.id;
     subtitle();
@@ -244,6 +245,7 @@
     var item = groupItems().filter(function (i) { return i.id === id; })[0];
     if (!item) return;
     state.item = item;
+    var page = document.querySelector('.pc'); if (page) page.setAttribute('data-item', item.id);
     save('pc-item-v1', id);
     Array.prototype.forEach.call($('items').querySelectorAll('button'), function (b) { b.setAttribute('aria-selected', String(b.dataset.item === id)); });
     render();

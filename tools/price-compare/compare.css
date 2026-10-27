@@ -1,11 +1,29 @@
-/* Price Compare page. Copper for the cheapest, the site's blue for Screwfix's own row. */
+/* Price Compare page. Each group has its own colour for the cheapest (copper, electric yellow for batteries, violet for
+   cable), the site's blue for Screwfix's own row. pickGroup() sets data-group on the page. */
 .pc{
-  --cu:#e0975c;--cu-ink:#22140a;--cu-soft:rgba(224,151,92,.15);
+  --cu:#e0975c;--cu-ink:#22140a;--cu-ink-rgb:34,20,10;--cu-win:#ffe2c8;--cu-soft:rgba(224,151,92,.15);
   --cu-card:linear-gradient(140deg,#f3b47f 0%,#e0975c 55%,#c97a40 100%);
   --up:#ff7a6b;--down:#3ccf86;--old:#ffb020;
 }
 @media (prefers-color-scheme:light){
   .pc{--cu:#b4612b;--cu-soft:rgba(180,97,43,.1);--up:#c8372b;--down:#11804a;--old:#a86400}
+}
+/* batteries: electric yellow */
+.pc[data-group="batteries"]{--cu:#f2c230;--cu-ink:#1d1700;--cu-ink-rgb:29,23,0;--cu-win:#fff1b8;--cu-soft:rgba(242,194,48,.16);
+  --cu-card:linear-gradient(140deg,#ffe27a 0%,#f2c230 55%,#d9a514 100%)}
+/* each battery in its maker's colour: DeWalt yellow (the batteries colour above), Milwaukee red, Makita teal */
+.pc[data-item="milwaukee5"]{--cu:#ee3a32;--cu-ink:#fff;--cu-ink-rgb:255,255,255;--cu-win:#2a0503;--cu-soft:rgba(238,58,50,.16);
+  --cu-card:linear-gradient(140deg,#ff6a5f 0%,#e5322a 55%,#b9201a 100%)}
+.pc[data-item="makita5"]{--cu:#18b4c4;--cu-ink:#00262b;--cu-ink-rgb:0,38,43;--cu-win:#d6f7fa;--cu-soft:rgba(24,180,196,.16);
+  --cu-card:linear-gradient(140deg,#5fd8e4 0%,#18b4c4 55%,#008d9c 100%)}
+/* twin and earth cable: violet */
+.pc[data-group="cable"]{--cu:#a58bfa;--cu-ink:#150c33;--cu-ink-rgb:21,12,51;--cu-win:#e9e1ff;--cu-soft:rgba(165,139,250,.16);
+  --cu-card:linear-gradient(140deg,#c7b6ff 0%,#a58bfa 55%,#8566ea 100%)}
+@media (prefers-color-scheme:light){
+  .pc[data-group="batteries"]{--cu:#a87800;--cu-on:#fff;--cu-soft:rgba(242,194,48,.22)}
+  .pc[data-item="milwaukee5"]{--cu:#c9261f;--cu-on:#fff;--cu-soft:rgba(201,38,31,.1)}
+  .pc[data-item="makita5"]{--cu:#007f8c;--cu-on:#fff;--cu-soft:rgba(0,127,140,.1)}
+  .pc[data-group="cable"]{--cu:#6a45d6;--cu-on:#fff;--cu-soft:rgba(106,69,214,.1)}
 }
 .pc{max-width:640px}
 .pc [hidden]{display:none!important}
@@ -23,7 +41,7 @@
 .pc-switch button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:54px;border:0;border-radius:12px;background:transparent;color:var(--muted);font:inherit;cursor:pointer;transition:background .15s,color .15s}
 .pc-switch b{font-size:1.12rem;font-weight:750;letter-spacing:-.01em}
 .pc-switch small{font-size:.72rem;font-weight:600;opacity:.8}
-.pc-switch button[aria-selected="true"]{background:var(--cu);color:var(--cu-ink)}
+.pc-switch button[aria-selected="true"]{background:var(--cu);color:var(--cu-on,var(--cu-ink))}
 
 .pc-vat{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:10px 2px 0}
 .pc-vat span{color:var(--muted);font-size:.8rem;font-weight:600;margin-right:2px}
@@ -45,8 +63,8 @@
 .pc-best-p{font-size:3.2rem;font-weight:800;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums}
 .pc-best-n{font-weight:700;font-size:1.1rem}
 .pc-best-s{font-size:.86rem;opacity:.85;margin-top:4px}
-.pc-best-h{margin-top:10px;align-self:flex-start;padding:7px 12px;border-radius:12px;background:rgba(34,20,10,.14);font-size:.88rem;font-weight:650}
-.pc-best-h.is-win{background:rgba(34,20,10,.85);color:#ffe2c8}
+.pc-best-h{margin-top:10px;align-self:flex-start;padding:7px 12px;border-radius:12px;background:rgba(var(--cu-ink-rgb),.14);font-size:.88rem;font-weight:650}
+.pc-best-h.is-win{background:rgba(var(--cu-ink-rgb),.85);color:var(--cu-win)}
 
 .pc-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .pc-row{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;padding:13px 14px;border-radius:16px;background:var(--card);border:1px solid var(--border);color:inherit;text-decoration:none;transition:background .12s,border-color .12s}
@@ -54,7 +72,7 @@
 .pc-row:active{transform:scale(.99)}
 .pc-row.is-home{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent)}
 .pc-rank{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--cu-soft);font-weight:750;font-variant-numeric:tabular-nums}
-.pc-row.is-best .pc-rank{background:var(--cu);color:var(--cu-ink)}
+.pc-row.is-best .pc-rank{background:var(--cu);color:var(--cu-on,var(--cu-ink))}
 .pc-row.is-busy .pc-rank{animation:pc-pulse 1s ease-in-out infinite}
 .pc-who{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pc-who b{font-weight:650;font-size:1rem;line-height:1.25}
