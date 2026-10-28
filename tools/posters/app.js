@@ -742,6 +742,9 @@
 
   document.addEventListener('paste', function (e) {
     var text = e.clipboardData && e.clipboardData.getData ? e.clipboardData.getData('text/plain') : '';
+    // a pasted list (several codes) goes into the code box as normal, ready for Add; only a single product page is read
+    var listed = parseCodes(text).codes.filter(function (c, i, a) { return a.indexOf(c) === i; });
+    if (listed.length > 1) return;
     var page = text && text.length > 30 ? L.fromCopiedPage(text) : null;
     if (page) { e.preventDefault(); useCopiedPage(page); return; }
     var got = P.fromPasteEvent(e);
@@ -766,6 +769,7 @@
     (text.toUpperCase().match(/[A-Z0-9]+/g) || []).forEach(function (raw) {
       if (!/\d/.test(raw)) return;                            // every code has a digit, so plain words are skipped quietly
       var c = normCode(raw);
+      if (/^\d{3}MM$/.test(c)) return;                        // 185MM etc. is a measurement, never a code
       if (isSku(c)) codes.push(c); else ignored.push(raw);
     });
     return { codes: codes, ignored: ignored };
