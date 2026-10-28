@@ -9,7 +9,7 @@
 <title>Monday Price Check</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="shelf-check/shelf-check.css?v=20f0399d5a">
+<link rel="stylesheet" href="shelf-check/shelf-check.css?v=48c5f4376d">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -24,28 +24,6 @@
   <p class="sc-meta" id="meta">Loading the latest check</p>
   <p class="sc-error" id="error" role="alert" hidden></p>
   <div class="sc-alert" id="alert" role="status" hidden></div>
-  <section class="sc-plan" id="planBox" aria-label="Shelf plan changes" hidden></section>
-  <details class="sc-floor sc-miss" id="missBox" hidden>
-    <summary>
-      <span class="sc-floor-h"><strong id="missTitle"></strong><small>Optional. They keep their last price.</small></span>
-      <svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-    </summary>
-    <div class="sc-miss-bar"><button class="btn" id="missRetryAll" type="button"></button><button class="btn" id="missRetryMe" type="button"></button></div>
-    <ul class="sc-fail-list" id="missList"></ul>
-  </details>
-
-  <details class="sc-floor" id="floor" hidden>
-    <summary>
-      <span class="sc-floor-h"><strong>Your shop floor</strong><small id="floorSum"></small></span>
-      <svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-    </summary>
-    <div class="sc-floor-b">
-      <p class="sc-floor-n">Not every store has every bay. Untick the ones yours doesn't have and they're left out of the counts, the lists and both PDFs. Saved on this device.</p>
-      <div class="sc-floor-btns"><button class="btn" id="floorAll" type="button">Tick all</button><button class="btn" id="floorNone" type="button">Untick all</button></div>
-      <ul class="sc-floor-list" id="floorList"></ul>
-    </div>
-  </details>
-
   <div class="sc-alert sc-update" id="update" role="status" hidden>
     <div>A newer version of this page is out. <button class="sc-inline" id="updateNow" type="button">Refresh now</button></div>
   </div>
@@ -56,20 +34,6 @@
       <ul class="sc-fail-list" id="failList"></ul>
       <button class="btn btn-primary sc-run-go" id="failGo" type="button"></button>
     </div>
-    <button class="btn btn-primary sc-run-go" id="phoneRun" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
-      <span class="sc-go-t"><span id="phoneLabel">Device search</span><small id="phoneSub">Updates the area</small></span>
-    </button>
-    <button class="btn sc-run-go sc-run-alt" id="phoneSession" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
-      <span class="sc-go-t"><span id="sessionLabel">Device search</span><small>Doesn't update the area · gone when you refresh</small></span>
-    </button>
-    <button class="btn sc-run-go sc-run-alt" id="ghRun" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 18a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.6-1.4A4.5 4.5 0 0 0 7 18z"/></svg>
-      <span class="sc-go-t"><span>GitHub search</span><small id="ghSub">Updates the area · runs on GitHub</small></span>
-    </button>
-    <button class="sc-run-link" id="phoneFresh" type="button" hidden>Start again from the first line</button>
-    <button class="sc-run-link" id="reportLink" type="button">Something not working? Copy an error report</button>
     <div class="sc-prog" id="prog" hidden>
       <div class="sc-prog-top"><b id="progText">Checking</b>
         <span class="sc-prog-btns"><button class="btn sc-stop" id="progReport" type="button">Error report</button><button class="btn sc-stop" id="phoneStop" type="button">Stop</button></span></div>
@@ -78,6 +42,28 @@
       <p class="sc-warn" id="progWarn" role="alert" hidden><span id="progWarnText"></span></p>
     </div>
   </div>
+  <details class="sc-floor sc-floor-big" id="floor" open hidden>
+    <summary>
+      <span class="sc-floor-h"><strong>Your shop floor</strong><small id="floorSum"></small></span>
+      <svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </summary>
+    <div class="sc-floor-b">
+      <p class="sc-floor-n">Tick the bays your store has. Unticked bays are left out of the counts, the lists and both PDFs. Saved on this phone.</p>
+      <div class="sc-floor-btns"><button class="btn" id="floorAll" type="button">Tick all</button><button class="btn" id="floorNone" type="button">Untick all</button></div>
+      <ul class="sc-floor-list" id="floorList"></ul>
+    </div>
+  </details>
+  <section class="sc-plan" id="planBox" aria-label="Shelf plan changes" hidden></section>
+  <details class="sc-floor sc-miss" id="missBox" hidden>
+    <summary>
+      <span class="sc-floor-h"><strong id="missTitle"></strong><small>Optional. They keep their last price.</small></span>
+      <svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </summary>
+    <div class="sc-miss-bar"><button class="btn" id="missRetryAll" type="button"></button><button class="btn" id="missRetryMe" type="button"></button></div>
+    <ul class="sc-fail-list" id="missList"></ul>
+  </details>
+
+
 
   <div id="main" hidden>
     <div class="sc-stats" id="stats"></div>
@@ -100,6 +86,29 @@
       <p class="sc-hint">Each bay runs top shelf first, left to right along each shelf, the way the planograms in the brief show it.</p>
       <div id="bays"></div>
     </section>
+
+    <details class="sc-floor sc-searches" id="searches">
+      <summary>
+        <span class="sc-floor-h"><strong>Run a price search yourself</strong><small>Only if Monday's check missed lines or you want fresher prices</small></span>
+        <svg class="sc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </summary>
+      <div class="sc-floor-b sc-search-btns">
+      <button class="btn sc-run-go sc-run-alt" id="phoneRun" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
+        <span class="sc-go-t"><span id="phoneLabel">Device search</span><small id="phoneSub">Updates the area</small></span>
+      </button>
+      <button class="btn sc-run-go sc-run-alt" id="phoneSession" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
+        <span class="sc-go-t"><span id="sessionLabel">Device search</span><small>Doesn't update the area · gone when you refresh</small></span>
+      </button>
+      <button class="btn sc-run-go sc-run-alt" id="ghRun" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 18a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.6-1.4A4.5 4.5 0 0 0 7 18z"/></svg>
+        <span class="sc-go-t"><span>GitHub search</span><small id="ghSub">Updates the area · runs on GitHub</small></span>
+      </button>
+      <button class="sc-run-link" id="phoneFresh" type="button" hidden>Start again from the first line</button>
+      <button class="sc-run-link" id="reportLink" type="button">Something not working? Copy an error report</button>
+      </div>
+    </details>
 
     <details class="sc-floor sc-token" id="share">
       <summary>
@@ -146,6 +155,6 @@
 
 <script src="shelf-check/sheet-engine.js?v=8714cd9a10"></script>
 <script src="price-tickets/lookup.js?v=a6702882b9"></script>
-<script src="shelf-check/app.js?v=7c384c3c8d"></script>
+<script src="shelf-check/app.js?v=fa8631640f"></script>
 </body>
 </html>

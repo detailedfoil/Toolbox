@@ -105,6 +105,9 @@
         '<span class="sc-floor-t">' + esc(b.name) + '<small>' + n + ' line' + (n === 1 ? '' : 's') + '</small></span></label></li>';
     }).join('');
     floorSummary();
+    var shut = false;
+    try { shut = localStorage.getItem('sc-floor-shut-v1') === '1'; } catch (e) {}
+    $('floor').open = !shut;                                // open unless folded on this phone
     $('floor').hidden = false;
   }
   function setFloor(off) {
@@ -114,6 +117,9 @@
     clearTimeout(warmTimer);
     warmTimer = setTimeout(warm, 800);
   }
+  $('floor').addEventListener('toggle', function () {
+    try { localStorage.setItem('sc-floor-shut-v1', $('floor').open ? '0' : '1'); } catch (e) {}
+  });
   $('floorList').addEventListener('change', function (e) {
     var i = e.target.getAttribute('data-bay');
     if (i == null || !src) return;
@@ -623,9 +629,10 @@
 
   function runBar() {
     if (!data) return;
-    $('runBar').hidden = false;
-    if (phone) { $('missBox').hidden = true; return; }
+    if (phone) { $('runBar').hidden = false; $('missBox').hidden = true; return; }
     var r = curRun(), more = r && r.queue.length, pending = r && !more && r.failed.length;
+    $('runBar').hidden = !r;                              // the box at the top only shows while a search needs you
+    if (more) $('searches').open = true;                  // "Carry on" lives in the folded search box
     $('failBox').hidden = !pending;
     if (pending) renderFails(r);
     renderMiss(pending);
@@ -846,7 +853,9 @@
     // show this search as if from scratch: earlier changes are hidden until the page is refreshed
     if (!r.partial && (!live || live.id !== r.id)) live = { id: r.id, session: !!r.session, baseDay: r.baseDay, mem: {}, failed: {} };
     $('phoneSession').hidden = true; $('ghRun').hidden = true; $('failBox').hidden = true; $('missBox').hidden = true;
+    $('runBar').hidden = false;
     $('runBar').classList.add('is-running');
+    $('runBar').scrollIntoView({ behavior: 'smooth', block: 'start' });   // the buttons sit lower down the page
     $('runStatus').hidden = true; $('phoneRun').hidden = true; $('phoneFresh').hidden = true;
     $('prog').hidden = false;
     build();

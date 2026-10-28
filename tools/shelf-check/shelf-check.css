@@ -260,3 +260,21 @@
 .sc-rep-sheet .sc-sheet-card { max-height: 92vh; overflow-y: auto; }
 .sc-rep-n { margin: 2px 2px 8px !important; }
 .sc-inline { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Your shop floor, front and centre (detailedfoil, 28 Oct 2026): big card near the top, bays as large tick tiles */
+.sc-floor-big { border: 2px solid var(--accent); }
+.sc-floor-big > summary { padding: 15px 16px; }
+.sc-floor-big .sc-floor-h strong { font-size: 1.2rem; font-weight: 750; }
+.sc-floor-big .sc-floor-h small { font-size: .9rem; }
+.sc-floor-big .sc-floor-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
+.sc-floor-big .sc-floor-list li + li { border-top: 0; }
+.sc-floor-big .sc-floor-i { height: 100%; box-sizing: border-box; padding: 12px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--card); }
+.sc-floor-big .sc-floor-i:has(input:checked) { border-color: var(--accent); background: var(--hi); }
+.sc-floor-big .sc-floor-t { font-weight: 600; }
+
+/* the search buttons, folded away lower down */
+.sc-searches { margin-top: 16px; }
+.sc-searches > summary { padding: 10px 14px; }
+.sc-searches .sc-floor-h strong { font-size: .92rem; font-weight: 600; }
+.sc-search-btns { display: grid; gap: 8px; padding-bottom: 12px; }
+.sc-search-btns .sc-run-go { min-height: 42px; }
