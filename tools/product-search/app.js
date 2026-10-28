@@ -21,7 +21,6 @@
   var list = null, web = null, dwords = null, searcher = null, shown = null, shownCount = 0, listInfo = '';
   var baseItems = [], stock = Stock.load();    // stock: {at, count, rows: {CODE: [available, name, age]}}
   var inStockOnly = false;
-  var settings = { nophotos: get('ps-nophotos') === '1' };
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
@@ -240,9 +239,9 @@
   var stockMsg = $('stockMsg'), stockClip = $('stockClip'), stockWhat = $('stockWhat');
   function showStockBar() {
     var on = !!(stock && stock.rows);
-    stockWhat.textContent = on ? 'Stock pasted at ' + new Date(stock.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) +
-      ' (' + n(stock.count) + ' products). Only on this device, not saved or sent anywhere: gone when you close the tab.' : 'Paste stock levels to see them on each result (PC only).';
-    stockOpen.textContent = on ? 'Paste again' : 'Paste stock';
+    stockWhat.textContent = on ? 'Stock uploaded at ' + new Date(stock.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) +
+      ' (' + n(stock.count) + ' products). Only on this device, not saved or sent anywhere: gone when you close the tab.' : 'Upload stock levels to see them on each result (PC only).';
+    stockOpen.textContent = on ? 'Upload again' : 'Upload stock';
     stockClear.hidden = !on;
     $('inStockWrap').hidden = !on;
     if (!on) { inStockOnly = false; $('inStock').checked = false; }
@@ -339,34 +338,31 @@
     PARTS.forEach(function (k) { $('btn-' + k).disabled = true; });
     saveDel.disabled = true;
     saveRun.hidden = false;
-    var cache, done = 0, missed = 0;
+    var cache, done = 0, missed = 0, swapped = false;
     var jobs = partFiles().map(function (u) { return { url: u, always: true }; });
     var total = jobs.length;
     function shown() { saveProg.value = total ? done / total : 1; saveMsg.textContent = 'Saving ' + n(done) + ' of ' + n(total) + '...'; }
     shown();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () { /* the phone decides */ });
-    caches.open(CACHE).then(function (c) {
-      cache = c;
-      var at = 0;
-      // 4 at a time, politely: GitHub Pages serves the site
-      function next() {
-        if (at >= jobs.length) return Promise.resolve();
-        var job = jobs[at++], url = new URL(job.url, location.href);
-        // a photo or description already kept is left as it is (checked one at a time: listing 20,000 at once can fail)
-        return (job.always ? Promise.resolve(null) : cache.match(url.href)).then(function (hit) {
-          if (hit) return;
-          return get(url.href, 0).then(function (res) {
-            if (res) return cache.put(url.href, res);
-            missed++;
-            if (window.console) console.warn('Not saved: ' + url.href);
-          });
-        }).catch(function () { missed++; }).then(function () {
-          done++;
-          if (done % 25 === 0 || done === total) shown();
-          return next();
-        });
-      }
-      return Promise.all([next(), next(), next(), next()]);
+    // every file is fetched first; only when they've all come back is the old saved copy deleted and the new one put
+    // in its place (detailedfoil, 28 Oct 2026: "Save again" replaces the old save). A failed save leaves the old copy.
+    var got = [], at = 0;
+    function next() {
+      if (at >= jobs.length) return Promise.resolve();
+      var url = new URL(jobs[at++].url, location.href).href;
+      return get(url, 0).then(function (res) {
+        if (!res) throw new Error('Not saved: ' + url);
+        return res.blob().then(function (body) { got.push({ url: url, body: body, type: res.headers.get('Content-Type') || '' }); });
+      }).then(function () { done++; shown(); return next(); });
+    }
+    Promise.all([next(), next(), next(), next()]).then(function () {
+      swapped = true;
+      return caches.delete(CACHE).then(function () { return caches.open(CACHE); }).then(function (c) {
+        cache = c;
+        return Promise.all(got.map(function (f) {
+          return cache.put(f.url, new Response(f.body, { headers: f.type ? { 'Content-Type': f.type } : {} }));
+        }));
+      });
     }).then(function () {
       try {
         var s = readSaved();
@@ -375,7 +371,8 @@
       } catch (e) { /* private mode: still saved */ }
       toast(missed ? 'Saved, apart from ' + n(missed) : 'Saved on this device');
     }, function () {
-      toast("Couldn't save: the device may be out of space");
+      toast(swapped ? "Couldn't save: the device may be out of space. Press Save again" :
+        "Couldn't save: check your signal and try again" + (readSaved().names ? '. Your old saved copy is still there' : ''));
     }).then(function () {
       saving = false;
       PARTS.forEach(function (k) { $('btn-' + k).disabled = false; });
@@ -386,7 +383,8 @@
   }
   // one file, with one more go after a pause if the site says it's busy -> Promise<Response|null>
   function get(url, tries) {
-    return fetch(url, { cache: 'no-cache' }).then(function (res) {
+    // the header tells product-search-sw.js to go to the site only, never hand back the old saved copy
+    return fetch(url, { cache: 'no-cache', headers: { 'X-PS-Save': '1' } }).then(function (res) {
       if (res.ok) return res;
       if ((res.status === 429 || res.status >= 500) && tries < 2) {
         return new Promise(function (ok) { setTimeout(ok, 5000 * (tries + 1)); }).then(function () { return get(url, tries + 1); });
@@ -417,7 +415,6 @@
   function watchPhoto(el) { if (photoWatch) photoWatch.observe(el); else showPhoto(el); }
 
   function showPhoto(box) {
-    if (settings.nophotos) { box.classList.add('off'); return; }
     var sku = box.getAttribute('data-sku'), img = box.querySelector('img');
     box.classList.add('loading');
     Photos.load(sku, img).then(function (r) {
@@ -434,11 +431,7 @@
 
   /* ---------- settings ---------- */
 
-  $('nophotos').checked = settings.nophotos;
-  $('nophotos').addEventListener('change', function () {
-    settings.nophotos = this.checked; set('ps-nophotos', this.checked ? '1' : '0');
-    if (!this.checked) Array.prototype.forEach.call(results.querySelectorAll('.sx-ph.off'), function (b) { b.classList.remove('off'); showPhoto(b); });
-  });
+  try { localStorage.removeItem('ps-nophotos'); } catch (e) { /* the "Don't load photos" switch was taken off, 28 Oct 2026 */ }
 
   /* ---------- small things ---------- */
 

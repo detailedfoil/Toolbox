@@ -116,6 +116,10 @@ explain changes in plain English and say what they'll see.
     and descriptions kept-first); never anything from another site. Settings has one "Download names" button (detailedfoil, 26 Oct 2026: "just names are ok"; descriptions
     and images were offered as separate downloads for a few hours, then taken out): it puts the page, its code and `products.json`
     (SKU code + ILS name) into the same cache (`product-search-v1`), about 1 MB, a moment; when it was saved is in `ps-saved2`.
+    "Save again" fetches every file fresh first (header `X-PS-Save`, which the service worker lets straight through to the
+    site), and only when all have come back deletes the whole cache and puts the new copy in (detailedfoil, 28 Oct 2026); a
+    failed fetch leaves the old copy. The "Don't load photos" switch was taken off on 28 Oct 2026, and "Paste stock" is now
+    labelled "Upload stock" (same paste box).
     Offline, photos show their placeholder and descriptions / description search don't work. Saved files are checked one at a time
     (`cache.match`): listing 20,000 with `cache.keys()` can fail in Chrome. The page has to be opened once with signal.
     Grouping sizes of the same product into one result with a size switcher (buttons or a drop-down) was built and

@@ -8,7 +8,8 @@
  *  - the page, its code and the lists: the site first (so updates come through), the kept copy when there's no
  *    answer in 4 seconds or no connection
  *  - photos and descriptions: the kept copy first (they hardly change), the site otherwise
- * The "Download names" button (app.js) puts the page and the ILS product list into the same cache in one go.
+ * The "Download names" button (app.js) fetches the page and the ILS product list fresh, then deletes the
+ * old saved copy and puts the new one in its place.
  */
 'use strict';
 
@@ -62,6 +63,7 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return;           // Screwfix's photos, GitHub, visitor stats: not kept
+  if (req.headers.get('X-PS-Save')) return;                   // "Download names" fetching a fresh copy: the site only
   if (/\/product-search\/(?:photos|descriptions)\//.test(url.pathname)) { e.respondWith(keptFirst(req)); return; }
   e.respondWith(siteFirst(req));
 });
