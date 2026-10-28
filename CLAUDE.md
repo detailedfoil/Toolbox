@@ -44,7 +44,8 @@ explain changes in plain English and say what they'll see.
     (tested on the real page, `fixtures/fuel-average.txt`), once per page open and again on Check again only if the saved
     one (`fu-avg-v1`) is over 6 hours old. It loads alongside the forecourts and stays hidden if it can't be read.
     The big green card is number 1 (a "1" badge, its distance, one forecourt) and the list under it starts at 2; a later
-    row at the same price says "Same price". The footer text was taken off on 28 Oct 2026 (detailedfoil's say), leaving Check again.
+    row at the same price says "Same price". The footer text was taken off on 28 Oct 2026 (detailedfoil's say), leaving Check again and one tiny credit line
+    (Fuel Finder via PetrolPrices.co.uk, OGL v3.0: the licence asks for it).
   - `till-count`: Photo Coin Counter (was Till Count), every store. Notes take a value; coins take a value, a number of coins or a photo
     of a pile of one coin (whichever was changed last wins). A £50 or £75 float (remembered per phone) comes off
     the total. Counts last while the page is open (sessionStorage) and photos only in memory: nothing is sent

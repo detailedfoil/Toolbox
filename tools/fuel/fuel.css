@@ -104,6 +104,7 @@ body[data-fuel="diesel"] .fu-row.is-best .fu-price span{color:var(--text)}
 .fu-foot{margin-top:22px;color:var(--muted);font-size:.8rem}
 .fu-foot p{margin:10px 4px 0}
 .fu-foot a{color:inherit}
+.fu-foot .fu-credit{margin-top:14px;text-align:center;font-size:.7rem;opacity:.7}
 .fu-again{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;border-radius:14px;border:1px solid var(--border);background:var(--card);color:var(--text);font:inherit;font-weight:650;cursor:pointer}
 .fu-again:disabled{opacity:.55;cursor:default}
 .fu-again svg{width:18px;height:18px}
