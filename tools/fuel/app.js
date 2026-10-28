@@ -239,33 +239,32 @@
       return;
     }
     var min = priced[0][f].p, max = priced[priced.length - 1][f].p;
-    var cheapest = priced.filter(function (s) { return s[f].p === min; });
-    var rep = reported(cheapest[0][f].date);
+    var top = priced[0], rep = reported(top[f].date);
 
+    // the big card is number 1; the list under it carries on from 2
     var best = $('best');
     best.hidden = false;
-    best.href = maps(cheapest[0]);
-    best.innerHTML = '<span class="fu-best-k">Cheapest ' + NAMES[f] + '</span>' +
+    best.href = maps(top);
+    best.innerHTML = '<span class="fu-best-top"><span class="fu-best-r">1</span><span class="fu-best-k">Cheapest ' + NAMES[f] + '</span></span>' +
       '<span class="fu-best-p">' + min.toFixed(1) + '<small>p</small></span>' +
-      '<span class="fu-best-n">' + cheapest.slice(0, 3).map(function (s) { return esc(s.brand) + ' <em>' + esc(firstBit(s.address)) + '</em>'; }).join('<br>') +
-      (cheapest.length > 3 ? '<br><em>and ' + (cheapest.length - 3) + ' more</em>' : '') + '</span>' +
+      '<span class="fu-best-n">' + esc(top.brand) + ' <em>' + esc(firstBit(top.address)) + '</em></span>' +
+      '<span class="fu-best-m">' + (top.miles != null ? top.miles + ' mi' : '') +
+      (rep && rep.days <= STALE_DAYS ? (top.miles != null ? ' · ' : '') + 'reported ' + esc(rep.text) : '') + '</span>' +
       '<span class="fu-best-s">' + (max > min
         ? (max - min).toFixed(1) + 'p a litre less than the dearest: £' + ((max - min) * LITRES / 100).toFixed(2) + ' on a ' + LITRES + ' litre fill'
         : 'Every forecourt is the same price') + '</span>' +
       (rep && rep.days > STALE_DAYS ? '<span class="fu-best-w">Last reported ' + esc(rep.text) + ', so it may have changed</span>' : '') +
       '<span class="fu-best-go">Directions<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></span>';
 
-    var rank = 0, last = null;
-    $('list').innerHTML = priced.map(function (s, i) {
-      if (s[f].p !== last) { rank = i + 1; last = s[f].p; }
+    $('list').innerHTML = priced.slice(1).map(function (s, i) {
       var gap = s[f].p - min, r = reported(s[f].date);
       return '<li><a class="fu-row' + (gap === 0 ? ' is-best' : '') + '" href="' + maps(s) + '" target="_blank" rel="noopener">' +
-        '<span class="fu-rank">' + rank + '</span>' +
+        '<span class="fu-rank">' + (i + 2) + '</span>' +
         '<span class="fu-who"><b>' + esc(s.brand) + '</b><span>' + esc(s.address) + '</span>' +
         '<span class="fu-meta">' + (s.miles != null ? s.miles + ' mi' : '') +
         (r ? ' · <i class="' + (r.days > STALE_DAYS ? 'is-old' : '') + '">' + (r.days > STALE_DAYS ? 'price from ' : 'reported ') + esc(r.text) + '</i>' : '') + '</span>' +
         '</span>' +
-        '<span class="fu-price"><b>' + money(s[f].p) + '</b><span>' + (gap === 0 ? 'Cheapest' : '+' + gap.toFixed(1) + 'p') + '</span></span>' +
+        '<span class="fu-price"><b>' + money(s[f].p) + '</b><span>' + (gap === 0 ? 'Same price' : '+' + gap.toFixed(1) + 'p') + '</span></span>' +
         '</a></li>';
     }).join('') + none.map(function (s) {
       return '<li><a class="fu-row is-none" href="' + maps(s) + '" target="_blank" rel="noopener"><span class="fu-rank">&ndash;</span>' +

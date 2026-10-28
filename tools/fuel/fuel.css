@@ -62,6 +62,9 @@ body[data-fuel="diesel"] .fu-bar span{background:var(--muted)}
 
 .fu-best{position:relative;display:flex;flex-direction:column;gap:2px;padding:18px 20px 16px;border-radius:20px;background:var(--fuel);color:var(--fuel-ink);text-decoration:none;margin-bottom:14px;transition:transform .12s}
 .fu-best:active{transform:scale(.985)}
+.fu-best-top{display:flex;align-items:center;gap:10px;padding-right:110px}
+.fu-best-r{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--fuel-ink);color:var(--fuel);font-weight:800;font-size:1rem;font-variant-numeric:tabular-nums;flex:none}
+.fu-best-m{font-size:.86rem;opacity:.85}
 .fu-best-k{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.85}
 .fu-best-p{font-size:3.4rem;font-weight:800;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums}
 .fu-best-p small{font-size:1.5rem;font-weight:700;margin-left:2px}
