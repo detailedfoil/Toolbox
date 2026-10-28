@@ -347,7 +347,7 @@
     (text.toUpperCase().match(/[A-Z0-9]+/g) || []).forEach(function (raw) {
       if (!/\d/.test(raw)) return;                            // every code has a digit, so plain words are skipped quietly
       var c = normCode(raw);
-      if (/^\d{3}MM$/.test(c)) return;                        // 185MM etc. is a measurement, never a code
+      if (/^\d{3}MM$|^\d{2}0ML$/.test(c)) return;            // 185MM, 500ML etc. are sizes, never codes
       if (isSku(c)) codes.push(c); else ignored.push(raw);
     });
     return { codes: codes, ignored: ignored };
