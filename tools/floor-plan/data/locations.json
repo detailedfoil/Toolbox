@@ -2,12 +2,6 @@
  "version": 1,
  "note": "Which stock-system location each bay holds. Codes are AREA-BAY as in the stock list (AAA-01 is the start of AAA-01-12-06). Bay 1 is nearest the middle aisle. Only location codes live here, never stock. Built from detailedfoil's descriptions on 29 Oct 2026.",
  "unsure": {
-  "H1b": "BAD",
-  "H2b": "BAD",
-  "H3b": "BAD",
-  "H4b": "BAD",
-  "H5b": "BAD",
-  "H6b": "BAD",
   "G1f": "BAC",
   "G2f": "BAC",
   "E3f": "BAG",
@@ -108,24 +102,6 @@
   "H6f": [
    "AAC-06"
   ],
-  "H1b": [
-   "BAD-01"
-  ],
-  "H2b": [
-   "BAD-02"
-  ],
-  "H3b": [
-   "BAD-03"
-  ],
-  "H4b": [
-   "BAD-04"
-  ],
-  "H5b": [
-   "BAD-05"
-  ],
-  "H6b": [
-   "BAD-06"
-  ],
   "G1f": [
    "BAC-01"
   ],
@@ -145,37 +121,41 @@
    "AAE-04"
   ],
   "G1b": [
-   "BAE-01"
+   "BAD-01",
+   "BAD-02"
   ],
   "F1f": [
    "BAF-01"
   ],
   "G2b": [
-   "BAE-02"
+   "BAD-03",
+   "BAD-04"
   ],
   "F2f": [
    "BAF-02"
   ],
   "G3b": [
-   "BAE-03"
+   "BAD-05",
+   "BAD-06"
   ],
   "F3f": [
    "BAF-03"
   ],
   "G4b": [
-   "BAE-04"
+   "BAD-07",
+   "BAD-08"
   ],
   "F4f": [
    "BAF-04"
   ],
   "G5b": [
-   "BAE-05"
+   "BAD-09"
   ],
   "F5f": [
    "BAF-05"
   ],
   "G6b": [
-   "BAE-06"
+   "BAD-10"
   ],
   "F6f": [
    "BAF-06"
