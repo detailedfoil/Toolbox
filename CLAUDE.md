@@ -147,6 +147,23 @@ explain changes in plain English and say what they'll see.
     score only) can't give the split, so the page asks for the export instead. Tests: `.github/tests/nps.test.mjs`. The
     real exports hold customer comments and invoice numbers: never commit one. The YTD trends tab hides itself with no chart.
   - `suggestions`, `audit-quiz.html` (all in one file): separate tools that share nothing.
+  - `floor-plan`: 3D Floor Plan, Dunstable (LB1) only: the tile has `only: ["LB1"]` and `app.js` shows "only for
+    Dunstable" to any other sign-in (a light lock: the layout is readable on GitHub like everything else). Built
+    29 Oct 2026 from photos of the store's fire plan and electrical layout: 19.6 x 21.2 m inside, positions good to
+    about 30 cm, heights and shelf counts are typical guesses until detailedfoil measures them. three.js r186 is
+    vendored as a plain script (`floor-plan/three/three.min.js`, global THREE; the esbuild command is at its top)
+    because there's no build step and the tests parse every .js file as a classic script. `data/layout.json` is the
+    store in metres (x from the left wall, y from the back wall towards the front): openings in the outside walls,
+    columns, inside walls, rooms, rack runs (`edges` = bay boundaries, `open` = the side you pick from, `braced` = bays
+    drawn with an X on the plans, `plan` = the electrical drawing's labels), objects (counters, tills, shop shelving,
+    furniture), zones, lights and where the walk starts. `bays.js` turns the runs into bays with temporary names
+    (row letter + bay number + b / f for the back / front of a back-to-back row: F3b, C2, L5); it's shared with
+    `.github/tests/floor-plan.test.mjs` (no overlaps, names unique, the walk starts on clear floor, LB1 only). Views:
+    3D (outside walls cut at 3.2 m), Top (flat, back wall at the top like the drawings) and Walk (full walls, roof
+    and lights; a stick on touch screens, WASD or arrows on a PC, drag to look, tap the little map to jump). Tap a
+    bay for its card; "Walk here" stands you in the aisle looking at it. Shadows are drawn once (nothing moves).
+    Next, when detailedfoil sends them: his location names for the bays, then pasting the stock list to show where
+    each product is.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

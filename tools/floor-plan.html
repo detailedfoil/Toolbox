@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Toolbox">
+<title>3D Floor Plan</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../style.css?v=b86f5823a5">
+<link rel="stylesheet" href="floor-plan/floor-plan.css?v=92e906861b">
+<script src="../auth-data.js?v=26c132d57a"></script>
+<script src="../auth.js?v=51f9bae97e"></script>
+<script src="../analytics.js?v=f5e6d397aa"></script>
+</head>
+<body class="fp">
+<header class="fp-top">
+  <a class="back" href="../index.html">&larr; Toolbox</a>
+  <h1>3D Floor Plan</h1>
+  <span class="fp-store">Dunstable</span>
+</header>
+<main class="fp-stage" id="stage">
+  <canvas id="view" tabindex="0" aria-label="3D model of the Dunstable store"></canvas>
+
+  <div class="fp-side" id="side" hidden>
+    <button class="fp-btn" id="namesBtn" type="button" aria-pressed="false">Bay names</button>
+    <button class="fp-btn fp-round" id="resetBtn" type="button" aria-label="Reset the view" title="Reset the view">&#8634;</button>
+    <button class="fp-btn fp-round" id="helpBtn" type="button" aria-label="How to use it" title="How to use it">?</button>
+  </div>
+
+  <canvas class="fp-mini" id="mini" hidden aria-label="Map: tap to jump there"></canvas>
+
+  <div class="fp-stick" id="stick" hidden aria-label="Walk: drag the stick"><div class="fp-knob" id="knob"></div></div>
+
+  <p class="fp-hint" id="hint" role="status" hidden></p>
+
+  <section class="fp-card" id="card" hidden aria-live="polite">
+    <button class="fp-x" id="cardClose" type="button" aria-label="Close">&times;</button>
+    <h2 id="cardTitle"></h2>
+    <p class="fp-card-sub" id="cardSub"></p>
+    <ul class="fp-card-list" id="cardList"></ul>
+    <p class="fp-card-note" id="cardNote"></p>
+    <div class="fp-card-btns" id="cardBtns"></div>
+  </section>
+
+  <div class="fp-bar" id="bar" hidden>
+    <div class="fp-modes" role="group" aria-label="View">
+      <button type="button" data-mode="orbit" class="on" aria-pressed="true">3D</button>
+      <button type="button" data-mode="plan" aria-pressed="false">Top</button>
+      <button type="button" data-mode="walk" aria-pressed="false">Walk</button>
+    </div>
+  </div>
+
+  <div class="fp-msg" id="msg">Loading the store&hellip;</div>
+</main>
+<script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
+<script src="floor-plan/bays.js?v=2a843d55b6"></script>
+<script src="floor-plan/app.js?v=3a96bdb034"></script>
+</body>
+</html>

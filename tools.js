@@ -11,6 +11,7 @@ const TOOLS = [
   { name: "Monday Price Check", desc: "Weekly shelf price check: what changed, plus printable sheets", icon: "📋", url: "tools/shelf-check.html", category: "Screwfix" },
   { name: "Price Compare", desc: "Copper pipe, 18V batteries and twin and earth at every major store, cheapest first", icon: "⚖️", url: "tools/price-compare.html", category: "Screwfix" },
   { name: "A25 Behind counter trial", desc: "Nightly price check on the behind counter tickets, kept until you tick them off", icon: "🧾", url: "tools/counter-trial.html", category: "Screwfix", only: ["LB1"] },
+  { name: "3D Floor Plan", desc: "Walk round a 3D model of the store and its racking, bay by bay", icon: "🏬", url: "tools/floor-plan.html", category: "Screwfix", only: ["LB1"] },
   { name: "NPS", desc: "Promoters needed to hit your target, plus an area overview", icon: "📊", url: "tools/nps.html", category: "Screwfix" },
   { name: "Audit Ready", desc: "Team audit quiz: safety, Challenge 25, deliveries and more", icon: "🧠", url: "tools/audit-quiz.html?v=2026101402", category: "Screwfix" },
   { name: "Incentive Tracker", desc: "Area 20 daily incentive tracker", icon: "🏆", url: "https://script.google.com/macros/s/AKfycbyjM1MXqsvfMT2Tn0RyJq_F23TLoUz-yh-jeoLqNQMh-s8Cm70-PS0a8CJvrspp1UDQ/exec", category: "Screwfix" },
