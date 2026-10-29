@@ -1,7 +1,7 @@
 {
   "trial": "A25 Behind counter trial",
   "checked": "2026-10-29",
-  "run": {"date":"2026-10-29","started":"2026-10-29T00:56:30.337Z","finished":"2026-10-29T01:26:32.505Z","trigger":"schedule","complete":false,"total":69,"checked":65,"not_found":0,"unchecked":4,"moved":0,"off_printed":3,"stopped":"4 lines could not be checked","fails":{"874EH":"jina: Screwfix's human verification page (405), try again later","226EY":"jina: Screwfix's human verification page (405), try again later","843PG":"jina: Screwfix's human verification page (405), try again later","6432V":"jina: Screwfix's human verification page (405), try again later"}},
+  "run": {"date":"2026-10-29","started":"2026-10-29T00:56:30.337Z","finished":"2026-10-29T04:20:03.502Z","trigger":"schedule","complete":true,"total":69,"checked":69,"not_found":0,"unchecked":0,"moved":0,"off_printed":3},
   "products": {
     "10171": {"name":"Essentials Pop-Up Garden Bag 690 x 560mm 170Ltr","price":12.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
     "44241": {"name":"Masterplug TCM24-XD Mechanical Plug-In & Plug-Through Compact Timer","price":4.99,"since":"2026-10-13","status":"ok","was":5.99,"on":"2026-10-29","moves":[]},
@@ -53,10 +53,10 @@
     "480PG": {"name":"Erbauer Metal Power Tool Accessories Set 120 Pieces","price":24.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
     "509PT": {"name":"Titan 1/4\" Shank Router Bits 13 Piece Set","price":26.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
     "487EH": {"name":"Titan TTB1347SDM 6.6kg Electric SDS Max Hammer Drill 220-240V","price":109.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
-    "874EH": {"name":"Titan TTB1325SDR 160W Electric Detail Sander 220-240V","price":19.97,"since":"2026-10-17","status":"unchecked","was":null,"on":"2026-10-28","moves":[]},
+    "874EH": {"name":"Titan TTB1325SDR 160W Electric Detail Sander 220-240V","price":19.97,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
     "135AN": {"name":"Titan TTB1471JSW 600W Electric Jigsaw 240V","price":23.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
     "912KJ": {"name":"Titan TTB773HTG 2000W Electric Heat Gun 220-240V","price":19.97,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
-    "226EY": {"name":"Titan TTB1233DRH 600W Electric Percussion Drill 220-240V","price":24.99,"since":"2026-10-17","status":"unchecked","was":null,"on":"2026-10-28","moves":[]},
+    "226EY": {"name":"Titan TTB1233DRH 600W Electric Percussion Drill 220-240V","price":24.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
     "688EH": {"name":"Titan TTB1323MLT 300W Electric Multi-Tool 220-240V","price":39.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
     "520KR": {"name":"Evolution R230DCT 230mm Electric Disc Cutter 220-240V","price":129.99,"since":"2026-10-17","status":"ok","was":169.99,"on":"2026-10-29","moves":[]},
     "266FX": {"name":"Evolution R165CCSL 1200W 165mm Electric Multi-Material Circular Saw 220-240V","price":49.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
@@ -69,8 +69,8 @@
     "121EH": {"name":"Titan TTB1359STM 2200W Electric Wallpaper Stripper 220-240V","price":39.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
     "812FM": {"name":"Fortress Trade Flat Paint Brush Set 5 Pieces","price":11.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
     "521FM": {"name":"Fortress Trade 12\" Pro Big Roller Set 17 Pieces","price":25.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
-    "843PG": {"name":"Titan TTB949MLT 130W Electric Multi-Tool & Accessories 230-240V 214 Piece Set","price":28.99,"since":"2026-10-17","status":"unchecked","was":32.99,"on":"2026-10-28","moves":[]},
+    "843PG": {"name":"Titan TTB949MLT 130W Electric Multi-Tool & Accessories 230-240V 214 Piece Set","price":28.99,"since":"2026-10-17","status":"ok","was":32.99,"on":"2026-10-29","moves":[]},
     "1480V": {"name":"Erbauer 1/4\" Hex Shank Mixed Impact Screwdriver Bit Set 113 Pieces","price":24.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]},
-    "6432V": {"name":"Erbauer Hex Shank Nut & Socket Driver Bit Set 12 Pieces","price":20.99,"since":"2026-10-17","status":"unchecked","was":null,"on":"2026-10-28","moves":[]}
+    "6432V": {"name":"Erbauer Hex Shank Nut & Socket Driver Bit Set 12 Pieces","price":20.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-10-29","moves":[]}
   }
 }
