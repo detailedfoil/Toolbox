@@ -1,6 +1,6 @@
 {
-  "updated": "2026-10-29T04:40:47.107Z",
-  "lastRun": {"date":"2026-10-29","started":"2026-10-29T01:21:48.514Z","tried":166,"found":126,"missing":5,"failed":35,"photos":2,"nophoto":79,"pauses":2,"stopped":null,"timeUp":false},
+  "updated": "2026-10-29T07:23:46.332Z",
+  "lastRun": {"date":"2026-10-29","started":"2026-10-29T07:23:45.461Z","tried":0,"found":0,"missing":0,"failed":0,"photos":0,"nophoto":0,"pauses":0,"stopped":null,"timeUp":false},
   "named": 10426,
   "photos": 11708,
   "described": 10421,
