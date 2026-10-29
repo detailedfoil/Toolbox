@@ -54,3 +54,18 @@ test('only Dunstable (LB1) gets the tile, and the page checks too', () => {
   assert.deepEqual([...tile.only], ['LB1']);
   assert.match(fs.readFileSync(path.join(REPO, 'tools/floor-plan/app.js'), 'utf8'), /const STORE = 'LB1';/);
 });
+
+test('stock locations: every one belongs to a real bay, none is claimed twice, and bay 1 is the middle-aisle end', () => {
+  const locs = JSON.parse(fs.readFileSync(path.join(REPO, 'tools/floor-plan/data/locations.json'), 'utf8'));
+  const ids = new Set(bays.map((b) => b.id)), claimed = new Map();
+  for (const [id, codes] of Object.entries(locs.bays)) {
+    assert.ok(ids.has(id), id + ' is not a bay in layout.json');
+    for (const c of codes) { assert.match(c, /^[A-Z]{3}-\d\d$/); assert.ok(!claimed.has(c), c + ' is on both ' + claimed.get(c) + ' and ' + id); claimed.set(c, id); }
+  }
+  for (const id of Object.keys(locs.unsure)) assert.ok(locs.bays[id], id + ' is marked unsure but has no location');
+  const { attach, where } = loadModule('tools/floor-plan/bays.js');
+  assert.equal(where(['AAA-01', 'AAA-02']), 'AAA 1+2');
+  const a = attach(list(L), locs), by = Object.fromEntries(a.map((b) => [b.id, b]));
+  assert.equal(by.J1f.where, 'AAA 1+2'); assert.equal(by.K6b.where, 'BAB 6'); assert.equal(by.H3f.where, 'AAE 1');
+  assert.ok(by.K1f.x0 < by.K6f.x0, 'bay 1 is the middle-aisle (left) end');
+});

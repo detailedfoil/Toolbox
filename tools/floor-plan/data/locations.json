@@ -1,0 +1,128 @@
+{
+ "version": 1,
+ "note": "Which stock-system location each bay holds. Codes are AREA-BAY as in the stock list (AAA-01 is the start of AAA-01-12-06). Bay 1 is nearest the middle aisle. Only location codes live here, never stock. Built from detailedfoil's descriptions on 29 Oct 2026.",
+ "unsure": {
+  "H1b": "BAD",
+  "H2b": "BAD",
+  "H3b": "BAD",
+  "H4b": "BAD",
+  "H5b": "BAD",
+  "H6b": "BAD",
+  "H1f": "BAC",
+  "H2f": "BAC"
+ },
+ "bays": {
+  "K1f": [
+   "BAA-01"
+  ],
+  "K1b": [
+   "BAB-01"
+  ],
+  "K2f": [
+   "BAA-02"
+  ],
+  "K2b": [
+   "BAB-02"
+  ],
+  "K3f": [
+   "BAA-03"
+  ],
+  "K3b": [
+   "BAB-03"
+  ],
+  "K4f": [
+   "BAA-04"
+  ],
+  "K4b": [
+   "BAB-04"
+  ],
+  "K5f": [
+   "BAA-05"
+  ],
+  "K5b": [
+   "BAB-05"
+  ],
+  "K6f": [
+   "BAA-06"
+  ],
+  "K6b": [
+   "BAB-06"
+  ],
+  "J1f": [
+   "AAA-01",
+   "AAA-02"
+  ],
+  "J1b": [
+   "AAB-01"
+  ],
+  "J2f": [
+   "AAA-03",
+   "AAA-04"
+  ],
+  "J2b": [
+   "AAB-02"
+  ],
+  "J3f": [
+   "AAA-05",
+   "AAA-06"
+  ],
+  "J3b": [
+   "AAB-03"
+  ],
+  "J4f": [
+   "AAA-07",
+   "AAA-08"
+  ],
+  "J4b": [
+   "AAB-04"
+  ],
+  "J5f": [
+   "AAA-09"
+  ],
+  "J5b": [
+   "AAB-05"
+  ],
+  "J6f": [
+   "AAA-10"
+  ],
+  "J6b": [
+   "AAB-06"
+  ],
+  "H1f": [
+   "BAC-01"
+  ],
+  "H2f": [
+   "BAC-02"
+  ],
+  "H3f": [
+   "AAE-01"
+  ],
+  "H4f": [
+   "AAE-02"
+  ],
+  "H5f": [
+   "AAE-03"
+  ],
+  "H6f": [
+   "AAE-04"
+  ],
+  "H1b": [
+   "BAD-01"
+  ],
+  "H2b": [
+   "BAD-02"
+  ],
+  "H3b": [
+   "BAD-03"
+  ],
+  "H4b": [
+   "BAD-04"
+  ],
+  "H5b": [
+   "BAD-05"
+  ],
+  "H6b": [
+   "BAD-06"
+  ]
+ }
+}

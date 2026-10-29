@@ -162,8 +162,12 @@ explain changes in plain English and say what they'll see.
     3D (outside walls cut at 3.2 m), Top (flat, back wall at the top like the drawings) and Walk (full walls, roof
     and lights; a stick on touch screens, WASD or arrows on a PC, drag to look, tap the little map to jump). Tap a
     bay for its card; "Walk here" stands you in the aisle looking at it. Shadows are drawn once (nothing moves).
-    Next, when detailedfoil sends them: his location names for the bays, then pasting the stock list to show where
-    each product is.
+    `data/locations.json` (added 29 Oct 2026 from detailedfoil's descriptions) says which stock-system location each bay
+    holds, as AREA-BAY codes (AAA-01 is the start of AAA-01-12-06): bay 1 is nearest the middle aisle, 6 at the right
+    wall. Done so far: K (front BAA 1-6, back BAB 1-6), J (front AAA 1-2 / 3-4 / 5-6 / 7-8 / 9 / 10, back AAB 1-6),
+    H (front BAC 1-2 then AAE 1-4, back BAD, `unsure` until confirmed: the stock list has BAD up to 10, so it may
+    split like AAA). The viewer shows the location on the tag and card (`attach` in bays.js); no stock goes in the repo.
+    Next: rows G, F, E, A-D, W, L and the rest of the areas, then pasting the stock list to show where each product is.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

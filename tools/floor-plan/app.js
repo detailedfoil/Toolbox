@@ -28,17 +28,18 @@
     booted = true;
     if (me !== STORE) { say('The 3D floor plan is only for Dunstable (LB1).'); return; }
     if (!window.THREE || !window.FloorBays) { say("The 3D viewer didn't load. Check your signal and reload the page."); return; }
-    fetch('floor-plan/data/layout.json', { cache: 'no-cache' })
-      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then((layout) => {
-        try { start(layout); } catch (e) { console.error(e); say('Something went wrong drawing the store. Reload the page to try again.'); }
+    const get = (f) => fetch('floor-plan/data/' + f, { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    // the stock locations are a bonus: without them the bays just keep their temporary names
+    Promise.all([get('layout.json'), get('locations.json').catch(() => null)])
+      .then(([layout, locs]) => {
+        try { start(layout, locs); } catch (e) { console.error(e); say('Something went wrong drawing the store. Reload the page to try again.'); }
       })
       .catch((e) => { console.error(e); say("Couldn't load the store layout. Check your signal and reload the page."); });
   }
   window.addEventListener('toolbox:login', boot);
   boot();
 
-  function start(L) {
+  function start(L, LOCS) {
     const T = THREE;
     const B = L.building, W = B.w, D = B.d, H = B.h, WT = B.t, CUT = B.cut || 3.2;
     const ROOM_H = 2.85;
@@ -353,11 +354,12 @@
         bar(M.brace, pt(uA, vb, h - 0.1), pt(uB, vb, 0.15), 0.028);
       }
     }
-    for (const b of window.FloorBays.list(L)) {
+    const allBays = window.FloorBays.attach(window.FloorBays.list(L), LOCS);
+    for (const b of allBays) {
       b.box = new T.Box3(new T.Vector3(b.x0, 0, b.y0), new T.Vector3(b.x1, b.h, b.y1));
       bays.push(b);
       drawBay(b);
-      const tag = label(b.id, { size: 0.3, bg: 'rgba(255,210,0,.97)', fg: '#14171f', weight: 800 });
+      const tag = label(b.where || b.id, { size: 0.3, bg: 'rgba(255,210,0,.97)', fg: '#14171f', weight: 800 });
       tag.position.copy(V((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, b.h + 0.24));
       groups.names.add(tag);
     }
@@ -596,16 +598,17 @@
       hl.scale.set(w + 0.05, b.h + 0.05, d + 0.05);
       hl.visible = true;
       hl.material.opacity = mode === 'walk' ? 0.12 : 0.32;
-      $('cardTitle').textContent = b.id;
+      $('cardTitle').textContent = b.where || b.id;
       const sideTxt = b.side === 'b' ? ', back side' : b.side === 'f' ? ', front side' : '';
       $('cardSub').textContent = ROWNAME[b.row] ? ROWNAME[b.row] + ' ' + b.num : 'Row ' + b.row + ', bay ' + b.num + sideTxt;
       const wide = b.along === 'x' ? w : d, deep = b.along === 'x' ? d : w;
       const items = [what(b), m2(wide) + ' wide, ' + m2(deep) + ' deep, about ' + m2(b.h) + ' high', FACES[b.open] || ''];
       if (b.braced) items.push('Drawn with a cross (X) on the plan');
+      if (b.where) items.unshift('Bay ' + b.id + ' in my drawing' + (b.unsure ? ' (location to be confirmed)' : ''));
       if (b.plan) items.push('Label on the electrical plan: ' + b.plan);
       $('cardList').innerHTML = '';
       for (const t of items) if (t) { const li = document.createElement('li'); li.textContent = t; $('cardList').appendChild(li); }
-      $('cardNote').textContent = 'Temporary name. Send Claude your location names and they will replace these.';
+      $('cardNote').textContent = b.where ? 'Stock location, from your descriptions.' : 'No stock location yet. This is a temporary name: send Claude the location names and they will replace it.';
       const btns = $('cardBtns'); btns.innerHTML = '';
       const go = document.createElement('button'); go.type = 'button'; go.textContent = mode === 'walk' ? 'Stand in front of it' : 'Walk here';
       go.addEventListener('click', () => walkTo(b));

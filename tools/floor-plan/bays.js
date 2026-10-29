@@ -27,7 +27,27 @@
     return out;
   }
 
-  const api = { list };
+  /* locations.json: which stock-system locations (AREA-BAY, e.g. AAA-01) each bay holds. Adds `codes` and `where`
+     (display text: "BAA 1", "AAA 1+2") to the bays that have some, and `unsure` to the ones still to be confirmed. */
+  function where(codes) {
+    const by = [];
+    for (const c of codes) {
+      const [area, n] = c.split('-'), last = by[by.length - 1];
+      if (last && last.area === area) last.nums.push(+n); else by.push({ area, nums: [+n] });
+    }
+    return by.map((g) => g.area + ' ' + g.nums.join('+')).join(', ');
+  }
+  function attach(bays, locs) {
+    const unsure = (locs && locs.unsure) || {};
+    for (const b of bays) {
+      const codes = locs && locs.bays && locs.bays[b.id];
+      if (!codes) continue;
+      b.codes = codes; b.where = where(codes); b.unsure = !!unsure[b.id];
+    }
+    return bays;
+  }
+
+  const api = { list, attach, where };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.FloorBays = api;
 })(typeof window !== 'undefined' ? window : this);
