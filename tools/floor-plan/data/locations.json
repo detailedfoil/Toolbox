@@ -7,9 +7,7 @@
   "H3b": "BAD",
   "H4b": "BAD",
   "H5b": "BAD",
-  "H6b": "BAD",
-  "H1f": "BAC",
-  "H2f": "BAC"
+  "H6b": "BAD"
  },
  "bays": {
   "K1f": [
@@ -89,22 +87,22 @@
    "AAB-06"
   ],
   "H1f": [
-   "BAC-01"
+   "AAC-01"
   ],
   "H2f": [
-   "BAC-02"
+   "AAC-02"
   ],
   "H3f": [
-   "AAE-01"
+   "AAC-03"
   ],
   "H4f": [
-   "AAE-02"
+   "AAC-04"
   ],
   "H5f": [
-   "AAE-03"
+   "AAC-05"
   ],
   "H6f": [
-   "AAE-04"
+   "AAC-06"
   ],
   "H1b": [
    "BAD-01"

@@ -66,6 +66,6 @@ test('stock locations: every one belongs to a real bay, none is claimed twice, a
   const { attach, where } = loadModule('tools/floor-plan/bays.js');
   assert.equal(where(['AAA-01', 'AAA-02']), 'AAA 1+2');
   const a = attach(list(L), locs), by = Object.fromEntries(a.map((b) => [b.id, b]));
-  assert.equal(by.J1f.where, 'AAA 1+2'); assert.equal(by.K6b.where, 'BAB 6'); assert.equal(by.H3f.where, 'AAE 1');
+  assert.equal(by.J1f.where, 'AAA 1+2'); assert.equal(by.K6b.where, 'BAB 6'); assert.equal(by.H3f.where, 'AAC 3');
   assert.ok(by.K1f.x0 < by.K6f.x0, 'bay 1 is the middle-aisle (left) end');
 });
