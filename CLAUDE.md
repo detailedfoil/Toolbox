@@ -165,7 +165,7 @@ explain changes in plain English and say what they'll see.
     `data/locations.json` (added 29 Oct 2026 from detailedfoil's descriptions) says which stock-system location each bay
     holds, as AREA-BAY codes (AAA-01 is the start of AAA-01-12-06): bay 1 is nearest the middle aisle, 6 at the right
     wall. Done so far: K (front BAA 1-6, back BAB 1-6), J (front AAA 1-2 / 3-4 / 5-6 / 7-8 / 9 / 10, back AAB 1-6),
-    G (front BAC 1-2 then AAE 1-4, back BAE 1-6), F (front BAF 1-6), H (front AAC 1-6, back BAD, `unsure` until confirmed: the stock list has BAD up to 10, so it may
+    G (front BAC 1-2 then AAE 1-4, back BAE 1-6), F (front BAF 1-6), E (E3f BAG 1, E4f BAG 2; E3b and E4b are the hazard cabinets, codes not given yet), H (front AAC 1-6, back BAD, `unsure` until confirmed: the stock list has BAD up to 10, so it may
     split like AAA). The viewer shows the location on the tag and card (`attach` in bays.js); no stock goes in the repo.
     Next: F back, E, A-D, W, L and the rest of the areas, then pasting the stock list to show where each product is.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
