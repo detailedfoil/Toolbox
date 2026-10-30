@@ -203,8 +203,7 @@ explain changes in plain English and say what they'll see.
     you're looking at, a bay card says how many products and free positions it has with What's here / Free spots buttons, cards have the
     photo, Copy location and a Product Search link (`product-search.html#q=CODE`), products with no bay still turn up in the search, / opens
     the search and Esc closes, the card sits top right (bottom right in Walk) on a wide screen and across the top on a phone in Walk (the
-    thing you're looking at is put lower down so the card doesn't hide it). Next: whatever detailedfoil asks for (heights, shelf counts and
-    the position direction are still guesses).
+    thing you're looking at is put lower down so the card doesn't hide it). Then (30 Oct 09:00): boxes fill their slots (pulled in 3.5 cm at each bay slice end so they never poke into the uprights), and location labels like the real ones: red (odd bay) / blue (even) on the shelf edge for ordinary shelves, white two-line labels on the drawer fronts with the back position on top; only the ~220 nearest in view are made (`updateLabels`). Next: whatever detailedfoil asks for (heights and shelf counts are still guesses).
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

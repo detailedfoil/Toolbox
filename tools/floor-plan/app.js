@@ -657,7 +657,7 @@
       ]).concat([
         tap + ' a bay for its locations, a box for its product, or a drawer to pull it out and see what is in it.',
         'Stock: upload or paste the SKU List report, then find a product by code, name or location and go straight to it.',
-        'Free spots (green): locations with nothing nailed to them. The Stock panel lists them by area.',
+        'Shelf labels are red for odd bay numbers and blue for even; drawer labels list their positions with the back one on top. Free spots (green): locations with nothing nailed to them. The Stock panel lists them by area.',
         'Photos on the boxes near you are the Toolbox\'s own saved copies (the Product Search ones), loaded a few at a time.',
       ]);
       if (!touch) items.push('Keys: / opens the search, Esc closes a card.');
@@ -887,6 +887,13 @@
       new T.Vector3((r.x0 + r.x1) / 2, z0 + h / 2, (r.y0 + r.y1) / 2), new T.Quaternion(),
       new T.Vector3((r.x1 - r.x0) * sw, h, (r.y1 - r.y0) * sd));
     const areaColour = (a) => { let h = 0; for (const ch of a) h = (h * 31 + ch.charCodeAt(0)) % 360; return new T.Color().setHSL(h / 360, 0.5, 0.64); };
+    // pull a cell in from the uprights at the ends of its bay slice (they're 6 cm square), so boxes never poke into the frame
+    const fit = (seg, r) => {
+      const ax = seg.along === 'x', W = seg.u1 - seg.u0, k = Math.max(0.5, (W - 0.07) / W), mid = (seg.u0 + seg.u1) / 2;
+      const f = (a, b) => [mid + (a - mid) * k, mid + (b - mid) * k];
+      if (ax) { const [x0, x1] = f(r.x0, r.x1); return { x0, x1, y0: r.y0, y1: r.y1 }; }
+      const [y0, y1] = f(r.y0, r.y1); return { x0: r.x0, x1: r.x1, y0, y1 };
+    };
     const nf = (n) => n.toLocaleString('en-GB');
     const side = (j, deep) => (j === 0 ? 'front' : j === deep - 1 ? 'back' : 'middle');
 
@@ -898,10 +905,10 @@
       if (drawerList.length) {
         drawerMesh = new T.InstancedMesh(unitBox, boardMat, drawerList.length);
         drawerList.forEach((d, i) => {
-          d.rect = FS.cellRect(d.seg, d.box, d.boxes, 0, 1);
+          d.rect = fit(d.seg, FS.cellRect(d.seg, d.box, d.boxes, 0, 1));
           d.z0 = FS.shelfZ(d.seg.bay, d.shelf) + 0.012;
           d.h = (d.seg.bay.pitch || 0.153) * 0.88;
-          d.matrix = boxM(d.rect, d.z0, d.h, 0.99, 0.99);
+          d.matrix = boxM(d.rect, d.z0, d.h, 0.99, 0.94);
           drawerMesh.setMatrixAt(i, d.matrix); drawerMesh.setColorAt(i, BOARD);
           drawerAt.set(d.key, i);
         });
@@ -938,10 +945,10 @@
         productMesh = new T.InstancedMesh(unitBox, boardMat, products.length);
         products.forEach((it, i) => {
           const pl = it.pl, bay = pl.seg.bay;
-          it.rect = FS.cellRect(pl.seg, pl.slot, pl.slots, 0, 1);
+          it.rect = fit(pl.seg, FS.cellRect(pl.seg, pl.slot, pl.slots, 0, 1));
           it.z0 = FS.shelfZ(bay, pl.shelf) + 0.012;
           it.h = Math.max(0.05, FS.shelfGap(bay, pl.shelf) - 0.1); // right up to the beam above
-          productMesh.setMatrixAt(i, boxM(it.rect, it.z0, it.h, 1, 1)); // fills its slot: no gaps
+          productMesh.setMatrixAt(i, boxM(it.rect, it.z0, it.h, 1, 0.94)); // fills its slot: no gaps
           productMesh.setColorAt(i, areaColour(pl.area).offsetHSL(0, 0, (pl.pos % 2 ? -0.035 : 0.035)));
           productOf.set(it, i);
         });
@@ -949,6 +956,8 @@
         productMesh.castShadow = true; productMesh.receiveShadow = true; productMesh.frustumCulled = false;
         groups.main.add(productMesh);
       }
+      shelfCells.clear(); for (const k in arr.shelves) if (!arr.shelves[k].drawer) shelfCells.set(k, arr.shelves[k].cells);
+      clearLabelPlanes();
       free = FS.freeSpots(arr, sidx);
       for (const r of free.runs) {
         const o = bayInfo.get(r.seg.bay) || { items: 0, free: 0, shelves: 0 };
@@ -978,10 +987,10 @@
             for (let p = r.from; p <= r.to; p++) { const i = drawerOfPos(r.seg, r.shelf, p); if (i !== undefined) drawerFree.set(i, (drawerFree.get(i) || 0) + 1); }
             continue;
           }
-          if (r.kind === 'shelf') { freeCellAt.set(r.loc, freeCells.length); freeCells.push({ run: r, pos: 0, rect: FS.cellRect(r.seg, 0, 1, 0, 1), z0, h: Math.min(0.08, gap * 0.3), sw: 0.97 }); continue; }
+          if (r.kind === 'shelf') { freeCellAt.set(r.loc, freeCells.length); freeCells.push({ run: r, pos: 0, rect: fit(r.seg, FS.cellRect(r.seg, 0, 1, 0, 1)), z0, h: Math.min(0.08, gap * 0.3), sw: 0.97 }); continue; }
           for (let p = r.from; p <= r.to; p++) {
             freeCellAt.set(r.key + '-' + pad2(p), freeCells.length);
-            freeCells.push({ run: r, pos: p, rect: FS.cellRect(r.seg, p - 1, r.cells, 0, 1), z0, h: Math.max(0.05, Math.min(0.25, gap * 0.5)), sw: 1 });
+            freeCells.push({ run: r, pos: p, rect: fit(r.seg, FS.cellRect(r.seg, p - 1, r.cells, 0, 1)), z0, h: Math.max(0.05, Math.min(0.25, gap * 0.5)), sw: 1 });
           }
         }
         if (freeCells.length) {
@@ -1142,7 +1151,7 @@
           const across = (f[0] ? r.y1 - r.y0 : r.x1 - r.x0), deep = (f[0] ? r.x1 - r.x0 : r.y1 - r.y0);
           const s = Math.min(across, it.h) * 0.9;
           m = new T.Mesh(photoGeo, new T.MeshLambertMaterial({ color: 0xffffff }));
-          m.position.set((r.x0 + r.x1) / 2 + f[0] * (deep / 2 + 0.003), it.z0 + it.h / 2, (r.y0 + r.y1) / 2 + f[1] * (deep / 2 + 0.003));
+          m.position.set((r.x0 + r.x1) / 2 + f[0] * (deep * 0.47 + 0.003), it.z0 + it.h / 2, (r.y0 + r.y1) / 2 + f[1] * (deep * 0.47 + 0.003));
           m.rotation.y = f[1] > 0 ? 0 : f[1] < 0 ? Math.PI : f[0] > 0 ? Math.PI / 2 : -Math.PI / 2;
           m.scale.set(s, s, 1); m.visible = false;
           groups.main.add(m); photoPlanes.set(i, m);
@@ -1152,6 +1161,112 @@
       wantPhotos(want);
       dirty = true;
     }
+
+    /* ---------- location labels: red / blue on the shelf edge, white two-line ones on the drawers ---------- */
+    // Like the real ones (red for odd bay numbers, blue for even; a drawer's label has its positions with the back
+    // one on top). Only the ones near you and in view are made, so there are never thousands at once.
+    const labelCache = new Map(), labelPlanes = new Map(), shelfCells = new Map();
+    const LABEL_MAX = 220;
+    function bars(g, text, x, y, w, h, colour) {
+      let sd = 7; for (const ch of text) sd = (sd * 31 + ch.charCodeAt(0)) >>> 0;
+      g.fillStyle = colour; let px = x, on = true;
+      while (px < x + w) { sd = (sd * 1664525 + 1013904223) >>> 0; const bw = 1 + ((sd >>> 27) % 4); if (on) g.fillRect(px, y, Math.min(bw, x + w - px), h); px += bw; on = !on; }
+    }
+    function labelTex(key, cw, ch, draw) {
+      let e = labelCache.get(key);
+      if (e) return e;
+      if (labelCache.size > 700) for (const [k, v] of labelCache) { if (!v.refs) { v.tex.dispose(); v.mat.dispose(); labelCache.delete(k); } if (labelCache.size <= 500) break; }
+      const c = document.createElement('canvas'); c.width = cw; c.height = ch; draw(c.getContext('2d'), cw, ch);
+      const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
+      e = { tex, mat: new T.MeshBasicMaterial({ map: tex }), ratio: ch / cw, refs: 0 };
+      labelCache.set(key, e);
+      return e;
+    }
+    function beamTex(text, odd) {
+      return labelTex('b|' + text + '|' + (odd ? 1 : 0), 256, 92, (g, w, h) => {
+        g.fillStyle = odd ? '#c3222b' : '#1f4fa8'; g.fillRect(0, 0, w, h);
+        g.fillStyle = '#fff'; g.font = '800 32px system-ui, -apple-system, "Segoe UI", Arial, sans-serif'; g.textBaseline = 'middle';
+        const tw = g.measureText(text).width; if (tw > w - 62) g.font = '800 ' + Math.floor(32 * (w - 62) / tw) + 'px system-ui, -apple-system, "Segoe UI", Arial, sans-serif';
+        g.fillText(text, 9, 27);
+        g.beginPath(); g.moveTo(w - 24, 8); g.lineTo(w - 38, 30); g.lineTo(w - 10, 30); g.closePath(); g.fill(); // the arrow
+        g.fillRect(w - 28, 28, 8, 16);
+        g.fillStyle = '#f4f4f2'; g.fillRect(8, 50, w - 16, 34); bars(g, text, 14, 54, w - 28, 26, '#15171c');
+      });
+    }
+    function drawerTex(lines) { // lines top to bottom: the back position first
+      return labelTex('d|' + lines.join('/'), 256, 16 + lines.length * 74, (g, w, h) => {
+        g.fillStyle = '#f2f2f0'; g.fillRect(0, 0, w, h); g.strokeStyle = '#b9b9b5'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, w - 3, h - 3);
+        g.fillStyle = '#15171c'; g.font = '800 31px system-ui, -apple-system, "Segoe UI", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        lines.forEach((t, i) => { const y = 8 + i * 74; g.fillText(t, w / 2, y + 17); bars(g, t, 22, y + 36, w - 44, 28, '#15171c'); });
+      });
+    }
+    function clearLabelPlanes() {
+      for (const m of labelPlanes.values()) { groups.main.remove(m); m.userData.entry.refs--; }
+      labelPlanes.clear(); dirty = true;
+    }
+    function updateLabels() {
+      const walking = mode === 'walk';
+      const want = new Map();
+      if (sidx && (walking || (mode === 'orbit' && orbit.r < 9))) {
+        const c = cam();
+        c.updateMatrixWorld(); _pm.multiplyMatrices(c.projectionMatrix, c.matrixWorldInverse); _frustum.setFromProjectionMatrix(_pm);
+        const ex = c.position.x, ey = c.position.z, ez = c.position.y, R = walking ? 4 : Math.max(2.5, orbit.r * 0.5), cand = [];
+        const take = (key, d2, x, y, z, f, w, make) => { // x, y: plan point on the front face
+          if (x - ex > R || ex - x > R || y - ey > R || ey - y > R) return;
+          if (d2 > R * R || (x - ex) * f[0] + (y - ey) * f[1] > 0) return;
+          if (!_frustum.containsPoint(_pv.set(x, z, y))) return;
+          cand.push({ d2, key, x, y, z, f, w, make });
+        };
+        for (const seg of sidx.list) {
+          const b = seg.bay;
+          if (b.kind === 'bulk' || b.kind === 'cage' || b.kind === 'cabinet') continue;
+          if (Math.max(b.x0 - ex, 0, ex - b.x1) > R || Math.max(b.y0 - ey, 0, ey - b.y1) > R) continue;
+          const cfg = FS.bayCfg(sidx, seg.area, seg.no), no = seg.no || 1, f = FRONT[seg.face], odd = no % 2 === 1;
+          const per = cfg.positions || Math.max(1, Math.round((seg.u1 - seg.u0) / FS.BOX_W));
+          const first = b.kind === 'pallet' ? 2 : 1;
+          for (let sh = first; sh <= b.levels; sh++) {
+            if (cfg.drawers && sh <= cfg.drawers) continue;
+            const z = FS.shelfZ(b, sh) - 0.04, cells = Math.max(per, shelfCells.get(seg.area + '-' + pad2(no) + '-' + pad2(sh)) || 0);
+            const lw = Math.min(0.115, (seg.u1 - seg.u0) / cells * 0.92);
+            for (let i = 0; i < cells; i++) {
+              const r = FS.cellRect(seg, i, cells, 0, 1), x = f[0] ? (f[0] > 0 ? r.x1 : r.x0) : (r.x0 + r.x1) / 2, y = f[1] ? (f[1] > 0 ? r.y1 : r.y0) : (r.y0 + r.y1) / 2;
+              const dx = x - ex, dy = y - ey, dz = z - ez;
+              if (dx > R || dx < -R || dy > R || dy < -R) continue;
+              const text = seg.area + '-' + pad2(no) + '-' + pad2(sh) + '-' + pad2(i + 1);
+              take('b' + text, dx * dx + dy * dy + dz * dz, x, y, z, f, lw, () => beamTex(text, odd));
+            }
+          }
+        }
+        for (let i = 0; i < drawerList.length; i++) {
+          const d = drawerList[i], r = d.rect, f = FRONT[d.seg.face];
+          if (i === openIndex) continue;
+          const x = f[0] ? (f[0] > 0 ? r.x1 : r.x0) : (r.x0 + r.x1) / 2, y = f[1] ? (f[1] > 0 ? r.y1 : r.y0) : (r.y0 + r.y1) / 2, z = d.z0 + d.h * 0.45;
+          const dx = x - ex, dy = y - ey, dz = z - ez;
+          if (dx > R || dx < -R || dy > R || dy < -R) continue;
+          take('d' + d.key, dx * dx + dy * dy + dz * dz, x, y, z, f, Math.min(0.105, (f[0] ? r.y1 - r.y0 : r.x1 - r.x0) * 0.85), () => {
+            const first = d.box * d.deep + 1, last = Math.min(d.positions, first + d.deep - 1), lines = [];
+            for (let p = last; p >= first; p--) lines.push(d.seg.area + '-' + pad2(d.seg.no || 1) + '-' + pad2(d.shelf) + '-' + pad2(p));
+            return drawerTex(lines);
+          });
+        }
+        cand.sort((a, b2) => a.d2 - b2.d2);
+        if (cand.length > LABEL_MAX) cand.length = LABEL_MAX;
+        for (const k of cand) want.set(k.key, k);
+      }
+      let changed = false;
+      for (const [key, m] of labelPlanes) if (!want.has(key)) { groups.main.remove(m); m.userData.entry.refs--; labelPlanes.delete(key); changed = true; }
+      for (const [key, k] of want) {
+        if (labelPlanes.has(key)) continue;
+        const e = k.make(); e.refs++;
+        const m = new T.Mesh(photoGeo, e.mat), f = k.f;
+        m.position.set(k.x + f[0] * 0.004, k.z, k.y + f[1] * 0.004);
+        m.rotation.y = f[1] > 0 ? 0 : f[1] < 0 ? Math.PI : f[0] > 0 ? Math.PI / 2 : -Math.PI / 2;
+        m.scale.set(k.w, k.w * e.ratio, 1); m.userData.entry = e;
+        groups.main.add(m); labelPlanes.set(key, m); changed = true;
+      }
+      if (changed) dirty = true;
+    }
+
     function thumb(code) { // a small photo for the lists and cards (the browser loads it when it's in view)
       const img = document.createElement('img');
       img.className = 'fp-thumb'; img.alt = ''; img.width = 40; img.height = 40; img.loading = 'lazy'; img.decoding = 'async';
@@ -1661,7 +1776,7 @@
         const sig = mode + ((p.x * 40) | 0) + ',' + ((p.y * 40) | 0) + ',' + ((p.z * 40) | 0) + ',' + ((q.x * 300) | 0) + ',' + ((q.y * 300) | 0) + ',' + ((q.z * 300) | 0) + ',' + (orbit.r | 0);
         if (sig !== photoSig) { photoSig = sig; if (!photoDue) photoDue = now + 300; }
       }
-      if (photoDue && now >= photoDue) { photoDue = 0; updatePhotos(); }
+      if (photoDue && now >= photoDue) { photoDue = 0; updatePhotos(); updateLabels(); }
       if (photoRedraw && now - photoRedrawAt > 150) { photoRedraw = false; photoRedrawAt = now; dirty = true; } // photos arriving
       if (!dirty) return;
       dirty = false;
