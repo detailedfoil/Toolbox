@@ -12,8 +12,8 @@
    (position 1 is the front of the first drawer, 2 the back) and a half width one has 5 drawers of 4. Everything else
    is a box in a slot. Positions count from the LEFT as you stand facing the shelf (to be confirmed with detailedfoil).
 
-   Kept on the device for the visit only (sessionStorage) and never sent anywhere: stock is store-specific and the
-   repo is public. */
+   Kept on this device (localStorage) until "Clear stock", and never sent anywhere or put in the repo: stock is
+   store-specific and the repo is public. */
 (function (root) {
   'use strict';
 
@@ -195,15 +195,26 @@
   }
   function drawerKey(area, bay, shelf, box) { return area + '-' + bay + '-' + shelf + '-' + box; }
 
+  // Kept on this device (localStorage, so it is there next time you open the page) and never sent anywhere.
+  // "Clear stock" removes it. A copy from before this change may still be in sessionStorage: it is moved across.
+  function enc(st) { return JSON.stringify(st.items.map(function (x) { return [x.code, x.name, x.qty, x.loc]; })); }
+  function dec(s) { return { items: JSON.parse(s).map(function (a) { return { code: a[0], name: a[1], qty: a[2], loc: a[3] }; }) }; }
   var storage = {
-    save: function (st) { try { sessionStorage.setItem(KEY, JSON.stringify(st.items.map(function (x) { return [x.code, x.name, x.qty, x.loc]; }))); return true; } catch (e) { return false; } },
+    save: function (st) {
+      var s = enc(st);
+      try { localStorage.setItem(KEY, s); try { sessionStorage.removeItem(KEY); } catch (e1) { /* fine */ } return true; } catch (e) { /* full or blocked */ }
+      try { sessionStorage.setItem(KEY, s); return true; } catch (e2) { return false; }
+    },
     load: function () {
       try {
-        var s = sessionStorage.getItem(KEY);
-        return s ? { items: JSON.parse(s).map(function (a) { return { code: a[0], name: a[1], qty: a[2], loc: a[3] }; }) } : null;
-      } catch (e) { return null; }
+        var s = localStorage.getItem(KEY);
+        if (s) return dec(s);
+        s = sessionStorage.getItem(KEY);
+        if (s) { try { localStorage.setItem(KEY, s); sessionStorage.removeItem(KEY); } catch (e3) { /* keep it for the visit */ } return dec(s); }
+      } catch (e) { /* nothing kept */ }
+      return null;
     },
-    clear: function () { try { sessionStorage.removeItem(KEY); } catch (e) { /* nothing kept */ } }
+    clear: function () { try { localStorage.removeItem(KEY); } catch (e) { /* nothing kept */ } try { sessionStorage.removeItem(KEY); } catch (e2) { /* nothing kept */ } }
   };
 
   var api = { parse: parse, index: index, place: place, levelBays: levelBays, shelfZ: shelfZ, shelfGap: shelfGap, cellRect: cellRect, drawers: drawers, drawerKey: drawerKey, BOX_W: BOX_W, storage: storage };

@@ -177,8 +177,8 @@ explain changes in plain English and say what they'll see.
     and every other aisle are spread evenly (`areas` in locations.json says how many shelves each area has). Shelves 1
     to 10 of AAA to AAE are cardboard drawers, 20 positions a shelf: a bay slice is about 12.7 cm per drawer wide, so a
     full width bay has 10 drawers of 2 (odd position = front, even = back) and a half width one (AAA 1-8) has 5 of 4.
-    `stock.js` reads the pasted SKU List report (same report as Product Search; kept in sessionStorage only, never
-    committed: the repo is public, so tests use made-up products) and works out where a location is (`index`, `place`,
+    `stock.js` reads the pasted SKU List report (same report as Product Search; kept on that device in localStorage until "Clear stock" (detailedfoil asked for it to load by
+    default, 30 Oct; it is NOT in the repo: the repo is public, so tests use made-up products) and works out where a location is (`index`, `place`,
     `cellRect`). The Stock button takes the paste; products on ordinary shelves become boxes, a tap on a drawer slides
     it out with what's in it, and the search jumps you to a product. Positions count from the LEFT as you face the
     shelf (an assumption, to be confirmed; `psign` in stock.js flips it). Mouse look: on a PC, in Walk, the first click
