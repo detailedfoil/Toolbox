@@ -88,6 +88,8 @@ test('the stock report is read: product, name, available quantity and location (
   assert.equal(r.count, 2); assert.equal(r.noLoc, 1);
   assert.deepEqual(JSON.parse(JSON.stringify(r.items[0])), { code: '10001', name: 'Test Screw Pk100', qty: 6, loc: 'AAA-01-05-06' });
   assert.equal(r.items[1].loc, 'BAA-01-05-03');
+  assert.equal(r.cut, false);
+  assert.equal(FS.parse(REPORT + '\n10004\tCOMPLETE\tHOST\tCut off in the mid').cut, true, 'a paste that ends part way through a row is flagged');
   assert.equal(FS.parse('nothing useful here'), null);
 });
 

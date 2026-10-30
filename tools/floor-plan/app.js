@@ -912,7 +912,7 @@
         drawerList.forEach((d, i) => drawerMesh.setColorAt(i, has.has(d.key) ? BOARD : BOARD_EMPTY));
         drawerMesh.instanceColor.needsUpdate = true;
       }
-      stock = { items: kept, total: items.length, unplaced };
+      stock = { items: kept, total: items.length, unplaced, all: items, cut: stockCut };
       renderer.shadowMap.needsUpdate = true; dirty = true;
       return stock;
     }
@@ -1055,7 +1055,7 @@
 
     // the Stock panel: paste the report, then find a product
     const sheet = $('sheet');
-    let pasting = false;
+    let pasting = false, adding = false, stockCut = false; // adding: the next paste is added to the list instead of replacing it
     function sheetState() {
       const have = !!stock && !pasting;
       $('sheetPaste').hidden = have; $('sheetFind').hidden = !have;
@@ -1063,6 +1063,7 @@
       const un = Object.keys(stock.unplaced).sort((a, b) => stock.unplaced[b] - stock.unplaced[a]);
       let info = stock.items.length + ' products are on the shelves.';
       if (un.length) info += ' ' + un.reduce((n, a) => n + stock.unplaced[a], 0) + ' more have a location I have no bay for: ' + un.map((a) => a + ' (' + stock.unplaced[a] + ')').join(', ') + '.';
+      if (stock.cut) info += ' It looks cut off part way through a row (copy and paste have size limits), so there are more products than this. Press Add more and paste the rest, or paste the whole report straight from the stock system on a PC.';
       $('stockInfo').textContent = info;
     }
     function runFind() {
@@ -1096,15 +1097,23 @@
     $('sheetClose').addEventListener('click', () => setSheet(false));
     $('findBox').addEventListener('input', runFind);
     $('stockGo').addEventListener('click', () => {
-      const r = FS.parse($('stockText').value), msg = $('stockMsg');
+      const raw = $('stockText').value, msg = $('stockMsg');
+      let r = FS.parse(raw);
       if (!r) { msg.textContent = "I couldn't find any products with a location in that. Check it is the SKU List report with the Nailed Location column."; msg.hidden = false; return; }
       msg.hidden = true; $('stockText').value = '';
+      stockCut = !!r.cut; // the paste stops part way through a row
+      if (adding && stock) {
+        const seen = new Set(stock.all.map((x) => x.code + x.loc));
+        r = { items: stock.all.concat(r.items.filter((x) => !seen.has(x.code + x.loc))) };
+        stockCut = stockCut || stock.cut;
+      }
       FS.storage.save(r);
-      pasting = false;
+      pasting = false; adding = false;
       applyStock(r.items); sheetState(); $('findBox').value = ''; runFind();
-      $('findBox').focus();
+      if (!sheet.hidden && !$('sheetFind').hidden) $('findBox').focus();
     });
-    $('stockNew').addEventListener('click', () => { pasting = true; sheetState(); $('stockText').focus(); });
+    $('stockAdd').addEventListener('click', () => { pasting = true; adding = true; sheetState(); $('stockText').focus(); });
+    $('stockNew').addEventListener('click', () => { pasting = true; adding = false; sheetState(); $('stockText').focus(); });
     $('stockClear').addEventListener('click', () => { FS.storage.clear(); stock = null; pasting = false; closeCard(); clearProducts(); sheetState(); $('findList').innerHTML = ''; dirty = true; });
     if (navigator.clipboard && navigator.clipboard.readText) {
       $('stockClip').hidden = false;

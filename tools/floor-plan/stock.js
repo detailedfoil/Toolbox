@@ -72,7 +72,13 @@
       seen[sku + loc] = 1;
       items.push({ code: sku, name: String(get('name')).replace(/\s+/g, ' ').trim(), qty: num(get('avail')) || 0, loc: loc });
     }
-    return items.length ? { items: items, count: items.length, noLoc: noLoc, skipped: skipped } : null;
+    // a paste that stops part way through a row has been cut off (copy and paste have size limits)
+    var last = '', wide = 0;
+    for (var q = lines.length - 1; q >= 0; q--) if (lines[q].trim()) { last = lines[q]; break; }
+    for (var q2 = 0; q2 < lines.length; q2++) { var n2 = lines[q2].split('\t').length; if (SKU.test(code(lines[q2].split('\t')[0])) && n2 > wide) wide = n2; }
+    var cells2 = last.split('\t');
+    var cut = SKU.test(code(cells2[0])) && cells2.length < wide;
+    return items.length ? { items: items, count: items.length, noLoc: noLoc, skipped: skipped, cut: cut } : null;
   }
 
   /* ---------- where things are ---------- */
