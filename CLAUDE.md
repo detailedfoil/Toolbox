@@ -170,7 +170,7 @@ explain changes in plain English and say what they'll see.
     3 holds 3+4 and so on), and B and C have stock on both sides. Done (30 Oct 2026): A (front BBG, back BBH), B
     (BBE front, BBF back), C (BBC, BBD), D (back BBB, front BBA 1-6 then LAC 3+4 on D1f), P (LAC 1+2), W (front only,
     BBJ 1-12 from the back right corner to the fire door at the back left), E1 BBI 1+2 / E2 BBI 3+4 with BBK on E2's back, E3b HAB and E4b HAA (hazard
-    cabinets, area only), L1 LAB 1+2, L3 LAB 3+4, L5 LAA, L2 and L4 the holding area, V1 AAJ 1, V2 AAJ 2 (HAD and HAE are ignored, detailedfoil's say). `unsure` marks guesses to confirm; area-only
+    cabinets, area only), L1 LAB 1+2, L3 LAB 3+4, L5 LAA, L2 and L4 the holding area, V1 AAJ 1, V2 AAJ 2, Z1 BBG-09 and Z2 BBC-09 (kind `floor`: taped floor spots at the left-wall end of the BBG and BBC aisles, stock straight on the floor, in `notFree`). `ignore` (HAD, HAE, HAC, LAC-05, LAA-05, HAA-01, HAB-01) is detailedfoil's say; stock.js place() returns null for them. An ordinary shelf has as many cells as its furthest nailed position (boxes fill the shelf, 30 Oct), not the area's usual number. `unsure` marks guesses to confirm; area-only
     codes (no bay number) are fine in locations.json.
     Stock on the shelves (30 Oct 2026): the racking is 3.6 m tall (detailedfoil: the top shelf is about two people
     tall); shelf 10 of the AA_ areas is chin height (1.5 m, 15.3 cm apart for shelves 1 to 10), the shelves above them

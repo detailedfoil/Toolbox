@@ -322,6 +322,12 @@
         for (const z of b.zs || [0.9, 1.6]) box(M.meshDeck, x0, y0, z - 0.02, x1, y1, z);
         return;
       }
+      if (b.kind === 'floor') { // no racking: a taped off patch of floor, the stock sits straight on it
+        const x0 = b.x0, x1 = b.x1, y0 = b.y0, y1 = b.y1, t = 0.05, z = 0.012;
+        box(M.cabinet, x0, y0, 0, x1, y0 + t, z); box(M.cabinet, x0, y1 - t, 0, x1, y1, z);
+        box(M.cabinet, x0, y0, 0, x0 + t, y1, z); box(M.cabinet, x1 - t, y0, 0, x1, y1, z);
+        return;
+      }
       if (b.kind === 'cabinet') {
         // a yellow flammables cabinet with its doors open, so you can see the shelves and what's on them
         const x0 = b.x0 + 0.03, x1 = b.x1 - 0.03, y0 = b.y0 + 0.02, y1 = b.y1 - 0.02, t = 0.025;
@@ -614,6 +620,7 @@
       if (b.kind === 'cabinet') return 'Flammables cabinet';
       if (b.kind === 'pallet') return 'Pallet racking, ' + (Math.max(2, b.levels) - 1) + ' beam levels';
       if (b.kind === 'bulk') return 'Floor space with one shelf on top';
+      if (b.kind === 'floor') return 'Floor space, no racking';
       return 'Shelving, ' + b.levels + ' shelves';
     }
     function showBay(b) {
@@ -678,8 +685,8 @@
 
     function walkTo(b) {
       // stand in the aisle in front of the bay, a step or two along towards the middle aisle, looking at it
-      const cab = b.kind === 'cabinet'; // straight in front of a cabinet, so its open doors don't get in the way
-      const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, gap = cab ? 1.15 : 0.45, along = cab ? 0 : 1.4;
+      const cab = b.kind === 'cabinet', flat = b.kind === 'floor'; // straight in front of a cabinet (its open doors) or a floor spot, not off to one side
+      const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, gap = cab ? 1.15 : flat ? 1.3 : 0.45, along = cab || flat ? 0 : 1.4;
       const o = b.open || 'S';
       let x = cx, y = cy;
       if (o.indexOf('S') >= 0) y = b.y1 + gap;
@@ -850,7 +857,7 @@
       R({ x0: 0, y0: 0, x1: W, y1: D }, '#c4c8cd');
       for (const r of L.rooms) R(r, r.floor === 'tile' ? '#e4e7ea' : '#d5cdc2');
       for (const o of L.objects) if (BLOCKS[o.kind]) R(o, o.kind === 'counter' ? '#15396b' : '#8f97a1');
-      for (const b of bays) R(b, b.kind === 'cabinet' ? '#f2c400' : b.kind === 'cage' ? '#7d858f' : b.kind === 'pallet' ? '#e07020' : '#2d5ea8');
+      for (const b of bays) R(b, b.kind === 'cabinet' ? '#f2c400' : b.kind === 'cage' ? '#7d858f' : b.kind === 'floor' ? '#d9b300' : b.kind === 'pallet' ? '#e07020' : '#2d5ea8');
       for (const w of L.walls) R({ x0: w[0], y0: w[1], x1: w[2], y1: w[3] }, '#2b3038');
       for (const c of L.columns || []) R({ x0: c[0], y0: c[1], x1: c[2], y1: c[3] }, '#2b3038');
       g.strokeStyle = '#2b3038'; g.lineWidth = 2; g.strokeRect(mPad - 1, mPad - 1, W * mScale + 2, D * mScale + 2);
@@ -1314,12 +1321,12 @@
       const add = (x, y, z, f, w, h, text, style) => { const p = packCode(text); rows.push(x, y, z, faceTurn(f), w, h, p[0], p[1], p[2], style); };
       for (const seg of sidx.list) { // the shelf edges: a label per position
         const b = seg.bay;
-        if (b.kind === 'bulk' || b.kind === 'cage' || b.kind === 'cabinet') continue;
+        if (b.kind === 'bulk' || b.kind === 'cage' || b.kind === 'cabinet' || b.kind === 'floor') continue;
         const cfg = FS.bayCfg(sidx, seg.area, seg.no), no = seg.no || 1, f = FRONT[seg.face], style = no % 2 === 1 ? 4 : 5;
         const per = cfg.positions || Math.max(1, Math.round((seg.u1 - seg.u0) / FS.BOX_W));
         for (let sh = b.kind === 'pallet' ? 2 : 1; sh <= b.levels; sh++) {
           if (cfg.drawers && sh <= cfg.drawers) continue;
-          const z = FS.shelfZ(b, sh) - 0.04, cells = Math.max(per, shelfCells.get(seg.area + '-' + pad2(no) + '-' + pad2(sh)) || 0);
+          const z = FS.shelfZ(b, sh) - 0.04, cells = shelfCells.get(seg.area + '-' + pad2(no) + '-' + pad2(sh)) || per;
           const w = Math.min(0.115, (seg.u1 - seg.u0) / cells * 0.92);
           for (let i = 0; i < cells; i++) {
             const r = FS.cellRect(seg, i, cells, 0, 1);
@@ -1449,7 +1456,7 @@
     function clearShelfTags() { for (const t of shelfTags.children) { t.material.map.dispose(); t.material.dispose(); } shelfTags.clear(); redraw(); }
     function showShelfTags(b, face) {
       clearShelfTags();
-      if (!b || b.kind === 'bulk' || b.kind === 'cage') return;
+      if (!b || b.kind === 'bulk' || b.kind === 'cage' || b.kind === 'floor') return;
       const faces = new Set(face ? [face] : []);
       if (!face) { if (sidx) for (const seg of sidx.list) if (seg.bay === b) faces.add(seg.face); if (!faces.size) for (const f of b.open) faces.add(f); }
       const n = Math.max(2, b.levels), ax = b.along === 'x';

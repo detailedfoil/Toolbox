@@ -116,9 +116,11 @@ test('locations land on the right bay, slice and drawer', () => {
   assert.equal(P('AAC-01-11-02').drawer, null);                                                   // shelf 11 up is not drawers
   assert.equal(P('BBB-01-02-01').seg.bay.id, 'D4b'); assert.equal(P('BBB-08-02-01').seg.bay.id, 'D1b'); // left block counts from the aisle
   assert.equal(P('BBC-01-02-01').seg.face, 'S'); assert.equal(P('BBD-01-02-01').seg.face, 'N');
-  assert.equal(P('HAB-01-01-01').seg.bay.id, 'E3b'); assert.equal(P('HAB-02-01-01').seg.bay.id, 'E3b'); // the cabinet's two halves
+  assert.equal(P('HAB-02-01-01').seg.bay.id, 'E3b'); assert.equal(P('HAB-01-01-01'), null); assert.equal(P('HAA-01-01-01'), null); assert.equal(P('HAA-02-01-01').seg.bay.id, 'E4b'); // the cabinet's right halves; bay 1 of each is left off
   assert.equal(P('BBK-01-01-01').seg.bay.id, 'E2');                                               // an area with no bay numbers takes them all
-  assert.equal(P('BBC-09-01-01'), null); assert.equal(P('LAC-05-01-07'), null);                   // a bay the plan doesn't have goes nowhere
+  assert.equal(P('BBC-09-01-01').seg.bay.id, 'Z2'); assert.equal(P('BBG-09-01-02').seg.bay.id, 'Z1'); // the two floor spots at the end of the aisles
+  assert.equal(P('BBC-09-01-01').seg.bay.kind, 'floor'); assert.equal(FS.shelfZ(P('BBC-09-01-01').seg.bay, 1), 0);
+  assert.equal(P('LAC-05-01-07'), null);                                                          // a bay the plan doesn't have goes nowhere
   assert.equal(P('BBJ-01-01-01').seg.bay.id, 'W6'); assert.equal(P('BBJ-12-01-01').seg.bay.id, 'W1'); // the back wall run starts at the back right
   assert.ok(P('BBJ-01-01-01').seg.u0 > P('BBJ-02-01-01').seg.u0);
   assert.equal(P('ZZZ-01-01-01'), null);
@@ -227,4 +229,12 @@ test('the floor plan never asks Screwfix for photos: only the Toolbox\'s own sav
   const app = fs.readFileSync(path.join(REPO, 'tools/floor-plan/app.js'), 'utf8');
   assert.doesNotMatch(app, /screwfix\.com|media\.screwfix|wsrv\.nl/i);
   assert.match(app, /'product-search\/photos\/' \+ encodeURIComponent\(code\) \+ '\.jpg'/);
+});
+
+test('a shelf is only as wide as its furthest product, so the boxes fill it', () => {
+  const rows = [['91001', 'AAA-01-12-01'], ['91002', 'AAA-01-12-02'], ['91003', 'AAA-01-12-03'], ['91004', 'BBC-02-03-01'], ['91005', 'BBC-02-03-05']];
+  const arr = FS.arrange(rows.map(([code, loc]) => ({ code, name: 'Made up ' + code, loc, qty: 1 })), FS.index(withLocs(), LOCS));
+  assert.equal(arr.shelves['AAA-01-12'].cells, 3);                       // 3 positions used on a shelf that usually has 9: 3 wide boxes
+  assert.equal(arr.shelves['BBC-02-03'].cells, 5);
+  assert.equal(arr.placed.find((i) => i.code === '91003').pl.slots, 3);
 });

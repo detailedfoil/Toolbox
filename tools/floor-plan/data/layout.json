@@ -70,7 +70,9 @@
   {"row": "L", "first": 3, "along": "y", "x0": 4.8, "y0": 16.6, "x1": 5.85, "y1": 19.05, "edges": [16.6, 19.05], "open": "W", "kind": "pallet", "h": 3.6, "levels": 3, "plan": ["S.P.R.1 longs bay"]},
   {"row": "L", "first": 4, "along": "y", "x0": 5.9, "y0": 16.6, "x1": 6.95, "y1": 19.1, "edges": [16.6, 19.1], "open": "E", "kind": "shelf", "h": 3.6, "levels": 4, "plan": ["S.L.S.R.2"]},
   {"row": "L", "first": 5, "along": "y", "x0": 8.35, "y0": 18.5, "x1": 9.35, "y1": 21.05, "edges": [18.5, 21.05], "open": "W", "kind": "pallet", "h": 3.6, "levels": 3, "plan": ["S.P.R.1 longs bay"]},
-  {"row": "V", "first": 1, "along": "x", "x0": 17.6, "y0": 0.2, "x1": 18.95, "y1": 0.95, "edges": [17.6, 18.95], "open": "S", "kind": "cage", "h": 2.2, "levels": 3, "plan": ["VPU (mesh)"]},
+  {"row": "Z", "first": 1, "along": "y", "x0": 0.05, "y0": 4.52, "x1": 0.65, "y1": 5.61, "edges": [4.52, 5.61], "open": "E", "kind": "floor", "h": 1.0, "levels": 1, "plan": ["Floor space, end of the aisle"]},
+    {"row": "Z", "first": 2, "along": "y", "x0": 0.05, "y0": 9.26, "x1": 0.65, "y1": 10.24, "edges": [9.26, 10.24], "open": "E", "kind": "floor", "h": 1.0, "levels": 1, "plan": ["Floor space, end of the aisle"]},
+    {"row": "V", "first": 1, "along": "x", "x0": 17.6, "y0": 0.2, "x1": 18.95, "y1": 0.95, "edges": [17.6, 18.95], "open": "S", "kind": "cage", "h": 2.2, "levels": 3, "plan": ["VPU (mesh)"]},
   {"row": "V", "first": 2, "along": "y", "x0": 19.0, "y0": 1.0, "x1": 19.6, "y1": 2.26, "edges": [1.0, 2.26], "open": "W", "kind": "cage", "h": 2.2, "levels": 3, "plan": ["VPU"]}
  ],
  "objects": [

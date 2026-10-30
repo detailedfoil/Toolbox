@@ -90,7 +90,8 @@
 
   // the slices of each drawn bay that locations.json gives to each stock system bay
   function index(bays, locs) {
-    var idx = { segs: {}, whole: {}, areas: (locs && locs.areas) || {}, list: [], notFree: {} };
+    var idx = { segs: {}, whole: {}, areas: (locs && locs.areas) || {}, list: [], notFree: {}, ignore: {} };
+    ((locs && locs.ignore) || []).forEach(function (k) { idx.ignore[k] = 1; });
     ((locs && locs.notFree) || []).forEach(function (k) { idx.notFree[k] = 1; });
     var faces = (locs && locs.faces) || {};
     bays.forEach(function (b) {
@@ -150,11 +151,13 @@
       var d = bay.drawerShelves || 10, z10 = 0.12 + (d - 1) * bay.pitch, top = bay.h - 0.2;
       return s <= d ? 0.12 + (s - 1) * bay.pitch : z10 + (s - d) * (top - z10) / Math.max(1, n - d);
     }
+    if (bay.kind === 'floor') return 0; // stock straight on the floor
     if (bay.kind === 'pallet') return s <= 1 ? 0 : 0.15 + (s - 1) * (bay.h - 0.25) / (n - 1);
     return 0.12 + (s - 1) * (bay.h - 0.2) / (n - 1);
   }
   // room above a shelf for what sits on it
   function shelfGap(bay, s) {
+    if (bay.kind === 'floor') return 0.7;
     var n = Math.max(2, bay.levels);
     return s < n ? shelfZ(bay, s + 1) - shelfZ(bay, s) : shelfZ(bay, s) - shelfZ(bay, s - 1);
   }
@@ -163,6 +166,7 @@
   function levelBays(bays, locs) {
     var areas = (locs && locs.areas) || {};
     bays.forEach(function (b) {
+      if (b.kind === 'floor') { b.levels = 1; b.zs = [0]; return; }
       var codes = locs && locs.bays && locs.bays[b.id];
       if (!codes) return;
       var n = 0, pitch = 0, drawerShelves = 0;
@@ -181,6 +185,7 @@
     var m = LOC.exec(String(loc || ''));
     if (!m) return null;
     var area = m[1], bay = +m[2], shelf = +m[3], pos = +m[4];
+    if (idx.ignore && (idx.ignore[area] || idx.ignore[area + '-' + m[2]])) return null; // left off the plan, detailedfoil's say
     var seg = idx.segs[area + '-' + bay] || idx.whole[area];
     if (!seg || !shelf || !pos) return null;
     var cfg = bayCfg(idx, area, seg.no), i0 = pos - 1;
@@ -209,9 +214,10 @@
       var s = out.shelves[k] || (out.shelves[k] = { key: k, seg: p.seg, area: p.area, bay: p.bay, shelf: p.shelf, drawer: !!p.drawer, used: {}, max: 0, cells: 0 });
       s.used[p.pos] = it;
       if (p.pos > s.max) s.max = p.pos;
-      if (p.slots > s.cells) s.cells = p.slots;
       out.placed.push(it);
     });
+    // an ordinary shelf has as many cells as its furthest product (detailedfoil: not every shelf has the same number of locations), so the boxes fill it
+    for (var sk in out.shelves) { var sh = out.shelves[sk]; if (!sh.drawer) sh.cells = Math.max(1, sh.max); }
     out.placed.forEach(function (it) { if (!it.pl.drawer) it.pl.slots = out.shelves[it.pl.area + '-' + pad2(it.pl.bay) + '-' + pad2(it.pl.shelf)].cells; });
     return out;
   }
