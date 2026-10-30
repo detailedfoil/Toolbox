@@ -171,7 +171,19 @@ explain changes in plain English and say what they'll see.
     (BBE front, BBF back), C (BBC, BBD), D (back BBB, front BBA 1-6 then LAC 3+4 on D1f), P (LAC 1+2), W (front only,
     BBJ 1-12, left to right for now), E1 BBI 1+2 / E2 BBI 3+4 with BBK on E2's back, E3b HAB and E4b HAA (hazard
     cabinets, area only), L1 LAB 1+2, L3 LAB 3+4, L5 LAA, L2 and L4 the holding area, V1 AAJ 1, V2 AAJ 2 (HAD and HAE are ignored, detailedfoil's say). `unsure` marks guesses to confirm; area-only
-    codes (no bay number) are fine in locations.json. Next: pasting the stock list to show where each product is.
+    codes (no bay number) are fine in locations.json.
+    Stock on the shelves (30 Oct 2026): the racking is 3.6 m tall (detailedfoil: the top shelf is about two people
+    tall); shelf 10 of the AA_ areas is chin height (1.5 m, 15.3 cm apart for shelves 1 to 10), the shelves above them
+    and every other aisle are spread evenly (`areas` in locations.json says how many shelves each area has). Shelves 1
+    to 10 of AAA to AAE are cardboard drawers, 20 positions a shelf: a bay slice is about 12.7 cm per drawer wide, so a
+    full width bay has 10 drawers of 2 (odd position = front, even = back) and a half width one (AAA 1-8) has 5 of 4.
+    `stock.js` reads the pasted SKU List report (same report as Product Search; kept in sessionStorage only, never
+    committed: the repo is public, so tests use made-up products) and works out where a location is (`index`, `place`,
+    `cellRect`). The Stock button takes the paste; products on ordinary shelves become boxes, a tap on a drawer slides
+    it out with what's in it, and the search jumps you to a product. Positions count from the LEFT as you face the
+    shelf (an assumption, to be confirmed; `psign` in stock.js flips it). Mouse look: on a PC, in Walk, the first click
+    captures the mouse like a game (Esc lets go); the "Mouse look" button (only shown with a mouse) turns it off for
+    dragging instead. Next: whatever detailedfoil asks for (heights, shelf counts and the position direction are still guesses).
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

@@ -58,3 +58,21 @@ body.fp{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;fle
 .fp-stage.walking .fp-hint{bottom:calc(max(12px,env(safe-area-inset-bottom)) + 222px)}
 .fp-stage.walking .fp-card{top:max(10px,env(safe-area-inset-top,0px));bottom:auto;left:10px;transform:none;width:calc(100% - 170px);max-width:420px;padding:12px 12px 10px}
 .fp-stage.walking .fp-card h2{font-size:1.2rem}
+
+/* stock panel, mouse look */
+.fp-cross{position:absolute;z-index:3;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none}
+.fp-cross::before,.fp-cross::after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.55)}
+.fp-cross::before{left:8px;top:0;width:2px;height:18px}.fp-cross::after{top:8px;left:0;height:2px;width:18px}
+.fp-cross[hidden]{display:none}
+.fp-sheet{position:absolute;z-index:5;left:50%;transform:translateX(-50%);top:max(10px,env(safe-area-inset-top,0px));width:min(480px,calc(100% - 20px));max-height:calc(100% - 90px);overflow:auto;padding:16px;border-radius:18px;background:var(--card);color:var(--text);border:1px solid var(--border);box-shadow:0 8px 30px rgba(0,0,0,.3);-webkit-user-select:text;user-select:text}
+.fp-sheet[hidden]{display:none}
+.fp-sheet h2{margin:0 40px 6px 0;font-size:1.4rem}
+.fp-small{margin:0 0 10px;color:var(--muted);font-size:.85rem}
+.fp-steps{margin:0 0 10px;padding-left:20px;font-size:.9rem}.fp-steps li{margin:4px 0}.fp-steps img{max-width:100%;height:auto;margin-top:4px;border-radius:6px}
+.fp-sheet textarea,.fp-find{width:100%;font:inherit;font-size:16px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);outline:none}
+.fp-sheet textarea:focus,.fp-find:focus{border-color:var(--accent)}
+.fp-find-list{list-style:none;margin:8px 0 0;padding:0;max-height:38vh;overflow:auto}
+.fp-find-list button{display:block;width:100%;text-align:left;padding:8px 10px;margin:0 0 4px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text);font:inherit;font-size:.9rem;cursor:pointer}
+.fp-find-list button:hover{border-color:var(--accent)}
+.fp-find-list small{color:var(--muted)}.fp-find-list .none{color:var(--muted);padding:6px 2px}
+.fp-stage.walking .fp-sheet{top:max(10px,env(safe-area-inset-top,0px))}

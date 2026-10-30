@@ -27,7 +27,7 @@
     if (!me) return; // the sign-in screen is up; its "toolbox:login" event brings us back here
     booted = true;
     if (me !== STORE) { say('The 3D floor plan is only for Dunstable (LB1).'); return; }
-    if (!window.THREE || !window.FloorBays) { say("The 3D viewer didn't load. Check your signal and reload the page."); return; }
+    if (!window.THREE || !window.FloorBays || !window.FloorStock) { say("The 3D viewer didn't load. Check your signal and reload the page."); return; }
     const get = (f) => fetch('floor-plan/data/' + f, { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
     // the stock locations are a bonus: without them the bays just keep their temporary names
     Promise.all([get('layout.json'), get('locations.json').catch(() => null)])
@@ -342,7 +342,7 @@
       } else if (b.kind === 'bulk') {
         level(h - 0.08, M.deck);
       } else {
-        for (let k = 0; k < n; k++) level(0.12 + k * (h - 0.2) / (n - 1), M.deck);
+        for (let k = 0; k < n; k++) level(b.zs ? b.zs[k] : 0.12 + k * (h - 0.2) / (n - 1), M.deck);
       }
       if (b.braced) {
         // X bracing on the back of the bay (or down the middle when it's open both sides)
@@ -355,6 +355,7 @@
       }
     }
     const allBays = window.FloorBays.attach(window.FloorBays.list(L), LOCS);
+    if (LOCS) window.FloorStock.levelBays(allBays, LOCS);
     for (const b of allBays) {
       b.box = new T.Box3(new T.Vector3(b.x0, 0, b.y0), new T.Vector3(b.x1, b.h, b.y1));
       bays.push(b);
@@ -374,8 +375,8 @@
     for (const [row, r] of Object.entries(rows)) {
       const cy = (r.y0 + r.y1) / 2;
       let x = (r.x0 + r.x1) / 2, y = cy, z = r.h + 0.75;
-      if (r.along === 'x' && r.n > 2 && r.x1 <= AISLE_X0 + 0.2) { x = r.x1 + 0.3; z = 2.95; }
-      else if (r.along === 'x' && r.n > 2 && r.x0 >= AISLE_X1 - 0.2) { x = r.x0 - 0.3; z = 2.95; }
+      if (r.along === 'x' && r.n > 2 && r.x1 <= AISLE_X0 + 0.2) { x = r.x1 + 0.3; z = 3.9; }
+      else if (r.along === 'x' && r.n > 2 && r.x0 >= AISLE_X1 - 0.2) { x = r.x0 - 0.3; z = 3.9; }
       const sprite = putLabel('signs', row, x, y, z, { size: 0.7, weight: 800 });
       rowSigns.push({ sprite, z, scale: sprite.scale.clone() });
     }
@@ -568,10 +569,10 @@
     const hl = new T.Mesh(unitBox, new T.MeshBasicMaterial({ color: 0xffd200, transparent: true, opacity: 0.32, depthWrite: false }));
     hl.add(new T.LineSegments(new T.EdgesGeometry(unitBox), new T.LineBasicMaterial({ color: 0xff9f00 })));
     hl.visible = false; hl.renderOrder = 4; scene.add(hl);
-    let selected = null;
-    function bayAt(clientX, clientY) {
+    let selected = null, shown = null; // shown: what the card is about (a bay, a drawer or a product)
+    function bayAt(clientX, clientY, centre) {
       const r = canvas.getBoundingClientRect();
-      ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+      if (centre) ndc.set(0, 0); else ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(ndc, cam());
       let best = null, bestD = Infinity;
       for (const b of bays) {
@@ -592,7 +593,8 @@
       return 'Shelving, ' + b.levels + ' shelves';
     }
     function showBay(b) {
-      selected = b;
+      if (openIndex >= 0) closeDrawer(true);
+      selected = b; shown = { kind: 'bay', ref: b };
       const w = b.x1 - b.x0, d = b.y1 - b.y0;
       hl.position.set((b.x0 + b.x1) / 2, b.h / 2, (b.y0 + b.y1) / 2);
       hl.scale.set(w + 0.05, b.h + 0.05, d + 0.05);
@@ -618,10 +620,11 @@
       card.hidden = false;
       dirty = true;
     }
-    function closeCard() { selected = null; hl.visible = false; card.hidden = true; dirty = true; }
+    function closeCard() { selected = null; shown = null; hl.visible = false; card.hidden = true; if (openIndex >= 0) closeDrawer(); dirty = true; }
     $('cardClose').addEventListener('click', closeCard);
     function showHelp() {
-      selected = null; hl.visible = false;
+      if (openIndex >= 0) closeDrawer(true);
+      selected = null; shown = null; hl.visible = false;
       $('cardTitle').textContent = 'How to use it';
       $('cardSub').textContent = 'Dunstable, from the fire plan and electrical layout';
       $('cardList').innerHTML = '';
@@ -695,6 +698,11 @@
       dirty = true;
     }
     canvas.addEventListener('pointerdown', (e) => {
+      // mouse look, like a game: the first click captures the mouse, after that a click picks what's under the crosshair
+      if (mode === 'walk' && mouseLook && hasMouse && e.pointerType === 'mouse') {
+        if (!locked()) lockMouse(); else if (e.button === 0) tapAt(0, 0, true);
+        e.preventDefault(); return;
+      }
       try { canvas.setPointerCapture(e.pointerId); } catch (x) { /* fine */ }
       ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), button: e.button, shift: e.shiftKey });
       tapId = ptrs.size === 1 ? e.pointerId : null;
@@ -721,8 +729,7 @@
       if (!p) return;
       ptrs.delete(e.pointerId);
       if (e.type === 'pointerup' && tapId === e.pointerId && performance.now() - p.t < 600) {
-        const b = bayAt(e.clientX, e.clientY);
-        if (b) showBay(b); else if (selected) closeCard();
+        tapAt(e.clientX, e.clientY);
       }
       tapId = null;
       pinch = ptrs.size === 2 ? pinchState() : null;
@@ -743,6 +750,7 @@
     const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', KeyD: 'r', ArrowLeft: 'tl', ArrowRight: 'tr', KeyQ: 'tl', KeyE: 'tr' };
     window.addEventListener('keydown', (e) => {
       if (mode !== 'walk' || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return; // typing in the stock box
       if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); }
       walk.run = e.shiftKey;
     });
@@ -832,6 +840,302 @@
       e.preventDefault();
     });
 
+    /* ---------- stock on the shelves ---------- */
+    const FS = window.FloorStock;
+    const sidx = LOCS ? FS.index(allBays, LOCS) : null;
+    const BOARD = new T.Color(0xb98a58), BOARD_EMPTY = new T.Color(0xe4d6bb);
+    const boardMat = new T.MeshLambertMaterial({ color: 0xffffff });
+    const trayMat = new T.MeshLambertMaterial({ color: 0xcaa06a });
+    const HIDE = new T.Matrix4().makeScale(1e-6, 1e-6, 1e-6);
+    const FRONT = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }; // which way a face looks (plan x, plan y)
+    const pad2 = (n) => (n < 10 ? '0' : '') + n;
+    const boxM = (r, z0, h, sw, sd) => new T.Matrix4().compose(
+      new T.Vector3((r.x0 + r.x1) / 2, z0 + h / 2, (r.y0 + r.y1) / 2), new T.Quaternion(),
+      new T.Vector3((r.x1 - r.x0) * sw, h, (r.y1 - r.y0) * sd));
+    const areaColour = (a) => { let h = 0; for (const ch of a) h = (h * 31 + ch.charCodeAt(0)) % 360; return new T.Color().setHSL(h / 360, 0.5, 0.64); };
+
+    // the drawers: shelves 1 to 10 of the AA_ areas, there whether or not any stock has been pasted
+    let drawerList = [], drawerMesh = null;
+    const drawerAt = new Map();
+    if (sidx) {
+      drawerList = FS.drawers(sidx);
+      if (drawerList.length) {
+        drawerMesh = new T.InstancedMesh(unitBox, boardMat, drawerList.length);
+        drawerList.forEach((d, i) => {
+          d.rect = FS.cellRect(d.seg, d.box, d.boxes, 0, 1);
+          d.z0 = FS.shelfZ(d.seg.bay, d.shelf) + 0.012;
+          d.h = (d.seg.bay.pitch || 0.153) * 0.88;
+          d.matrix = boxM(d.rect, d.z0, d.h, 0.92, 0.97);
+          drawerMesh.setMatrixAt(i, d.matrix); drawerMesh.setColorAt(i, BOARD);
+          drawerAt.set(d.key, i);
+        });
+        drawerMesh.instanceMatrix.needsUpdate = true; drawerMesh.instanceColor.needsUpdate = true;
+        drawerMesh.castShadow = true; drawerMesh.receiveShadow = true; drawerMesh.frustumCulled = false;
+        groups.main.add(drawerMesh);
+      }
+    }
+
+    // the pasted list: items on ordinary shelves become boxes; items in drawers are in the drawer
+    let stock = null, products = [], productMesh = null;
+    const itemAt = new Map(), productOf = new Map();
+    function clearProducts() {
+      if (productMesh) { groups.main.remove(productMesh); productMesh.dispose(); productMesh = null; }
+      products = []; productOf.clear(); itemAt.clear();
+      if (drawerMesh) { for (let i = 0; i < drawerList.length; i++) drawerMesh.setColorAt(i, BOARD); drawerMesh.instanceColor.needsUpdate = true; }
+    }
+    function applyStock(items) {
+      if (!sidx) return null;
+      closeCard(); clearProducts();
+      const unplaced = {}, has = new Set(), kept = [];
+      for (const it of items) {
+        const pl = FS.place(sidx, it.loc);
+        if (!pl) { const a = it.loc.slice(0, 3); unplaced[a] = (unplaced[a] || 0) + 1; continue; }
+        it.pl = pl; itemAt.set(it.loc, it); kept.push(it);
+        if (pl.drawer) { it.drawerKey = FS.drawerKey(pl.area, pl.seg.no, pl.shelf, pl.drawer.box); has.add(it.drawerKey); } else products.push(it);
+      }
+      if (products.length) {
+        productMesh = new T.InstancedMesh(unitBox, boardMat, products.length);
+        products.forEach((it, i) => {
+          const pl = it.pl, bay = pl.seg.bay;
+          it.rect = FS.cellRect(pl.seg, pl.slot, pl.slots, 0, 1);
+          it.z0 = FS.shelfZ(bay, pl.shelf) + 0.012;
+          it.h = Math.max(0.06, Math.min(0.4, FS.shelfGap(bay, pl.shelf) * 0.78));
+          productMesh.setMatrixAt(i, boxM(it.rect, it.z0, it.h, 0.88, 0.9));
+          productMesh.setColorAt(i, areaColour(pl.area));
+          productOf.set(it, i);
+        });
+        productMesh.instanceMatrix.needsUpdate = true; productMesh.instanceColor.needsUpdate = true;
+        productMesh.castShadow = true; productMesh.receiveShadow = true; productMesh.frustumCulled = false;
+        groups.main.add(productMesh);
+      }
+      if (drawerMesh) {
+        drawerList.forEach((d, i) => drawerMesh.setColorAt(i, has.has(d.key) ? BOARD : BOARD_EMPTY));
+        drawerMesh.instanceColor.needsUpdate = true;
+      }
+      stock = { items: kept, total: items.length, unplaced };
+      renderer.shadowMap.needsUpdate = true; dirty = true;
+      return stock;
+    }
+
+    // pulling a drawer out: it slides towards you and you can see what is in it
+    let tray = null, trayInfo = null, openIndex = -1, slide = null, trayV = 0;
+    const trayLoc = (d, j) => d.seg.area + '-' + pad2(d.seg.no || 0) + '-' + pad2(d.shelf) + '-' + pad2(d.box * d.deep + j + 1);
+    function moveTray() { const t = trayInfo; tray.position.set(t.base[0] + t.f[0] * t.dist * trayV, t.z, t.base[1] + t.f[1] * t.dist * trayV); }
+    function removeTray() {
+      if (tray) {
+        scene.remove(tray);
+        tray.traverse((o) => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } });
+        tray = null;
+      }
+      if (openIndex >= 0 && drawerMesh) { drawerMesh.setMatrixAt(openIndex, drawerList[openIndex].matrix); drawerMesh.instanceMatrix.needsUpdate = true; }
+      openIndex = -1; slide = null; trayV = 0; dirty = true;
+    }
+    function openDrawer(i) {
+      if (openIndex === i) return;
+      if (openIndex >= 0) removeTray();
+      const d = drawerList[i], r = d.rect, h = d.h, t = 0.012;
+      const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2, w = (r.x1 - r.x0) * 0.92, dd = (r.y1 - r.y0) * 0.97, f = FRONT[d.seg.face];
+      openIndex = i;
+      drawerMesh.setMatrixAt(i, HIDE); drawerMesh.instanceMatrix.needsUpdate = true;
+      const g = new T.Group();
+      g.userData.drawer = i;
+      const part = (x, y, z, sx, sy, sz, mat) => { const m = new T.Mesh(unitBox, mat || trayMat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.receiveShadow = true; g.add(m); return m; };
+      part(0, t / 2, 0, w, t, dd);
+      for (const [sx, sz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const wh = sx === f[0] && sz === f[1] ? h * 0.35 : h * 0.9;
+        if (sx) part(sx * (w / 2 - t / 2), wh / 2, 0, t, wh, dd); else part(0, wh / 2, sz * (dd / 2 - t / 2), w, wh, t);
+      }
+      for (let j = 0; j < d.deep; j++) {
+        const it = itemAt.get(trayLoc(d, j));
+        if (!it) continue;
+        const c = FS.cellRect(d.seg, d.box, d.boxes, j, d.deep);
+        const px = (c.x0 + c.x1) / 2 - cx, pz = (c.y0 + c.y1) / 2 - cy;
+        part(px, t + h * 0.3, pz, (c.x1 - c.x0) * 0.8, h * 0.55, (c.y1 - c.y0) * 0.8, new T.MeshLambertMaterial({ color: areaColour(d.seg.area) }));
+        const s = label(it.code, { size: 0.07, bg: 'rgba(255,255,255,.95)', fg: '#14171f', weight: 800 });
+        s.position.set(px, h * 1.05, pz); g.add(s);
+      }
+      tray = g; scene.add(g);
+      trayInfo = { base: [cx, cy], f, z: d.z0, dist: (f[0] ? r.x1 - r.x0 : r.y1 - r.y0) * 0.8 };
+      trayV = 0; moveTray();
+      slide = { from: 0, to: 1, t0: performance.now(), dur: 280, closing: false };
+      dirty = true;
+    }
+    function closeDrawer(instant) {
+      if (openIndex < 0) return;
+      if (instant) removeTray(); else slide = { from: trayV, to: 0, t0: performance.now(), dur: 240, closing: true };
+      dirty = true;
+    }
+
+    // putting yourself in front of something and looking at it
+    function standAt(seg, r, z) {
+      const f = FRONT[seg.face], tx = (r.x0 + r.x1) / 2, ty = (r.y0 + r.y1) / 2;
+      [walk.x, walk.y] = nearestFree(tx + f[0] * 1.05, ty + f[1] * 1.05);
+      walk.yaw = Math.atan2(-(tx - walk.x), -(ty - walk.y));
+      walk.pitch = Math.max(-1.2, Math.min(1.2, Math.atan2(z - 1.62, Math.hypot(tx - walk.x, ty - walk.y) || 1)));
+      setMode('walk'); applyWalk(); dirty = true;
+    }
+    function cardLines(lines) {
+      $('cardList').innerHTML = '';
+      for (const t of lines) if (t) { const li = document.createElement('li'); li.textContent = t; $('cardList').appendChild(li); }
+    }
+    function cardButtons(list) {
+      const btns = $('cardBtns'); btns.innerHTML = '';
+      for (const [text, fn, alt] of list) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (alt) b.className = 'alt'; b.addEventListener('click', fn); btns.appendChild(b); }
+    }
+    function showDrawer(i) {
+      const d = drawerList[i];
+      if (openIndex !== i) openDrawer(i);
+      shown = { kind: 'drawer', ref: i }; selected = null; hl.visible = false;
+      const first = d.box * d.deep + 1;
+      $('cardTitle').textContent = d.seg.area + '-' + pad2(d.seg.no || 0) + '-' + pad2(d.shelf);
+      $('cardSub').textContent = 'Drawer ' + (d.box + 1) + ' of ' + d.boxes + ', shelf ' + d.shelf + ' (positions ' + first + ' to ' + (first + d.deep - 1) + ')';
+      const lines = [];
+      for (let j = 0; j < d.deep; j++) {
+        const it = itemAt.get(trayLoc(d, j)), pos = pad2(first + j), side = j === 0 ? 'front' : j === d.deep - 1 ? 'back' : 'middle';
+        lines.push(pos + ' ' + side + ': ' + (it ? it.code + ' ' + it.name + ' (' + it.qty + ' available)' : stock ? 'empty' : 'paste the stock list to see what is in it'));
+      }
+      lines.push('Bay ' + d.seg.bay.id + ' in my drawing');
+      cardLines(lines);
+      $('cardNote').textContent = 'Positions count from the left as you face the shelf. Tell Claude if that is the wrong way round.';
+      cardButtons([[mode === 'walk' ? 'Stand in front of it' : 'Walk here', () => standAt(d.seg, d.rect, d.z0 + d.h / 2)], ['Push it in', () => closeCard(), true]]);
+      card.hidden = false; dirty = true;
+    }
+    function showProduct(i) {
+      const it = products[i], pl = it.pl, b = pl.seg.bay, r = it.rect;
+      closeDrawer(true);
+      shown = { kind: 'product', ref: i }; selected = null;
+      hl.position.set((r.x0 + r.x1) / 2, it.z0 + it.h / 2, (r.y0 + r.y1) / 2);
+      hl.scale.set(r.x1 - r.x0 + 0.04, it.h + 0.04, r.y1 - r.y0 + 0.04);
+      hl.material.opacity = 0.5; hl.visible = true;
+      $('cardTitle').textContent = it.code;
+      $('cardSub').textContent = it.name;
+      cardLines(['Location ' + it.loc, it.qty + ' available', 'Shelf ' + pl.shelf + ', position ' + pl.pos, 'Bay ' + b.id + ' in my drawing']);
+      $('cardNote').textContent = 'Positions count from the left as you face the shelf. Tell Claude if that is the wrong way round.';
+      cardButtons([[mode === 'walk' ? 'Stand in front of it' : 'Walk here', () => standAt(pl.seg, r, it.z0 + it.h / 2)]]);
+      card.hidden = false; dirty = true;
+    }
+    function refreshCard() {
+      if (!shown) return;
+      if (shown.kind === 'bay') showBay(shown.ref); else if (shown.kind === 'drawer') showDrawer(shown.ref); else showProduct(shown.ref);
+    }
+    function goTo(it) {
+      const pl = it.pl;
+      if (!pl) return;
+      closeCard();
+      if (pl.drawer) { const i = drawerAt.get(it.drawerKey), d = drawerList[i]; standAt(d.seg, d.rect, d.z0 + d.h / 2); showDrawer(i); }
+      else { const i = productOf.get(it); standAt(pl.seg, it.rect, it.z0 + it.h / 2); showProduct(i); }
+    }
+
+    // what a tap or click lands on: a drawer, a product, or else the bay
+    function pickAt(cx, cy, centre) {
+      const r = canvas.getBoundingClientRect();
+      if (centre) ndc.set(0, 0); else ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, cam());
+      const objs = [];
+      if (drawerMesh) objs.push(drawerMesh);
+      if (productMesh) objs.push(productMesh);
+      if (tray) objs.push(tray);
+      if (objs.length) {
+        for (const hit of ray.intersectObjects(objs, true)) {
+          if (hit.object === drawerMesh) return { kind: 'drawer', i: hit.instanceId };
+          if (hit.object === productMesh) return { kind: 'product', i: hit.instanceId };
+          let o = hit.object;
+          while (o && o.userData.drawer === undefined) o = o.parent;
+          if (o) return { kind: 'drawer', i: o.userData.drawer };
+        }
+      }
+      const b = bayAt(cx, cy, centre);
+      return b ? { kind: 'bay', b } : null;
+    }
+    function tapAt(cx, cy, centre) {
+      const k = pickAt(cx, cy, centre);
+      if (!k) { if (shown) closeCard(); return; }
+      if (k.kind === 'drawer') showDrawer(k.i); else if (k.kind === 'product') showProduct(k.i); else showBay(k.b);
+    }
+
+    // the Stock panel: paste the report, then find a product
+    const sheet = $('sheet');
+    let pasting = false;
+    function sheetState() {
+      const have = !!stock && !pasting;
+      $('sheetPaste').hidden = have; $('sheetFind').hidden = !have;
+      if (!stock) return;
+      const un = Object.keys(stock.unplaced).sort((a, b) => stock.unplaced[b] - stock.unplaced[a]);
+      let info = stock.items.length + ' products are on the shelves.';
+      if (un.length) info += ' ' + un.reduce((n, a) => n + stock.unplaced[a], 0) + ' more have a location I have no bay for: ' + un.map((a) => a + ' (' + stock.unplaced[a] + ')').join(', ') + '.';
+      $('stockInfo').textContent = info;
+    }
+    function runFind() {
+      const q = $('findBox').value.trim(), list = $('findList');
+      list.innerHTML = '';
+      if (!stock || q.length < 2) return;
+      const qc = q.toUpperCase().replace(/O/g, '0'), qu = q.toUpperCase(), words = q.toLowerCase().split(/\s+/).filter(Boolean);
+      const out = [], seen = new Set();
+      const add = (it) => { if (!seen.has(it)) { seen.add(it); out.push(it); } };
+      for (const it of stock.items) if (it.code.indexOf(qc) === 0 || it.loc.indexOf(qu) === 0) add(it);
+      for (const it of stock.items) { if (out.length >= 30) break; if (words.every((w) => it.name.toLowerCase().indexOf(w) >= 0)) add(it); }
+      for (const it of out.slice(0, 30)) {
+        const li = document.createElement('li'), b = document.createElement('button');
+        b.type = 'button';
+        const t = document.createElement('b'); t.textContent = it.code + ' ';
+        const n = document.createElement('span'); n.textContent = it.name;
+        const s = document.createElement('small'); s.textContent = it.loc + ', ' + it.qty + ' available';
+        b.append(t, n, document.createElement('br'), s);
+        b.addEventListener('click', () => { sheet.hidden = true; goTo(it); });
+        li.appendChild(b); list.appendChild(li);
+      }
+      if (!out.length) { const li = document.createElement('li'); li.className = 'none'; li.textContent = 'Nothing found'; list.appendChild(li); }
+    }
+    function setSheet(open) {
+      if (open && locked()) document.exitPointerLock();
+      sheet.hidden = !open;
+      if (open) { sheetState(); if (stock && !pasting) $('findBox').focus(); }
+    }
+    $('stockBtn').hidden = !sidx;
+    $('stockBtn').addEventListener('click', () => setSheet(sheet.hidden));
+    $('sheetClose').addEventListener('click', () => setSheet(false));
+    $('findBox').addEventListener('input', runFind);
+    $('stockGo').addEventListener('click', () => {
+      const r = FS.parse($('stockText').value), msg = $('stockMsg');
+      if (!r) { msg.textContent = "I couldn't find any products with a location in that. Check it is the SKU List report with the Nailed Location column."; msg.hidden = false; return; }
+      msg.hidden = true; $('stockText').value = '';
+      FS.storage.save(r);
+      pasting = false;
+      applyStock(r.items); sheetState(); $('findBox').value = ''; runFind();
+      $('findBox').focus();
+    });
+    $('stockNew').addEventListener('click', () => { pasting = true; sheetState(); $('stockText').focus(); });
+    $('stockClear').addEventListener('click', () => { FS.storage.clear(); stock = null; pasting = false; closeCard(); clearProducts(); sheetState(); $('findList').innerHTML = ''; dirty = true; });
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      $('stockClip').hidden = false;
+      $('stockClip').addEventListener('click', () => { navigator.clipboard.readText().then((t) => { $('stockText').value = t; }).catch(() => { $('stockMsg').textContent = "The browser wouldn't let me read the clipboard. Paste into the box with Ctrl+V."; $('stockMsg').hidden = false; }); });
+    }
+    if (sidx) { const saved = FS.storage.load(); if (saved) applyStock(saved.items); }
+
+    /* ---------- mouse look (PC) ---------- */
+    const hasMouse = matchMedia('(any-hover: hover)').matches && matchMedia('(any-pointer: fine)').matches;
+    let mouseLook = hasMouse;
+    try { if (localStorage.getItem('fp-mouselook-v1') === '0') mouseLook = false; } catch (e) { /* private mode */ }
+    const mouseBtn = $('mouseBtn'), cross = $('cross');
+    const locked = () => document.pointerLockElement === canvas;
+    function lockMouse() { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (x) { /* not allowed */ } }
+    function setMouseLook(on) {
+      mouseLook = on; mouseBtn.setAttribute('aria-pressed', String(on));
+      try { localStorage.setItem('fp-mouselook-v1', on ? '1' : '0'); } catch (e) { /* private mode */ }
+      if (!on && locked()) document.exitPointerLock();
+      if (on && mode === 'walk') flash(MOUSE_HINT);
+    }
+    const MOUSE_HINT = 'Click the view to look round with the mouse (Esc lets go). WASD to walk, Shift to run.';
+    mouseBtn.hidden = !hasMouse;
+    mouseBtn.setAttribute('aria-pressed', String(mouseLook));
+    mouseBtn.addEventListener('click', () => setMouseLook(!mouseLook));
+    document.addEventListener('pointerlockchange', () => { cross.hidden = !locked(); dirty = true; if (locked()) flash('Mouse captured: move it to look, click to pick. Esc lets go.'); });
+    document.addEventListener('mousemove', (e) => {
+      if (!locked() || Math.abs(e.movementX) > 300 || Math.abs(e.movementY) > 300) return; // some browsers send one huge jump as the mouse is captured
+      walk.yaw -= e.movementX * 0.0022; walk.pitch -= e.movementY * 0.0022;
+      applyWalk(); dirty = true;
+    });
+
     /* ---------- views ---------- */
     const hint = $('hint');
     let hintTimer = 0;
@@ -855,8 +1159,9 @@
       stick.hidden = !walking || !matchMedia('(any-pointer: coarse)').matches;
       mini.hidden = !walking;
       if (walking) { sizeMini(); [walk.x, walk.y] = nearestFree(walk.x, walk.y); applyWalk(); canvas.focus({ preventScroll: true }); }
-      if (!card.hidden && selected) showBay(selected);
-      if (!seenHint[m]) { seenHint[m] = 1; flash(HINTS[m]); }
+      if (!walking && locked()) document.exitPointerLock();
+      if (!card.hidden) refreshCard();
+      if (!seenHint[m]) { seenHint[m] = 1; flash(walking && hasMouse && mouseLook ? MOUSE_HINT : HINTS[m]); }
       dirty = true;
     }
     for (const btn of document.querySelectorAll('.fp-modes button')) btn.addEventListener('click', () => setMode(btn.dataset.mode));
@@ -884,6 +1189,13 @@
       requestAnimationFrame(frame);
       const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now; // time-based, so slow phones walk at the same speed
       if (mode === 'walk' && stepWalk(dt)) dirty = true;
+      if (slide) {
+        const k = Math.min(1, Math.max(0, (performance.now() - slide.t0) / slide.dur)), e = 1 - Math.pow(1 - k, 3);
+        trayV = slide.from + (slide.to - slide.from) * e;
+        if (tray) moveTray();
+        dirty = true;
+        if (k >= 1) { const closing = slide.closing; slide = null; if (closing) removeTray(); }
+      }
       if (!dirty) return;
       dirty = false;
       renderer.render(scene, cam());
@@ -897,6 +1209,6 @@
     setMode('orbit');
     requestAnimationFrame(frame);
     // for testing in a browser console: FloorPlan.bays, FloorPlan.setMode('walk')
-    window.FloorPlan = { bays, setMode, showBay, walkTo, scene, renderer, get mode() { return mode; }, walk, orbit, top };
+    window.FloorPlan = { bays, setMode, showBay, showDrawer, showProduct, goTo, applyStock, walkTo, scene, renderer, get mode() { return mode; }, get stock() { return stock; }, get drawers() { return drawerList; }, get products() { return products; }, get tray() { return tray; }, walk, orbit, top, tapAt, setSheet };
   }
 })();

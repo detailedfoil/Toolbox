@@ -9,7 +9,7 @@
 <title>3D Floor Plan</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="floor-plan/floor-plan.css?v=92e906861b">
+<link rel="stylesheet" href="floor-plan/floor-plan.css?v=607c2aa7a8">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -25,6 +25,8 @@
 
   <div class="fp-side" id="side" hidden>
     <button class="fp-btn" id="namesBtn" type="button" aria-pressed="false">Bay names</button>
+    <button class="fp-btn" id="stockBtn" type="button">Stock</button>
+    <button class="fp-btn" id="mouseBtn" type="button" aria-pressed="true" hidden title="Look round with the mouse like a game">Mouse look</button>
     <button class="fp-btn fp-round" id="resetBtn" type="button" aria-label="Reset the view" title="Reset the view">&#8634;</button>
     <button class="fp-btn fp-round" id="helpBtn" type="button" aria-label="How to use it" title="How to use it">?</button>
   </div>
@@ -33,7 +35,31 @@
 
   <div class="fp-stick" id="stick" hidden aria-label="Walk: drag the stick"><div class="fp-knob" id="knob"></div></div>
 
+  <div class="fp-cross" id="cross" hidden></div>
+
   <p class="fp-hint" id="hint" role="status" hidden></p>
+
+  <section class="fp-sheet" id="sheet" hidden aria-label="Stock">
+    <button class="fp-x" id="sheetClose" type="button" aria-label="Close">&times;</button>
+    <h2>Stock</h2>
+    <div id="sheetPaste">
+      <p class="fp-small">On a PC, copy the SKU List report from the stock system and paste it here. It is not uploaded or saved anywhere: it stays on this device and is gone when you close the tab.</p>
+      <ol class="fp-steps">
+        <li>In <b>SKU Query</b>, set <b>Nailed</b> to <b>YES</b> and press <b>Run Query</b>.</li>
+        <li>Press the magnifying glass icon (in the red box):<br><img src="product-search/stock-help.png" width="717" height="78" alt="The toolbar, with the Print Preview icon (a page with a magnifying glass) in a red box"></li>
+        <li>Press <b>Ctrl+A</b>, then <b>Ctrl+C</b>, and paste it below.</li>
+      </ol>
+      <textarea id="stockText" rows="4" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste here (Ctrl+V)" aria-label="Paste the stock report here"></textarea>
+      <p class="fp-small" id="stockMsg" role="status" hidden></p>
+      <div class="fp-card-btns"><button id="stockGo" type="button">Show stock</button><button id="stockClip" class="alt" type="button" hidden>Paste from clipboard</button></div>
+    </div>
+    <div id="sheetFind" hidden>
+      <p class="fp-card-sub" id="stockInfo"></p>
+      <input id="findBox" class="fp-find" type="search" placeholder="Find a product: code or name" autocomplete="off" aria-label="Find a product">
+      <ul class="fp-find-list" id="findList"></ul>
+      <div class="fp-card-btns"><button id="stockNew" class="alt" type="button">Paste a new list</button><button id="stockClear" class="alt" type="button">Clear stock</button></div>
+    </div>
+  </section>
 
   <section class="fp-card" id="card" hidden aria-live="polite">
     <button class="fp-x" id="cardClose" type="button" aria-label="Close">&times;</button>
@@ -56,6 +82,7 @@
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
 <script src="floor-plan/bays.js?v=484c5d728e"></script>
-<script src="floor-plan/app.js?v=b4db35f2bc"></script>
+<script src="floor-plan/stock.js?v=56971d7dfc"></script>
+<script src="floor-plan/app.js?v=5f5e708739"></script>
 </body>
 </html>
