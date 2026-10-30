@@ -169,7 +169,7 @@ explain changes in plain English and say what they'll see.
     Left block A-D is "bulk" to the shop; its location numbers run from the middle aisle (so drawn bay 4 holds 1+2,
     3 holds 3+4 and so on), and B and C have stock on both sides. Done (30 Oct 2026): A (front BBG, back BBH), B
     (BBE front, BBF back), C (BBC, BBD), D (back BBB, front BBA 1-6 then LAC 3+4 on D1f), P (LAC 1+2), W (front only,
-    BBJ 1-12, left to right for now), E1 BBI 1+2 / E2 BBI 3+4 with BBK on E2's back, E3b HAB and E4b HAA (hazard
+    BBJ 1-12 from the back right corner to the fire door at the back left), E1 BBI 1+2 / E2 BBI 3+4 with BBK on E2's back, E3b HAB and E4b HAA (hazard
     cabinets, area only), L1 LAB 1+2, L3 LAB 3+4, L5 LAA, L2 and L4 the holding area, V1 AAJ 1, V2 AAJ 2 (HAD and HAE are ignored, detailedfoil's say). `unsure` marks guesses to confirm; area-only
     codes (no bay number) are fine in locations.json.
     Stock on the shelves (30 Oct 2026): the racking is 3.6 m tall (detailedfoil: the top shelf is about two people

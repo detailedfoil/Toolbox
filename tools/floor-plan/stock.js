@@ -99,7 +99,7 @@
           if (face === 'S' || face === 'E') v0 = mid; else v1 = mid;
         }
         var a0 = ax ? b.x0 : b.y0, a1 = ax ? b.x1 : b.y1, wid = (a1 - a0) / n;
-        var dir = ax && b.row !== 'W' && b.x1 <= LEFT_EDGE ? -1 : 1;
+        var dir = ax && (b.row === 'W' || b.x1 <= LEFT_EDGE) ? -1 : 1; // the back wall run counts from the back right corner too
         nums.forEach(function (no, k) {
           var u0 = dir > 0 ? a0 + k * wid : a1 - (k + 1) * wid;
           var seg = { bay: b, area: area, no: no, k: k, n: n, face: face, along: b.along, u0: u0, u1: u0 + wid, v0: v0, v1: v1, psign: FACE[face].psign };

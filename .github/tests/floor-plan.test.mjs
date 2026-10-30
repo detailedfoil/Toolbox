@@ -115,6 +115,8 @@ test('locations land on the right bay, slice and drawer', () => {
   assert.equal(P('BBB-01-02-01').seg.bay.id, 'D4b'); assert.equal(P('BBB-08-02-01').seg.bay.id, 'D1b'); // left block counts from the aisle
   assert.equal(P('BBC-01-02-01').seg.face, 'S'); assert.equal(P('BBD-01-02-01').seg.face, 'N');
   assert.equal(P('HAB-01-01-01').seg.bay.id, 'E3b');                                              // area-only codes
+  assert.equal(P('BBJ-01-01-01').seg.bay.id, 'W6'); assert.equal(P('BBJ-12-01-01').seg.bay.id, 'W1'); // the back wall run starts at the back right
+  assert.ok(P('BBJ-01-01-01').seg.u0 > P('BBJ-02-01-01').seg.u0);
   assert.equal(P('ZZZ-01-01-01'), null);
 });
 
