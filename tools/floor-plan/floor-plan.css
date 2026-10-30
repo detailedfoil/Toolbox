@@ -76,3 +76,5 @@ body.fp{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;fle
 .fp-find-list button:hover{border-color:var(--accent)}
 .fp-find-list small{color:var(--muted)}.fp-find-list .none{color:var(--muted);padding:6px 2px}
 .fp-stage.walking .fp-sheet{top:max(10px,env(safe-area-inset-top,0px))}
+.fp-file{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:12px;background:var(--accent);color:#fff;font-weight:650;cursor:pointer}
+.fp-file input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}

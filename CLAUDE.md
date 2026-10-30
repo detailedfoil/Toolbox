@@ -183,7 +183,7 @@ explain changes in plain English and say what they'll see.
     it out with what's in it, and the search jumps you to a product. Positions count from the LEFT as you face the
     shelf (an assumption, to be confirmed; `psign` in stock.js flips it). Mouse look: on a PC, in Walk, the first click
     captures the mouse like a game (Esc lets go); the "Mouse look" button (only shown with a mouse) turns it off for
-    dragging instead. A paste that stops part way through a row (stock.js `cut`) is flagged, and "Add more" adds a second paste to the list (the 29 Oct list was cut at exactly 100,000 characters, 1,129 products; detailedfoil expects about 10,000 nailed). Next: whatever detailedfoil asks for (heights, shelf counts and the position direction are still guesses).
+    dragging instead. A paste that stops part way through a row (stock.js `cut`) is flagged, and "Add more" adds a second paste to the list. The report can also be uploaded as a text file ("Upload a file", or drop it on the panel; detailedfoil, 30 Oct: "as well as the paste"): the first list he pasted was cut at exactly 100,000 characters (1,129 products) by a copy or chat limit, the full file has 10,999. `areas` in locations.json (shelves and positions per area, `ignore` = HAD and HAE) came from the full file; HAC (11 products) has no bay yet. Next: whatever detailedfoil asks for (heights, shelf counts and the position direction are still guesses).
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

@@ -1060,7 +1060,8 @@
       const have = !!stock && !pasting;
       $('sheetPaste').hidden = have; $('sheetFind').hidden = !have;
       if (!stock) return;
-      const un = Object.keys(stock.unplaced).sort((a, b) => stock.unplaced[b] - stock.unplaced[a]);
+      const skip = (LOCS && LOCS.ignore) || [];
+      const un = Object.keys(stock.unplaced).filter((x) => skip.indexOf(x) < 0).sort((a, b) => stock.unplaced[b] - stock.unplaced[a]);
       let info = stock.items.length + ' products are on the shelves.';
       if (un.length) info += ' ' + un.reduce((n, a) => n + stock.unplaced[a], 0) + ' more have a location I have no bay for: ' + un.map((a) => a + ' (' + stock.unplaced[a] + ')').join(', ') + '.';
       if (stock.cut) info += ' It looks cut off part way through a row (copy and paste have size limits), so there are more products than this. Press Add more and paste the rest, or paste the whole report straight from the stock system on a PC.';
@@ -1096,12 +1097,13 @@
     $('stockBtn').addEventListener('click', () => setSheet(sheet.hidden));
     $('sheetClose').addEventListener('click', () => setSheet(false));
     $('findBox').addEventListener('input', runFind);
-    $('stockGo').addEventListener('click', () => {
-      const raw = $('stockText').value, msg = $('stockMsg');
+    // a paste or an uploaded file: the same report either way
+    function submitStock(raw) {
+      const msg = $('stockMsg');
       let r = FS.parse(raw);
-      if (!r) { msg.textContent = "I couldn't find any products with a location in that. Check it is the SKU List report with the Nailed Location column."; msg.hidden = false; return; }
+      if (!r) { msg.textContent = "I couldn't find any products with a location in that. Check it is the SKU List report with the Nailed Location column."; msg.hidden = false; return false; }
       msg.hidden = true; $('stockText').value = '';
-      stockCut = !!r.cut; // the paste stops part way through a row
+      stockCut = !!r.cut; // stops part way through a row
       if (adding && stock) {
         const seen = new Set(stock.all.map((x) => x.code + x.loc));
         r = { items: stock.all.concat(r.items.filter((x) => !seen.has(x.code + x.loc))) };
@@ -1111,7 +1113,21 @@
       pasting = false; adding = false;
       applyStock(r.items); sheetState(); $('findBox').value = ''; runFind();
       if (!sheet.hidden && !$('sheetFind').hidden) $('findBox').focus();
-    });
+      return true;
+    }
+    $('stockGo').addEventListener('click', () => submitStock($('stockText').value));
+    function readFile(file) {
+      if (!file) return;
+      const msg = $('stockMsg');
+      msg.textContent = 'Reading ' + file.name + '...'; msg.hidden = false;
+      const rd = new FileReader();
+      rd.onload = () => { msg.hidden = true; if (!submitStock(String(rd.result || ''))) { pasting = true; sheetState(); } };
+      rd.onerror = () => { msg.textContent = "I couldn't read that file."; msg.hidden = false; };
+      rd.readAsText(file);
+    }
+    $('stockFile').addEventListener('change', (e) => { readFile(e.target.files && e.target.files[0]); e.target.value = ''; });
+    sheet.addEventListener('dragover', (e) => { e.preventDefault(); });
+    sheet.addEventListener('drop', (e) => { e.preventDefault(); if (e.dataTransfer && e.dataTransfer.files.length) readFile(e.dataTransfer.files[0]); });
     $('stockAdd').addEventListener('click', () => { pasting = true; adding = true; sheetState(); $('stockText').focus(); });
     $('stockNew').addEventListener('click', () => { pasting = true; adding = false; sheetState(); $('stockText').focus(); });
     $('stockClear').addEventListener('click', () => { FS.storage.clear(); stock = null; pasting = false; closeCard(); clearProducts(); sheetState(); $('findList').innerHTML = ''; dirty = true; });

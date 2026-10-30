@@ -96,9 +96,9 @@ test('the stock report is read: product, name, available quantity and location (
 test('shelves: shelf 10 of the AA_ areas is about chin height, the top shelf is about two people tall, others are even', () => {
   const bs = withLocs(), by = Object.fromEntries(bs.map((b) => [b.id, b]));
   const j = by.J1f;
-  assert.equal(j.levels, 15);
+  assert.equal(j.levels, 16);
   assert.ok(Math.abs(FS.shelfZ(j, 10) - 1.5) < 0.05, 'shelf 10 is ' + FS.shelfZ(j, 10));
-  assert.ok(Math.abs(FS.shelfZ(j, 15) - (j.h - 0.2)) < 0.01 && j.h >= 3.5);
+  assert.ok(Math.abs(FS.shelfZ(j, j.levels) - (j.h - 0.2)) < 0.01 && j.h >= 3.5);
   for (let s = 2; s <= 10; s++) assert.ok(Math.abs(FS.shelfZ(j, s) - FS.shelfZ(j, s - 1) - 0.153) < 0.001);
   const k = by.K1f; // BAA has 10 shelves spread evenly
   const gaps = []; for (let s = 2; s <= 10; s++) gaps.push(FS.shelfZ(k, s) - FS.shelfZ(k, s - 1));
