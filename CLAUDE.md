@@ -166,7 +166,12 @@ explain changes in plain English and say what they'll see.
     holds, as AREA-BAY codes (AAA-01 is the start of AAA-01-12-06): bay 1 is nearest the middle aisle, 6 at the right
     wall. Done so far: K (front BAA 1-6, back BAB 1-6), J (front AAA 1-2 / 3-4 / 5-6 / 7-8 / 9 / 10, back AAB 1-6),
     G (front BAC 1-2 then AAE 1-4, back BAD split like AAA: 1+2, 3+4, 5+6, 7+8, 9, 10), F (front BAF 1-6), E (E3f BAG 1, E4f BAG 2; E3b and E4b are the hazard cabinets, codes not given yet), H (front AAC 1-6, back AAD 1-6), F back BAE 1-6. The viewer shows the location on the tag and card (`attach` in bays.js); no stock goes in the repo.
-    Next: F back, E, A-D, W, L and the rest of the areas, then pasting the stock list to show where each product is.
+    Left block A-D is "bulk" to the shop; its location numbers run from the middle aisle (so drawn bay 4 holds 1+2,
+    3 holds 3+4 and so on), and B and C have stock on both sides. Done (30 Oct 2026): A (front BBG, back BBH), B
+    (BBE front, BBF back), C (BBC, BBD), D (back BBB, front BBA 1-6 then LAC 3+4 on D1f), P (LAC 1+2), W (front only,
+    BBJ 1-12, left to right for now), E1 BBI 1+2 / E2 BBI 3+4 with BBK on E2's back, E3b HAB and E4b HAA (hazard
+    cabinets, area only), L1-L2 LAB, L5 LAA, L3-L4 the holding area. `unsure` marks guesses to confirm; area-only
+    codes (no bay number) are fine in locations.json. Next: the areas not placed yet (AAJ, HAD, HAE), then pasting the stock list to show where each product is.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

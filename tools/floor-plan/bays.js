@@ -32,14 +32,19 @@
   function where(codes) {
     const by = [];
     for (const c of codes) {
-      const [area, n] = c.split('-'), last = by[by.length - 1];
-      if (last && last.area === area) last.nums.push(+n); else by.push({ area, nums: [+n] });
+      const [area, n] = c.split('-');
+      let g = by.find((x) => x.area === area);
+      if (!g) by.push((g = { area, nums: [] }));
+      if (n) g.nums.push(+n);
     }
-    return by.map((g) => g.area + ' ' + g.nums.join('+')).join(', ');
+    return by.map((g) => g.area + (g.nums.length ? ' ' + g.nums.join('+') : '')).join(', ');
   }
   function attach(bays, locs) {
     const unsure = (locs && locs.unsure) || {};
+    const hold = (locs && locs.holding) || [], notes = (locs && locs.notes) || {};
     for (const b of bays) {
+      if (notes[b.id]) b.note = notes[b.id];
+      if (hold.indexOf(b.id) >= 0) b.holding = true;
       const codes = locs && locs.bays && locs.bays[b.id];
       if (!codes) continue;
       b.codes = codes; b.where = where(codes); b.unsure = !!unsure[b.id];

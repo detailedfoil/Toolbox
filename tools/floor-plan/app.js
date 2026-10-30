@@ -605,10 +605,12 @@
       const items = [what(b), m2(wide) + ' wide, ' + m2(deep) + ' deep, about ' + m2(b.h) + ' high', FACES[b.open] || ''];
       if (b.braced) items.push('Drawn with a cross (X) on the plan');
       if (b.where) items.unshift('Bay ' + b.id + ' in my drawing' + (b.unsure ? ' (location to be confirmed)' : ''));
+      if (b.note) items.splice(b.where ? 1 : 0, 0, b.note);
+      if (b.holding) items.unshift('Holding area');
       if (b.plan) items.push('Label on the electrical plan: ' + b.plan);
       $('cardList').innerHTML = '';
       for (const t of items) if (t) { const li = document.createElement('li'); li.textContent = t; $('cardList').appendChild(li); }
-      $('cardNote').textContent = b.where ? 'Stock location, from your descriptions.' : 'No stock location yet. This is a temporary name: send Claude the location names and they will replace it.';
+      $('cardNote').textContent = b.holding ? 'No stock locations here.' : b.where ? 'Stock location, from your descriptions.' : 'No stock location yet. This is a temporary name: send Claude the location names and they will replace it.';
       const btns = $('cardBtns'); btns.innerHTML = '';
       const go = document.createElement('button'); go.type = 'button'; go.textContent = mode === 'walk' ? 'Stand in front of it' : 'Walk here';
       go.addEventListener('click', () => walkTo(b));
