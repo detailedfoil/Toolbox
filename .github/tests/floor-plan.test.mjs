@@ -181,6 +181,7 @@ test('free spots: gaps between products, every empty drawer position, and whole 
   const bs = withLocs(), idx = FS.index(bs, LOCS);
   const items = FS.parse(report([
     ['30001', 'BAA-01-05-01'], ['30002', 'BAA-01-05-03'], ['30003', 'BAA-01-05-06'],   // 02 free, then 04 and 05
+    ['30008', 'BAA-01-08-01'],                                                          // so shelves 6 and 7 are under one in use
     ['30004', 'BAA-01-03-02'],                                                          // 01 free; nothing after the last counts
     ['30005', 'AAB-01-01-01'],                                                          // a drawer shelf: 02 to 20 free
     ['30006', 'AAB-01-12-04'],                                                          // above the drawers: 01 to 03, and all of shelf 11
@@ -190,6 +191,7 @@ test('free spots: gaps between products, every empty drawer position, and whole 
   assert.deepEqual(at('BAA-01-05'), [['gap', 2, 2], ['gap', 4, 5]]);
   assert.deepEqual(at('BAA-01-03'), [['gap', 1, 1]]);
   assert.deepEqual(at('BAA-01-04'), [['shelf', 0, 0]]);          // under shelf 5, nothing on it
+  assert.deepEqual(at('BAA-01-06'), []);                          // empty on purpose (locations.json notFree)
   assert.deepEqual(at('BAA-01-06'), []);                          // above the top one in use: not counted
   assert.deepEqual(at('AAB-01-01'), [['drawer', 2, 20]]);
   assert.deepEqual(at('AAB-01-02'), [['drawer', 1, 20]]);         // a drawer shelf with nothing on it
@@ -199,7 +201,7 @@ test('free spots: gaps between products, every empty drawer position, and whole 
   assert.deepEqual(at('BBC-09-01'), []);
   const gap = fr.runs.find((r) => r.key === 'BAA-01-05' && r.from === 4);
   assert.equal(gap.prev.code, '30002'); assert.equal(gap.next.code, '30003'); assert.equal(gap.loc, 'BAA-01-05-04'); assert.equal(gap.n, 2);
-  assert.equal(fr.byArea.BAA.positions, 4); assert.equal(fr.byArea.BAA.shelves, 3);  // shelves 1, 2 and 4 of BAA-01
+  assert.equal(fr.byArea.BAA.positions, 4); assert.equal(fr.byArea.BAA.shelves, 3);  // shelves 1, 2 and 4 of BAA-01 (6 and 7 are kept empty)
   const sorted = plain(fr.runs.map((r) => r.key + '-' + String(r.from).padStart(2, '0')));
   assert.deepEqual(sorted, sorted.slice().sort(), 'in location order');
 });

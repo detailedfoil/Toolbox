@@ -9,7 +9,7 @@
 <title>3D Floor Plan</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="floor-plan/floor-plan.css?v=e01e5720a8">
+<link rel="stylesheet" href="floor-plan/floor-plan.css?v=88a9749ddc">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -103,11 +103,15 @@
     </div>
   </div>
 
-  <div class="fp-msg" id="msg">Loading the store&hellip;</div>
+  <div class="fp-msg" id="msg" hidden></div>
+  <div class="fp-loading" id="loading" role="progressbar" aria-label="Loading the 3D floor plan" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <p id="loadText">Loading the store&hellip;</p>
+    <div class="fp-meter"><div id="loadBar"></div></div>
+  </div>
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
 <script src="floor-plan/bays.js?v=484c5d728e"></script>
-<script src="floor-plan/stock.js?v=2f952d85be"></script>
-<script src="floor-plan/app.js?v=f7fe9f084d"></script>
+<script src="floor-plan/stock.js?v=ecaea17359"></script>
+<script src="floor-plan/app.js?v=a3c0c1d897"></script>
 </body>
 </html>

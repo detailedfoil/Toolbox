@@ -19,7 +19,14 @@
   function signedInAs() {
     try { return (localStorage.getItem('toolbox.signedIn.area20') || '').toUpperCase(); } catch (e) { return ''; }
   }
-  function say(text) { msg.textContent = text; msg.hidden = !text; }
+  const loading = $('loading');
+  function say(text) { msg.textContent = text; msg.hidden = !text; if (text) loading.hidden = true; }
+  function progress(frac, text) { // the loading bar
+    const pc = Math.round(frac * 100);
+    $('loadBar').style.width = pc + '%'; loading.setAttribute('aria-valuenow', String(pc));
+    if (text) $('loadText').textContent = text;
+  }
+  const breathe = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))); // lets the bar move before the next step
 
   let booted = false;
   function boot() {
@@ -30,17 +37,19 @@
     if (me !== STORE) { say('The 3D floor plan is only for Dunstable (LB1).'); return; }
     if (!window.THREE || !window.FloorBays || !window.FloorStock) { say("The 3D viewer didn't load. Check your signal and reload the page."); return; }
     const get = (f) => fetch('floor-plan/data/' + f, { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    progress(0.08, 'Loading the store\u2026');
     // the stock locations are a bonus: without them the bays just keep their temporary names
     Promise.all([get('layout.json'), get('locations.json').catch(() => null)])
-      .then(([layout, locs]) => {
-        try { start(layout, locs); } catch (e) { console.error(e); say('Something went wrong drawing the store. Reload the page to try again.'); }
+      .then(async ([layout, locs]) => {
+        progress(0.25, 'Building the racking\u2026'); await breathe();
+        try { await start(layout, locs); } catch (e) { console.error(e); say('Something went wrong drawing the store. Reload the page to try again.'); }
       })
       .catch((e) => { console.error(e); say("Couldn't load the store layout. Check your signal and reload the page."); });
   }
   window.addEventListener('toolbox:login', boot);
   boot();
 
-  function start(L, LOCS) {
+  async function start(L, LOCS) {
     const T = THREE;
     const B = L.building, W = B.w, D = B.d, H = B.h, WT = B.t, CUT = B.cut || 3.2;
     const ROOM_H = 2.85;
@@ -985,7 +994,7 @@
         groups.main.add(productMesh);
       }
       shelfCells.clear(); for (const k in arr.shelves) if (!arr.shelves[k].drawer) shelfCells.set(k, arr.shelves[k].cells);
-      clearLabelPlanes();
+      if (labelMesh) buildLabels();
       free = FS.freeSpots(arr, sidx);
       for (const r of free.runs) {
         const o = bayInfo.get(r.seg.bay) || { items: 0, free: 0, shelves: 0 };
@@ -1095,32 +1104,17 @@
       pin.scale.set(hgt * pin.userData.aspect, hgt, 1);
     }
 
-    /* ---------- atlases: lots of little pictures in one texture, drawn in one go ---------- */
-    // The photos and the location labels each live in one big texture with a slot per picture, and each set is one
-    // InstancedMesh, so the phone makes 2 draws for them rather than hundreds, and memory stays the same however far
-    // you walk. A slot is reused for something new once its picture hasn't been needed for longest.
-    // Smaller copies (mipmaps, for things further away) are drawn here with each picture, levels 0 to 3: asking the GPU
-    // to remake them for the whole texture after every change stalled the test browser for seconds.
-    const MIPS = 4;
-    function atlasTexture(w, h) {
-      const t = new T.DataTexture(null, w, h);
-      t.mipmaps = [];
-      for (let l = 0; l < MIPS; l++) t.mipmaps.push({ data: null, width: w >> l, height: h >> l });
-      t.source.dataReady = false; // room on the GPU, nothing to send yet: the slots are filled one at a time
-      t.colorSpace = T.SRGBColorSpace; t.magFilter = T.LinearFilter; t.minFilter = T.LinearMipmapLinearFilter; t.generateMipmaps = false;
-      t.needsUpdate = true;
-      return t;
-    }
+    /* ---------- photos and labels drawn many to a draw ---------- */
     function atlasSlots(x0, y0, w, h, sw, sh) {
       const out = [];
       for (let y = y0; y + sh <= y0 + h; y += sh) for (let x = x0; x + sw <= x0 + w; x += sw) out.push({ x, y, key: null, used: 0 });
       return out;
     }
-    function atlasMesh(mat, tex, cap) {
+    function atlasMesh(mat, tex, cap) { // an InstancedMesh whose instances each show their own part (slot) of one texture
       const geo = new T.PlaneGeometry(1, 1);
       geo.setAttribute('aUv', new T.InstancedBufferAttribute(new Float32Array(cap * 4), 4));
       mat.map = tex;
-      mat.onBeforeCompile = (sh) => { // each instance shows its own slot (canvas rows go in top first, so v is flipped)
+      mat.onBeforeCompile = (sh) => { // images go in top row first, so v is flipped inside the slot
         sh.vertexShader = 'attribute vec4 aUv;\n' + sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n\tvMapUv = aUv.xy + vec2(vMapUv.x, 1.0 - vMapUv.y) * aUv.zw;');
       };
       const m = new T.InstancedMesh(geo, mat, cap);
@@ -1129,21 +1123,6 @@
       return m;
     }
     const _src = new T.Texture(), _at = new T.Vector2(), _im = new T.Matrix4(), _iq = new T.Quaternion(), _ip = new T.Vector3(), _is = new T.Vector3(), _up = new T.Vector3(0, 1, 0);
-    const mipCanvas = [];
-    for (let l = 0; l < MIPS; l++) mipCanvas.push(document.createElement('canvas'));
-    function toAtlas(tex, canvas, x, y) { // a small canvas into its slot (x, y on an 8 px grid), and halved copies into each smaller level
-      let from = canvas;
-      for (let l = 0; l < MIPS; l++) {
-        if (l) {
-          const c = mipCanvas[l], w = Math.max(1, canvas.width >> l), h = Math.max(1, canvas.height >> l);
-          c.width = w; c.height = h;
-          const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(from, 0, 0, w, h);
-          from = c;
-        }
-        _src.image = from;
-        renderer.copyTextureToTexture(_src, tex, null, _at.set(x >> l, y >> l), 0, l);
-      }
-    }
     function takeSlot(slots, keep) { // an empty slot, or the one unused for longest that isn't on screen
       let best = null;
       for (const s of slots) {
@@ -1167,16 +1146,20 @@
     // The Toolbox's own saved copies, the ones Product Search shows (product-search/photos/CODE.jpg, 120 px, about
     // 2 KB each), loaded a few at a time and only for boxes near you, an open drawer and the cards. Screwfix's own image
     // server is never asked (detailedfoil, 30 Oct 2026: don't send it everything at once): no saved copy, no photo.
+    // They go straight into one 2048 px texture with room for 256 (no smaller copies to make, so each costs one quick
+    // copy), and the 80 nearest are drawn in one go.
     const photoUrl = (code) => 'product-search/photos/' + encodeURIComponent(code) + '.jpg';
     const photos = new Map(); // code -> { state: 'loading' | 'ok' | 'none', slot }
-    const PHOTO_AT_ONCE = 4, PHOTO_NEAR = 5, PS = 136, PP = 8, PI = 120; // a slot is 136 px: the 120 px photo with a white edge
-    const photoTex = atlasTexture(2048, 1024), photoSlots = atlasSlots(0, 0, 2048, 1024, PS, PS);
-    const PHOTO_MAX = Math.min(80, photoSlots.length - 20);
+    const PHOTO_AT_ONCE = 4, PHOTO_NEAR = 5, PHOTO_MAX = 80, PS = 128, PI = 120;
+    const photoTex = new T.DataTexture(null, 2048, 2048);
+    photoTex.source.dataReady = false; // room on the graphics chip, nothing sent yet: the slots are filled one at a time
+    photoTex.colorSpace = T.SRGBColorSpace; photoTex.magFilter = photoTex.minFilter = T.LinearFilter; photoTex.generateMipmaps = false; photoTex.needsUpdate = true;
+    const photoSlots = atlasSlots(0, 0, 2048, 2048, PS, PS);
+    const photoMesh = atlasMesh(new T.MeshLambertMaterial({ color: 0xffffff }), photoTex, PHOTO_MAX);
     const photoGeo = new T.PlaneGeometry(1, 1); // for the photos in an open drawer
-    const photoMesh = atlasMesh(new T.MeshLambertMaterial({ color: 0xffffff }), photoTex, photoSlots.length);
-    const photoCanvas = document.createElement('canvas'); photoCanvas.width = photoCanvas.height = PS;
+    const photoCanvas = document.createElement('canvas'); photoCanvas.width = photoCanvas.height = PI;
     let photoQueue = [], photoBusy = 0, photoDue = 0, photoSig = '', photoNear = [];
-    const photoInbox = []; // photos that have arrived, waiting for the next frame to go in the atlas together
+    const photoInbox = []; // photos that have arrived, waiting for the next frame
     function loadPhotos() {
       while (photoBusy < PHOTO_AT_ONCE && photoQueue.length) {
         const code = photoQueue.shift();
@@ -1191,22 +1174,23 @@
       }
     }
     function wantPhotos(codes) { photoQueue = codes.filter((c) => !photos.has(c)); loadPhotos(); }
-    function flushPhotos() { // called by the frame loop: everything that arrived since the last frame, one texture update
+    function flushPhotos() { // called by the frame loop: everything that arrived since the last frame
       const list = photoInbox.splice(0), keep = new Set(photoNear.map((i) => products[i] && products[i].code)), now = performance.now();
-      const g = photoCanvas.getContext('2d');
-      list.forEach(([code, img], k) => {
+      for (const [code, img] of list) {
         const p = photos.get(code);
-        if (!p) return;
+        if (!p) continue;
         const s = takeSlot(photoSlots, keep);
-        if (!s) { photos.delete(code); return; }
-        if (s.key) photos.delete(s.key); // its old photo is fetched again (from the browser's copy) if it's wanted later
-        g.fillStyle = '#ffffff'; g.fillRect(0, 0, PS, PS); g.drawImage(img, PP, PP, PI, PI);
-        toAtlas(photoTex, photoCanvas, s.x, s.y);
+        if (!s) { photos.delete(code); continue; }
+        if (s.key) photos.delete(s.key); // its old photo comes again (from the browser's copy) if it's wanted later
+        let from = img;
+        if (img.naturalWidth !== PI || img.naturalHeight !== PI) { const g = photoCanvas.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, PI, PI); g.drawImage(img, 0, 0, PI, PI); from = photoCanvas; }
+        _src.image = from;
+        renderer.copyTextureToTexture(_src, photoTex, null, _at.set(s.x, s.y));
         s.key = code; s.used = now; p.state = 'ok'; p.slot = s;
-      });
+      }
       fillPhotos();
     }
-    function fillPhotos() { // the photo instances: the near boxes whose photo is in the atlas
+    function fillPhotos() { // the photo instances: the near boxes whose photo is in the texture
       let n = 0;
       const now = performance.now();
       for (const i of photoNear) {
@@ -1216,7 +1200,7 @@
         const across = f[0] ? r.y1 - r.y0 : r.x1 - r.x0, deep = f[0] ? r.x1 - r.x0 : r.y1 - r.y0, s = Math.min(across, it.h) * 0.9;
         p.slot.used = now;
         putInstance(photoMesh, n++, (r.x0 + r.x1) / 2 + f[0] * (deep * 0.47 + 0.003), (r.y0 + r.y1) / 2 + f[1] * (deep * 0.47 + 0.003), it.z0 + it.h / 2, faceTurn(f), s, s,
-          [(p.slot.x + PP) / 2048, (p.slot.y + PP) / 1024, PI / 2048, PI / 1024]);
+          [(p.slot.x + 0.5) / 2048, (p.slot.y + 0.5) / 2048, (PI - 1) / 2048, (PI - 1) / 2048]);
       }
       showInstances(photoMesh, n);
       redraw();
@@ -1246,107 +1230,140 @@
       fillPhotos();
     }
 
-    /* ---------- location labels: red / blue on the shelf edge, white ones on the drawers ---------- */
-    // Like the real ones (red for odd bay numbers, blue for even; a drawer's label has its positions with the back
-    // one on top). Only the ones near you and in view are drawn. Their atlas: shelf-edge labels (192 x 40) in the top
-    // half, drawer labels (128 wide) in the bottom half, each with an 8 px edge so they don't run into each other.
-    const labelTex = atlasTexture(2048, 2048), shelfCells = new Map();
-    const beamSlots = atlasSlots(0, 0, 2048, 1024, 208, 56), drawerSlots = atlasSlots(0, 1024, 2048, 1024, 144, 96);
-    const labelMesh = atlasMesh(new T.MeshBasicMaterial({ color: 0xffffff }), labelTex, beamSlots.length + drawerSlots.length);
-    const labelAt = new Map(); // label key -> its slot
-    let labelWanted = 0;
-    const labelCanvas = document.createElement('canvas');
-    const LABEL_FONT = 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif';
-    function fitFont(g, text, px, room) { g.font = '800 ' + px + 'px ' + LABEL_FONT; const w = g.measureText(text).width; if (w > room) g.font = '800 ' + Math.floor(px * room / w) + 'px ' + LABEL_FONT; }
-    // Each label is drawn with an 8 px edge of its own background colour round it (so the smaller copies don't pick up
-    // the black between slots); the label itself starts at 8, 8.
-    function labelSize(w, h, bg) {
-      const c = labelCanvas; c.width = w + 16; c.height = h + 16;
+    /* ---------- location labels: every one in the store, made once while the page loads ---------- */
+    // Red (odd bay numbers) and blue (even) labels on the shelf edges, and white ones on the drawer fronts (a line per
+    // position, the back one on top), like the real ones. Making them as you walked round was laggy, so now all of them
+    // (about 15,000 with the full list) are one InstancedMesh made behind the loading bar: each instance carries its
+    // location as numbers (4 characters to a number, 6 bits each) and the graphics chip draws the letters from one small
+    // font texture. Walking round costs nothing extra; only the ones within 6 m are drawn.
+    const GLYPHS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'; // 62 = a gap, 63 = the arrow
+    const glyphTex = (() => { // 16 x 4 cells of 32 x 64 px, white letters
+      const c = document.createElement('canvas'); c.width = 512; c.height = 256;
       const g = c.getContext('2d');
-      g.fillStyle = bg; g.fillRect(0, 0, w + 16, h + 16); g.translate(8, 8);
-      return g;
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '800 52px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+      for (let i = 0; i < GLYPHS.length; i++) {
+        const s = Math.min(1, 29 / g.measureText(GLYPHS[i]).width); // wide letters are squeezed into the cell
+        g.save(); g.translate((i % 16) * 32 + 16, ((i / 16) | 0) * 64 + 33); g.scale(s, 1); g.fillText(GLYPHS[i], 0, 0); g.restore();
+      }
+      g.save(); g.translate(15 * 32 + 16, 3 * 64); // the arrow, cell 63
+      g.beginPath(); g.moveTo(0, 9); g.lineTo(-13, 31); g.lineTo(13, 31); g.closePath(); g.fill(); g.fillRect(-4.5, 29, 9, 26);
+      g.restore();
+      const t = new T.CanvasTexture(c); t.colorSpace = T.NoColorSpace; t.anisotropy = maxAniso;
+      return t;
+    })();
+    const labelMat = new T.ShaderMaterial({
+      uniforms: {
+        uGlyphs: { value: glyphTex }, uFar: { value: 6 },
+        uRed: { value: new T.Color('#c3222b') }, uBlue: { value: new T.Color('#1f4fa8') }, uPaper: { value: new T.Color('#f2f2f0') }, uInk: { value: new T.Color('#15171c') }, uEdge: { value: new T.Color('#b9b9b5') },
+      },
+      vertexShader: [
+        'attribute vec4 aLab;', 'uniform float uFar;', 'varying vec2 vUv;', 'flat varying vec4 vLab;',
+        'void main() {',
+        '  vUv = uv; vLab = aLab;',
+        '  vec4 c = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);',
+        '  if (distance(c.xyz, cameraPosition) > uFar) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }', // too far: not drawn
+        '  gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0);',
+        '}'].join('\n'),
+      fragmentShader: [
+        'uniform sampler2D uGlyphs;', 'uniform vec3 uRed, uBlue, uPaper, uInk, uEdge;', 'varying vec2 vUv;', 'flat varying vec4 vLab;',
+        'float charAt(float i) {', // character i (0 to 11) of the location
+        '  float f = i < 3.5 ? vLab.x : (i < 7.5 ? vLab.y : vLab.z);',
+        '  return mod(floor(f / exp2(6.0 * mod(i, 4.0))), 64.0);',
+        '}',
+        'void main() {',
+        '  float style = vLab.w;', // 0 to 3: a line of a drawer label (1 top, 2 bottom, 3 the only one), 4: red, 5: blue
+        '  bool shelf = style > 3.5;',
+        '  vec3 bg = shelf ? (style < 4.5 ? uRed : uBlue) : uPaper;',
+        '  vec3 ink = shelf ? vec3(1.0) : uInk;',
+        '  float cells = shelf ? 13.0 : 12.0;', // the shelf-edge labels have the arrow as a 13th character
+        '  vec2 pad = shelf ? vec2(0.035, 0.16) : vec2(0.05, 0.12);',
+        '  vec2 p = (vUv - pad) / (1.0 - 2.0 * pad);',
+        '  vec2 q = vec2(p.x * cells, p.y);',
+        '  vec2 qdx = dFdx(q), qdy = dFdy(q), sc = vec2(1.0 / 16.0, 1.0 / 4.0);',
+        '  float a = 0.0;',
+        '  if (p.x > 0.0 && p.x < 1.0 && p.y > 0.0 && p.y < 1.0) {',
+        '    float i = floor(q.x);',
+        '    float code = i > 11.5 ? 63.0 : charAt(i);',
+        '    vec2 cell = vec2(mod(code, 16.0), floor(code / 16.0));',
+        '    vec2 g = vec2((cell.x + fract(q.x)) / 16.0, 1.0 - (cell.y + 1.0 - p.y) / 4.0);',
+        '    a = textureGrad(uGlyphs, g, qdx * sc, qdy * sc).a;',
+        '  }',
+        '  vec3 col = mix(bg, ink, a);',
+        '  if (!shelf) {', // a thin grey edge round each drawer label
+        '    float e = min(vUv.x, 1.0 - vUv.x) < 0.012 ? 1.0 : 0.0;',
+        '    if ((abs(style - 1.0) < 0.5 || abs(style - 3.0) < 0.5) && vUv.y > 0.93) e = 1.0;',
+        '    if ((abs(style - 2.0) < 0.5 || abs(style - 3.0) < 0.5) && vUv.y < 0.07) e = 1.0;',
+        '    col = mix(col, uEdge, e);',
+        '  }',
+        '  gl_FragColor = vec4(col, 1.0);',
+        '  #include <colorspace_fragment>',
+        '}'].join('\n'),
+    });
+    let labelMesh = null, labelBase = null;
+    const shelfCells = new Map(); // area-bay-shelf -> how many positions its labels need (from the list)
+    const labelRange = new Map(); // drawer index -> [first instance, how many] (hidden while it's pulled out)
+    const labelsWanted = () => mode === 'walk' || (mode === 'orbit' && orbit.r < 9);
+    function packCode(t) { // 12 characters, 4 to a number: exact in the graphics chip's 32-bit numbers
+      const out = [0, 0, 0];
+      for (let i = 0; i < 12; i++) { const k = i < t.length ? GLYPHS.indexOf(t[i]) : -1; out[(i / 4) | 0] += (k < 0 ? 62 : k) * Math.pow(64, i % 4); }
+      return out;
     }
-    function drawBeam(text, odd) { // 192 x 40
-      const w = 192, h = 40, g = labelSize(w, h, odd ? '#c3222b' : '#1f4fa8');
-      g.fillStyle = '#fff'; fitFont(g, text, 24, w - 40); g.textBaseline = 'middle'; g.fillText(text, 7, 21);
-      g.beginPath(); g.moveTo(w - 17, 6); g.lineTo(w - 27, 21); g.lineTo(w - 7, 21); g.closePath(); g.fill(); // the arrow
-      g.fillRect(w - 20, 20, 6, 13);
-      return [w, h];
-    }
-    function drawDrawer(lines) { // 128 wide, a line per position, the back one on top
-      const n = lines.length, lh = n > 2 ? 18 : 22, w = 128, h = 8 + n * lh, g = labelSize(w, h, '#f2f2f0');
-      g.strokeStyle = '#b9b9b5'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2);
-      g.fillStyle = '#15171c'; fitFont(g, lines[0], n > 2 ? 15 : 18, w - 12); g.textAlign = 'center'; g.textBaseline = 'middle';
-      lines.forEach((t, i) => g.fillText(t, w / 2, 4 + i * lh + lh / 2 + 1));
-      return [w, h];
-    }
-    function clearLabelPlanes() { showInstances(labelMesh, 0); redraw(); }
-    function updateLabels() {
-      const walking = mode === 'walk', want = [];
-      if (sidx && (walking || (mode === 'orbit' && orbit.r < 9))) {
-        const c = cam();
-        c.updateMatrixWorld(); _pm.multiplyMatrices(c.projectionMatrix, c.matrixWorldInverse); _frustum.setFromProjectionMatrix(_pm);
-        const ex = c.position.x, ey = c.position.z, ez = c.position.y, R = walking ? 4 : Math.max(2.5, orbit.r * 0.5);
-        const take = (key, d2, x, y, z, f, w, draw, drawer) => { // x, y: plan point on the front face
-          if (d2 > R * R || (x - ex) * f[0] + (y - ey) * f[1] > 0) return;
-          if (!_frustum.containsPoint(_pv.set(x, z, y))) return;
-          want.push({ d2, key, x, y, z, f, w, draw, drawer });
-        };
-        for (const seg of sidx.list) {
-          const b = seg.bay;
-          if (b.kind === 'bulk' || b.kind === 'cage' || b.kind === 'cabinet') continue;
-          if (Math.max(b.x0 - ex, 0, ex - b.x1) > R || Math.max(b.y0 - ey, 0, ey - b.y1) > R) continue;
-          const cfg = FS.bayCfg(sidx, seg.area, seg.no), no = seg.no || 1, f = FRONT[seg.face], odd = no % 2 === 1;
-          const per = cfg.positions || Math.max(1, Math.round((seg.u1 - seg.u0) / FS.BOX_W));
-          for (let sh = b.kind === 'pallet' ? 2 : 1; sh <= b.levels; sh++) {
-            if (cfg.drawers && sh <= cfg.drawers) continue;
-            const z = FS.shelfZ(b, sh) - 0.04, cells = Math.max(per, shelfCells.get(seg.area + '-' + pad2(no) + '-' + pad2(sh)) || 0);
-            const lw = Math.min(0.115, (seg.u1 - seg.u0) / cells * 0.92);
-            for (let i = 0; i < cells; i++) {
-              const r = FS.cellRect(seg, i, cells, 0, 1), x = f[0] ? (f[0] > 0 ? r.x1 : r.x0) : (r.x0 + r.x1) / 2, y = f[1] ? (f[1] > 0 ? r.y1 : r.y0) : (r.y0 + r.y1) / 2;
-              const dx = x - ex, dy = y - ey, dz = z - ez;
-              if (dx > R || dx < -R || dy > R || dy < -R) continue;
-              const text = seg.area + '-' + pad2(no) + '-' + pad2(sh) + '-' + pad2(i + 1);
-              take('b' + text, dx * dx + dy * dy + dz * dz, x, y, z, f, lw, () => drawBeam(text, odd), false);
-            }
+    function buildLabels() {
+      if (!sidx) return;
+      const rows = []; // 10 numbers a label: x, y, z, turn, width, height, the location (3), style
+      const add = (x, y, z, f, w, h, text, style) => { const p = packCode(text); rows.push(x, y, z, faceTurn(f), w, h, p[0], p[1], p[2], style); };
+      for (const seg of sidx.list) { // the shelf edges: a label per position
+        const b = seg.bay;
+        if (b.kind === 'bulk' || b.kind === 'cage' || b.kind === 'cabinet') continue;
+        const cfg = FS.bayCfg(sidx, seg.area, seg.no), no = seg.no || 1, f = FRONT[seg.face], style = no % 2 === 1 ? 4 : 5;
+        const per = cfg.positions || Math.max(1, Math.round((seg.u1 - seg.u0) / FS.BOX_W));
+        for (let sh = b.kind === 'pallet' ? 2 : 1; sh <= b.levels; sh++) {
+          if (cfg.drawers && sh <= cfg.drawers) continue;
+          const z = FS.shelfZ(b, sh) - 0.04, cells = Math.max(per, shelfCells.get(seg.area + '-' + pad2(no) + '-' + pad2(sh)) || 0);
+          const w = Math.min(0.115, (seg.u1 - seg.u0) / cells * 0.92);
+          for (let i = 0; i < cells; i++) {
+            const r = FS.cellRect(seg, i, cells, 0, 1);
+            const x = f[0] ? (f[0] > 0 ? r.x1 : r.x0) + f[0] * 0.004 : (r.x0 + r.x1) / 2, y = f[1] ? (f[1] > 0 ? r.y1 : r.y0) + f[1] * 0.004 : (r.y0 + r.y1) / 2;
+            add(x, y, z, f, w, w * 0.208, seg.area + '-' + pad2(no) + '-' + pad2(sh) + '-' + pad2(i + 1), style);
           }
         }
-        for (let i = 0; i < drawerList.length; i++) {
-          const d = drawerList[i], r = d.rect, f = FRONT[d.seg.face];
-          if (i === openIndex) continue;
-          const x = f[0] ? (f[0] > 0 ? r.x1 : r.x0) : (r.x0 + r.x1) / 2, y = f[1] ? (f[1] > 0 ? r.y1 : r.y0) : (r.y0 + r.y1) / 2, z = d.z0 + d.h * 0.45;
-          const dx = x - ex, dy = y - ey, dz = z - ez;
-          if (dx > R || dx < -R || dy > R || dy < -R) continue;
-          take('d' + d.key, dx * dx + dy * dy + dz * dz, x, y, z, f, Math.min(0.105, (f[0] ? r.y1 - r.y0 : r.x1 - r.x0) * 0.85), () => {
-            const first = d.box * d.deep + 1, last = Math.min(d.positions, first + d.deep - 1), lines = [];
-            for (let p = last; p >= first; p--) lines.push(d.seg.area + '-' + pad2(d.seg.no || 1) + '-' + pad2(d.shelf) + '-' + pad2(p));
-            return drawDrawer(lines);
-          }, true);
+      }
+      labelRange.clear();
+      drawerList.forEach((d, i) => { // the drawer fronts: a line per position, the back one on top
+        const r = d.rect, f = FRONT[d.seg.face], deep = f[0] ? r.x1 - r.x0 : r.y1 - r.y0;
+        const x = (r.x0 + r.x1) / 2 + f[0] * (deep * 0.47 + 0.003), y = (r.y0 + r.y1) / 2 + f[1] * (deep * 0.47 + 0.003);
+        const first = d.box * d.deep + 1, last = Math.min(d.positions, first + d.deep - 1), n = last - first + 1;
+        const w = Math.min(0.105, (f[0] ? r.y1 - r.y0 : r.x1 - r.x0) * 0.85), lh = Math.min(0.0185, d.h * 0.8 / n), top = d.z0 + d.h * 0.45 + lh * n / 2;
+        labelRange.set(i, [rows.length / 10, n]);
+        for (let k = 0; k < n; k++) {
+          add(x, y, top - lh * (k + 0.5), f, w, lh, d.seg.area + '-' + pad2(d.seg.no || 1) + '-' + pad2(d.shelf) + '-' + pad2(last - k), n === 1 ? 3 : k === 0 ? 1 : k === n - 1 ? 2 : 0);
         }
-        want.sort((a, b2) => a.d2 - b2.d2);
+      });
+      const n = rows.length / 10, lab = new Float32Array(Math.max(1, n) * 4);
+      if (labelMesh) { groups.main.remove(labelMesh); labelMesh.geometry.dispose(); labelMesh.dispose(); }
+      const geo = new T.PlaneGeometry(1, 1);
+      geo.setAttribute('aLab', new T.InstancedBufferAttribute(lab, 4));
+      labelMesh = new T.InstancedMesh(geo, labelMat, Math.max(1, n));
+      for (let i = 0; i < n; i++) {
+        const o = i * 10;
+        _iq.setFromAxisAngle(_up, rows[o + 3]);
+        labelMesh.setMatrixAt(i, _im.compose(_ip.set(rows[o], rows[o + 2], rows[o + 1]), _iq, _is.set(rows[o + 4], rows[o + 5], 1)));
+        lab.set([rows[o + 6], rows[o + 7], rows[o + 8], rows[o + 9]], i * 4);
       }
-      // the nearest that fit (each half of the atlas keeps a few slots spare), then any new ones drawn into the atlas
-      const room = [beamSlots.length - 12, drawerSlots.length - 12], shown = [], keep = new Set();
-      for (const k of want) if (room[k.drawer ? 1 : 0]-- > 0) { shown.push(k); keep.add(k.key); }
-      // at most 90 new ones a go, so walking into a new aisle never stalls a frame; the rest come a moment later
-      const now = performance.now(), fresh = shown.filter((k) => !labelAt.has(k.key)).slice(0, 90);
-      if (shown.some((k) => !labelAt.has(k.key) && fresh.indexOf(k) < 0)) photoDue = now + 60;
-      for (const k of fresh) {
-        const s = takeSlot(k.drawer ? drawerSlots : beamSlots, keep);
-        if (s.key) labelAt.delete(s.key);
-        const [w, h] = k.draw();
-        toAtlas(labelTex, labelCanvas, s.x, s.y);
-        s.key = k.key; s.w = w; s.h = h; labelAt.set(k.key, s);
+      labelMesh.count = n; labelMesh.frustumCulled = false; labelMesh.visible = labelsWanted();
+      labelBase = labelMesh.instanceMatrix.array.slice(); // to put a drawer's label back when it's pushed in
+      groups.main.add(labelMesh);
+      if (openIndex >= 0) drawerLabel(openIndex, false);
+      redraw();
+    }
+    function drawerLabel(i, show) { // a pulled-out drawer leaves its label behind otherwise
+      const r = labelMesh && labelRange.get(i);
+      if (!r) return;
+      const a = labelMesh.instanceMatrix.array;
+      for (let k = r[0]; k < r[0] + r[1]; k++) {
+        if (show) a.set(labelBase.subarray(k * 16, k * 16 + 16), k * 16); else labelMesh.setMatrixAt(k, HIDE);
       }
-      let n = 0;
-      for (const k of shown) {
-        const s = labelAt.get(k.key);
-        if (!s) continue; // next time
-        s.used = now;
-        putInstance(labelMesh, n++, k.x + k.f[0] * 0.004, k.y + k.f[1] * 0.004, k.z, faceTurn(k.f), k.w, k.w * s.h / s.w, [(s.x + 8) / 2048, (s.y + 8) / 2048, s.w / 2048, s.h / 2048]);
-      }
-      labelWanted = shown.length;
-      if (n || labelMesh.count) { showInstances(labelMesh, n); redraw(); }
+      labelMesh.instanceMatrix.needsUpdate = true;
     }
 
     function thumb(code) { // a small photo for the lists and cards (the browser loads it when it's in view)
@@ -1381,7 +1398,7 @@
         });
         tray = null;
       }
-      if (openIndex >= 0 && drawerMesh) { drawerMesh.setMatrixAt(openIndex, drawerList[openIndex].matrix); drawerMesh.instanceMatrix.needsUpdate = true; }
+      if (openIndex >= 0 && drawerMesh) { drawerMesh.setMatrixAt(openIndex, drawerList[openIndex].matrix); drawerMesh.instanceMatrix.needsUpdate = true; drawerLabel(openIndex, true); }
       openIndex = -1; slide = null; trayV = 0; redraw();
     }
     function openDrawer(i) {
@@ -1390,7 +1407,7 @@
       const d = drawerList[i], r = d.rect, h = d.h, t = 0.012;
       const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2, w = (r.x1 - r.x0) * 0.99, dd = (r.y1 - r.y0) * 0.99, f = FRONT[d.seg.face];
       openIndex = i;
-      drawerMesh.setMatrixAt(i, HIDE); drawerMesh.instanceMatrix.needsUpdate = true;
+      drawerMesh.setMatrixAt(i, HIDE); drawerMesh.instanceMatrix.needsUpdate = true; drawerLabel(i, false);
       const g = new T.Group();
       g.userData.drawer = i;
       const part = (x, y, z, sx, sy, sz, mat) => { const m = new T.Mesh(unitBox, mat || trayMat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.receiveShadow = true; g.add(m); return m; };
@@ -1581,11 +1598,11 @@
     function showNowhere(it) { // a product whose location has no bay on the plan
       closeCard();
       shown = { kind: 'nowhere', ref: it };
-      const area = it.loc.slice(0, 3), ignored = ((LOCS && LOCS.ignore) || []).indexOf(area) >= 0;
+      const area = it.loc.slice(0, 3), ignored = leftOff(it.loc);
       const known = Object.keys(sidx.segs).some((k) => k.indexOf(area + '-') === 0); // other bays of this area are on the plan
       $('cardTitle').textContent = it.code;
       $('cardSub').textContent = it.name;
-      cardLines(['Location ' + it.loc, it.qty + ' available', ignored ? area + ' is left off the plan (your say).'
+      cardLines(['Location ' + it.loc, it.qty + ' available', ignored ? (skipped.has(area) ? area : it.loc.slice(0, 6)) + ' is left off the plan (your say).'
         : "I don't know where " + (known ? area + ' bay ' + +it.loc.slice(4, 6) : area) + ' is in the store yet. Tell Claude and it will go on the plan.']);
       cardPhoto(it.code);
       $('cardNote').textContent = '';
@@ -1649,14 +1666,17 @@
     const sheet = $('sheet');
     let pasting = false, adding = false, stockCut = false, tab = 'find'; // adding: the next paste is added to the list instead of replacing it
     const locQuery = FS.locQuery;
+    const skipped = new Set((LOCS && LOCS.ignore) || []); // areas (HAD) or bays (LAC-05) left off the plan, detailedfoil's say
+    const leftOff = (loc) => skipped.has(loc.slice(0, 3)) || skipped.has(loc.slice(0, 6));
     function sheetState() {
       const have = !!stock && !pasting;
       $('sheetPaste').hidden = have; $('sheetFind').hidden = !have;
       if (!stock) return;
-      const skip = (LOCS && LOCS.ignore) || [];
-      const un = Object.keys(stock.unplaced).filter((x) => skip.indexOf(x) < 0).sort((a, b) => stock.unplaced[b] - stock.unplaced[a]);
+      const left = {};
+      for (const it of stock.all) if (!it.pl && !leftOff(it.loc)) left[it.loc.slice(0, 3)] = (left[it.loc.slice(0, 3)] || 0) + 1;
+      const un = Object.keys(left).sort((a, b) => left[b] - left[a]);
       let info = nf(stock.items.length) + ' products are on the shelves.';
-      if (un.length) info += ' ' + un.reduce((n, a) => n + stock.unplaced[a], 0) + ' more have a location I have no bay for: ' + un.map((a) => a + ' (' + stock.unplaced[a] + ')').join(', ') + '.';
+      if (un.length) info += ' ' + un.reduce((n, a) => n + left[a], 0) + ' more have a location I have no bay for: ' + un.map((a) => a + ' (' + left[a] + ')').join(', ') + '.';
       if (stock.cut) info += ' It looks cut off part way through a row (copy and paste have size limits), so there are more products than this. Press Add more and paste the rest, or upload the report as a file.';
       $('stockInfo').textContent = info;
       setTab(tab);
@@ -1696,7 +1716,7 @@
       each(stock.items, (it) => words.every((w) => it.name.toLowerCase().indexOf(w) >= 0));
       for (const it of out.slice(0, MAX)) {
         if (it.pl) list.appendChild(listButton(it.code + ' ' + it.name, it.loc + ', ' + it.qty + ' available', it.code, () => { sheet.hidden = true; goTo(it); }));
-        else list.appendChild(listButton(it.code + ' ' + it.name, it.loc + ', ' + it.qty + ' available (no bay for ' + it.loc.slice(0, 3) + ' on the plan)', it.code, () => { sheet.hidden = true; showNowhere(it); }));
+        else list.appendChild(listButton(it.code + ' ' + it.name, it.loc + ', ' + it.qty + ' available (' + (leftOff(it.loc) ? 'left off the plan' : 'no bay for ' + it.loc.slice(0, 3) + ' on the plan') + ')', it.code, () => { sheet.hidden = true; showNowhere(it); }));
       }
       if (!out.length) { const li = document.createElement('li'); li.className = 'none'; li.textContent = 'Nothing found'; list.appendChild(li); }
       else count('findCount', out.length > MAX ? nf(out.length) + ' found: the first ' + MAX + ' are here, type more to narrow it down' : out.length === 1 ? '1 found' : nf(out.length) + ' found');
@@ -1784,6 +1804,7 @@
     $('stockNew').addEventListener('click', () => { pasting = true; adding = false; sheetState(); $('stockText').focus(); });
     $('stockClear').addEventListener('click', () => {
       FS.storage.clear(); stock = null; pasting = false; closeCard(); clearProducts(); setFree(false); $('freeBtn').hidden = true;
+      shelfCells.clear(); buildLabels();
       sheetState(); $('findList').innerHTML = ''; redraw();
     });
     if (navigator.clipboard && navigator.clipboard.readText) {
@@ -1791,7 +1812,6 @@
       $('stockClip').addEventListener('click', () => { navigator.clipboard.readText().then((t) => { $('stockText').value = t; }).catch(() => { $('stockMsg').textContent = "The browser wouldn't let me read the clipboard. Paste into the box with Ctrl+V."; $('stockMsg').hidden = false; }); });
     }
 
-    if (sidx) { const saved = FS.storage.load(); if (saved) applyStock(saved.items); }
 
     /* ---------- mouse look (PC) ---------- */
     const hasMouse = matchMedia('(any-hover: hover)').matches && matchMedia('(any-pointer: fine)').matches;
@@ -1888,7 +1908,7 @@
         const sig = mode + ((p.x * 40) | 0) + ',' + ((p.y * 40) | 0) + ',' + ((p.z * 40) | 0) + ',' + ((q.x * 300) | 0) + ',' + ((q.y * 300) | 0) + ',' + ((q.z * 300) | 0) + ',' + (orbit.r | 0);
         if (sig !== photoSig) { photoSig = sig; if (!photoDue) photoDue = now + 300; }
       }
-      if (photoDue && now >= photoDue) { photoDue = 0; updatePhotos(); updateLabels(); }
+      if (photoDue && now >= photoDue) { photoDue = 0; updatePhotos(); }
       if (photoDue) busy = true;
       if (dirty) {
         dirty = false;
@@ -1898,20 +1918,46 @@
         }
         lastShown = now;
         sizePin();
+        if (labelMesh) { labelMesh.visible = labelsWanted(); labelMat.uniforms.uFar.value = mode === 'walk' ? 6 : Math.max(2.5, orbit.r * 0.55); }
         renderer.render(scene, cam());
         if (mode === 'walk') drawMini();
       }
       if (busy || dirty) wake();
     }
+    // Everything that would otherwise be made the first time you need it is made here, behind the loading bar
+    // (detailedfoil, 30 Oct 2026: "when the site opens there is a loading bar and it pre loads stuff").
+    async function warmUp() {
+      // every shader the three views use, and the ones for a pin and for photos in an open drawer, compiled now
+      const seen = new Map(), extra = [new T.Mesh(photoGeo, new T.MeshLambertMaterial({ map: photoTex })), pinSprite('0', '#fff')];
+      for (const k in groups) { seen.set(groups[k], groups[k].visible); groups[k].visible = true; }
+      for (const o of [hl, freeMesh, labelMesh]) if (o) { seen.set(o, o.visible); o.visible = true; }
+      for (const o of extra) scene.add(o);
+      try { if (renderer.compileAsync && renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(scene, eye); else renderer.compile(scene, eye); } catch (e) { /* compiled when first used instead */ }
+      for (const o of extra) { scene.remove(o); if (o.material.map && o.isSprite) o.material.map.dispose(); o.material.dispose(); }
+      for (const [o, v] of seen) o.visible = v;
+      // and one frame from where the walk starts (under the loading screen), so its buffers are on the graphics chip
+      const was = mode;
+      mode = 'walk'; groups.cut.visible = false; groups.full.visible = groups.walk.visible = true; if (labelMesh) labelMesh.visible = true;
+      applyWalk(); renderer.render(scene, eye);
+      mode = was;
+    }
     new ResizeObserver(resize).observe(stage);
     resize();
     renderer.shadowMap.needsUpdate = true; // the one time the shadows are drawn (cut walls showing)
+    progress(0.45, 'Putting your stock on the shelves\u2026'); await breathe();
+    if (sidx) { const saved = FS.storage.load(); if (saved) applyStock(saved.items); }
+    progress(0.6, 'Making the location labels\u2026'); await breathe();
+    buildLabels();
+    progress(0.75, 'Getting the graphics ready\u2026'); await breathe();
+    await warmUp();
+    progress(1, 'Ready'); await breathe();
     say('');
     $('side').hidden = false; $('bar').hidden = false;
     setMode('orbit');
     try { if (stock && localStorage.getItem('fp-free-v1') === '1') { seenHint.free = 1; setFree(true); } } catch (e) { /* private mode */ }
-    wake();
+    loading.classList.add('done'); setTimeout(() => { loading.hidden = true; }, 400);
+    redraw();
     // for testing in a browser console: FloorPlan.bays, FloorPlan.setMode('walk')
-    window.FloorPlan = { bays, setMode, showBay, showDrawer, showProduct, showFree, goTo, goToFree, applyStock, walkTo, setFree, scene, renderer, get mode() { return mode; }, get stock() { return stock; }, get drawers() { return drawerList; }, get products() { return products; }, get tray() { return tray; }, get free() { return free; }, get freeCells() { return freeCells; }, get photoMesh() { return photoMesh; }, get labelMesh() { return labelMesh; }, get photos() { return photos; }, get ratio() { return ratio; }, get labelWanted() { return labelWanted; }, get frames() { return frames; }, get scheduled() { return scheduled; }, get camera() { return cam(); }, walk, orbit, top, tapAt, setSheet };
+    window.FloorPlan = { bays, setMode, showBay, showDrawer, showProduct, showFree, goTo, goToFree, applyStock, walkTo, setFree, scene, renderer, get mode() { return mode; }, get stock() { return stock; }, get drawers() { return drawerList; }, get products() { return products; }, get tray() { return tray; }, get free() { return free; }, get freeCells() { return freeCells; }, get photoMesh() { return photoMesh; }, get labelMesh() { return labelMesh; }, get photos() { return photos; }, get ratio() { return ratio; }, get frames() { return frames; }, get scheduled() { return scheduled; }, get camera() { return cam(); }, walk, orbit, top, tapAt, setSheet };
   }
 })();

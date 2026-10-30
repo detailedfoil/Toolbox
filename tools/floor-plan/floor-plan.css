@@ -143,3 +143,10 @@ body.fp{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;fle
 .fp-card.compact .fp-card-btns{margin-top:6px;gap:6px}
 .fp-card.compact .fp-card-btns button{min-height:38px;padding:0 12px;font-size:.88rem}
 .fp-card-btns .fp-more{min-width:64px}
+/* the loading bar: everything is got ready behind it, so walking round never has to stop and make things */
+.fp-loading{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--text);font-weight:650;transition:opacity .35s}
+.fp-loading[hidden]{display:none}
+.fp-loading.done{opacity:0;pointer-events:none}
+.fp-loading p{margin:0}
+.fp-meter{width:min(280px,72%);height:10px;border-radius:999px;background:var(--border);overflow:hidden}
+#loadBar{width:0;height:100%;border-radius:inherit;background:var(--accent);transition:width .3s ease-out}

@@ -90,7 +90,8 @@
 
   // the slices of each drawn bay that locations.json gives to each stock system bay
   function index(bays, locs) {
-    var idx = { segs: {}, whole: {}, areas: (locs && locs.areas) || {}, list: [] };
+    var idx = { segs: {}, whole: {}, areas: (locs && locs.areas) || {}, list: [], notFree: {} };
+    ((locs && locs.notFree) || []).forEach(function (k) { idx.notFree[k] = 1; });
     var faces = (locs && locs.faces) || {};
     bays.forEach(function (b) {
       var codes = locs && locs.bays && locs.bays[b.id];
@@ -219,12 +220,15 @@
      there is a free spot in AAA-01-01-02"). A drawer shelf has a known number of positions, so every one of them not in
      the list is free ('drawer'). On an ordinary shelf only the gaps count ('gap'): positions before the last one in use,
      as nobody knows how many labels a shelf has after its last product. A shelf with nothing on it at all, under one in
-     the same bay that has, is free as a whole ('shelf'). Returns runs of free positions next to each other on one shelf,
+     the same bay that has, is free as a whole ('shelf'), unless locations.json says it's empty on purpose. Returns runs of free positions next to each other on one shelf,
      in location order: {key, loc, area, bay, shelf, from, to, n, kind, seg, cells, prev, next} (prev / next: the
      products either side, if any; a whole shelf has from = to = n = 0), plus totals. */
   function freeSpots(arr, idx) {
-    var runs = [], shelves = arr.shelves, tops = {};
+    var runs = [], shelves = arr.shelves, tops = {}, nf = idx.notFree || {};
+    // a shelf, bay or area left empty on purpose (locations.json `notFree`) has no free spots
+    function kept(key) { var p = key.split('-'); return !!(nf[key] || nf[p[0] + '-' + p[1]] || nf[p[0]]); }
     function add(s, kind, free, cells) {
+      if (kept(s.key)) return;
       for (var i = 0; i < free.length; i++) {
         var from = free[i], to = from;
         while (i + 1 < free.length && free[i + 1] === to + 1) to = free[++i];
@@ -259,7 +263,7 @@
       var t = tops[b], cfg = bayCfg(idx, t.area, t.seg.no), first = cfg.drawers ? cfg.drawers + 1 : 1;
       for (var sh = first; sh < t.shelf; sh++) {
         var k = b + '-' + pad2(sh);
-        if (shelves[k]) continue;
+        if (shelves[k] || kept(k)) continue;
         runs.push({ key: k, loc: k, area: t.area, bay: t.bay, shelf: sh, from: 0, to: 0, n: 0, kind: 'shelf', seg: t.seg, cells: 1, prev: null, next: null });
       }
     });
