@@ -657,7 +657,7 @@
       ]).concat([
         tap + ' a bay for its locations, a box for its product, or a drawer to pull it out and see what is in it.',
         'Stock: upload or paste the SKU List report, then find a product by code, name or location and go straight to it.',
-        'Shelf labels are red for odd bay numbers and blue for even; drawer labels list their positions with the back one on top. Free spots (green): locations with nothing nailed to them. The Stock panel lists them by area.',
+        'Shelf labels are red for odd bay numbers and blue for even; drawer labels list their positions with the back one on top. Red boxes are sharps and liquids. Free spots (green): locations with nothing nailed to them. The Stock panel lists them by area.',
         'Photos on the boxes near you are the Toolbox\'s own saved copies (the Product Search ones), loaded a few at a time.',
       ]);
       if (!touch) items.push('Keys: / opens the search, Esc closes a card.');
@@ -886,7 +886,7 @@
     const boxM = (r, z0, h, sw, sd) => new T.Matrix4().compose(
       new T.Vector3((r.x0 + r.x1) / 2, z0 + h / 2, (r.y0 + r.y1) / 2), new T.Quaternion(),
       new T.Vector3((r.x1 - r.x0) * sw, h, (r.y1 - r.y0) * sd));
-    const areaColour = (a) => { let h = 0; for (const ch of a) h = (h * 31 + ch.charCodeAt(0)) % 360; return new T.Color().setHSL(((175 + h * 250 / 360) % 360) / 360, 0.5, 0.64); }; // never green: that's the free spots
+    const areaColour = (a) => { let h = 0; for (const ch of a) h = (h * 31 + ch.charCodeAt(0)) % 360; return new T.Color().setHSL((175 + (h % 360) * 160 / 360) / 360, 0.5, h % 2 ? 0.62 : 0.72); }; // blues to pinks: never green (free spots) or red (sharps and liquids)
     // pull a cell in from the uprights at the ends of its bay slice (they're 6 cm square), so boxes never poke into the frame
     const fit = (seg, r) => {
       const ax = seg.along === 'x', W = seg.u1 - seg.u0, k = Math.max(0.5, (W - 0.07) / W), mid = (seg.u0 + seg.u1) / 2;
@@ -921,6 +921,16 @@
     const drawerOfPos = (seg, shelf, pos) => drawerAt.get(FS.drawerKey(seg.area, seg.no, shelf, Math.floor((pos - 1) / FS.drawerShape(sidx, seg).deep)));
 
     // the list: items on ordinary shelves become boxes; items in drawers are in the drawer
+    // red boxes: sharps and liquids (the stock list's flag 8, from Product Search's own list of the store's products)
+    const RED = new T.Color(0xd8323a), flagOf = new Map();
+    const isRed = (it) => ((flagOf.get(it.code) || 0) & 8) !== 0;
+    const colourFor = (it) => (isRed(it) ? RED : areaColour(it.pl.area).offsetHSL(0, 0, it.pl.pos % 2 ? -0.035 : 0.035));
+    function recolour() {
+      if (!productMesh) return;
+      products.forEach((it, i) => productMesh.setColorAt(i, colourFor(it)));
+      productMesh.instanceColor.needsUpdate = true; dirty = true;
+    }
+    fetch('product-search/data/products.json').then((r) => r.json()).then((j) => { for (const x of j.items) flagOf.set(x[0], x[2] || 0); recolour(); }).catch(() => { /* no flags: no red */ });
     let stock = null, products = [], productMesh = null, byLoc = [];
     const itemAt = new Map(), productOf = new Map();
     function clearProducts() {
@@ -949,7 +959,7 @@
           it.z0 = FS.shelfZ(bay, pl.shelf) + 0.012;
           it.h = Math.max(0.05, FS.shelfGap(bay, pl.shelf) - 0.1); // right up to the beam above
           productMesh.setMatrixAt(i, boxM(it.rect, it.z0, it.h, 1, 0.94)); // fills its slot: no gaps
-          productMesh.setColorAt(i, areaColour(pl.area).offsetHSL(0, 0, (pl.pos % 2 ? -0.035 : 0.035)));
+          productMesh.setColorAt(i, colourFor(it));
           productOf.set(it, i);
         });
         productMesh.instanceMatrix.needsUpdate = true; productMesh.instanceColor.needsUpdate = true;
@@ -1311,7 +1321,7 @@
           if (stock) part(px, t + 0.004, pz, cw, 0.008, cd, freeMat); // a free position: green
           continue;
         }
-        part(px, t + h * 0.3, pz, cw, h * 0.55, cd, new T.MeshLambertMaterial({ color: areaColour(d.seg.area) }));
+        part(px, t + h * 0.3, pz, cw, h * 0.55, cd, new T.MeshLambertMaterial({ color: colourFor(it) }));
         const ph = new T.Mesh(photoGeo, new T.MeshLambertMaterial({ color: 0xffffff }));
         const s = Math.min(cw, cd) * 0.92;
         ph.rotation.x = -Math.PI / 2; ph.position.set(px, t + h * 0.575 + 0.002, pz); ph.scale.set(s, s, 1); ph.visible = false;
@@ -1435,7 +1445,7 @@
       hl.material.opacity = 0.5; hl.visible = true;
       $('cardTitle').textContent = it.code;
       $('cardSub').textContent = it.name;
-      cardLines(['Location ' + it.loc + ': shelf ' + pl.shelf + ', position ' + pl.pos, it.qty + ' available', 'Bay ' + b.id + ' in my drawing']);
+      cardLines(['Location ' + it.loc + ': shelf ' + pl.shelf + ', position ' + pl.pos, it.qty + ' available', isRed(it) ? 'Sharp or liquid (red box)' : '', 'Bay ' + b.id + ' in my drawing']);
       cardPhoto(it.code);
       $('cardNote').textContent = 'Positions count from the left as you face the shelf. Tell Claude if that is the wrong way round.';
       cardButtons([[lookHere(), () => standAt(pl.seg, r, it.z0 + it.h / 2)], ['Copy location', () => copy(it.loc), true], ['Product Search', () => window.open('product-search.html#q=' + encodeURIComponent(it.code), '_blank'), true]]);
