@@ -1176,7 +1176,7 @@
     // Like the real ones (red for odd bay numbers, blue for even; a drawer's label has its positions with the back
     // one on top). Only the ones near you and in view are made, so there are never thousands at once.
     const labelCache = new Map(), labelPlanes = new Map(), shelfCells = new Map();
-    const LABEL_MAX = 220;
+    const LABEL_MAX = 150;
     function bars(g, text, x, y, w, h, colour) {
       let sd = 7; for (const ch of text) sd = (sd * 31 + ch.charCodeAt(0)) >>> 0;
       g.fillStyle = colour; let px = x, on = true;
@@ -1193,21 +1193,20 @@
       return e;
     }
     function beamTex(text, odd) {
-      return labelTex('b|' + text + '|' + (odd ? 1 : 0), 256, 92, (g, w, h) => {
+      return labelTex('b|' + text + '|' + (odd ? 1 : 0), 256, 56, (g, w, h) => {
         g.fillStyle = odd ? '#c3222b' : '#1f4fa8'; g.fillRect(0, 0, w, h);
         g.fillStyle = '#fff'; g.font = '800 32px system-ui, -apple-system, "Segoe UI", Arial, sans-serif'; g.textBaseline = 'middle';
         const tw = g.measureText(text).width; if (tw > w - 62) g.font = '800 ' + Math.floor(32 * (w - 62) / tw) + 'px system-ui, -apple-system, "Segoe UI", Arial, sans-serif';
-        g.fillText(text, 9, 27);
+        g.fillText(text, 9, 29);
         g.beginPath(); g.moveTo(w - 24, 8); g.lineTo(w - 38, 30); g.lineTo(w - 10, 30); g.closePath(); g.fill(); // the arrow
         g.fillRect(w - 28, 28, 8, 16);
-        g.fillStyle = '#f4f4f2'; g.fillRect(8, 50, w - 16, 34); bars(g, text, 14, 54, w - 28, 26, '#15171c');
       });
     }
     function drawerTex(lines) { // lines top to bottom: the back position first
-      return labelTex('d|' + lines.join('/'), 256, 16 + lines.length * 74, (g, w, h) => {
+      return labelTex('d|' + lines.join('/'), 256, 12 + lines.length * 44, (g, w, h) => {
         g.fillStyle = '#f2f2f0'; g.fillRect(0, 0, w, h); g.strokeStyle = '#b9b9b5'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, w - 3, h - 3);
         g.fillStyle = '#15171c'; g.font = '800 31px system-ui, -apple-system, "Segoe UI", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-        lines.forEach((t, i) => { const y = 8 + i * 74; g.fillText(t, w / 2, y + 17); bars(g, t, 22, y + 36, w - 44, 28, '#15171c'); });
+        lines.forEach((t, i) => g.fillText(t, w / 2, 6 + i * 44 + 22));
       });
     }
     function clearLabelPlanes() {
