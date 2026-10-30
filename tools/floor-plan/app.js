@@ -901,7 +901,7 @@
           d.rect = FS.cellRect(d.seg, d.box, d.boxes, 0, 1);
           d.z0 = FS.shelfZ(d.seg.bay, d.shelf) + 0.012;
           d.h = (d.seg.bay.pitch || 0.153) * 0.88;
-          d.matrix = boxM(d.rect, d.z0, d.h, 0.92, 0.97);
+          d.matrix = boxM(d.rect, d.z0, d.h, 0.99, 0.99);
           drawerMesh.setMatrixAt(i, d.matrix); drawerMesh.setColorAt(i, BOARD);
           drawerAt.set(d.key, i);
         });
@@ -940,9 +940,9 @@
           const pl = it.pl, bay = pl.seg.bay;
           it.rect = FS.cellRect(pl.seg, pl.slot, pl.slots, 0, 1);
           it.z0 = FS.shelfZ(bay, pl.shelf) + 0.012;
-          it.h = Math.max(0.05, Math.min(0.4, FS.shelfGap(bay, pl.shelf) * 0.78));
-          productMesh.setMatrixAt(i, boxM(it.rect, it.z0, it.h, 0.88, 0.9));
-          productMesh.setColorAt(i, areaColour(pl.area));
+          it.h = Math.max(0.05, FS.shelfGap(bay, pl.shelf) - 0.1); // right up to the beam above
+          productMesh.setMatrixAt(i, boxM(it.rect, it.z0, it.h, 1, 1)); // fills its slot: no gaps
+          productMesh.setColorAt(i, areaColour(pl.area).offsetHSL(0, 0, (pl.pos % 2 ? -0.035 : 0.035)));
           productOf.set(it, i);
         });
         productMesh.instanceMatrix.needsUpdate = true; productMesh.instanceColor.needsUpdate = true;
@@ -981,7 +981,7 @@
           if (r.kind === 'shelf') { freeCellAt.set(r.loc, freeCells.length); freeCells.push({ run: r, pos: 0, rect: FS.cellRect(r.seg, 0, 1, 0, 1), z0, h: Math.min(0.08, gap * 0.3), sw: 0.97 }); continue; }
           for (let p = r.from; p <= r.to; p++) {
             freeCellAt.set(r.key + '-' + pad2(p), freeCells.length);
-            freeCells.push({ run: r, pos: p, rect: FS.cellRect(r.seg, p - 1, r.cells, 0, 1), z0, h: Math.max(0.05, Math.min(0.25, gap * 0.5)), sw: 0.8 });
+            freeCells.push({ run: r, pos: p, rect: FS.cellRect(r.seg, p - 1, r.cells, 0, 1), z0, h: Math.max(0.05, Math.min(0.25, gap * 0.5)), sw: 1 });
           }
         }
         if (freeCells.length) {
@@ -1139,7 +1139,7 @@
         let m = photoPlanes.get(i);
         if (!m) {
           const r = it.rect, f = FRONT[it.pl.seg.face];
-          const across = (f[0] ? r.y1 - r.y0 : r.x1 - r.x0) * 0.88, deep = (f[0] ? r.x1 - r.x0 : r.y1 - r.y0) * 0.9;
+          const across = (f[0] ? r.y1 - r.y0 : r.x1 - r.x0), deep = (f[0] ? r.x1 - r.x0 : r.y1 - r.y0);
           const s = Math.min(across, it.h) * 0.9;
           m = new T.Mesh(photoGeo, new T.MeshLambertMaterial({ color: 0xffffff }));
           m.position.set((r.x0 + r.x1) / 2 + f[0] * (deep / 2 + 0.003), it.z0 + it.h / 2, (r.y0 + r.y1) / 2 + f[1] * (deep / 2 + 0.003));
@@ -1177,7 +1177,7 @@
       if (openIndex === i) return;
       if (openIndex >= 0) removeTray();
       const d = drawerList[i], r = d.rect, h = d.h, t = 0.012;
-      const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2, w = (r.x1 - r.x0) * 0.92, dd = (r.y1 - r.y0) * 0.97, f = FRONT[d.seg.face];
+      const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2, w = (r.x1 - r.x0) * 0.99, dd = (r.y1 - r.y0) * 0.99, f = FRONT[d.seg.face];
       openIndex = i;
       drawerMesh.setMatrixAt(i, HIDE); drawerMesh.instanceMatrix.needsUpdate = true;
       const g = new T.Group();

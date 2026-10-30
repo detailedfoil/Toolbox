@@ -181,7 +181,7 @@ explain changes in plain English and say what they'll see.
     default, 30 Oct; it is NOT in the repo: the repo is public, so tests use made-up products) and works out where a location is (`index`, `place`,
     `cellRect`). The Stock button takes the paste; products on ordinary shelves become boxes, a tap on a drawer slides
     it out with what's in it, and the search jumps you to a product. Positions count from the LEFT as you face the
-    shelf (an assumption, to be confirmed; `psign` in stock.js flips it). Mouse look: on a PC, in Walk, the first click
+    shelf (confirmed by detailedfoil 30 Oct; `psign` in stock.js flips it). Mouse look: on a PC, in Walk, the first click
     captures the mouse like a game (Esc lets go); the "Mouse look" button (only shown with a mouse) turns it off for
     dragging instead. A paste that stops part way through a row (stock.js `cut`) is flagged, and "Add more" adds a second paste to the list. The report can also be uploaded as a text file ("Upload a file", or drop it on the panel; detailedfoil, 30 Oct: "as well as the paste"): the first list he pasted was cut at exactly 100,000 characters (1,129 products) by a copy or chat limit, the full file has 10,999. `areas` in locations.json (shelves and positions per area, `ignore` = HAD and HAE) came from the full file; HAC (11 products) has no bay yet.
     30 Oct 2026, "find locations with nothing nailed" + photos + polish: **Free spots** (`freeSpots` in stock.js, tested): a drawer shelf
