@@ -8,7 +8,7 @@
    arrow keys on a PC, mouse look like a game). Bays are named from data/locations.json (AAC 3 ...), or a temporary
    row letter + bay number + b / f where there's no location yet. With the stock list loaded (stock.js reads it; it
    stays on the device): products are boxes on the shelves or in the drawers, the search jumps to one, free spots
-   (nothing nailed) show pink, and the boxes near you get the Toolbox's own saved product photos. */
+   (nothing nailed) show green, and the boxes near you get the Toolbox's own saved product photos. */
 (function () {
   'use strict';
 
@@ -657,7 +657,7 @@
       ]).concat([
         tap + ' a bay for its locations, a box for its product, or a drawer to pull it out and see what is in it.',
         'Stock: upload or paste the SKU List report, then find a product by code, name or location and go straight to it.',
-        'Shelf labels are red for odd bay numbers and blue for even; drawer labels list their positions with the back one on top. Free spots (pink): locations with nothing nailed to them. The Stock panel lists them by area.',
+        'Shelf labels are red for odd bay numbers and blue for even; drawer labels list their positions with the back one on top. Free spots (green): locations with nothing nailed to them. The Stock panel lists them by area.',
         'Photos on the boxes near you are the Toolbox\'s own saved copies (the Product Search ones), loaded a few at a time.',
       ]);
       if (!touch) items.push('Keys: / opens the search, Esc closes a card.');
@@ -856,7 +856,7 @@
       mctx.scale(dpr, dpr);
       if (pinAt) { // what you're looking for
         const qx = mPad + pinAt.x * mScale, qy = mPad + pinAt.y * mScale;
-        mctx.fillStyle = pinAt.green ? '#d61c80' : '#ffb000'; mctx.strokeStyle = '#14171f'; mctx.lineWidth = 1.2;
+        mctx.fillStyle = pinAt.green ? '#1f8a46' : '#ffb000'; mctx.strokeStyle = '#14171f'; mctx.lineWidth = 1.2;
         mctx.beginPath(); mctx.moveTo(qx, qy); mctx.lineTo(qx - 5, qy - 9); mctx.lineTo(qx + 5, qy - 9); mctx.closePath(); mctx.fill(); mctx.stroke();
       }
       const px = mPad + walk.x * mScale, py = mPad + walk.y * mScale;
@@ -877,16 +877,16 @@
     /* ---------- stock on the shelves ---------- */
     const FS = window.FloorStock, pad2 = FS.pad2;
     const sidx = LOCS ? FS.index(allBays, LOCS) : null;
-    const BOARD = new T.Color(0xb98a58), BOARD_EMPTY = new T.Color(0xe4d6bb), FREE_ALL = new T.Color(0xff2d9b), FREE_SOME = new T.Color(0xff9bd0);
+    const BOARD = new T.Color(0xb98a58), BOARD_EMPTY = new T.Color(0xe4d6bb), FREE_ALL = new T.Color(0x34b85a), FREE_SOME = new T.Color(0xa3d683);
     const boardMat = new T.MeshLambertMaterial({ color: 0xffffff });
     const trayMat = new T.MeshLambertMaterial({ color: 0xcaa06a });
-    const freeMat = new T.MeshBasicMaterial({ color: 0xff2d9b, transparent: true, opacity: 0.6, depthWrite: false });
+    const freeMat = new T.MeshBasicMaterial({ color: 0x2ccf5a, transparent: true, opacity: 0.5, depthWrite: false });
     const HIDE = new T.Matrix4().makeScale(1e-6, 1e-6, 1e-6);
     const FRONT = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }; // which way a face looks (plan x, plan y)
     const boxM = (r, z0, h, sw, sd) => new T.Matrix4().compose(
       new T.Vector3((r.x0 + r.x1) / 2, z0 + h / 2, (r.y0 + r.y1) / 2), new T.Quaternion(),
       new T.Vector3((r.x1 - r.x0) * sw, h, (r.y1 - r.y0) * sd));
-    const areaColour = (a) => { let h = 0; for (const ch of a) h = (h * 31 + ch.charCodeAt(0)) % 360; return new T.Color().setHSL((20 + h * 230 / 360) / 360, 0.5, 0.64); }; // never pink: that's the free spots
+    const areaColour = (a) => { let h = 0; for (const ch of a) h = (h * 31 + ch.charCodeAt(0)) % 360; return new T.Color().setHSL(((175 + h * 250 / 360) % 360) / 360, 0.5, 0.64); }; // never green: that's the free spots
     // pull a cell in from the uprights at the ends of its bay slice (they're 6 cm square), so boxes never poke into the frame
     const fit = (seg, r) => {
       const ax = seg.along === 'x', W = seg.u1 - seg.u0, k = Math.max(0.5, (W - 0.07) / W), mid = (seg.u0 + seg.u1) / 2;
@@ -974,7 +974,7 @@
 
     /* ---------- free spots: locations with nothing nailed to them ---------- */
     // Green boxes on ordinary shelves (one a free position, or a slab for a whole empty shelf); drawers with free
-    // positions turn pink (light pink: some free, pink: all of it). Shown with the Free spots button.
+    // positions turn green (light green: some free, green: all of it). Shown with the Free spots button.
     let free = null, freeMesh = null, freeOn = false;
     const freeCells = [], freeCellAt = new Map(), drawerFree = new Map();
     function buildFree() {
@@ -1019,7 +1019,7 @@
       $('freeBtn').setAttribute('aria-pressed', String(freeOn)); $('freeShow').checked = freeOn;
       colourDrawers();
       try { localStorage.setItem('fp-free-v1', freeOn ? '1' : '0'); } catch (e) { /* private mode */ }
-      if (freeOn && free && !seenHint.free) { seenHint.free = 1; flash(nf(free.positions) + ' free spots are pink. Tap one to see where it is.'); }
+      if (freeOn && free && !seenHint.free) { seenHint.free = 1; flash(nf(free.positions) + ' free spots are green. Tap one to see where it is.'); }
     }
     $('freeBtn').addEventListener('click', () => setFree(!freeOn));
     $('freeShow').addEventListener('change', (e) => setFree(e.target.checked));
@@ -1056,7 +1056,7 @@
     }
     function setPin(text, x, y, z, green) {
       clearPin();
-      pin = pinSprite(text, green ? 'rgba(214,28,128,.97)' : 'rgba(255,210,0,.97)', green ? '#ffffff' : '#14171f');
+      pin = pinSprite(text, green ? 'rgba(31,138,70,.97)' : 'rgba(255,210,0,.97)', green ? '#ffffff' : '#14171f');
       pin.position.copy(V(x, y, z)); scene.add(pin); pinAt = { x, y, green };
       sizePin(); dirty = true;
     }
@@ -1308,7 +1308,7 @@
         const it = itemAt.get(trayLoc(d, j)), c = FS.cellRect(d.seg, d.box, d.boxes, j, d.deep);
         const px = (c.x0 + c.x1) / 2 - cx, pz = (c.y0 + c.y1) / 2 - cy, cw = (c.x1 - c.x0) * 0.8, cd = (c.y1 - c.y0) * 0.8;
         if (!it) {
-          if (stock) part(px, t + 0.004, pz, cw, 0.008, cd, freeMat); // a free position: pink
+          if (stock) part(px, t + 0.004, pz, cw, 0.008, cd, freeMat); // a free position: green
           continue;
         }
         part(px, t + h * 0.3, pz, cw, h * 0.55, cd, new T.MeshLambertMaterial({ color: areaColour(d.seg.area) }));
