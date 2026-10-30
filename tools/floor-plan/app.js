@@ -59,7 +59,9 @@
     renderer.shadowMap.autoUpdate = false; // nothing moves, so the shadows are worked out once
     const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
-    let dirty = true, last = performance.now(); // redraw only when something changed
+    let dirty = true, last = performance.now(), scheduled = false; // draw only when something changed; sleep when nothing does
+    function wake() { if (!scheduled) { scheduled = true; if (performance.now() - last > 100) last = performance.now(); requestAnimationFrame(frame); } }
+    function redraw() { dirty = true; wake(); }
     const scene = new T.Scene();
     const dark = !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
     scene.background = new T.Color(dark ? 0x1c2028 : 0xdde3ea);
@@ -572,7 +574,7 @@
       if (first) { fitOrbit(); fitTop(); }
       applyOrbit(); applyTop(); applyWalk();
       if (!mini.hidden) sizeMini();
-      dirty = true;
+      redraw();
     }
 
     /* ---------- picking a bay ---------- */
@@ -596,7 +598,6 @@
 
     const card = $('card');
     new MutationObserver(() => stage.classList.toggle('carded', !card.hidden)).observe(card, { attributes: true, attributeFilter: ['hidden'] });
-    const ROWNAME = { W: 'Back wall run', P: 'Pallet rack', L: 'Longs bay', V: 'VPU cage' };
     const FACES = { N: 'Faces the back wall', S: 'Faces the shop front', NS: 'Open on both sides', EW: 'Open on both sides', E: 'Faces the right-hand wall', W: 'Faces the left-hand wall' };
     const m2 = (n) => (Math.round(n * 100) / 100).toFixed(2) + ' m';
     function what(b) {
@@ -615,29 +616,25 @@
       hl.scale.set(w + 0.05, b.h + 0.05, d + 0.05);
       hl.visible = true;
       hl.material.opacity = mode === 'walk' ? 0.12 : 0.32;
-      $('cardTitle').textContent = b.where || b.id;
-      const sideTxt = b.side === 'b' ? ', back side' : b.side === 'f' ? ', front side' : '';
-      $('cardSub').textContent = ROWNAME[b.row] ? ROWNAME[b.row] + ' ' + b.num : 'Row ' + b.row + ', bay ' + b.num + sideTxt;
-      const wide = b.along === 'x' ? w : d, deep = b.along === 'x' ? d : w;
-      const items = [what(b), m2(wide) + ' wide, ' + m2(deep) + ' deep, about ' + m2(b.h) + ' high', FACES[b.open] || ''];
-      if (b.braced) items.push('Drawn with a cross (X) on the plan');
-      if (b.where) items.unshift('Bay ' + b.id + ' in my drawing' + (b.unsure ? ' (location to be confirmed)' : ''));
-      if (b.note) items.splice(b.where ? 1 : 0, 0, b.note);
-      if (b.holding) items.unshift('Holding area');
-      if (b.plan) items.push('Label on the electrical plan: ' + b.plan);
+      $('cardTitle').textContent = b.where || (b.holding ? 'Holding area' : b.id);
+      $('cardSub').textContent = what(b) + (FACES[b.open] ? ', ' + FACES[b.open].toLowerCase() : '');
+      const wide = b.along === 'x' ? w : d, deep = b.along === 'x' ? d : w, lines = [];
       const info = stock && b.codes ? bayInfo.get(b) || { items: 0, free: 0, shelves: 0 } : null;
-      if (info) items.splice(b.where ? 1 : 0, 0, nf(info.items) + ' products nailed here, ' + nf(info.free) + ' free position' + (info.free === 1 ? '' : 's') + (info.shelves ? ' and ' + info.shelves + (info.shelves > 1 ? ' empty shelves' : ' empty shelf') : ''));
-      cardLines(items);
+      if (info) lines.push(nf(info.items) + ' products nailed here, ' + nf(info.free) + ' free position' + (info.free === 1 ? '' : 's') + (info.shelves ? ' and ' + info.shelves + (info.shelves > 1 ? ' empty shelves' : ' empty shelf') : ''));
+      if (b.unsure) lines.push({ text: 'Location to be confirmed', more: true });
+      if (b.note) lines.push({ text: b.note, more: true });
+      lines.push({ text: m2(wide) + ' wide, ' + m2(deep) + ' deep, about ' + m2(b.h) + ' high', more: true });
+      cardLines(lines);
       cardPhoto(null);
-      $('cardNote').textContent = b.holding ? 'No stock locations here.' : b.where ? 'Stock location, from your descriptions.' : 'No stock location yet. This is a temporary name: send Claude the location names and they will replace it.';
+      $('cardNote').textContent = b.where || b.holding ? '' : 'No stock location here yet: tell Claude what is in it and it will go on the plan.';
       const btns = [[mode === 'walk' ? 'Stand in front of it' : 'Walk here', () => walkTo(b)]];
       if (info && info.items) btns.push(["What's here", () => setSheet(true, 'find', b.codes.join(', ')), true]);
-      if (info && (info.free || info.shelves)) btns.push(['Free spots', () => { setFree(true); setSheet(true, 'free', b.codes.join(', ')); }, true]);
+      if (info && (info.free || info.shelves)) btns.push(['Free spots', () => { setFree(true); setSheet(true, 'free', b.codes.join(', ')); }, true, true]);
       cardButtons(btns);
       card.hidden = false;
-      dirty = true;
+      redraw();
     }
-    function closeCard() { selected = null; shown = null; hl.visible = false; card.hidden = true; if (openIndex >= 0) closeDrawer(); clearPin(); clearShelfTags(); dirty = true; }
+    function closeCard() { selected = null; shown = null; hl.visible = false; card.hidden = true; if (openIndex >= 0) closeDrawer(); clearPin(); clearShelfTags(); redraw(); }
     $('cardClose').addEventListener('click', closeCard);
     function showHelp() {
       if (openIndex >= 0) closeDrawer(true);
@@ -657,15 +654,16 @@
       ]).concat([
         tap + ' a bay for its locations, a box for its product, or a drawer to pull it out and see what is in it.',
         'Stock: upload or paste the SKU List report, then find a product by code, name or location and go straight to it.',
-        'Shelf labels are red for odd bay numbers and blue for even; drawer labels list their positions with the back one on top. Red boxes are sharps and liquids. Free spots (green): locations with nothing nailed to them. The Stock panel lists them by area.',
+        'Shelf labels are red for odd bay numbers and blue for even; drawer labels list their positions with the back one on top. Free spots (green): locations with nothing nailed to them. The Stock panel lists them by area, and has a switch to show sharps and liquids in red.',
+        'A card shows the main things first: More shows the rest.',
         'Photos on the boxes near you are the Toolbox\'s own saved copies (the Product Search ones), loaded a few at a time.',
       ]);
       if (!touch) items.push('Keys: / opens the search, Esc closes a card.');
       cardLines(items);
       cardPhoto(null);
       $('cardNote').textContent = 'Sizes come from the plans, so expect them to be out by up to about 30 cm. Heights and shelf counts are typical ones until the real ones are measured.';
-      $('cardBtns').innerHTML = '';
-      card.hidden = false; dirty = true;
+      cardButtons([], true);
+      card.hidden = false; redraw();
     }
     $('helpBtn').addEventListener('click', () => (card.hidden || selected ? showHelp() : closeCard()));
 
@@ -718,7 +716,7 @@
       } else {
         walk.yaw += dx * 0.0055; walk.pitch += dy * 0.0055; applyWalk();
       }
-      dirty = true;
+      redraw();
     }
     canvas.addEventListener('pointerdown', (e) => {
       // mouse look, like a game: the first click captures the mouse, after that a click picks what's under the crosshair
@@ -744,7 +742,7 @@
         if (mode === 'orbit') { orbit.r /= f; applyOrbit(); panOrbit(mx, my); }
         else if (mode === 'plan') { zoomTopAt(now.x, now.y, f); top.cx -= mx / top.ppm; top.cy -= my / top.ppm; applyTop(); }
         else { walk.yaw += mx * 0.0055; applyWalk(); }
-        pinch = now; dirty = true;
+        pinch = now; redraw();
       }
     });
     function pointerEnd(e) {
@@ -766,7 +764,7 @@
       if (mode === 'orbit') { orbit.r /= f; applyOrbit(); }
       else if (mode === 'plan') zoomTopAt(e.clientX, e.clientY, f);
       else { eye.fov = Math.min(95, Math.max(35, eye.fov / f)); eye.updateProjectionMatrix(); }
-      dirty = true;
+      redraw();
     }, { passive: false });
 
     const keys = new Set();
@@ -780,7 +778,7 @@
       if (typing || e.altKey || e.ctrlKey || e.metaKey) return; // typing in the stock box
       if (e.key === '/' && sidx) { e.preventDefault(); setSheet(true, stock ? 'find' : undefined); return; }
       if (mode !== 'walk') return;
-      if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); }
+      if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); wake(); }
       walk.run = e.shiftKey;
     });
     window.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) keys.delete(KEYMAP[e.code]); walk.run = e.shiftKey; });
@@ -796,6 +794,7 @@
       if (len > 1) { dx /= len; dy /= len; }
       knob.style.transform = 'translate(' + (dx * R * 0.62) + 'px,' + (dy * R * 0.62) + 'px)';
       walk.fwd = -dy; walk.side = dx;
+      wake();
     }
     stick.addEventListener('pointerdown', (e) => { stickId = e.pointerId; try { stick.setPointerCapture(e.pointerId); } catch (x) { /* fine */ } stickMove(e); e.preventDefault(); });
     stick.addEventListener('pointermove', (e) => { if (e.pointerId === stickId) stickMove(e); });
@@ -870,7 +869,7 @@
       const r = mini.getBoundingClientRect();
       const x = (e.clientX - r.left - mPad) / mScale, y = (e.clientY - r.top - mPad) / mScale;
       [walk.x, walk.y] = nearestFree(Math.min(W, Math.max(0, x)), Math.min(D, Math.max(0, y)));
-      applyWalk(); dirty = true;
+      applyWalk(); redraw();
       e.preventDefault();
     });
 
@@ -921,16 +920,35 @@
     const drawerOfPos = (seg, shelf, pos) => drawerAt.get(FS.drawerKey(seg.area, seg.no, shelf, Math.floor((pos - 1) / FS.drawerShape(sidx, seg).deep)));
 
     // the list: items on ordinary shelves become boxes; items in drawers are in the drawer
-    // red boxes: sharps and liquids (the stock list's flag 8, from Product Search's own list of the store's products)
+    // Sharps and liquids in red: a switch in the Stock panel, off to start with (detailedfoil, 30 Oct 2026). The flag
+    // (8, "Sharp or liquid") comes from Product Search's own list of the store's products, fetched only once it's on.
     const RED = new T.Color(0xd8323a), flagOf = new Map();
+    let redOn = false, flagsAsked = false;
+    try { redOn = localStorage.getItem('fp-red-v1') === '1'; } catch (e) { /* private mode */ }
     const isRed = (it) => ((flagOf.get(it.code) || 0) & 8) !== 0;
-    const colourFor = (it) => (isRed(it) ? RED : areaColour(it.pl.area).offsetHSL(0, 0, it.pl.pos % 2 ? -0.035 : 0.035));
+    const colourFor = (it) => (redOn && isRed(it) ? RED : areaColour(it.pl.area).offsetHSL(0, 0, it.pl.pos % 2 ? -0.035 : 0.035));
     function recolour() {
-      if (!productMesh) return;
-      products.forEach((it, i) => productMesh.setColorAt(i, colourFor(it)));
-      productMesh.instanceColor.needsUpdate = true; dirty = true;
+      if (productMesh) { products.forEach((it, i) => productMesh.setColorAt(i, colourFor(it))); productMesh.instanceColor.needsUpdate = true; }
+      if (tray) tray.traverse((o) => { if (o.userData.item) o.material.color.copy(colourFor(o.userData.item)); });
+      redraw();
     }
-    fetch('product-search/data/products.json').then((r) => r.json()).then((j) => { for (const x of j.items) flagOf.set(x[0], x[2] || 0); recolour(); }).catch(() => { /* no flags: no red */ });
+    function loadFlags() {
+      if (flagsAsked) return;
+      flagsAsked = true;
+      fetch('product-search/data/products.json').then((r) => r.json()).then((j) => {
+        for (const x of j.items) flagOf.set(x[0], x[2] || 0);
+        recolour(); if (shown && shown.kind === 'product') refreshCard();
+      }).catch(() => { flagsAsked = false; });
+    }
+    function setRed(on) {
+      redOn = !!on; $('redShow').checked = redOn;
+      try { localStorage.setItem('fp-red-v1', redOn ? '1' : '0'); } catch (e) { /* private mode */ }
+      if (redOn) loadFlags();
+      recolour();
+    }
+    $('redShow').checked = redOn;
+    $('redShow').addEventListener('change', (e) => setRed(e.target.checked));
+    if (redOn) loadFlags();
     let stock = null, products = [], productMesh = null, byLoc = [];
     const itemAt = new Map(), productOf = new Map();
     function clearProducts() {
@@ -978,7 +996,7 @@
       stock = { items: arr.placed, total: items.length, unplaced: arr.unplaced, all: items, cut: stockCut, free };
       buildFree();
       $('freeBtn').hidden = false;
-      renderer.shadowMap.needsUpdate = true; dirty = true; photoSig = '';
+      renderer.shadowMap.needsUpdate = true; redraw(); photoSig = ''; photoDue = performance.now();
       return stock;
     }
 
@@ -1021,7 +1039,7 @@
         else if (stock && drawerFree.get(i) >= Math.min(d.deep, d.positions - d.box * d.deep)) c = BOARD_EMPTY;
         drawerMesh.setColorAt(i, c);
       });
-      drawerMesh.instanceColor.needsUpdate = true; dirty = true;
+      drawerMesh.instanceColor.needsUpdate = true; redraw();
     }
     function setFree(on) {
       freeOn = !!on && !!stock;
@@ -1068,13 +1086,81 @@
       clearPin();
       pin = pinSprite(text, green ? 'rgba(31,138,70,.97)' : 'rgba(255,210,0,.97)', green ? '#ffffff' : '#14171f');
       pin.position.copy(V(x, y, z)); scene.add(pin); pinAt = { x, y, green };
-      sizePin(); dirty = true;
+      sizePin(); redraw();
     }
-    function clearPin() { if (pin) { scene.remove(pin); pin.material.map.dispose(); pin.material.dispose(); pin = null; } pinAt = null; dirty = true; }
+    function clearPin() { if (pin) { scene.remove(pin); pin.material.map.dispose(); pin.material.dispose(); pin = null; } pinAt = null; redraw(); }
     function sizePin() { // about 30 px tall whatever the view
       if (!pin) return;
       const hgt = mode === 'plan' ? 30 / top.ppm : (30 / view.h) * 2 * Math.tan(T.MathUtils.degToRad(cam().fov / 2));
       pin.scale.set(hgt * pin.userData.aspect, hgt, 1);
+    }
+
+    /* ---------- atlases: lots of little pictures in one texture, drawn in one go ---------- */
+    // The photos and the location labels each live in one big texture with a slot per picture, and each set is one
+    // InstancedMesh, so the phone makes 2 draws for them rather than hundreds, and memory stays the same however far
+    // you walk. A slot is reused for something new once its picture hasn't been needed for longest.
+    // Smaller copies (mipmaps, for things further away) are drawn here with each picture, levels 0 to 3: asking the GPU
+    // to remake them for the whole texture after every change stalled the test browser for seconds.
+    const MIPS = 4;
+    function atlasTexture(w, h) {
+      const t = new T.DataTexture(null, w, h);
+      t.mipmaps = [];
+      for (let l = 0; l < MIPS; l++) t.mipmaps.push({ data: null, width: w >> l, height: h >> l });
+      t.source.dataReady = false; // room on the GPU, nothing to send yet: the slots are filled one at a time
+      t.colorSpace = T.SRGBColorSpace; t.magFilter = T.LinearFilter; t.minFilter = T.LinearMipmapLinearFilter; t.generateMipmaps = false;
+      t.needsUpdate = true;
+      return t;
+    }
+    function atlasSlots(x0, y0, w, h, sw, sh) {
+      const out = [];
+      for (let y = y0; y + sh <= y0 + h; y += sh) for (let x = x0; x + sw <= x0 + w; x += sw) out.push({ x, y, key: null, used: 0 });
+      return out;
+    }
+    function atlasMesh(mat, tex, cap) {
+      const geo = new T.PlaneGeometry(1, 1);
+      geo.setAttribute('aUv', new T.InstancedBufferAttribute(new Float32Array(cap * 4), 4));
+      mat.map = tex;
+      mat.onBeforeCompile = (sh) => { // each instance shows its own slot (canvas rows go in top first, so v is flipped)
+        sh.vertexShader = 'attribute vec4 aUv;\n' + sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n\tvMapUv = aUv.xy + vec2(vMapUv.x, 1.0 - vMapUv.y) * aUv.zw;');
+      };
+      const m = new T.InstancedMesh(geo, mat, cap);
+      m.count = 0; m.frustumCulled = false;
+      groups.main.add(m);
+      return m;
+    }
+    const _src = new T.Texture(), _at = new T.Vector2(), _im = new T.Matrix4(), _iq = new T.Quaternion(), _ip = new T.Vector3(), _is = new T.Vector3(), _up = new T.Vector3(0, 1, 0);
+    const mipCanvas = [];
+    for (let l = 0; l < MIPS; l++) mipCanvas.push(document.createElement('canvas'));
+    function toAtlas(tex, canvas, x, y) { // a small canvas into its slot (x, y on an 8 px grid), and halved copies into each smaller level
+      let from = canvas;
+      for (let l = 0; l < MIPS; l++) {
+        if (l) {
+          const c = mipCanvas[l], w = Math.max(1, canvas.width >> l), h = Math.max(1, canvas.height >> l);
+          c.width = w; c.height = h;
+          const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(from, 0, 0, w, h);
+          from = c;
+        }
+        _src.image = from;
+        renderer.copyTextureToTexture(_src, tex, null, _at.set(x >> l, y >> l), 0, l);
+      }
+    }
+    function takeSlot(slots, keep) { // an empty slot, or the one unused for longest that isn't on screen
+      let best = null;
+      for (const s of slots) {
+        if (!s.key) return s;
+        if (!keep.has(s.key) && (!best || s.used < best.used)) best = s;
+      }
+      return best;
+    }
+    const faceTurn = (f) => (f[1] > 0 ? 0 : f[1] < 0 ? Math.PI : f[0] > 0 ? Math.PI / 2 : -Math.PI / 2);
+    function putInstance(mesh, i, x, y, z, turn, w, h, uv) { // x, y: plan point; z: height; uv: [u, v, du, dv]
+      _iq.setFromAxisAngle(_up, turn);
+      mesh.setMatrixAt(i, _im.compose(_ip.set(x, z, y), _iq, _is.set(w, h, 1)));
+      mesh.geometry.attributes.aUv.setXYZW(i, uv[0], uv[1], uv[2], uv[3]);
+    }
+    function showInstances(mesh, n) {
+      mesh.count = n;
+      mesh.instanceMatrix.needsUpdate = true; mesh.geometry.attributes.aUv.needsUpdate = true;
     }
 
     /* ---------- product photos ---------- */
@@ -1082,56 +1168,60 @@
     // 2 KB each), loaded a few at a time and only for boxes near you, an open drawer and the cards. Screwfix's own image
     // server is never asked (detailedfoil, 30 Oct 2026: don't send it everything at once): no saved copy, no photo.
     const photoUrl = (code) => 'product-search/photos/' + encodeURIComponent(code) + '.jpg';
-    const photos = new Map(); // code -> { state: 'loading' | 'ok' | 'none', tex, used }
-    const PHOTO_AT_ONCE = 4, PHOTO_KEEP = 260, PHOTO_NEAR = 5, PHOTO_MAX = 80;
-    let photoQueue = [], photoBusy = 0, photoDue = 0, photoSig = '', photoRedraw = false, photoRedrawAt = 0;
-    const photoPlanes = new Map(), photoGeo = new T.PlaneGeometry(1, 1);
+    const photos = new Map(); // code -> { state: 'loading' | 'ok' | 'none', slot }
+    const PHOTO_AT_ONCE = 4, PHOTO_NEAR = 5, PS = 136, PP = 8, PI = 120; // a slot is 136 px: the 120 px photo with a white edge
+    const photoTex = atlasTexture(2048, 1024), photoSlots = atlasSlots(0, 0, 2048, 1024, PS, PS);
+    const PHOTO_MAX = Math.min(80, photoSlots.length - 20);
+    const photoGeo = new T.PlaneGeometry(1, 1); // for the photos in an open drawer
+    const photoMesh = atlasMesh(new T.MeshLambertMaterial({ color: 0xffffff }), photoTex, photoSlots.length);
+    const photoCanvas = document.createElement('canvas'); photoCanvas.width = photoCanvas.height = PS;
+    let photoQueue = [], photoBusy = 0, photoDue = 0, photoSig = '', photoNear = [];
+    const photoInbox = []; // photos that have arrived, waiting for the next frame to go in the atlas together
     function loadPhotos() {
       while (photoBusy < PHOTO_AT_ONCE && photoQueue.length) {
         const code = photoQueue.shift();
         if (photos.has(code)) continue;
-        const p = { state: 'loading', tex: null, used: performance.now() };
+        const p = { state: 'loading', slot: null };
         photos.set(code, p); photoBusy++;
         const img = new Image();
         img.decoding = 'async';
-        img.onload = () => {
-          photoBusy--; p.state = 'ok';
-          p.tex = new T.Texture(img); p.tex.colorSpace = T.SRGBColorSpace; p.tex.generateMipmaps = false; p.tex.minFilter = T.LinearFilter; p.tex.needsUpdate = true;
-          photoArrived(code, p); loadPhotos();
-        };
+        img.onload = () => { photoBusy--; photoInbox.push([code, img]); redraw(); loadPhotos(); };
         img.onerror = () => { photoBusy--; p.state = 'none'; loadPhotos(); };
         img.src = photoUrl(code);
       }
     }
-    function wantPhotos(codes, first) { // first: put these at the front (an open drawer), else they replace the queue
-      const fresh = codes.filter((c) => !photos.has(c));
-      photoQueue = first ? fresh.concat(photoQueue.filter((c) => fresh.indexOf(c) < 0)) : fresh;
-      loadPhotos();
+    function wantPhotos(codes) { photoQueue = codes.filter((c) => !photos.has(c)); loadPhotos(); }
+    function flushPhotos() { // called by the frame loop: everything that arrived since the last frame, one texture update
+      const list = photoInbox.splice(0), keep = new Set(photoNear.map((i) => products[i] && products[i].code)), now = performance.now();
+      const g = photoCanvas.getContext('2d');
+      list.forEach(([code, img], k) => {
+        const p = photos.get(code);
+        if (!p) return;
+        const s = takeSlot(photoSlots, keep);
+        if (!s) { photos.delete(code); return; }
+        if (s.key) photos.delete(s.key); // its old photo is fetched again (from the browser's copy) if it's wanted later
+        g.fillStyle = '#ffffff'; g.fillRect(0, 0, PS, PS); g.drawImage(img, PP, PP, PI, PI);
+        toAtlas(photoTex, photoCanvas, s.x, s.y);
+        s.key = code; s.used = now; p.state = 'ok'; p.slot = s;
+      });
+      fillPhotos();
     }
-    function usePhoto(m, code) {
-      const p = photos.get(code);
-      if (!p || p.state !== 'ok') return false;
-      p.used = performance.now(); m.material.map = p.tex; m.material.needsUpdate = true; m.visible = true;
-      return true;
+    function fillPhotos() { // the photo instances: the near boxes whose photo is in the atlas
+      let n = 0;
+      const now = performance.now();
+      for (const i of photoNear) {
+        const it = products[i], p = it && photos.get(it.code);
+        if (!p || p.state !== 'ok') continue;
+        const r = it.rect, f = FRONT[it.pl.seg.face];
+        const across = f[0] ? r.y1 - r.y0 : r.x1 - r.x0, deep = f[0] ? r.x1 - r.x0 : r.y1 - r.y0, s = Math.min(across, it.h) * 0.9;
+        p.slot.used = now;
+        putInstance(photoMesh, n++, (r.x0 + r.x1) / 2 + f[0] * (deep * 0.47 + 0.003), (r.y0 + r.y1) / 2 + f[1] * (deep * 0.47 + 0.003), it.z0 + it.h / 2, faceTurn(f), s, s,
+          [(p.slot.x + PP) / 2048, (p.slot.y + PP) / 1024, PI / 2048, PI / 1024]);
+      }
+      showInstances(photoMesh, n);
+      redraw();
     }
-    function photoArrived(code) {
-      for (const [i, m] of photoPlanes) if (products[i] && products[i].code === code) usePhoto(m, code);
-      if (tray) tray.traverse((o) => { if (o.userData.photo === code) usePhoto(o, code); });
-      trimPhotos(); photoRedraw = true;
-    }
-    function trimPhotos() { // forget the photos used longest ago (the browser keeps the files, so they come back quickly)
-      const ok = [...photos.entries()].filter(([, p]) => p.state === 'ok');
-      if (ok.length <= PHOTO_KEEP) return;
-      const inUse = new Set();
-      for (const m of photoPlanes.values()) inUse.add(m.material.map);
-      if (tray) tray.traverse((o) => { if (o.material && o.material.map) inUse.add(o.material.map); });
-      ok.sort((a, b) => a[1].used - b[1].used);
-      for (const [code, p] of ok.slice(0, ok.length - PHOTO_KEEP)) if (!inUse.has(p.tex)) { p.tex.dispose(); photos.delete(code); }
-    }
-    function clearPhotoPlanes() {
-      for (const m of photoPlanes.values()) { groups.main.remove(m); m.material.dispose(); }
-      photoPlanes.clear();
-    }
+    function clearPhotoPlanes() { photoNear = []; showInstances(photoMesh, 0); }
     const _frustum = new T.Frustum(), _pm = new T.Matrix4(), _pv = new T.Vector3();
     function updatePhotos() { // a photo on the front of the boxes close to you that you can see
       const near = [];
@@ -1151,80 +1241,56 @@
         near.sort((a, b) => a[0] - b[0]);
         if (near.length > PHOTO_MAX) near.length = PHOTO_MAX;
       }
-      const keep = new Set(near.map((n) => n[1])), want = [];
-      for (const [i, m] of photoPlanes) if (!keep.has(i)) { groups.main.remove(m); m.material.dispose(); photoPlanes.delete(i); }
-      for (const [, i] of near) {
-        const it = products[i];
-        let m = photoPlanes.get(i);
-        if (!m) {
-          const r = it.rect, f = FRONT[it.pl.seg.face];
-          const across = (f[0] ? r.y1 - r.y0 : r.x1 - r.x0), deep = (f[0] ? r.x1 - r.x0 : r.y1 - r.y0);
-          const s = Math.min(across, it.h) * 0.9;
-          m = new T.Mesh(photoGeo, new T.MeshLambertMaterial({ color: 0xffffff }));
-          m.position.set((r.x0 + r.x1) / 2 + f[0] * (deep * 0.47 + 0.003), it.z0 + it.h / 2, (r.y0 + r.y1) / 2 + f[1] * (deep * 0.47 + 0.003));
-          m.rotation.y = f[1] > 0 ? 0 : f[1] < 0 ? Math.PI : f[0] > 0 ? Math.PI / 2 : -Math.PI / 2;
-          m.scale.set(s, s, 1); m.visible = false;
-          groups.main.add(m); photoPlanes.set(i, m);
-        }
-        if (!usePhoto(m, it.code) && !photos.has(it.code)) want.push(it.code);
-      }
-      wantPhotos(want);
-      dirty = true;
+      photoNear = near.map((n) => n[1]);
+      wantPhotos(photoNear.map((i) => products[i].code).filter((code) => !photos.has(code)));
+      fillPhotos();
     }
 
-    /* ---------- location labels: red / blue on the shelf edge, white two-line ones on the drawers ---------- */
+    /* ---------- location labels: red / blue on the shelf edge, white ones on the drawers ---------- */
     // Like the real ones (red for odd bay numbers, blue for even; a drawer's label has its positions with the back
-    // one on top). Only the ones near you and in view are made, so there are never thousands at once.
-    const labelCache = new Map(), labelPlanes = new Map(), shelfCells = new Map();
-    const LABEL_MAX = 150;
-    function bars(g, text, x, y, w, h, colour) {
-      let sd = 7; for (const ch of text) sd = (sd * 31 + ch.charCodeAt(0)) >>> 0;
-      g.fillStyle = colour; let px = x, on = true;
-      while (px < x + w) { sd = (sd * 1664525 + 1013904223) >>> 0; const bw = 1 + ((sd >>> 27) % 4); if (on) g.fillRect(px, y, Math.min(bw, x + w - px), h); px += bw; on = !on; }
+    // one on top). Only the ones near you and in view are drawn. Their atlas: shelf-edge labels (192 x 40) in the top
+    // half, drawer labels (128 wide) in the bottom half, each with an 8 px edge so they don't run into each other.
+    const labelTex = atlasTexture(2048, 2048), shelfCells = new Map();
+    const beamSlots = atlasSlots(0, 0, 2048, 1024, 208, 56), drawerSlots = atlasSlots(0, 1024, 2048, 1024, 144, 96);
+    const labelMesh = atlasMesh(new T.MeshBasicMaterial({ color: 0xffffff }), labelTex, beamSlots.length + drawerSlots.length);
+    const labelAt = new Map(); // label key -> its slot
+    let labelWanted = 0;
+    const labelCanvas = document.createElement('canvas');
+    const LABEL_FONT = 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif';
+    function fitFont(g, text, px, room) { g.font = '800 ' + px + 'px ' + LABEL_FONT; const w = g.measureText(text).width; if (w > room) g.font = '800 ' + Math.floor(px * room / w) + 'px ' + LABEL_FONT; }
+    // Each label is drawn with an 8 px edge of its own background colour round it (so the smaller copies don't pick up
+    // the black between slots); the label itself starts at 8, 8.
+    function labelSize(w, h, bg) {
+      const c = labelCanvas; c.width = w + 16; c.height = h + 16;
+      const g = c.getContext('2d');
+      g.fillStyle = bg; g.fillRect(0, 0, w + 16, h + 16); g.translate(8, 8);
+      return g;
     }
-    function labelTex(key, cw, ch, draw) {
-      let e = labelCache.get(key);
-      if (e) return e;
-      if (labelCache.size > 700) for (const [k, v] of labelCache) { if (!v.refs) { v.tex.dispose(); v.mat.dispose(); labelCache.delete(k); } if (labelCache.size <= 500) break; }
-      const c = document.createElement('canvas'); c.width = cw; c.height = ch; draw(c.getContext('2d'), cw, ch);
-      const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
-      e = { tex, mat: new T.MeshBasicMaterial({ map: tex }), ratio: ch / cw, refs: 0 };
-      labelCache.set(key, e);
-      return e;
+    function drawBeam(text, odd) { // 192 x 40
+      const w = 192, h = 40, g = labelSize(w, h, odd ? '#c3222b' : '#1f4fa8');
+      g.fillStyle = '#fff'; fitFont(g, text, 24, w - 40); g.textBaseline = 'middle'; g.fillText(text, 7, 21);
+      g.beginPath(); g.moveTo(w - 17, 6); g.lineTo(w - 27, 21); g.lineTo(w - 7, 21); g.closePath(); g.fill(); // the arrow
+      g.fillRect(w - 20, 20, 6, 13);
+      return [w, h];
     }
-    function beamTex(text, odd) {
-      return labelTex('b|' + text + '|' + (odd ? 1 : 0), 256, 56, (g, w, h) => {
-        g.fillStyle = odd ? '#c3222b' : '#1f4fa8'; g.fillRect(0, 0, w, h);
-        g.fillStyle = '#fff'; g.font = '800 32px system-ui, -apple-system, "Segoe UI", Arial, sans-serif'; g.textBaseline = 'middle';
-        const tw = g.measureText(text).width; if (tw > w - 62) g.font = '800 ' + Math.floor(32 * (w - 62) / tw) + 'px system-ui, -apple-system, "Segoe UI", Arial, sans-serif';
-        g.fillText(text, 9, 29);
-        g.beginPath(); g.moveTo(w - 24, 8); g.lineTo(w - 38, 30); g.lineTo(w - 10, 30); g.closePath(); g.fill(); // the arrow
-        g.fillRect(w - 28, 28, 8, 16);
-      });
+    function drawDrawer(lines) { // 128 wide, a line per position, the back one on top
+      const n = lines.length, lh = n > 2 ? 18 : 22, w = 128, h = 8 + n * lh, g = labelSize(w, h, '#f2f2f0');
+      g.strokeStyle = '#b9b9b5'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2);
+      g.fillStyle = '#15171c'; fitFont(g, lines[0], n > 2 ? 15 : 18, w - 12); g.textAlign = 'center'; g.textBaseline = 'middle';
+      lines.forEach((t, i) => g.fillText(t, w / 2, 4 + i * lh + lh / 2 + 1));
+      return [w, h];
     }
-    function drawerTex(lines) { // lines top to bottom: the back position first
-      return labelTex('d|' + lines.join('/'), 256, 12 + lines.length * 44, (g, w, h) => {
-        g.fillStyle = '#f2f2f0'; g.fillRect(0, 0, w, h); g.strokeStyle = '#b9b9b5'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, w - 3, h - 3);
-        g.fillStyle = '#15171c'; g.font = '800 31px system-ui, -apple-system, "Segoe UI", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-        lines.forEach((t, i) => g.fillText(t, w / 2, 6 + i * 44 + 22));
-      });
-    }
-    function clearLabelPlanes() {
-      for (const m of labelPlanes.values()) { groups.main.remove(m); m.userData.entry.refs--; }
-      labelPlanes.clear(); dirty = true;
-    }
+    function clearLabelPlanes() { showInstances(labelMesh, 0); redraw(); }
     function updateLabels() {
-      const walking = mode === 'walk';
-      const want = new Map();
+      const walking = mode === 'walk', want = [];
       if (sidx && (walking || (mode === 'orbit' && orbit.r < 9))) {
         const c = cam();
         c.updateMatrixWorld(); _pm.multiplyMatrices(c.projectionMatrix, c.matrixWorldInverse); _frustum.setFromProjectionMatrix(_pm);
-        const ex = c.position.x, ey = c.position.z, ez = c.position.y, R = walking ? 4 : Math.max(2.5, orbit.r * 0.5), cand = [];
-        const take = (key, d2, x, y, z, f, w, make) => { // x, y: plan point on the front face
-          if (x - ex > R || ex - x > R || y - ey > R || ey - y > R) return;
+        const ex = c.position.x, ey = c.position.z, ez = c.position.y, R = walking ? 4 : Math.max(2.5, orbit.r * 0.5);
+        const take = (key, d2, x, y, z, f, w, draw, drawer) => { // x, y: plan point on the front face
           if (d2 > R * R || (x - ex) * f[0] + (y - ey) * f[1] > 0) return;
           if (!_frustum.containsPoint(_pv.set(x, z, y))) return;
-          cand.push({ d2, key, x, y, z, f, w, make });
+          want.push({ d2, key, x, y, z, f, w, draw, drawer });
         };
         for (const seg of sidx.list) {
           const b = seg.bay;
@@ -1232,8 +1298,7 @@
           if (Math.max(b.x0 - ex, 0, ex - b.x1) > R || Math.max(b.y0 - ey, 0, ey - b.y1) > R) continue;
           const cfg = FS.bayCfg(sidx, seg.area, seg.no), no = seg.no || 1, f = FRONT[seg.face], odd = no % 2 === 1;
           const per = cfg.positions || Math.max(1, Math.round((seg.u1 - seg.u0) / FS.BOX_W));
-          const first = b.kind === 'pallet' ? 2 : 1;
-          for (let sh = first; sh <= b.levels; sh++) {
+          for (let sh = b.kind === 'pallet' ? 2 : 1; sh <= b.levels; sh++) {
             if (cfg.drawers && sh <= cfg.drawers) continue;
             const z = FS.shelfZ(b, sh) - 0.04, cells = Math.max(per, shelfCells.get(seg.area + '-' + pad2(no) + '-' + pad2(sh)) || 0);
             const lw = Math.min(0.115, (seg.u1 - seg.u0) / cells * 0.92);
@@ -1242,7 +1307,7 @@
               const dx = x - ex, dy = y - ey, dz = z - ez;
               if (dx > R || dx < -R || dy > R || dy < -R) continue;
               const text = seg.area + '-' + pad2(no) + '-' + pad2(sh) + '-' + pad2(i + 1);
-              take('b' + text, dx * dx + dy * dy + dz * dz, x, y, z, f, lw, () => beamTex(text, odd));
+              take('b' + text, dx * dx + dy * dy + dz * dz, x, y, z, f, lw, () => drawBeam(text, odd), false);
             }
           }
         }
@@ -1255,25 +1320,33 @@
           take('d' + d.key, dx * dx + dy * dy + dz * dz, x, y, z, f, Math.min(0.105, (f[0] ? r.y1 - r.y0 : r.x1 - r.x0) * 0.85), () => {
             const first = d.box * d.deep + 1, last = Math.min(d.positions, first + d.deep - 1), lines = [];
             for (let p = last; p >= first; p--) lines.push(d.seg.area + '-' + pad2(d.seg.no || 1) + '-' + pad2(d.shelf) + '-' + pad2(p));
-            return drawerTex(lines);
-          });
+            return drawDrawer(lines);
+          }, true);
         }
-        cand.sort((a, b2) => a.d2 - b2.d2);
-        if (cand.length > LABEL_MAX) cand.length = LABEL_MAX;
-        for (const k of cand) want.set(k.key, k);
+        want.sort((a, b2) => a.d2 - b2.d2);
       }
-      let changed = false;
-      for (const [key, m] of labelPlanes) if (!want.has(key)) { groups.main.remove(m); m.userData.entry.refs--; labelPlanes.delete(key); changed = true; }
-      for (const [key, k] of want) {
-        if (labelPlanes.has(key)) continue;
-        const e = k.make(); e.refs++;
-        const m = new T.Mesh(photoGeo, e.mat), f = k.f;
-        m.position.set(k.x + f[0] * 0.004, k.z, k.y + f[1] * 0.004);
-        m.rotation.y = f[1] > 0 ? 0 : f[1] < 0 ? Math.PI : f[0] > 0 ? Math.PI / 2 : -Math.PI / 2;
-        m.scale.set(k.w, k.w * e.ratio, 1); m.userData.entry = e;
-        groups.main.add(m); labelPlanes.set(key, m); changed = true;
+      // the nearest that fit (each half of the atlas keeps a few slots spare), then any new ones drawn into the atlas
+      const room = [beamSlots.length - 12, drawerSlots.length - 12], shown = [], keep = new Set();
+      for (const k of want) if (room[k.drawer ? 1 : 0]-- > 0) { shown.push(k); keep.add(k.key); }
+      // at most 90 new ones a go, so walking into a new aisle never stalls a frame; the rest come a moment later
+      const now = performance.now(), fresh = shown.filter((k) => !labelAt.has(k.key)).slice(0, 90);
+      if (shown.some((k) => !labelAt.has(k.key) && fresh.indexOf(k) < 0)) photoDue = now + 60;
+      for (const k of fresh) {
+        const s = takeSlot(k.drawer ? drawerSlots : beamSlots, keep);
+        if (s.key) labelAt.delete(s.key);
+        const [w, h] = k.draw();
+        toAtlas(labelTex, labelCanvas, s.x, s.y);
+        s.key = k.key; s.w = w; s.h = h; labelAt.set(k.key, s);
       }
-      if (changed) dirty = true;
+      let n = 0;
+      for (const k of shown) {
+        const s = labelAt.get(k.key);
+        if (!s) continue; // next time
+        s.used = now;
+        putInstance(labelMesh, n++, k.x + k.f[0] * 0.004, k.y + k.f[1] * 0.004, k.z, faceTurn(k.f), k.w, k.w * s.h / s.w, [(s.x + 8) / 2048, (s.y + 8) / 2048, s.w / 2048, s.h / 2048]);
+      }
+      labelWanted = shown.length;
+      if (n || labelMesh.count) { showInstances(labelMesh, n); redraw(); }
     }
 
     function thumb(code) { // a small photo for the lists and cards (the browser loads it when it's in view)
@@ -1286,16 +1359,30 @@
     }
 
     // pulling a drawer out: it slides towards you and you can see what is in it
+    function trayPhoto(m, code) { // a photo on top of something in the open drawer (its own small texture)
+      const p = photos.get(code);
+      if (p && p.state === 'none') return;
+      const img = new Image();
+      img.onload = () => {
+        if (!tray || m.parent !== tray) return; // pushed back in before it came
+        const t = new T.Texture(img); t.colorSpace = T.SRGBColorSpace; t.generateMipmaps = false; t.minFilter = T.LinearFilter; t.needsUpdate = true;
+        m.material.map = t; m.material.needsUpdate = true; m.visible = true; redraw();
+      };
+      img.src = photoUrl(code);
+    }
     let tray = null, trayInfo = null, slide = null, trayV = 0;
     function moveTray() { const t = trayInfo; tray.position.set(t.base[0] + t.f[0] * t.dist * trayV, t.z, t.base[1] + t.f[1] * t.dist * trayV); }
     function removeTray() {
       if (tray) {
         scene.remove(tray);
-        tray.traverse((o) => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } else if (o.material && o.material !== trayMat) o.material.dispose(); });
+        tray.traverse((o) => {
+          if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); }
+          else if (o.material && o.material !== trayMat && o.material !== freeMat) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
+        });
         tray = null;
       }
       if (openIndex >= 0 && drawerMesh) { drawerMesh.setMatrixAt(openIndex, drawerList[openIndex].matrix); drawerMesh.instanceMatrix.needsUpdate = true; }
-      openIndex = -1; slide = null; trayV = 0; dirty = true;
+      openIndex = -1; slide = null; trayV = 0; redraw();
     }
     function openDrawer(i) {
       if (openIndex === i) return;
@@ -1312,7 +1399,6 @@
         const wh = sx === f[0] && sz === f[1] ? h * 0.35 : h * 0.9;
         if (sx) part(sx * (w / 2 - t / 2), wh / 2, 0, t, wh, dd); else part(0, wh / 2, sz * (dd / 2 - t / 2), w, wh, t);
       }
-      const codes = [];
       for (let j = 0; j < d.deep && d.box * d.deep + j < d.positions; j++) {
         const it = itemAt.get(trayLoc(d, j)), c = FS.cellRect(d.seg, d.box, d.boxes, j, d.deep);
         const px = (c.x0 + c.x1) / 2 - cx, pz = (c.y0 + c.y1) / 2 - cy, cw = (c.x1 - c.x0) * 0.8, cd = (c.y1 - c.y0) * 0.8;
@@ -1320,32 +1406,30 @@
           if (stock) part(px, t + 0.004, pz, cw, 0.008, cd, freeMat); // a free position: green
           continue;
         }
-        part(px, t + h * 0.3, pz, cw, h * 0.55, cd, new T.MeshLambertMaterial({ color: colourFor(it) }));
+        part(px, t + h * 0.3, pz, cw, h * 0.55, cd, new T.MeshLambertMaterial({ color: colourFor(it) })).userData.item = it;
         const ph = new T.Mesh(photoGeo, new T.MeshLambertMaterial({ color: 0xffffff }));
         const s = Math.min(cw, cd) * 0.92;
         ph.rotation.x = -Math.PI / 2; ph.position.set(px, t + h * 0.575 + 0.002, pz); ph.scale.set(s, s, 1); ph.visible = false;
-        ph.userData.photo = it.code; g.add(ph);
-        if (!usePhoto(ph, it.code)) codes.push(it.code);
-        const lab = label(it.code, { size: 0.07, bg: 'rgba(255,255,255,.95)', fg: '#14171f', weight: 800 });
-        lab.position.set(px, h * 1.15, pz); g.add(lab);
+        g.add(ph); trayPhoto(ph, it.code);
+        const lab = label(it.code, { size: 0.035, bg: 'rgba(255,255,255,.95)', fg: '#14171f', weight: 800 });
+        lab.position.set(px, h * 0.95, pz); g.add(lab);
       }
       tray = g; scene.add(g);
       trayInfo = { base: [cx, cy], f, z: d.z0, dist: (f[0] ? r.x1 - r.x0 : r.y1 - r.y0) * 0.8 };
       trayV = 0; moveTray();
       slide = { from: 0, to: 1, t0: performance.now(), dur: 280, closing: false };
-      wantPhotos(codes, true);
-      dirty = true;
+      redraw();
     }
     function closeDrawer(instant) {
       if (openIndex < 0) return;
       if (instant) removeTray(); else slide = { from: trayV, to: 0, t0: performance.now(), dur: 240, closing: true };
-      dirty = true;
+      redraw();
     }
 
     // shelf numbers down the left-hand upright (positions count from that end) of the bay you're looking at
     const shelfTags = new T.Group();
     scene.add(shelfTags);
-    function clearShelfTags() { for (const t of shelfTags.children) { t.material.map.dispose(); t.material.dispose(); } shelfTags.clear(); dirty = true; }
+    function clearShelfTags() { for (const t of shelfTags.children) { t.material.map.dispose(); t.material.dispose(); } shelfTags.clear(); redraw(); }
     function showShelfTags(b, face) {
       clearShelfTags();
       if (!b || b.kind === 'bulk' || b.kind === 'cage') return;
@@ -1357,12 +1441,12 @@
         const u = left ? (ax ? b.x0 : b.y0) + 0.07 : (ax ? b.x1 : b.y1) - 0.07;
         const v = (f === 'S' ? b.y1 : f === 'N' ? b.y0 : f === 'E' ? b.x1 : b.x0) + (F[0] + F[1]) * 0.03;
         for (let k = 1; k <= n; k++) {
-          const t = label(String(k), { size: 0.08, bg: 'rgba(255,255,255,.94)', fg: '#14171f', weight: 800 });
+          const t = label(String(k), { size: 0.055, bg: 'rgba(255,255,255,.94)', fg: '#14171f', weight: 800 });
           t.position.copy(V(ax ? u : v, ax ? v : u, FS.shelfZ(b, k) + 0.06));
           shelfTags.add(t);
         }
       }
-      dirty = true;
+      redraw();
     }
 
     // putting yourself in front of something and looking at it
@@ -1374,9 +1458,11 @@
       // on a phone the card covers the top of the screen, so look a little higher and the thing sits lower down
       const lift = view.w < 700 ? Math.atan(0.36 * Math.tan(T.MathUtils.degToRad(eye.fov / 2))) : 0;
       walk.pitch = Math.max(-1.2, Math.min(1.2, Math.atan2(z - 1.62, Math.hypot(tx - walk.x, ty - walk.y) || 1) + lift));
-      applyWalk(); dirty = true;
+      applyWalk(); redraw();
     }
-    // card lines: plain text, or {text, code (a photo), cls}
+    // card lines: plain text, or {text, code (a photo), cls, more}. `more` lines, buttons and the note only show once
+    // the card is opened up with More (detailedfoil, 30 Oct 2026: the pop-up was too big); it stays open until Less.
+    let cardFull = false;
     function cardLines(lines, items) {
       const list = $('cardList');
       list.innerHTML = ''; list.classList.toggle('items', !!items);
@@ -1387,13 +1473,27 @@
         else {
           if (items) li.appendChild(l.code ? thumb(l.code) : Object.assign(document.createElement('span'), { className: 'fp-thumb none' }));
           const s = document.createElement('span'); s.textContent = l.text; if (l.cls) s.className = l.cls; li.appendChild(s);
+          if (l.more) li.classList.add('more');
         }
         list.appendChild(li);
       }
     }
-    function cardButtons(list) {
+    // buttons: [text, fn, alt, more]; all = always the whole card (the help)
+    function cardButtons(list, all) {
       const btns = $('cardBtns'); btns.innerHTML = '';
-      for (const [text, fn, alt] of list) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (alt) b.className = 'alt'; b.addEventListener('click', fn); btns.appendChild(b); }
+      for (const [text, fn, alt, more] of list) {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = text;
+        if (alt) b.className = 'alt';
+        if (more) b.classList.add('more');
+        b.addEventListener('click', fn); btns.appendChild(b);
+      }
+      const extra = !all && !!($('cardList').querySelector('.more') || btns.querySelector('.more') || $('cardNote').textContent);
+      card.classList.toggle('compact', extra && !cardFull);
+      if (!extra) return;
+      const t = document.createElement('button'); t.type = 'button'; t.className = 'alt fp-more';
+      const set = () => { t.textContent = cardFull ? 'Less' : 'More'; t.setAttribute('aria-expanded', String(cardFull)); card.classList.toggle('compact', !cardFull); };
+      t.addEventListener('click', () => { cardFull = !cardFull; set(); });
+      set(); btns.appendChild(t);
     }
     function cardPhoto(code) {
       const img = $('cardPhoto'), p = code && photos.get(code);
@@ -1419,21 +1519,20 @@
       const first = d.box * d.deep + 1, last = Math.min(d.positions, first + d.deep - 1);
       const loc = d.seg.area + '-' + pad2(d.seg.no || 0) + '-' + pad2(d.shelf);
       $('cardTitle').textContent = loc;
-      $('cardSub').textContent = 'Drawer ' + (d.box + 1) + ' of ' + d.boxes + ' on shelf ' + d.shelf + ' (positions ' + first + ' to ' + last + ')';
+      $('cardSub').textContent = 'Drawer ' + (d.box + 1) + ' of ' + d.boxes + ', shelf ' + d.shelf;
       const lines = [];
       for (let j = 0; first + j <= last; j++) {
         const it = itemAt.get(trayLoc(d, j));
         lines.push(stock ? itemLine(pad2(first + j), side(j, d.deep), it) : { text: pad2(first + j) + ' ' + side(j, d.deep) + ': load the stock list to see what is in it' });
       }
-      lines.push({ text: 'Bay ' + d.seg.bay.id + ' in my drawing' });
       cardLines(lines, true);
       cardPhoto(at && itemAt.get(at) ? itemAt.get(at).code : null);
-      $('cardNote').textContent = 'Positions count from the left as you face the shelf. Tell Claude if that is the wrong way round.';
-      cardButtons([[lookHere(), () => standAt(d.seg, d.rect, d.z0 + d.h / 2)], ['Copy ' + (at || loc), () => copy(at || loc), true], ['Push it in', () => closeCard(), true]]);
+      $('cardNote').textContent = '';
+      cardButtons([[lookHere(), () => standAt(d.seg, d.rect, d.z0 + d.h / 2)], ['Copy ' + (at || loc), () => copy(at || loc), true, true], ['Push it in', () => closeCard(), true, true]]);
       const top = FS.cellRect(d.seg, d.box, d.boxes, 0, 1);
       setPin(at || loc + ' drawer ' + (d.box + 1), (top.x0 + top.x1) / 2, (top.y0 + top.y1) / 2, d.z0 + d.h + 0.05, !!(at && !itemAt.get(at)));
       showShelfTags(d.seg.bay, d.seg.face);
-      card.hidden = false; dirty = true;
+      card.hidden = false; redraw();
     }
     function showProduct(i) {
       const it = products[i], pl = it.pl, b = pl.seg.bay, r = it.rect;
@@ -1444,13 +1543,13 @@
       hl.material.opacity = 0.5; hl.visible = true;
       $('cardTitle').textContent = it.code;
       $('cardSub').textContent = it.name;
-      cardLines(['Location ' + it.loc + ': shelf ' + pl.shelf + ', position ' + pl.pos, it.qty + ' available', isRed(it) ? 'Sharp or liquid (red box)' : '', 'Bay ' + b.id + ' in my drawing']);
+      cardLines([it.loc + ', ' + it.qty + ' available', { text: 'Shelf ' + pl.shelf + ', position ' + pl.pos, more: true }, redOn && isRed(it) ? { text: 'Sharp or liquid', more: true } : '']);
       cardPhoto(it.code);
-      $('cardNote').textContent = 'Positions count from the left as you face the shelf. Tell Claude if that is the wrong way round.';
-      cardButtons([[lookHere(), () => standAt(pl.seg, r, it.z0 + it.h / 2)], ['Copy location', () => copy(it.loc), true], ['Product Search', () => window.open('product-search.html#q=' + encodeURIComponent(it.code), '_blank'), true]]);
+      $('cardNote').textContent = '';
+      cardButtons([[lookHere(), () => standAt(pl.seg, r, it.z0 + it.h / 2)], ['Copy location', () => copy(it.loc), true, true], ['Product Search', () => window.open('product-search.html#q=' + encodeURIComponent(it.code), '_blank'), true, true]]);
       setPin(it.loc, (r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2, it.z0 + it.h + 0.04);
       showShelfTags(b, pl.seg.face);
-      card.hidden = false; dirty = true;
+      card.hidden = false; redraw();
     }
     function showFree(ci) {
       const c = freeCells[ci], r = c.run, rc = c.rect, bay = r.seg.bay;
@@ -1467,18 +1566,17 @@
       else {
         lines.push({ text: runNote(r) + (r.n > 1 ? ' (' + runTitle(r) + ')' : ''), cls: 'free' });
         const before = itemAt.get(r.key + '-' + pad2(c.pos - 1)), after = itemAt.get(r.key + '-' + pad2(c.pos + 1));
-        if (r.prev) lines.push({ text: 'Before it: ' + pad2(r.from - 1) + ' ' + r.prev.code + ' ' + r.prev.name, code: r.prev.code });
-        if (r.next) lines.push({ text: 'After it: ' + pad2(r.to + 1) + ' ' + r.next.code + ' ' + r.next.name, code: r.next.code });
-        if (!before && !after && !r.prev && !r.next) lines.push({ text: 'Shelf ' + r.shelf + ', position ' + c.pos });
+        if (r.prev) lines.push({ text: 'Before it: ' + pad2(r.from - 1) + ' ' + r.prev.code + ' ' + r.prev.name, code: r.prev.code, more: true });
+        if (r.next) lines.push({ text: 'After it: ' + pad2(r.to + 1) + ' ' + r.next.code + ' ' + r.next.name, code: r.next.code, more: true });
+        if (!before && !after && !r.prev && !r.next) lines.push({ text: 'Shelf ' + r.shelf + ', position ' + c.pos, more: true });
       }
-      lines.push({ text: 'Bay ' + bay.id + ' in my drawing' });
       cardLines(lines, true);
       cardPhoto(null);
       $('cardNote').textContent = 'Free means nothing in your list is nailed here. On ordinary shelves only gaps between products count: the list doesn\'t say how many labels a shelf has after its last product.';
-      cardButtons([[lookHere(), () => standAt(r.seg, rc, c.z0 + c.h / 2)], ['Copy location', () => copy(loc), true]]);
+      cardButtons([[lookHere(), () => standAt(r.seg, rc, c.z0 + c.h / 2)], ['Copy location', () => copy(loc), true, true]]);
       setPin(loc, (rc.x0 + rc.x1) / 2, (rc.y0 + rc.y1) / 2, c.z0 + c.h + 0.04, true);
       showShelfTags(bay, r.seg.face);
-      card.hidden = false; dirty = true;
+      card.hidden = false; redraw();
     }
     function showNowhere(it) { // a product whose location has no bay on the plan
       closeCard();
@@ -1491,8 +1589,8 @@
         : "I don't know where " + (known ? area + ' bay ' + +it.loc.slice(4, 6) : area) + ' is in the store yet. Tell Claude and it will go on the plan.']);
       cardPhoto(it.code);
       $('cardNote').textContent = '';
-      cardButtons([['Copy location', () => copy(it.loc)], ['Product Search', () => window.open('product-search.html#q=' + encodeURIComponent(it.code), '_blank'), true]]);
-      card.hidden = false; dirty = true;
+      cardButtons([['Copy location', () => copy(it.loc)], ['Product Search', () => window.open('product-search.html#q=' + encodeURIComponent(it.code), '_blank'), true, true]]);
+      card.hidden = false; redraw();
     }
     function refreshCard() {
       if (!shown) return;
@@ -1686,7 +1784,7 @@
     $('stockNew').addEventListener('click', () => { pasting = true; adding = false; sheetState(); $('stockText').focus(); });
     $('stockClear').addEventListener('click', () => {
       FS.storage.clear(); stock = null; pasting = false; closeCard(); clearProducts(); setFree(false); $('freeBtn').hidden = true;
-      sheetState(); $('findList').innerHTML = ''; dirty = true;
+      sheetState(); $('findList').innerHTML = ''; redraw();
     });
     if (navigator.clipboard && navigator.clipboard.readText) {
       $('stockClip').hidden = false;
@@ -1712,11 +1810,11 @@
     mouseBtn.hidden = !hasMouse;
     mouseBtn.setAttribute('aria-pressed', String(mouseLook));
     mouseBtn.addEventListener('click', () => setMouseLook(!mouseLook));
-    document.addEventListener('pointerlockchange', () => { cross.hidden = !locked(); dirty = true; if (locked()) flash('Mouse captured: move it to look, click to pick. Esc lets go.'); });
+    document.addEventListener('pointerlockchange', () => { cross.hidden = !locked(); redraw(); if (locked()) flash('Mouse captured: move it to look, click to pick. Esc lets go.'); });
     document.addEventListener('mousemove', (e) => {
       if (!locked() || Math.abs(e.movementX) > 300 || Math.abs(e.movementY) > 300) return; // some browsers send one huge jump as the mouse is captured
       walk.yaw -= e.movementX * 0.0022; walk.pitch -= e.movementY * 0.0022;
-      applyWalk(); dirty = true;
+      applyWalk(); redraw();
     });
 
     /* ---------- views ---------- */
@@ -1746,20 +1844,20 @@
       if (!walking && locked()) document.exitPointerLock();
       if (!card.hidden) refreshCard();
       if (!seenHint[m]) { seenHint[m] = 1; flash(walking && hasMouse && mouseLook ? MOUSE_HINT : HINTS[m]); }
-      dirty = true;
+      redraw();
     }
     for (const btn of document.querySelectorAll('.fp-modes button')) btn.addEventListener('click', () => setMode(btn.dataset.mode));
     $('resetBtn').addEventListener('click', () => {
       if (mode === 'orbit') { fitOrbit(); applyOrbit(); }
       else if (mode === 'plan') { fitTop(); applyTop(); }
       else { walk.x = L.start.x; walk.y = L.start.y; walk.yaw = FACING[L.start.facing] || 0; walk.pitch = -0.06; eye.fov = 70; resize(); }
-      dirty = true;
+      redraw();
     });
     const namesBtn = $('namesBtn');
     function setNames(on) {
       groups.names.visible = on; namesBtn.setAttribute('aria-pressed', String(on));
       try { localStorage.setItem('fp-names-v1', on ? '1' : '0'); } catch (e) { /* private mode */ }
-      dirty = true;
+      redraw();
     }
     namesBtn.addEventListener('click', () => setNames(!groups.names.visible));
     let namesOn = false;
@@ -1769,29 +1867,41 @@
     canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); say('The 3D view stopped (the phone needed the memory back). Reload the page to carry on.'); });
 
     /* ---------- go ---------- */
+    // A slow phone (frames over 34 ms while you keep moving) draws fewer pixels: down from 2 per screen pixel to 1.
+    let ratio = Math.min(window.devicePixelRatio || 1, 2), slowRun = 0, lastShown = 0;
+    let frames = 0;
     function frame(now) {
-      requestAnimationFrame(frame);
+      scheduled = false; frames++;
       const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now; // time-based, so slow phones walk at the same speed
-      if (mode === 'walk' && stepWalk(dt)) dirty = true;
+      let busy = false;
+      if (mode === 'walk' && (keys.size || walk.fwd || walk.side)) { busy = true; if (stepWalk(dt)) dirty = true; }
       if (slide) {
         const k = Math.min(1, Math.max(0, (performance.now() - slide.t0) / slide.dur)), e = 1 - Math.pow(1 - k, 3);
         trayV = slide.from + (slide.to - slide.from) * e;
         if (tray) moveTray();
-        dirty = true;
+        dirty = true; busy = true;
         if (k >= 1) { const closing = slide.closing; slide = null; if (closing) removeTray(); }
       }
-      if (dirty) { // photos follow the camera: at most every 0.3 s while it moves, and once more when it stops
+      if (photoInbox.length) flushPhotos();
+      if (dirty) { // photos and labels follow the camera: at most every 0.3 s while it moves, and once more when it stops
         const c = cam(), q = c.quaternion, p = c.position;
         const sig = mode + ((p.x * 40) | 0) + ',' + ((p.y * 40) | 0) + ',' + ((p.z * 40) | 0) + ',' + ((q.x * 300) | 0) + ',' + ((q.y * 300) | 0) + ',' + ((q.z * 300) | 0) + ',' + (orbit.r | 0);
         if (sig !== photoSig) { photoSig = sig; if (!photoDue) photoDue = now + 300; }
       }
       if (photoDue && now >= photoDue) { photoDue = 0; updatePhotos(); updateLabels(); }
-      if (photoRedraw && now - photoRedrawAt > 150) { photoRedraw = false; photoRedrawAt = now; dirty = true; } // photos arriving
-      if (!dirty) return;
-      dirty = false;
-      sizePin();
-      renderer.render(scene, cam());
-      if (mode === 'walk') drawMini();
+      if (photoDue) busy = true;
+      if (dirty) {
+        dirty = false;
+        if (busy && lastShown && now - lastShown < 250) {
+          slowRun = now - lastShown > 34 ? slowRun + 1 : Math.max(0, slowRun - 2);
+          if (slowRun > 45 && ratio > 1) { ratio = Math.max(1, ratio - 0.5); slowRun = 0; renderer.setPixelRatio(ratio); resize(); }
+        }
+        lastShown = now;
+        sizePin();
+        renderer.render(scene, cam());
+        if (mode === 'walk') drawMini();
+      }
+      if (busy || dirty) wake();
     }
     new ResizeObserver(resize).observe(stage);
     resize();
@@ -1800,8 +1910,8 @@
     $('side').hidden = false; $('bar').hidden = false;
     setMode('orbit');
     try { if (stock && localStorage.getItem('fp-free-v1') === '1') { seenHint.free = 1; setFree(true); } } catch (e) { /* private mode */ }
-    requestAnimationFrame(frame);
+    wake();
     // for testing in a browser console: FloorPlan.bays, FloorPlan.setMode('walk')
-    window.FloorPlan = { bays, setMode, showBay, showDrawer, showProduct, showFree, goTo, goToFree, applyStock, walkTo, setFree, scene, renderer, get mode() { return mode; }, get stock() { return stock; }, get drawers() { return drawerList; }, get products() { return products; }, get tray() { return tray; }, get free() { return free; }, get freeCells() { return freeCells; }, get photoPlanes() { return photoPlanes; }, get photos() { return photos; }, get camera() { return cam(); }, walk, orbit, top, tapAt, setSheet };
+    window.FloorPlan = { bays, setMode, showBay, showDrawer, showProduct, showFree, goTo, goToFree, applyStock, walkTo, setFree, scene, renderer, get mode() { return mode; }, get stock() { return stock; }, get drawers() { return drawerList; }, get products() { return products; }, get tray() { return tray; }, get free() { return free; }, get freeCells() { return freeCells; }, get photoMesh() { return photoMesh; }, get labelMesh() { return labelMesh; }, get photos() { return photos; }, get ratio() { return ratio; }, get labelWanted() { return labelWanted; }, get frames() { return frames; }, get scheduled() { return scheduled; }, get camera() { return cam(); }, walk, orbit, top, tapAt, setSheet };
   }
 })();

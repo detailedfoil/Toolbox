@@ -85,6 +85,7 @@ body.fp{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;fle
 .fp-tabs button[aria-selected="true"]{background:var(--accent);color:#fff}
 .fp-check{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:.92rem;cursor:pointer}
 .fp-check input{width:20px;height:20px;margin:0;accent-color:#1f8a46}
+#redShow{accent-color:#d8323a}
 .fp-chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
 .fp-chips button{min-height:34px;padding:0 10px;border:1px solid var(--border);border-radius:999px;background:transparent;color:var(--text);font:inherit;font-size:.85rem;cursor:pointer}
 .fp-chips button.on{background:#1f8a46;border-color:#1f8a46;color:#fff}
@@ -129,3 +130,16 @@ body.fp{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;fle
   .fp-stage.walking .fp-card-btns button{min-height:40px;padding:0 12px;font-size:.88rem}
   .fp-stage.walking .fp-card-list{margin-bottom:0}
 }
+/* a card starts small (the main lines and buttons); More shows the rest */
+.fp-card.compact{padding:10px 12px}
+.fp-card.compact h2{font-size:1.15rem}
+.fp-card.compact .fp-card-sub{margin-bottom:4px;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fp-card.compact .more,.fp-card.compact .fp-card-note{display:none}
+.fp-card.compact .fp-card-list{margin-bottom:2px;font-size:.88rem}
+.fp-card.compact .fp-card-list li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:1px 0}
+.fp-card.compact .fp-card-list.items li>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.fp-card.compact .fp-card-list.items .fp-thumb{width:26px;height:26px}
+.fp-card.compact .fp-card-photo{width:44px;height:44px;border-radius:8px}
+.fp-card.compact .fp-card-btns{margin-top:6px;gap:6px}
+.fp-card.compact .fp-card-btns button{min-height:38px;padding:0 12px;font-size:.88rem}
+.fp-card-btns .fp-more{min-width:64px}
