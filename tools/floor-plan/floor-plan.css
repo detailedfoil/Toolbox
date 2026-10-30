@@ -78,3 +78,54 @@ body.fp{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;fle
 .fp-stage.walking .fp-sheet{top:max(10px,env(safe-area-inset-top,0px))}
 .fp-file{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:12px;background:var(--accent);color:#fff;font-weight:650;cursor:pointer}
 .fp-file input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+
+/* stock panel tabs, free spots, photos */
+.fp-tabs{display:flex;gap:4px;margin:0 0 10px;padding:3px;border-radius:12px;background:var(--bg);border:1px solid var(--border)}
+.fp-tabs button{flex:1;min-height:40px;border:0;border-radius:9px;background:transparent;color:var(--text);font:inherit;font-weight:650;cursor:pointer}
+.fp-tabs button[aria-selected="true"]{background:var(--accent);color:#fff}
+.fp-check{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:.92rem;cursor:pointer}
+.fp-check input{width:20px;height:20px;margin:0;accent-color:#1f8a46}
+.fp-chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+.fp-chips button{min-height:34px;padding:0 10px;border:1px solid var(--border);border-radius:999px;background:transparent;color:var(--text);font:inherit;font-size:.85rem;cursor:pointer}
+.fp-chips button.on{background:#1f8a46;border-color:#1f8a46;color:#fff}
+.fp-row{display:flex;gap:8px}
+.fp-row .fp-find{flex:1;min-width:0}
+.fp-select{flex:none;max-width:44%;font:inherit;font-size:16px;padding:0 8px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.fp-count{margin:8px 2px 0;color:var(--muted);font-size:.82rem}
+.fp-count[hidden]{display:none}
+.fp-find-list button{display:flex;gap:10px;align-items:center}
+.fp-find-list .txt{flex:1;min-width:0;overflow-wrap:anywhere}
+.fp-find-list .free b{color:#1f8a46}
+.fp-thumb{flex:none;width:40px;height:40px;border-radius:6px;background:#fff;object-fit:contain}
+.fp-thumb.none{visibility:hidden}
+.fp-card-head{display:flex;gap:12px;align-items:flex-start}
+.fp-card-photo{flex:none;width:72px;height:72px;border-radius:10px;background:#fff;border:1px solid var(--border);object-fit:contain}
+.fp-card-photo[hidden]{display:none}
+.fp-card-name{flex:1;min-width:0}
+.fp-card-name h2{overflow-wrap:anywhere}
+.fp-card-list.items{list-style:none;padding-left:0}
+.fp-card-list.items li{display:flex;gap:8px;align-items:center;margin:4px 0}
+.fp-card-list.items .fp-thumb{width:34px;height:34px}
+.fp-card-list .free{color:#1f8a46;font-weight:650}
+.fp-stage.walking .fp-card-photo{width:52px;height:52px}
+@media (prefers-color-scheme:dark){.fp-find-list .free b,.fp-card-list .free{color:#5fd38a}}
+/* on a wide screen the card sits at the top right, clear of the model */
+@media (min-width:900px) and (min-height:520px){
+  .fp-stage:not(.walking) .fp-card{left:auto;right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top,0px));bottom:auto;transform:none;max-height:calc(100% - 100px)}
+  /* in Walk: bottom right, clear of the buttons, the little map and what you're looking at */
+  .fp-stage.walking .fp-card{top:auto;left:auto;right:max(10px,env(safe-area-inset-right));bottom:calc(max(12px,env(safe-area-inset-bottom)) + 66px);width:min(420px,calc(100% - 20px));max-height:calc(100% - 270px)}
+  .fp-stage.walking .fp-hint{top:max(10px,env(safe-area-inset-top,0px));bottom:auto}
+}
+.fp-how{margin:10px 0 0;font-size:.8rem}
+/* phones: the area buttons are one row you swipe along; in Walk the card spans the top (the little map steps aside) */
+@media (max-width:699px){
+  .fp-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+  .fp-chips::-webkit-scrollbar{display:none}
+  .fp-chips button{flex:none}
+  .fp-stage.walking .fp-card{width:auto;right:10px;max-height:46%}
+  .fp-stage.walking.carded .fp-mini{display:none}
+  .fp-stage.walking .fp-card-note{display:none}
+  .fp-stage.walking .fp-card-btns{margin-top:8px;gap:6px}
+  .fp-stage.walking .fp-card-btns button{min-height:40px;padding:0 12px;font-size:.88rem}
+  .fp-stage.walking .fp-card-list{margin-bottom:0}
+}

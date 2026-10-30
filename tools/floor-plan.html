@@ -9,7 +9,7 @@
 <title>3D Floor Plan</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="floor-plan/floor-plan.css?v=74cbef1a1f">
+<link rel="stylesheet" href="floor-plan/floor-plan.css?v=9781ee035a">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -26,6 +26,7 @@
   <div class="fp-side" id="side" hidden>
     <button class="fp-btn" id="namesBtn" type="button" aria-pressed="false">Bay names</button>
     <button class="fp-btn" id="stockBtn" type="button">Stock</button>
+    <button class="fp-btn" id="freeBtn" type="button" aria-pressed="false" hidden title="Show the locations with nothing nailed to them in green">Free spots</button>
     <button class="fp-btn" id="mouseBtn" type="button" aria-pressed="true" hidden title="Look round with the mouse like a game">Mouse look</button>
     <button class="fp-btn fp-round" id="resetBtn" type="button" aria-label="Reset the view" title="Reset the view">&#8634;</button>
     <button class="fp-btn fp-round" id="helpBtn" type="button" aria-label="How to use it" title="How to use it">?</button>
@@ -57,16 +58,37 @@
     </div>
     <div id="sheetFind" hidden>
       <p class="fp-card-sub" id="stockInfo"></p>
-      <input id="findBox" class="fp-find" type="search" placeholder="Find a product: code or name" autocomplete="off" aria-label="Find a product">
-      <ul class="fp-find-list" id="findList"></ul>
+      <div class="fp-tabs" role="tablist" aria-label="Stock">
+        <button type="button" role="tab" id="tabFind" aria-selected="true" aria-controls="paneFind">Find a product</button>
+        <button type="button" role="tab" id="tabFree" aria-selected="false" aria-controls="paneFree">Free spots</button>
+      </div>
+      <div id="paneFind" role="tabpanel" aria-labelledby="tabFind">
+        <input id="findBox" class="fp-find" type="search" placeholder="Code, name or location (AAC-03)" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-label="Find a product by code, name or location">
+        <p class="fp-count" id="findCount" hidden></p>
+        <ul class="fp-find-list" id="findList"></ul>
+      </div>
+      <div id="paneFree" role="tabpanel" aria-labelledby="tabFree" hidden>
+        <p class="fp-card-sub" id="freeInfo"></p>
+        <label class="fp-check"><input type="checkbox" id="freeShow"> Show them on the shelves in green</label>
+        <div class="fp-row">
+          <input id="freeBox" class="fp-find" type="search" placeholder="Area, bay or shelf: AAC-03" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Show free spots in an area, bay or shelf">
+          <select id="freeSort" class="fp-select" aria-label="Order"><option value="loc">By location</option><option value="big">Most room first</option></select>
+        </div>
+        <div class="fp-chips" id="freeAreas" aria-label="Areas"></div>
+        <p class="fp-count" id="freeCount" hidden></p>
+        <ul class="fp-find-list" id="freeList"></ul>
+        <p class="fp-small fp-how">Free means nothing in your list is nailed there: every empty position in the drawers, and on other shelves the gaps between products (if it goes 01 then 03, 02 is free). Positions after a shelf's last product aren't counted, as the list doesn't say how many labels a shelf has.</p>
+      </div>
       <div class="fp-card-btns"><button id="stockAdd" type="button">Add more</button><button id="stockNew" class="alt" type="button">Paste a new list</button><button id="stockClear" class="alt" type="button">Clear stock</button></div>
     </div>
   </section>
 
   <section class="fp-card" id="card" hidden aria-live="polite">
     <button class="fp-x" id="cardClose" type="button" aria-label="Close">&times;</button>
-    <h2 id="cardTitle"></h2>
-    <p class="fp-card-sub" id="cardSub"></p>
+    <div class="fp-card-head">
+      <img class="fp-card-photo" id="cardPhoto" alt="" width="72" height="72" hidden>
+      <div class="fp-card-name"><h2 id="cardTitle"></h2><p class="fp-card-sub" id="cardSub"></p></div>
+    </div>
     <ul class="fp-card-list" id="cardList"></ul>
     <p class="fp-card-note" id="cardNote"></p>
     <div class="fp-card-btns" id="cardBtns"></div>
@@ -84,7 +106,7 @@
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
 <script src="floor-plan/bays.js?v=484c5d728e"></script>
-<script src="floor-plan/stock.js?v=19486a41eb"></script>
-<script src="floor-plan/app.js?v=cdefce816e"></script>
+<script src="floor-plan/stock.js?v=2f952d85be"></script>
+<script src="floor-plan/app.js?v=19b35ef843"></script>
 </body>
 </html>

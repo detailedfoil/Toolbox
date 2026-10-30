@@ -183,7 +183,28 @@ explain changes in plain English and say what they'll see.
     it out with what's in it, and the search jumps you to a product. Positions count from the LEFT as you face the
     shelf (an assumption, to be confirmed; `psign` in stock.js flips it). Mouse look: on a PC, in Walk, the first click
     captures the mouse like a game (Esc lets go); the "Mouse look" button (only shown with a mouse) turns it off for
-    dragging instead. A paste that stops part way through a row (stock.js `cut`) is flagged, and "Add more" adds a second paste to the list. The report can also be uploaded as a text file ("Upload a file", or drop it on the panel; detailedfoil, 30 Oct: "as well as the paste"): the first list he pasted was cut at exactly 100,000 characters (1,129 products) by a copy or chat limit, the full file has 10,999. `areas` in locations.json (shelves and positions per area, `ignore` = HAD and HAE) came from the full file; HAC (11 products) has no bay yet. Next: whatever detailedfoil asks for (heights, shelf counts and the position direction are still guesses).
+    dragging instead. A paste that stops part way through a row (stock.js `cut`) is flagged, and "Add more" adds a second paste to the list. The report can also be uploaded as a text file ("Upload a file", or drop it on the panel; detailedfoil, 30 Oct: "as well as the paste"): the first list he pasted was cut at exactly 100,000 characters (1,129 products) by a copy or chat limit, the full file has 10,999. `areas` in locations.json (shelves and positions per area, `ignore` = HAD and HAE) came from the full file; HAC (11 products) has no bay yet.
+    30 Oct 2026, "find locations with nothing nailed" + photos + polish: **Free spots** (`freeSpots` in stock.js, tested): a drawer shelf
+    has a known number of positions, so every empty one is free; on ordinary shelves only gaps count (detailedfoil: 01 then 03 means 02 is
+    free; nothing after a shelf's last product, as the list doesn't say how many labels it has); a whole shelf with nothing on it under one
+    in use is free as a whole ("if the shelf is there": BAA 1-4 shelves 6-7 are like that). The Free spots button turns them green (drawers
+    light green / green) and the Stock panel's Free spots tab lists them by area (chips, a filter that reads AAC, aac 3, AAC0312 or "AAA-01,
+    AAA-02": `locQuery`), with "Most room first". The full list gives 1,512 free positions and 23 empty shelves. **Photos**: boxes near you
+    in Walk (5 m, in view, facing you, 80 at most), the open drawer and the cards/lists show `product-search/photos/CODE.jpg`, the
+    Toolbox's own copies (the Product Search ones), 4 at a time, about 260 kept; no saved copy = no photo, Screwfix's own server is never
+    asked (a test checks app.js never names screwfix.com). No mipmaps on them: on swiftshader mipmapping 80 textures took 5 s a frame.
+    Found from the full list and fixed: drawer shelves of AAC 5-6, AAD and AAE have 12 positions, not 20 (6 wider drawers: `drawerPositions`,
+    and `bays` for one bay's settings, in locations.json); `positions` is now the shelves above the drawers (9-10), so their boxes no longer
+    share slots; a bay number the plan doesn't have (BBC-09, BBG-09, LAC-05, LAA-05) is no longer put on the area's first bay; pallet
+    racking stock sits on the drawn beams; cage shelves are at the stock heights. detailedfoil said E3b and E4b are the hazard cabinets
+    (HAB, HAA) and E3f / E4f are BAG: layout.json had the cabinet on E4f, now E3b and E4b are cabinets (1.95 m, drawn with the doors open
+    so the stock shows) and E4f is shelving. HAA, HAB and LAA have bays 1 and 2 in the list: drawn as the two halves of E4b, E3b and L5
+    (marked unsure). Also: a pin over what you're looking for (seen through everything, and on the little map), shelf numbers on the bay
+    you're looking at, a bay card says how many products and free positions it has with What's here / Free spots buttons, cards have the
+    photo, Copy location and a Product Search link (`product-search.html#q=CODE`), products with no bay still turn up in the search, / opens
+    the search and Esc closes, the card sits top right (bottom right in Walk) on a wide screen and across the top on a phone in Walk (the
+    thing you're looking at is put lower down so the card doesn't hide it). Next: whatever detailedfoil asks for (heights, shelf counts and
+    the position direction are still guesses).
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

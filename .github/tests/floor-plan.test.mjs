@@ -116,7 +116,9 @@ test('locations land on the right bay, slice and drawer', () => {
   assert.equal(P('AAC-01-11-02').drawer, null);                                                   // shelf 11 up is not drawers
   assert.equal(P('BBB-01-02-01').seg.bay.id, 'D4b'); assert.equal(P('BBB-08-02-01').seg.bay.id, 'D1b'); // left block counts from the aisle
   assert.equal(P('BBC-01-02-01').seg.face, 'S'); assert.equal(P('BBD-01-02-01').seg.face, 'N');
-  assert.equal(P('HAB-01-01-01').seg.bay.id, 'E3b');                                              // area-only codes
+  assert.equal(P('HAB-01-01-01').seg.bay.id, 'E3b'); assert.equal(P('HAB-02-01-01').seg.bay.id, 'E3b'); // the cabinet's two halves
+  assert.equal(P('BBK-01-01-01').seg.bay.id, 'E2');                                               // an area with no bay numbers takes them all
+  assert.equal(P('BBC-09-01-01'), null); assert.equal(P('LAC-05-01-07'), null);                   // a bay the plan doesn't have goes nowhere
   assert.equal(P('BBJ-01-01-01').seg.bay.id, 'W6'); assert.equal(P('BBJ-12-01-01').seg.bay.id, 'W1'); // the back wall run starts at the back right
   assert.ok(P('BBJ-01-01-01').seg.u0 > P('BBJ-02-01-01').seg.u0);
   assert.equal(P('ZZZ-01-01-01'), null);
@@ -131,13 +133,96 @@ test('positions run left to right as you face the shelf, and the front of a draw
   assert.ok(f.y0 > r.y0, 'front slot is the one nearer the shop floor on a south-facing bay');
 });
 
+test('drawers: 20 positions a shelf (10 of 2, or 5 of 4 in a half bay), 12 where the drawers are wider (6 of 2)', () => {
+  const bs = withLocs(), idx = FS.index(bs, LOCS), shape = (loc) => { const d = FS.place(idx, loc).drawer; return [d.boxes, d.deep, d.box, d.slot]; };
+  assert.deepEqual(shape('AAC-01-01-20'), [10, 2, 9, 1]);
+  assert.deepEqual(shape('AAC-05-01-12'), [6, 2, 5, 1]);    // AAC 5 and 6 have 12 positions a drawer shelf
+  assert.deepEqual(shape('AAD-03-04-07'), [6, 2, 3, 0]);
+  assert.deepEqual(shape('AAE-04-10-01'), [6, 2, 0, 0]);
+  assert.deepEqual(shape('AAA-08-02-13'), [5, 4, 3, 0]);
+  const ds = FS.drawers(idx), per = (a, n) => ds.filter((d) => d.seg.area === a && d.seg.no === n && d.shelf === 1).length;
+  assert.equal(per('AAB', 1), 10); assert.equal(per('AAA', 1), 5); assert.equal(per('AAC', 6), 6); assert.equal(per('AAD', 2), 6);
+});
+
 test('every drawer sits inside its bay and no two drawers overlap', () => {
   const bs = withLocs(), idx = FS.index(bs, LOCS), ds = FS.drawers(idx);
-  assert.ok(ds.length > 2500);
+  assert.ok(ds.length > 2000);
   const seen = new Set();
   for (const d of ds) {
     assert.ok(!seen.has(d.key), 'duplicate drawer ' + d.key); seen.add(d.key);
     const r = FS.cellRect(d.seg, d.box, d.boxes, 0, 1), b = d.seg.bay;
     assert.ok(r.x0 >= b.x0 - 1e-6 && r.x1 <= b.x1 + 1e-6 && r.y0 >= b.y0 - 1e-6 && r.y1 <= b.y1 + 1e-6, d.key + ' is outside ' + b.id);
   }
+});
+
+const plain = (x) => JSON.parse(JSON.stringify(x)); // arrays made inside the loaded scripts compare as different otherwise
+// a made-up list in the report's format: [code, location] pairs
+const report = (rows) => ['SKU Code', 'Description', 'Total Qty', 'Available Qty', 'Unreserved Qty', 'Age Restricted', 'Hazardous', 'Aerosol', 'Nailed Location', 'SKU held',
+  ...rows.map(([c, loc], i) => [c, 'Made up ' + i, 3, 3, 3, 'NO', 'NO', 'NO', loc, 'NO'].join('\t'))].join('\n');
+
+test('every product on a shelf gets its own place, the same width as the others on that shelf', () => {
+  const bs = withLocs(), idx = FS.index(bs, LOCS);
+  const rows = []; for (let p = 1; p <= 10; p++) rows.push([String(20000 + p), 'AAB-01-11-' + String(p).padStart(2, '0')]);
+  rows.push(['20099', 'AAJ-01-01-24']);
+  for (let p = 1; p <= 14; p++) rows.push([String(20100 + p), 'AAJ-01-01-' + String(p).padStart(2, '0')]);
+  const arr = FS.arrange(FS.parse(report(rows)).items, idx);
+  assert.equal(arr.placed.length, 25);
+  const seen = new Set();
+  for (const it of arr.placed) {
+    const k = it.pl.seg.bay.id + it.pl.seg.area + it.pl.shelf + '/' + it.pl.slot;
+    assert.ok(!seen.has(k), it.loc + ' shares a place'); seen.add(k);
+  }
+  const aab = arr.placed.filter((it) => it.loc.startsWith('AAB'));
+  assert.ok(aab.every((it) => it.pl.slots === 10 && !it.pl.drawer), 'shelf 11 of AAB is above the drawers: 10 slots');
+  assert.ok(arr.placed.filter((it) => it.loc.startsWith('AAJ')).every((it) => it.pl.slots === 24));
+});
+
+test('free spots: gaps between products, every empty drawer position, and whole empty shelves', () => {
+  const bs = withLocs(), idx = FS.index(bs, LOCS);
+  const items = FS.parse(report([
+    ['30001', 'BAA-01-05-01'], ['30002', 'BAA-01-05-03'], ['30003', 'BAA-01-05-06'],   // 02 free, then 04 and 05
+    ['30004', 'BAA-01-03-02'],                                                          // 01 free; nothing after the last counts
+    ['30005', 'AAB-01-01-01'],                                                          // a drawer shelf: 02 to 20 free
+    ['30006', 'AAB-01-12-04'],                                                          // above the drawers: 01 to 03, and all of shelf 11
+    ['30007', 'BBC-09-01-03'],                                                          // no bay for it: left out
+  ])).items;
+  const arr = FS.arrange(items, idx), fr = FS.freeSpots(arr, idx), at = (key) => plain(fr.runs.filter((r) => r.key === key).map((r) => [r.kind, r.from, r.to]));
+  assert.deepEqual(at('BAA-01-05'), [['gap', 2, 2], ['gap', 4, 5]]);
+  assert.deepEqual(at('BAA-01-03'), [['gap', 1, 1]]);
+  assert.deepEqual(at('BAA-01-04'), [['shelf', 0, 0]]);          // under shelf 5, nothing on it
+  assert.deepEqual(at('BAA-01-06'), []);                          // above the top one in use: not counted
+  assert.deepEqual(at('AAB-01-01'), [['drawer', 2, 20]]);
+  assert.deepEqual(at('AAB-01-02'), [['drawer', 1, 20]]);         // a drawer shelf with nothing on it
+  assert.deepEqual(at('AAD-04-01'), [['drawer', 1, 12]]);         // 12 positions a shelf in AAD
+  assert.deepEqual(at('AAB-01-12'), [['gap', 1, 3]]);
+  assert.deepEqual(at('AAB-01-11'), [['shelf', 0, 0]]);
+  assert.deepEqual(at('BBC-09-01'), []);
+  const gap = fr.runs.find((r) => r.key === 'BAA-01-05' && r.from === 4);
+  assert.equal(gap.prev.code, '30002'); assert.equal(gap.next.code, '30003'); assert.equal(gap.loc, 'BAA-01-05-04'); assert.equal(gap.n, 2);
+  assert.equal(fr.byArea.BAA.positions, 4); assert.equal(fr.byArea.BAA.shelves, 3);  // shelves 1, 2 and 4 of BAA-01
+  const sorted = plain(fr.runs.map((r) => r.key + '-' + String(r.from).padStart(2, '0')));
+  assert.deepEqual(sorted, sorted.slice().sort(), 'in location order');
+});
+
+test('a search for a location understands the ways people type them', () => {
+  assert.deepEqual(plain(FS.locQuery('aac 3')), ['AAC-03']);
+  assert.deepEqual(plain(FS.locQuery('AAC0312')), ['AAC-03-12']);
+  assert.deepEqual(plain(FS.locQuery('aac-3-12-5')), ['AAC-03-12-05']);
+  assert.deepEqual(plain(FS.locQuery('AAA-01, AAA-02')), ['AAA-01', 'AAA-02']);
+  assert.deepEqual(plain(FS.locQuery('BBI-03, BBK')), ['BBI-03', 'BBK']);
+  assert.equal(FS.locQuery('drill bits'), null);
+  assert.equal(FS.locQuery('AAC312'), null);
+});
+
+test('pallet racking: the stock sits on the beams that are drawn (shelf 1 is the floor)', () => {
+  const bs = withLocs(), p = bs.find((b) => b.id === 'P1');
+  assert.equal(FS.shelfZ(p, 1), 0);
+  const n = Math.max(2, p.levels), drawn = []; for (let k = 1; k < n; k++) drawn.push(0.15 + k * (p.h - 0.25) / (n - 1)); // drawBay's beams
+  assert.ok(Math.abs(FS.shelfZ(p, 2) - drawn[0]) < 1e-9, 'shelf 2 is the first beam');
+});
+
+test('the floor plan never asks Screwfix for photos: only the Toolbox\'s own saved copies', () => {
+  const app = fs.readFileSync(path.join(REPO, 'tools/floor-plan/app.js'), 'utf8');
+  assert.doesNotMatch(app, /screwfix\.com|media\.screwfix|wsrv\.nl/i);
+  assert.match(app, /'product-search\/photos\/' \+ encodeURIComponent\(code\) \+ '\.jpg'/);
 });

@@ -5,9 +5,10 @@
    towards the shop front, z is height. three.js has y up, so a plan point (x, y, z) is the vector (x, z, y).
 
    Three views: 3D (turn round the store), Top (a flat plan) and Walk (first person: a stick on phones, WASD or the
-   arrow keys on a PC). Tap a bay for its name. Names are temporary until the real location names come: row letter
-   + bay number (left to right, or back to front for bays that run that way), plus b / f for the back / front side
-   of a back-to-back row. */
+   arrow keys on a PC, mouse look like a game). Bays are named from data/locations.json (AAC 3 ...), or a temporary
+   row letter + bay number + b / f where there's no location yet. With the stock list loaded (stock.js reads it; it
+   stays on the device): products are boxes on the shelves or in the drawers, the search jumps to one, free spots
+   (nothing nailed) show green, and the boxes near you get the Toolbox's own saved product photos. */
 (function () {
   'use strict';
 
@@ -307,17 +308,27 @@
         const x0 = b.x0 + 0.02, x1 = b.x1 - 0.02, y0 = b.y0 + 0.02, y1 = b.y1 - 0.02;
         texturedBox(M.cage, x0, y0, 0, x1, y1, h, 0.2);
         for (const [x, y] of [[x0, y0], [x1, y0], [x0, y1], [x1, y1]]) box(M.frame, x - 0.02, y - 0.02, 0, x + 0.02, y + 0.02, h);
-        for (const z of [0.9, 1.6]) box(M.meshDeck, x0, y0, z - 0.02, x1, y1, z);
+        for (const z of b.zs || [0.9, 1.6]) box(M.meshDeck, x0, y0, z - 0.02, x1, y1, z);
         return;
       }
       if (b.kind === 'cabinet') {
-        const x0 = b.x0 + 0.03, x1 = b.x1 - 0.03, y0 = b.y0 + 0.02, y1 = b.y1 - 0.02;
-        box(M.cabinet, x0, y0, 0.05, x1, y1, h);
+        // a yellow flammables cabinet with its doors open, so you can see the shelves and what's on them
+        const x0 = b.x0 + 0.03, x1 = b.x1 - 0.03, y0 = b.y0 + 0.02, y1 = b.y1 - 0.02, t = 0.025;
+        const north = b.open.indexOf('N') >= 0, fy = north ? y0 : y1, out = north ? -1 : 1;
         box(M.black, x0 + 0.02, y0 + 0.02, 0, x1 - 0.02, y1 - 0.02, 0.05);
-        const fy = b.open.indexOf('N') >= 0 ? y0 - 0.006 : y1 + 0.006;
-        box(M.black, (x0 + x1) / 2 - 0.006, fy - 0.004, 0.1, (x0 + x1) / 2 + 0.006, fy + 0.004, h - 0.05);
+        box(M.cabinet, x0, y0, 0.05, x0 + t, y1, h); box(M.cabinet, x1 - t, y0, 0.05, x1, y1, h); // sides
+        if (north) box(M.cabinet, x0, y1 - t, 0.05, x1, y1, h); else box(M.cabinet, x0, y0, 0.05, x1, y0 + t, h); // back
+        box(M.cabinet, x0, y0, h - t, x1, y1, h); box(M.cabinet, x0, y0, 0.05, x1, y1, 0.05 + t); // top, bottom
+        for (const z of b.zs || [0.5, 1.0, 1.5]) if (z > 0.15) box(M.cabinet, x0 + t, y0 + t, z - 0.015, x1 - t, y1 - t, z);
+        // the doors, hinged at the front corners and swung open
+        const dw = (x1 - x0) / 2, ang = 2.1;
+        for (const [hx, sx] of [[x0, 1], [x1, -1]]) {
+          const dx = sx * Math.cos(ang), dy = out * Math.sin(ang);
+          const m = new T.Matrix4().compose(V(hx + dx * dw / 2, fy + dy * dw / 2, 0.05 + (h - 0.05) / 2), new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), Math.atan2(-dy, dx)), new T.Vector3(dw, h - 0.06, 0.02));
+          addMatrix(M.cabinet, 'main', true, m);
+        }
         const sign = label('FLAMMABLE', { size: 0.12, bg: 'rgba(36,39,44,.95)', fg: '#f2c400', weight: 800 });
-        sign.position.copy(V((x0 + x1) / 2, fy + (b.open.indexOf('N') >= 0 ? -0.01 : 0.01), h * 0.72));
+        sign.position.copy(V((x0 + x1) / 2, fy + out * 0.02, h + 0.1));
         groups.main.add(sign);
         return;
       }
@@ -569,7 +580,9 @@
     const hl = new T.Mesh(unitBox, new T.MeshBasicMaterial({ color: 0xffd200, transparent: true, opacity: 0.32, depthWrite: false }));
     hl.add(new T.LineSegments(new T.EdgesGeometry(unitBox), new T.LineBasicMaterial({ color: 0xff9f00 })));
     hl.visible = false; hl.renderOrder = 4; scene.add(hl);
-    let selected = null, shown = null; // shown: what the card is about (a bay, a drawer or a product)
+    let selected = null, shown = null; // shown: what the card is about (a bay, a drawer, a product or a free spot)
+    let openIndex = -1, pin = null, pinAt = null; // the pulled-out drawer; the pin over what you're looking for
+    const bayInfo = new Map(); // bay -> {items, free, shelves} once stock is loaded
     function bayAt(clientX, clientY, centre) {
       const r = canvas.getBoundingClientRect();
       if (centre) ndc.set(0, 0); else ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
@@ -582,6 +595,7 @@
     }
 
     const card = $('card');
+    new MutationObserver(() => stage.classList.toggle('carded', !card.hidden)).observe(card, { attributes: true, attributeFilter: ['hidden'] });
     const ROWNAME = { W: 'Back wall run', P: 'Pallet rack', L: 'Longs bay', V: 'VPU cage' };
     const FACES = { N: 'Faces the back wall', S: 'Faces the shop front', NS: 'Open on both sides', EW: 'Open on both sides', E: 'Faces the right-hand wall', W: 'Faces the left-hand wall' };
     const m2 = (n) => (Math.round(n * 100) / 100).toFixed(2) + ' m';
@@ -594,6 +608,7 @@
     }
     function showBay(b) {
       if (openIndex >= 0) closeDrawer(true);
+      clearPin(); showShelfTags(b);
       selected = b; shown = { kind: 'bay', ref: b };
       const w = b.x1 - b.x0, d = b.y1 - b.y0;
       hl.position.set((b.x0 + b.x1) / 2, b.h / 2, (b.y0 + b.y1) / 2);
@@ -610,37 +625,44 @@
       if (b.note) items.splice(b.where ? 1 : 0, 0, b.note);
       if (b.holding) items.unshift('Holding area');
       if (b.plan) items.push('Label on the electrical plan: ' + b.plan);
-      $('cardList').innerHTML = '';
-      for (const t of items) if (t) { const li = document.createElement('li'); li.textContent = t; $('cardList').appendChild(li); }
+      const info = stock && b.codes ? bayInfo.get(b) || { items: 0, free: 0, shelves: 0 } : null;
+      if (info) items.splice(b.where ? 1 : 0, 0, nf(info.items) + ' products nailed here, ' + nf(info.free) + ' free position' + (info.free === 1 ? '' : 's') + (info.shelves ? ' and ' + info.shelves + (info.shelves > 1 ? ' empty shelves' : ' empty shelf') : ''));
+      cardLines(items);
+      cardPhoto(null);
       $('cardNote').textContent = b.holding ? 'No stock locations here.' : b.where ? 'Stock location, from your descriptions.' : 'No stock location yet. This is a temporary name: send Claude the location names and they will replace it.';
-      const btns = $('cardBtns'); btns.innerHTML = '';
-      const go = document.createElement('button'); go.type = 'button'; go.textContent = mode === 'walk' ? 'Stand in front of it' : 'Walk here';
-      go.addEventListener('click', () => walkTo(b));
-      btns.appendChild(go);
+      const btns = [[mode === 'walk' ? 'Stand in front of it' : 'Walk here', () => walkTo(b)]];
+      if (info && info.items) btns.push(["What's here", () => setSheet(true, 'find', b.codes.join(', ')), true]);
+      if (info && (info.free || info.shelves)) btns.push(['Free spots', () => { setFree(true); setSheet(true, 'free', b.codes.join(', ')); }, true]);
+      cardButtons(btns);
       card.hidden = false;
       dirty = true;
     }
-    function closeCard() { selected = null; shown = null; hl.visible = false; card.hidden = true; if (openIndex >= 0) closeDrawer(); dirty = true; }
+    function closeCard() { selected = null; shown = null; hl.visible = false; card.hidden = true; if (openIndex >= 0) closeDrawer(); clearPin(); clearShelfTags(); dirty = true; }
     $('cardClose').addEventListener('click', closeCard);
     function showHelp() {
       if (openIndex >= 0) closeDrawer(true);
+      clearPin(); clearShelfTags();
       selected = null; shown = null; hl.visible = false;
       $('cardTitle').textContent = 'How to use it';
       $('cardSub').textContent = 'Dunstable, from the fire plan and electrical layout';
-      $('cardList').innerHTML = '';
-      const touch = matchMedia('(any-pointer: coarse)').matches;
-      const items = touch ? [
+      const touch = matchMedia('(any-pointer: coarse)').matches, tap = touch ? 'Tap' : 'Click';
+      const items = (touch ? [
         '3D: drag to turn, pinch to zoom, two fingers to move.',
         'Top: drag to move, pinch to zoom.',
         'Walk: the stick walks, drag anywhere else to look round. Tap the little map to jump there.',
-        'Tap any bay to see its name.',
       ] : [
         '3D: drag to turn, scroll to zoom, right-drag (or Shift + drag) to move.',
         'Top: drag to move, scroll to zoom.',
-        'Walk: WASD or the arrow keys walk, drag to look round, hold Shift to go faster. Click the little map to jump there.',
-        'Click any bay to see its name.',
-      ];
-      for (const t of items) { const li = document.createElement('li'); li.textContent = t; $('cardList').appendChild(li); }
+        'Walk: WASD or the arrow keys walk, hold Shift to go faster. With Mouse look on, click once and move the mouse to look round (Esc lets go). Click the little map to jump there.',
+      ]).concat([
+        tap + ' a bay for its locations, a box for its product, or a drawer to pull it out and see what is in it.',
+        'Stock: upload or paste the SKU List report, then find a product by code, name or location and go straight to it.',
+        'Free spots (green): locations with nothing nailed to them. The Stock panel lists them by area.',
+        'Photos on the boxes near you are the Toolbox\'s own saved copies (the Product Search ones), loaded a few at a time.',
+      ]);
+      if (!touch) items.push('Keys: / opens the search, Esc closes a card.');
+      cardLines(items);
+      cardPhoto(null);
       $('cardNote').textContent = 'Sizes come from the plans, so expect them to be out by up to about 30 cm. Heights and shelf counts are typical ones until the real ones are measured.';
       $('cardBtns').innerHTML = '';
       card.hidden = false; dirty = true;
@@ -649,7 +671,8 @@
 
     function walkTo(b) {
       // stand in the aisle in front of the bay, a step or two along towards the middle aisle, looking at it
-      const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, gap = 0.45, along = 1.4;
+      const cab = b.kind === 'cabinet'; // straight in front of a cabinet, so its open doors don't get in the way
+      const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, gap = cab ? 1.15 : 0.45, along = cab ? 0 : 1.4;
       const o = b.open || 'S';
       let x = cx, y = cy;
       if (o.indexOf('S') >= 0) y = b.y1 + gap;
@@ -660,7 +683,7 @@
       else y -= along;
       [walk.x, walk.y] = nearestFree(x, y);
       walk.yaw = Math.atan2(-(cx - walk.x), -(cy - walk.y));
-      walk.pitch = -0.08;
+      walk.pitch = cab ? Math.atan2(b.h / 2 - 1.62, Math.hypot(cx - walk.x, cy - walk.y) || 1) : -0.08;
       setMode('walk');
       showBay(b);
     }
@@ -749,8 +772,14 @@
     const keys = new Set();
     const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', KeyD: 'r', ArrowLeft: 'tl', ArrowRight: 'tr', KeyQ: 'tl', KeyE: 'tr' };
     window.addEventListener('keydown', (e) => {
-      if (mode !== 'walk' || e.altKey || e.ctrlKey || e.metaKey) return;
-      if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return; // typing in the stock box
+      const typing = e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+      if (e.key === 'Escape' && !locked()) {
+        if (!sheet.hidden) { setSheet(false); e.preventDefault(); return; }
+        if (!card.hidden) { closeCard(); e.preventDefault(); return; }
+      }
+      if (typing || e.altKey || e.ctrlKey || e.metaKey) return; // typing in the stock box
+      if (e.key === '/' && sidx) { e.preventDefault(); setSheet(true, stock ? 'find' : undefined); return; }
+      if (mode !== 'walk') return;
       if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); }
       walk.run = e.shiftKey;
     });
@@ -825,6 +854,11 @@
       mctx.clearRect(0, 0, mini.width, mini.height);
       mctx.drawImage(mBase, 0, 0);
       mctx.scale(dpr, dpr);
+      if (pinAt) { // what you're looking for
+        const qx = mPad + pinAt.x * mScale, qy = mPad + pinAt.y * mScale;
+        mctx.fillStyle = pinAt.green ? '#1f8a46' : '#ffb000'; mctx.strokeStyle = '#14171f'; mctx.lineWidth = 1.2;
+        mctx.beginPath(); mctx.moveTo(qx, qy); mctx.lineTo(qx - 5, qy - 9); mctx.lineTo(qx + 5, qy - 9); mctx.closePath(); mctx.fill(); mctx.stroke();
+      }
       const px = mPad + walk.x * mScale, py = mPad + walk.y * mScale;
       const a = Math.atan2(-Math.cos(walk.yaw), -Math.sin(walk.yaw)); // screen angle of where you're looking
       mctx.fillStyle = 'rgba(255,210,0,.45)';
@@ -841,20 +875,22 @@
     });
 
     /* ---------- stock on the shelves ---------- */
-    const FS = window.FloorStock;
+    const FS = window.FloorStock, pad2 = FS.pad2;
     const sidx = LOCS ? FS.index(allBays, LOCS) : null;
-    const BOARD = new T.Color(0xb98a58), BOARD_EMPTY = new T.Color(0xe4d6bb);
+    const BOARD = new T.Color(0xb98a58), BOARD_EMPTY = new T.Color(0xe4d6bb), FREE_ALL = new T.Color(0x34b85a), FREE_SOME = new T.Color(0xa3d683);
     const boardMat = new T.MeshLambertMaterial({ color: 0xffffff });
     const trayMat = new T.MeshLambertMaterial({ color: 0xcaa06a });
+    const freeMat = new T.MeshBasicMaterial({ color: 0x2ccf5a, transparent: true, opacity: 0.5, depthWrite: false });
     const HIDE = new T.Matrix4().makeScale(1e-6, 1e-6, 1e-6);
     const FRONT = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }; // which way a face looks (plan x, plan y)
-    const pad2 = (n) => (n < 10 ? '0' : '') + n;
     const boxM = (r, z0, h, sw, sd) => new T.Matrix4().compose(
       new T.Vector3((r.x0 + r.x1) / 2, z0 + h / 2, (r.y0 + r.y1) / 2), new T.Quaternion(),
       new T.Vector3((r.x1 - r.x0) * sw, h, (r.y1 - r.y0) * sd));
     const areaColour = (a) => { let h = 0; for (const ch of a) h = (h * 31 + ch.charCodeAt(0)) % 360; return new T.Color().setHSL(h / 360, 0.5, 0.64); };
+    const nf = (n) => n.toLocaleString('en-GB');
+    const side = (j, deep) => (j === 0 ? 'front' : j === deep - 1 ? 'back' : 'middle');
 
-    // the drawers: shelves 1 to 10 of the AA_ areas, there whether or not any stock has been pasted
+    // the drawers: shelves 1 to 10 of the AA_ areas, there whether or not any stock has been loaded
     let drawerList = [], drawerMesh = null;
     const drawerAt = new Map();
     if (sidx) {
@@ -874,24 +910,29 @@
         groups.main.add(drawerMesh);
       }
     }
+    const trayLoc = (d, j) => d.seg.area + '-' + pad2(d.seg.no || 0) + '-' + pad2(d.shelf) + '-' + pad2(d.box * d.deep + j + 1);
+    const drawerOfPos = (seg, shelf, pos) => drawerAt.get(FS.drawerKey(seg.area, seg.no, shelf, Math.floor((pos - 1) / FS.drawerShape(sidx, seg).deep)));
 
-    // the pasted list: items on ordinary shelves become boxes; items in drawers are in the drawer
-    let stock = null, products = [], productMesh = null;
+    // the list: items on ordinary shelves become boxes; items in drawers are in the drawer
+    let stock = null, products = [], productMesh = null, byLoc = [];
     const itemAt = new Map(), productOf = new Map();
     function clearProducts() {
       if (productMesh) { groups.main.remove(productMesh); productMesh.dispose(); productMesh = null; }
-      products = []; productOf.clear(); itemAt.clear();
-      if (drawerMesh) { for (let i = 0; i < drawerList.length; i++) drawerMesh.setColorAt(i, BOARD); drawerMesh.instanceColor.needsUpdate = true; }
+      products = []; productOf.clear(); itemAt.clear(); byLoc = []; bayInfo.clear();
+      clearPhotoPlanes();
+      free = null; buildFree();
+      colourDrawers();
     }
     function applyStock(items) {
       if (!sidx) return null;
       closeCard(); clearProducts();
-      const unplaced = {}, has = new Set(), kept = [];
-      for (const it of items) {
-        const pl = FS.place(sidx, it.loc);
-        if (!pl) { const a = it.loc.slice(0, 3); unplaced[a] = (unplaced[a] || 0) + 1; continue; }
-        it.pl = pl; itemAt.set(it.loc, it); kept.push(it);
-        if (pl.drawer) { it.drawerKey = FS.drawerKey(pl.area, pl.seg.no, pl.shelf, pl.drawer.box); has.add(it.drawerKey); } else products.push(it);
+      const arr = FS.arrange(items, sidx);
+      for (const it of arr.placed) {
+        const pl = it.pl;
+        itemAt.set(it.loc, it);
+        if (pl.drawer) it.drawerKey = FS.drawerKey(pl.area, pl.seg.no, pl.shelf, pl.drawer.box); else products.push(it);
+        const o = bayInfo.get(pl.seg.bay) || { items: 0, free: 0, shelves: 0 };
+        o.items++; bayInfo.set(pl.seg.bay, o);
       }
       if (products.length) {
         productMesh = new T.InstancedMesh(unitBox, boardMat, products.length);
@@ -899,7 +940,7 @@
           const pl = it.pl, bay = pl.seg.bay;
           it.rect = FS.cellRect(pl.seg, pl.slot, pl.slots, 0, 1);
           it.z0 = FS.shelfZ(bay, pl.shelf) + 0.012;
-          it.h = Math.max(0.06, Math.min(0.4, FS.shelfGap(bay, pl.shelf) * 0.78));
+          it.h = Math.max(0.05, Math.min(0.4, FS.shelfGap(bay, pl.shelf) * 0.78));
           productMesh.setMatrixAt(i, boxM(it.rect, it.z0, it.h, 0.88, 0.9));
           productMesh.setColorAt(i, areaColour(pl.area));
           productOf.set(it, i);
@@ -908,23 +949,225 @@
         productMesh.castShadow = true; productMesh.receiveShadow = true; productMesh.frustumCulled = false;
         groups.main.add(productMesh);
       }
-      if (drawerMesh) {
-        drawerList.forEach((d, i) => drawerMesh.setColorAt(i, has.has(d.key) ? BOARD : BOARD_EMPTY));
-        drawerMesh.instanceColor.needsUpdate = true;
+      free = FS.freeSpots(arr, sidx);
+      for (const r of free.runs) {
+        const o = bayInfo.get(r.seg.bay) || { items: 0, free: 0, shelves: 0 };
+        if (r.kind === 'shelf') o.shelves++; else o.free += r.n;
+        bayInfo.set(r.seg.bay, o);
       }
-      stock = { items: kept, total: items.length, unplaced, all: items, cut: stockCut };
-      renderer.shadowMap.needsUpdate = true; dirty = true;
+      byLoc = arr.placed.slice().sort((a, b) => (a.loc < b.loc ? -1 : a.loc > b.loc ? 1 : 0));
+      stock = { items: arr.placed, total: items.length, unplaced: arr.unplaced, all: items, cut: stockCut, free };
+      buildFree();
+      $('freeBtn').hidden = false;
+      renderer.shadowMap.needsUpdate = true; dirty = true; photoSig = '';
       return stock;
     }
 
+    /* ---------- free spots: locations with nothing nailed to them ---------- */
+    // Green boxes on ordinary shelves (one a free position, or a slab for a whole empty shelf); drawers with free
+    // positions turn green (light green: some free, green: all of it). Shown with the Free spots button.
+    let free = null, freeMesh = null, freeOn = false;
+    const freeCells = [], freeCellAt = new Map(), drawerFree = new Map();
+    function buildFree() {
+      if (freeMesh) { groups.main.remove(freeMesh); freeMesh.dispose(); freeMesh = null; }
+      freeCells.length = 0; freeCellAt.clear(); drawerFree.clear();
+      if (free) {
+        for (const r of free.runs) {
+          const bay = r.seg.bay, z0 = FS.shelfZ(bay, r.shelf) + 0.012, gap = FS.shelfGap(bay, r.shelf);
+          if (r.kind === 'drawer') {
+            for (let p = r.from; p <= r.to; p++) { const i = drawerOfPos(r.seg, r.shelf, p); if (i !== undefined) drawerFree.set(i, (drawerFree.get(i) || 0) + 1); }
+            continue;
+          }
+          if (r.kind === 'shelf') { freeCellAt.set(r.loc, freeCells.length); freeCells.push({ run: r, pos: 0, rect: FS.cellRect(r.seg, 0, 1, 0, 1), z0, h: Math.min(0.08, gap * 0.3), sw: 0.97 }); continue; }
+          for (let p = r.from; p <= r.to; p++) {
+            freeCellAt.set(r.key + '-' + pad2(p), freeCells.length);
+            freeCells.push({ run: r, pos: p, rect: FS.cellRect(r.seg, p - 1, r.cells, 0, 1), z0, h: Math.max(0.05, Math.min(0.25, gap * 0.5)), sw: 0.8 });
+          }
+        }
+        if (freeCells.length) {
+          freeMesh = new T.InstancedMesh(unitBox, freeMat, freeCells.length);
+          freeCells.forEach((c, i) => freeMesh.setMatrixAt(i, boxM(c.rect, c.z0, c.h, c.sw, 0.86)));
+          freeMesh.instanceMatrix.needsUpdate = true; freeMesh.frustumCulled = false; freeMesh.renderOrder = 2;
+          freeMesh.visible = freeOn;
+          groups.main.add(freeMesh);
+        }
+      }
+      colourDrawers();
+    }
+    function colourDrawers() {
+      if (!drawerMesh) return;
+      drawerList.forEach((d, i) => {
+        let c = BOARD;
+        if (stock && freeOn && drawerFree.has(i)) c = drawerFree.get(i) >= Math.min(d.deep, d.positions - d.box * d.deep) ? FREE_ALL : FREE_SOME;
+        else if (stock && drawerFree.get(i) >= Math.min(d.deep, d.positions - d.box * d.deep)) c = BOARD_EMPTY;
+        drawerMesh.setColorAt(i, c);
+      });
+      drawerMesh.instanceColor.needsUpdate = true; dirty = true;
+    }
+    function setFree(on) {
+      freeOn = !!on && !!stock;
+      if (freeMesh) freeMesh.visible = freeOn;
+      $('freeBtn').setAttribute('aria-pressed', String(freeOn)); $('freeShow').checked = freeOn;
+      colourDrawers();
+      try { localStorage.setItem('fp-free-v1', freeOn ? '1' : '0'); } catch (e) { /* private mode */ }
+      if (freeOn && free && !seenHint.free) { seenHint.free = 1; flash(nf(free.positions) + ' free spots are green. Tap one to see where it is.'); }
+    }
+    $('freeBtn').addEventListener('click', () => setFree(!freeOn));
+    $('freeShow').addEventListener('change', (e) => setFree(e.target.checked));
+    function runTitle(r) {
+      if (r.kind === 'shelf') return r.loc + ', whole shelf';
+      return r.loc + (r.n > 1 ? ' to ' + pad2(r.to) : '');
+    }
+    function runNote(r) {
+      if (r.kind === 'shelf') return 'Nothing nailed on the whole shelf (if the shelf is there)';
+      const n = r.n > 1 ? r.n + ' free next to each other' : '1 free';
+      if (r.kind === 'drawer') {
+        const sh = FS.drawerShape(sidx, r.seg), a = Math.floor((r.from - 1) / sh.deep) + 1, b = Math.floor((r.to - 1) / sh.deep) + 1;
+        return n + ', ' + (a === b ? 'drawer ' + a + (r.n === 1 ? ' ' + side((r.from - 1) % sh.deep, sh.deep) : '') : 'drawers ' + a + ' to ' + b);
+      }
+      return n + (r.from === 1 ? ', before ' + pad2(r.to + 1) : ', in the gap between ' + pad2(r.from - 1) + ' and ' + pad2(r.to + 1));
+    }
+
+    /* ---------- a pin over what you're looking for, seen through everything ---------- */
+    function pinSprite(text, bg, fg) {
+      const px = 64, pad = 18, tip = 20, c = document.createElement('canvas'), g = c.getContext('2d');
+      const font = '800 ' + px + 'px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+      g.font = font;
+      const w = Math.ceil(g.measureText(text).width) + pad * 2, bh = Math.round(px + pad * 1.3), h = bh + tip, r = 20;
+      c.width = w; c.height = h;
+      g.fillStyle = bg;
+      g.beginPath(); g.moveTo(r, 0); g.arcTo(w, 0, w, bh, r); g.arcTo(w, bh, 0, bh, r); g.arcTo(0, bh, 0, 0, r); g.arcTo(0, 0, w, 0, r); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(w / 2 - tip, bh - 1); g.lineTo(w / 2 + tip, bh - 1); g.lineTo(w / 2, h); g.closePath(); g.fill();
+      g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = fg || '#14171f';
+      g.fillText(text, w / 2, bh / 2 + 3);
+      const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace;
+      const s = new T.Sprite(new T.SpriteMaterial({ map: t, transparent: true, depthTest: false, depthWrite: false, sizeAttenuation: false }));
+      s.center.set(0.5, 0); s.renderOrder = 10; s.userData.aspect = w / h;
+      return s;
+    }
+    function setPin(text, x, y, z, green) {
+      clearPin();
+      pin = pinSprite(text, green ? 'rgba(31,138,70,.97)' : 'rgba(255,210,0,.97)', green ? '#ffffff' : '#14171f');
+      pin.position.copy(V(x, y, z)); scene.add(pin); pinAt = { x, y, green };
+      sizePin(); dirty = true;
+    }
+    function clearPin() { if (pin) { scene.remove(pin); pin.material.map.dispose(); pin.material.dispose(); pin = null; } pinAt = null; dirty = true; }
+    function sizePin() { // about 30 px tall whatever the view
+      if (!pin) return;
+      const hgt = mode === 'plan' ? 30 / top.ppm : (30 / view.h) * 2 * Math.tan(T.MathUtils.degToRad(cam().fov / 2));
+      pin.scale.set(hgt * pin.userData.aspect, hgt, 1);
+    }
+
+    /* ---------- product photos ---------- */
+    // The Toolbox's own saved copies, the ones Product Search shows (product-search/photos/CODE.jpg, 120 px, about
+    // 2 KB each), loaded a few at a time and only for boxes near you, an open drawer and the cards. Screwfix's own image
+    // server is never asked (detailedfoil, 30 Oct 2026: don't send it everything at once): no saved copy, no photo.
+    const photoUrl = (code) => 'product-search/photos/' + encodeURIComponent(code) + '.jpg';
+    const photos = new Map(); // code -> { state: 'loading' | 'ok' | 'none', tex, used }
+    const PHOTO_AT_ONCE = 4, PHOTO_KEEP = 260, PHOTO_NEAR = 5, PHOTO_MAX = 80;
+    let photoQueue = [], photoBusy = 0, photoDue = 0, photoSig = '', photoRedraw = false, photoRedrawAt = 0;
+    const photoPlanes = new Map(), photoGeo = new T.PlaneGeometry(1, 1);
+    function loadPhotos() {
+      while (photoBusy < PHOTO_AT_ONCE && photoQueue.length) {
+        const code = photoQueue.shift();
+        if (photos.has(code)) continue;
+        const p = { state: 'loading', tex: null, used: performance.now() };
+        photos.set(code, p); photoBusy++;
+        const img = new Image();
+        img.decoding = 'async';
+        img.onload = () => {
+          photoBusy--; p.state = 'ok';
+          p.tex = new T.Texture(img); p.tex.colorSpace = T.SRGBColorSpace; p.tex.generateMipmaps = false; p.tex.minFilter = T.LinearFilter; p.tex.needsUpdate = true;
+          photoArrived(code, p); loadPhotos();
+        };
+        img.onerror = () => { photoBusy--; p.state = 'none'; loadPhotos(); };
+        img.src = photoUrl(code);
+      }
+    }
+    function wantPhotos(codes, first) { // first: put these at the front (an open drawer), else they replace the queue
+      const fresh = codes.filter((c) => !photos.has(c));
+      photoQueue = first ? fresh.concat(photoQueue.filter((c) => fresh.indexOf(c) < 0)) : fresh;
+      loadPhotos();
+    }
+    function usePhoto(m, code) {
+      const p = photos.get(code);
+      if (!p || p.state !== 'ok') return false;
+      p.used = performance.now(); m.material.map = p.tex; m.material.needsUpdate = true; m.visible = true;
+      return true;
+    }
+    function photoArrived(code) {
+      for (const [i, m] of photoPlanes) if (products[i] && products[i].code === code) usePhoto(m, code);
+      if (tray) tray.traverse((o) => { if (o.userData.photo === code) usePhoto(o, code); });
+      trimPhotos(); photoRedraw = true;
+    }
+    function trimPhotos() { // forget the photos used longest ago (the browser keeps the files, so they come back quickly)
+      const ok = [...photos.entries()].filter(([, p]) => p.state === 'ok');
+      if (ok.length <= PHOTO_KEEP) return;
+      const inUse = new Set();
+      for (const m of photoPlanes.values()) inUse.add(m.material.map);
+      if (tray) tray.traverse((o) => { if (o.material && o.material.map) inUse.add(o.material.map); });
+      ok.sort((a, b) => a[1].used - b[1].used);
+      for (const [code, p] of ok.slice(0, ok.length - PHOTO_KEEP)) if (!inUse.has(p.tex)) { p.tex.dispose(); photos.delete(code); }
+    }
+    function clearPhotoPlanes() {
+      for (const m of photoPlanes.values()) { groups.main.remove(m); m.material.dispose(); }
+      photoPlanes.clear();
+    }
+    const _frustum = new T.Frustum(), _pm = new T.Matrix4(), _pv = new T.Vector3();
+    function updatePhotos() { // a photo on the front of the boxes close to you that you can see
+      const near = [];
+      const c = cam();
+      if (products.length && (mode === 'walk' || (mode === 'orbit' && orbit.r < 10))) {
+        c.updateMatrixWorld(); _pm.multiplyMatrices(c.projectionMatrix, c.matrixWorldInverse); _frustum.setFromProjectionMatrix(_pm);
+        const ex = c.position.x, ey = c.position.z, ez = c.position.y, R = mode === 'walk' ? PHOTO_NEAR : Math.max(3, orbit.r * 0.7);
+        for (let i = 0; i < products.length; i++) {
+          const it = products[i], r = it.rect, f = FRONT[it.pl.seg.face];
+          const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2, cz = it.z0 + it.h / 2, dx = cx - ex, dy = cy - ey;
+          if (dx > R || dx < -R || dy > R || dy < -R) continue;
+          const d2 = dx * dx + dy * dy + (cz - ez) * (cz - ez);
+          if (d2 > R * R || dx * f[0] + dy * f[1] > 0) continue; // too far, or you're behind it
+          if (!_frustum.containsPoint(_pv.set(cx, cz, cy))) continue;
+          near.push([d2, i]);
+        }
+        near.sort((a, b) => a[0] - b[0]);
+        if (near.length > PHOTO_MAX) near.length = PHOTO_MAX;
+      }
+      const keep = new Set(near.map((n) => n[1])), want = [];
+      for (const [i, m] of photoPlanes) if (!keep.has(i)) { groups.main.remove(m); m.material.dispose(); photoPlanes.delete(i); }
+      for (const [, i] of near) {
+        const it = products[i];
+        let m = photoPlanes.get(i);
+        if (!m) {
+          const r = it.rect, f = FRONT[it.pl.seg.face];
+          const across = (f[0] ? r.y1 - r.y0 : r.x1 - r.x0) * 0.88, deep = (f[0] ? r.x1 - r.x0 : r.y1 - r.y0) * 0.9;
+          const s = Math.min(across, it.h) * 0.9;
+          m = new T.Mesh(photoGeo, new T.MeshLambertMaterial({ color: 0xffffff }));
+          m.position.set((r.x0 + r.x1) / 2 + f[0] * (deep / 2 + 0.003), it.z0 + it.h / 2, (r.y0 + r.y1) / 2 + f[1] * (deep / 2 + 0.003));
+          m.rotation.y = f[1] > 0 ? 0 : f[1] < 0 ? Math.PI : f[0] > 0 ? Math.PI / 2 : -Math.PI / 2;
+          m.scale.set(s, s, 1); m.visible = false;
+          groups.main.add(m); photoPlanes.set(i, m);
+        }
+        if (!usePhoto(m, it.code) && !photos.has(it.code)) want.push(it.code);
+      }
+      wantPhotos(want);
+      dirty = true;
+    }
+    function thumb(code) { // a small photo for the lists and cards (the browser loads it when it's in view)
+      const img = document.createElement('img');
+      img.className = 'fp-thumb'; img.alt = ''; img.width = 40; img.height = 40; img.loading = 'lazy'; img.decoding = 'async';
+      const p = photos.get(code);
+      if (p && p.state === 'none') img.classList.add('none');
+      else { img.onerror = () => { img.classList.add('none'); if (!photos.has(code)) photos.set(code, { state: 'none' }); }; img.src = photoUrl(code); }
+      return img;
+    }
+
     // pulling a drawer out: it slides towards you and you can see what is in it
-    let tray = null, trayInfo = null, openIndex = -1, slide = null, trayV = 0;
-    const trayLoc = (d, j) => d.seg.area + '-' + pad2(d.seg.no || 0) + '-' + pad2(d.shelf) + '-' + pad2(d.box * d.deep + j + 1);
+    let tray = null, trayInfo = null, slide = null, trayV = 0;
     function moveTray() { const t = trayInfo; tray.position.set(t.base[0] + t.f[0] * t.dist * trayV, t.z, t.base[1] + t.f[1] * t.dist * trayV); }
     function removeTray() {
       if (tray) {
         scene.remove(tray);
-        tray.traverse((o) => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } });
+        tray.traverse((o) => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } else if (o.material && o.material !== trayMat) o.material.dispose(); });
         tray = null;
       }
       if (openIndex >= 0 && drawerMesh) { drawerMesh.setMatrixAt(openIndex, drawerList[openIndex].matrix); drawerMesh.instanceMatrix.needsUpdate = true; }
@@ -945,19 +1188,28 @@
         const wh = sx === f[0] && sz === f[1] ? h * 0.35 : h * 0.9;
         if (sx) part(sx * (w / 2 - t / 2), wh / 2, 0, t, wh, dd); else part(0, wh / 2, sz * (dd / 2 - t / 2), w, wh, t);
       }
-      for (let j = 0; j < d.deep; j++) {
-        const it = itemAt.get(trayLoc(d, j));
-        if (!it) continue;
-        const c = FS.cellRect(d.seg, d.box, d.boxes, j, d.deep);
-        const px = (c.x0 + c.x1) / 2 - cx, pz = (c.y0 + c.y1) / 2 - cy;
-        part(px, t + h * 0.3, pz, (c.x1 - c.x0) * 0.8, h * 0.55, (c.y1 - c.y0) * 0.8, new T.MeshLambertMaterial({ color: areaColour(d.seg.area) }));
-        const s = label(it.code, { size: 0.07, bg: 'rgba(255,255,255,.95)', fg: '#14171f', weight: 800 });
-        s.position.set(px, h * 1.05, pz); g.add(s);
+      const codes = [];
+      for (let j = 0; j < d.deep && d.box * d.deep + j < d.positions; j++) {
+        const it = itemAt.get(trayLoc(d, j)), c = FS.cellRect(d.seg, d.box, d.boxes, j, d.deep);
+        const px = (c.x0 + c.x1) / 2 - cx, pz = (c.y0 + c.y1) / 2 - cy, cw = (c.x1 - c.x0) * 0.8, cd = (c.y1 - c.y0) * 0.8;
+        if (!it) {
+          if (stock) part(px, t + 0.004, pz, cw, 0.008, cd, freeMat); // a free position: green
+          continue;
+        }
+        part(px, t + h * 0.3, pz, cw, h * 0.55, cd, new T.MeshLambertMaterial({ color: areaColour(d.seg.area) }));
+        const ph = new T.Mesh(photoGeo, new T.MeshLambertMaterial({ color: 0xffffff }));
+        const s = Math.min(cw, cd) * 0.92;
+        ph.rotation.x = -Math.PI / 2; ph.position.set(px, t + h * 0.575 + 0.002, pz); ph.scale.set(s, s, 1); ph.visible = false;
+        ph.userData.photo = it.code; g.add(ph);
+        if (!usePhoto(ph, it.code)) codes.push(it.code);
+        const lab = label(it.code, { size: 0.07, bg: 'rgba(255,255,255,.95)', fg: '#14171f', weight: 800 });
+        lab.position.set(px, h * 1.15, pz); g.add(lab);
       }
       tray = g; scene.add(g);
       trayInfo = { base: [cx, cy], f, z: d.z0, dist: (f[0] ? r.x1 - r.x0 : r.y1 - r.y0) * 0.8 };
       trayV = 0; moveTray();
       slide = { from: 0, to: 1, t0: performance.now(), dur: 280, closing: false };
+      wantPhotos(codes, true);
       dirty = true;
     }
     function closeDrawer(instant) {
@@ -966,38 +1218,97 @@
       dirty = true;
     }
 
+    // shelf numbers down the left-hand upright (positions count from that end) of the bay you're looking at
+    const shelfTags = new T.Group();
+    scene.add(shelfTags);
+    function clearShelfTags() { for (const t of shelfTags.children) { t.material.map.dispose(); t.material.dispose(); } shelfTags.clear(); dirty = true; }
+    function showShelfTags(b, face) {
+      clearShelfTags();
+      if (!b || b.kind === 'bulk' || b.kind === 'cage') return;
+      const faces = new Set(face ? [face] : []);
+      if (!face) { if (sidx) for (const seg of sidx.list) if (seg.bay === b) faces.add(seg.face); if (!faces.size) for (const f of b.open) faces.add(f); }
+      const n = Math.max(2, b.levels), ax = b.along === 'x';
+      for (const f of faces) {
+        const F = FRONT[f], left = f === 'S' || f === 'W'; // positions run +x / +y from the left as you face S / W
+        const u = left ? (ax ? b.x0 : b.y0) + 0.07 : (ax ? b.x1 : b.y1) - 0.07;
+        const v = (f === 'S' ? b.y1 : f === 'N' ? b.y0 : f === 'E' ? b.x1 : b.x0) + (F[0] + F[1]) * 0.03;
+        for (let k = 1; k <= n; k++) {
+          const t = label(String(k), { size: 0.08, bg: 'rgba(255,255,255,.94)', fg: '#14171f', weight: 800 });
+          t.position.copy(V(ax ? u : v, ax ? v : u, FS.shelfZ(b, k) + 0.06));
+          shelfTags.add(t);
+        }
+      }
+      dirty = true;
+    }
+
     // putting yourself in front of something and looking at it
     function standAt(seg, r, z) {
       const f = FRONT[seg.face], tx = (r.x0 + r.x1) / 2, ty = (r.y0 + r.y1) / 2;
       [walk.x, walk.y] = nearestFree(tx + f[0] * 1.05, ty + f[1] * 1.05);
       walk.yaw = Math.atan2(-(tx - walk.x), -(ty - walk.y));
-      walk.pitch = Math.max(-1.2, Math.min(1.2, Math.atan2(z - 1.62, Math.hypot(tx - walk.x, ty - walk.y) || 1)));
-      setMode('walk'); applyWalk(); dirty = true;
+      setMode('walk');
+      // on a phone the card covers the top of the screen, so look a little higher and the thing sits lower down
+      const lift = view.w < 700 ? Math.atan(0.36 * Math.tan(T.MathUtils.degToRad(eye.fov / 2))) : 0;
+      walk.pitch = Math.max(-1.2, Math.min(1.2, Math.atan2(z - 1.62, Math.hypot(tx - walk.x, ty - walk.y) || 1) + lift));
+      applyWalk(); dirty = true;
     }
-    function cardLines(lines) {
-      $('cardList').innerHTML = '';
-      for (const t of lines) if (t) { const li = document.createElement('li'); li.textContent = t; $('cardList').appendChild(li); }
+    // card lines: plain text, or {text, code (a photo), cls}
+    function cardLines(lines, items) {
+      const list = $('cardList');
+      list.innerHTML = ''; list.classList.toggle('items', !!items);
+      for (const l of lines) {
+        if (!l) continue;
+        const li = document.createElement('li');
+        if (typeof l === 'string') li.textContent = l;
+        else {
+          if (items) li.appendChild(l.code ? thumb(l.code) : Object.assign(document.createElement('span'), { className: 'fp-thumb none' }));
+          const s = document.createElement('span'); s.textContent = l.text; if (l.cls) s.className = l.cls; li.appendChild(s);
+        }
+        list.appendChild(li);
+      }
     }
     function cardButtons(list) {
       const btns = $('cardBtns'); btns.innerHTML = '';
       for (const [text, fn, alt] of list) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (alt) b.className = 'alt'; b.addEventListener('click', fn); btns.appendChild(b); }
     }
-    function showDrawer(i) {
+    function cardPhoto(code) {
+      const img = $('cardPhoto'), p = code && photos.get(code);
+      img.hidden = true; img.onload = null; img.onerror = null; img.removeAttribute('src');
+      if (!code || (p && p.state === 'none')) return;
+      img.onload = () => { img.hidden = false; };
+      img.onerror = () => { if (!photos.has(code)) photos.set(code, { state: 'none' }); };
+      img.src = photoUrl(code);
+    }
+    function copy(text) {
+      const ok = () => flash('Copied ' + text), no = () => flash("Couldn't copy: " + text);
+      try { navigator.clipboard.writeText(text).then(ok, no); } catch (e) { no(); }
+    }
+    const lookHere = () => (mode === 'walk' ? 'Stand in front of it' : 'Walk here');
+    function itemLine(pos, sideTxt, it) {
+      return it ? { text: pos + ' ' + sideTxt + ': ' + it.code + ' ' + it.name + ' (' + it.qty + ' available)', code: it.code }
+        : { text: pos + ' ' + sideTxt + ': free (nothing nailed)', cls: 'free' };
+    }
+    function showDrawer(i, at) {
       const d = drawerList[i];
       if (openIndex !== i) openDrawer(i);
-      shown = { kind: 'drawer', ref: i }; selected = null; hl.visible = false;
-      const first = d.box * d.deep + 1;
-      $('cardTitle').textContent = d.seg.area + '-' + pad2(d.seg.no || 0) + '-' + pad2(d.shelf);
-      $('cardSub').textContent = 'Drawer ' + (d.box + 1) + ' of ' + d.boxes + ', shelf ' + d.shelf + ' (positions ' + first + ' to ' + (first + d.deep - 1) + ')';
+      shown = { kind: 'drawer', ref: i, at }; selected = null; hl.visible = false;
+      const first = d.box * d.deep + 1, last = Math.min(d.positions, first + d.deep - 1);
+      const loc = d.seg.area + '-' + pad2(d.seg.no || 0) + '-' + pad2(d.shelf);
+      $('cardTitle').textContent = loc;
+      $('cardSub').textContent = 'Drawer ' + (d.box + 1) + ' of ' + d.boxes + ' on shelf ' + d.shelf + ' (positions ' + first + ' to ' + last + ')';
       const lines = [];
-      for (let j = 0; j < d.deep; j++) {
-        const it = itemAt.get(trayLoc(d, j)), pos = pad2(first + j), side = j === 0 ? 'front' : j === d.deep - 1 ? 'back' : 'middle';
-        lines.push(pos + ' ' + side + ': ' + (it ? it.code + ' ' + it.name + ' (' + it.qty + ' available)' : stock ? 'empty' : 'paste the stock list to see what is in it'));
+      for (let j = 0; first + j <= last; j++) {
+        const it = itemAt.get(trayLoc(d, j));
+        lines.push(stock ? itemLine(pad2(first + j), side(j, d.deep), it) : { text: pad2(first + j) + ' ' + side(j, d.deep) + ': load the stock list to see what is in it' });
       }
-      lines.push('Bay ' + d.seg.bay.id + ' in my drawing');
-      cardLines(lines);
+      lines.push({ text: 'Bay ' + d.seg.bay.id + ' in my drawing' });
+      cardLines(lines, true);
+      cardPhoto(at && itemAt.get(at) ? itemAt.get(at).code : null);
       $('cardNote').textContent = 'Positions count from the left as you face the shelf. Tell Claude if that is the wrong way round.';
-      cardButtons([[mode === 'walk' ? 'Stand in front of it' : 'Walk here', () => standAt(d.seg, d.rect, d.z0 + d.h / 2)], ['Push it in', () => closeCard(), true]]);
+      cardButtons([[lookHere(), () => standAt(d.seg, d.rect, d.z0 + d.h / 2)], ['Copy ' + (at || loc), () => copy(at || loc), true], ['Push it in', () => closeCard(), true]]);
+      const top = FS.cellRect(d.seg, d.box, d.boxes, 0, 1);
+      setPin(at || loc + ' drawer ' + (d.box + 1), (top.x0 + top.x1) / 2, (top.y0 + top.y1) / 2, d.z0 + d.h + 0.05, !!(at && !itemAt.get(at)));
+      showShelfTags(d.seg.bay, d.seg.face);
       card.hidden = false; dirty = true;
     }
     function showProduct(i) {
@@ -1009,24 +1320,81 @@
       hl.material.opacity = 0.5; hl.visible = true;
       $('cardTitle').textContent = it.code;
       $('cardSub').textContent = it.name;
-      cardLines(['Location ' + it.loc, it.qty + ' available', 'Shelf ' + pl.shelf + ', position ' + pl.pos, 'Bay ' + b.id + ' in my drawing']);
+      cardLines(['Location ' + it.loc + ': shelf ' + pl.shelf + ', position ' + pl.pos, it.qty + ' available', 'Bay ' + b.id + ' in my drawing']);
+      cardPhoto(it.code);
       $('cardNote').textContent = 'Positions count from the left as you face the shelf. Tell Claude if that is the wrong way round.';
-      cardButtons([[mode === 'walk' ? 'Stand in front of it' : 'Walk here', () => standAt(pl.seg, r, it.z0 + it.h / 2)]]);
+      cardButtons([[lookHere(), () => standAt(pl.seg, r, it.z0 + it.h / 2)], ['Copy location', () => copy(it.loc), true], ['Product Search', () => window.open('product-search.html#q=' + encodeURIComponent(it.code), '_blank'), true]]);
+      setPin(it.loc, (r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2, it.z0 + it.h + 0.04);
+      showShelfTags(b, pl.seg.face);
+      card.hidden = false; dirty = true;
+    }
+    function showFree(ci) {
+      const c = freeCells[ci], r = c.run, rc = c.rect, bay = r.seg.bay;
+      closeDrawer(true);
+      shown = { kind: 'free', ref: ci }; selected = null;
+      hl.position.set((rc.x0 + rc.x1) / 2, c.z0 + c.h / 2, (rc.y0 + rc.y1) / 2);
+      hl.scale.set(rc.x1 - rc.x0 + 0.03, c.h + 0.04, rc.y1 - rc.y0 + 0.03);
+      hl.material.opacity = 0.35; hl.visible = true;
+      const loc = r.kind === 'shelf' ? r.loc : r.key + '-' + pad2(c.pos);
+      $('cardTitle').textContent = loc;
+      $('cardSub').textContent = r.kind === 'shelf' ? 'Free: nothing nailed on this whole shelf' : 'Free: nothing nailed here';
+      const lines = [];
+      if (r.kind === 'shelf') lines.push({ text: 'No product in the list is on shelf ' + r.shelf + ' of ' + r.area + '-' + pad2(r.bay) + ', but there is stock on a shelf above it. Check the shelf is there.' });
+      else {
+        lines.push({ text: runNote(r) + (r.n > 1 ? ' (' + runTitle(r) + ')' : ''), cls: 'free' });
+        const before = itemAt.get(r.key + '-' + pad2(c.pos - 1)), after = itemAt.get(r.key + '-' + pad2(c.pos + 1));
+        if (r.prev) lines.push({ text: 'Before it: ' + pad2(r.from - 1) + ' ' + r.prev.code + ' ' + r.prev.name, code: r.prev.code });
+        if (r.next) lines.push({ text: 'After it: ' + pad2(r.to + 1) + ' ' + r.next.code + ' ' + r.next.name, code: r.next.code });
+        if (!before && !after && !r.prev && !r.next) lines.push({ text: 'Shelf ' + r.shelf + ', position ' + c.pos });
+      }
+      lines.push({ text: 'Bay ' + bay.id + ' in my drawing' });
+      cardLines(lines, true);
+      cardPhoto(null);
+      $('cardNote').textContent = 'Free means nothing in your list is nailed here. On ordinary shelves only gaps between products count: the list doesn\'t say how many labels a shelf has after its last product.';
+      cardButtons([[lookHere(), () => standAt(r.seg, rc, c.z0 + c.h / 2)], ['Copy location', () => copy(loc), true]]);
+      setPin(loc, (rc.x0 + rc.x1) / 2, (rc.y0 + rc.y1) / 2, c.z0 + c.h + 0.04, true);
+      showShelfTags(bay, r.seg.face);
+      card.hidden = false; dirty = true;
+    }
+    function showNowhere(it) { // a product whose location has no bay on the plan
+      closeCard();
+      shown = { kind: 'nowhere', ref: it };
+      const area = it.loc.slice(0, 3), ignored = ((LOCS && LOCS.ignore) || []).indexOf(area) >= 0;
+      const known = Object.keys(sidx.segs).some((k) => k.indexOf(area + '-') === 0); // other bays of this area are on the plan
+      $('cardTitle').textContent = it.code;
+      $('cardSub').textContent = it.name;
+      cardLines(['Location ' + it.loc, it.qty + ' available', ignored ? area + ' is left off the plan (your say).'
+        : "I don't know where " + (known ? area + ' bay ' + +it.loc.slice(4, 6) : area) + ' is in the store yet. Tell Claude and it will go on the plan.']);
+      cardPhoto(it.code);
+      $('cardNote').textContent = '';
+      cardButtons([['Copy location', () => copy(it.loc)], ['Product Search', () => window.open('product-search.html#q=' + encodeURIComponent(it.code), '_blank'), true]]);
       card.hidden = false; dirty = true;
     }
     function refreshCard() {
       if (!shown) return;
-      if (shown.kind === 'bay') showBay(shown.ref); else if (shown.kind === 'drawer') showDrawer(shown.ref); else showProduct(shown.ref);
+      if (shown.kind === 'bay') showBay(shown.ref); else if (shown.kind === 'drawer') showDrawer(shown.ref, shown.at); else if (shown.kind === 'free') showFree(shown.ref);
+      else if (shown.kind === 'nowhere') showNowhere(shown.ref); else showProduct(shown.ref);
     }
     function goTo(it) {
       const pl = it.pl;
       if (!pl) return;
       closeCard();
-      if (pl.drawer) { const i = drawerAt.get(it.drawerKey), d = drawerList[i]; standAt(d.seg, d.rect, d.z0 + d.h / 2); showDrawer(i); }
+      if (pl.drawer) { const i = drawerAt.get(it.drawerKey), d = drawerList[i]; standAt(d.seg, d.rect, d.z0 + d.h / 2); showDrawer(i, it.loc); }
       else { const i = productOf.get(it); standAt(pl.seg, it.rect, it.z0 + it.h / 2); showProduct(i); }
     }
+    function goToFree(r) {
+      closeCard();
+      if (!freeOn) setFree(true);
+      if (r.kind === 'drawer') {
+        const i = drawerOfPos(r.seg, r.shelf, r.from), d = drawerList[i];
+        standAt(d.seg, d.rect, d.z0 + d.h / 2); showDrawer(i, r.key + '-' + pad2(r.from));
+        return;
+      }
+      const ci = freeCellAt.get(r.kind === 'shelf' ? r.loc : r.key + '-' + pad2(r.from)), c = freeCells[ci];
+      standAt(r.seg, c.rect, c.z0 + c.h / 2); showFree(ci);
+    }
 
-    // what a tap or click lands on: a drawer, a product, or else the bay
+    // what a tap or click lands on: a drawer, a product, a free spot, or else the bay
     function pickAt(cx, cy, centre) {
       const r = canvas.getBoundingClientRect();
       if (centre) ndc.set(0, 0); else ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
@@ -1034,11 +1402,13 @@
       const objs = [];
       if (drawerMesh) objs.push(drawerMesh);
       if (productMesh) objs.push(productMesh);
+      if (freeMesh && freeOn) objs.push(freeMesh);
       if (tray) objs.push(tray);
       if (objs.length) {
         for (const hit of ray.intersectObjects(objs, true)) {
           if (hit.object === drawerMesh) return { kind: 'drawer', i: hit.instanceId };
           if (hit.object === productMesh) return { kind: 'product', i: hit.instanceId };
+          if (hit.object === freeMesh) return { kind: 'free', i: hit.instanceId };
           let o = hit.object;
           while (o && o.userData.drawer === undefined) o = o.parent;
           if (o) return { kind: 'drawer', i: o.userData.drawer };
@@ -1050,53 +1420,113 @@
     function tapAt(cx, cy, centre) {
       const k = pickAt(cx, cy, centre);
       if (!k) { if (shown) closeCard(); return; }
-      if (k.kind === 'drawer') showDrawer(k.i); else if (k.kind === 'product') showProduct(k.i); else showBay(k.b);
+      if (k.kind === 'drawer') showDrawer(k.i); else if (k.kind === 'product') showProduct(k.i); else if (k.kind === 'free') showFree(k.i); else showBay(k.b);
     }
 
-    // the Stock panel: paste the report, then find a product
+    /* ---------- the Stock panel: load the report, find a product, list the free spots ---------- */
     const sheet = $('sheet');
-    let pasting = false, adding = false, stockCut = false; // adding: the next paste is added to the list instead of replacing it
+    let pasting = false, adding = false, stockCut = false, tab = 'find'; // adding: the next paste is added to the list instead of replacing it
+    const locQuery = FS.locQuery;
     function sheetState() {
       const have = !!stock && !pasting;
       $('sheetPaste').hidden = have; $('sheetFind').hidden = !have;
       if (!stock) return;
       const skip = (LOCS && LOCS.ignore) || [];
       const un = Object.keys(stock.unplaced).filter((x) => skip.indexOf(x) < 0).sort((a, b) => stock.unplaced[b] - stock.unplaced[a]);
-      let info = stock.items.length + ' products are on the shelves.';
+      let info = nf(stock.items.length) + ' products are on the shelves.';
       if (un.length) info += ' ' + un.reduce((n, a) => n + stock.unplaced[a], 0) + ' more have a location I have no bay for: ' + un.map((a) => a + ' (' + stock.unplaced[a] + ')').join(', ') + '.';
-      if (stock.cut) info += ' It looks cut off part way through a row (copy and paste have size limits), so there are more products than this. Press Add more and paste the rest, or paste the whole report straight from the stock system on a PC.';
+      if (stock.cut) info += ' It looks cut off part way through a row (copy and paste have size limits), so there are more products than this. Press Add more and paste the rest, or upload the report as a file.';
       $('stockInfo').textContent = info;
+      setTab(tab);
     }
+    function setTab(t) {
+      tab = t;
+      for (const [id, pane, name] of [['tabFind', 'paneFind', 'find'], ['tabFree', 'paneFree', 'free']]) { $(id).setAttribute('aria-selected', String(t === name)); $(pane).hidden = t !== name; }
+      if (t === 'free') runFree(); else runFind();
+    }
+    $('tabFind').addEventListener('click', () => { setTab('find'); $('findBox').focus(); });
+    $('tabFree').addEventListener('click', () => setTab('free'));
+    function listButton(main, sub, code, onClick, cls) {
+      const li = document.createElement('li'), b = document.createElement('button'), txt = document.createElement('span');
+      b.type = 'button'; txt.className = 'txt';
+      const t = document.createElement('b'); t.textContent = main;
+      const s = document.createElement('small'); s.textContent = sub;
+      txt.append(t, document.createElement('br'), s);
+      if (code !== undefined) b.appendChild(code ? thumb(code) : Object.assign(document.createElement('span'), { className: 'fp-thumb none' }));
+      b.appendChild(txt);
+      if (cls) li.className = cls;
+      b.addEventListener('click', onClick);
+      li.appendChild(b);
+      return li;
+    }
+    function count(id, text) { $(id).textContent = text; $(id).hidden = !text; }
     function runFind() {
       const q = $('findBox').value.trim(), list = $('findList');
-      list.innerHTML = '';
+      list.innerHTML = ''; count('findCount', '');
       if (!stock || q.length < 2) return;
-      const qc = q.toUpperCase().replace(/O/g, '0'), qu = q.toUpperCase(), words = q.toLowerCase().split(/\s+/).filter(Boolean);
-      const out = [], seen = new Set();
+      const qc = q.toUpperCase().replace(/O/g, '0'), words = q.toLowerCase().split(/\s+/).filter(Boolean), lq = locQuery(q);
+      const out = [], seen = new Set(), MAX = lq ? 600 : 200; // a whole bay can hold nearly 500
       const add = (it) => { if (!seen.has(it)) { seen.add(it); out.push(it); } };
-      for (const it of stock.items) if (it.code.indexOf(qc) === 0 || it.loc.indexOf(qu) === 0) add(it);
-      for (const it of stock.items) { if (out.length >= 30) break; if (words.every((w) => it.name.toLowerCase().indexOf(w) >= 0)) add(it); }
-      for (const it of out.slice(0, 30)) {
-        const li = document.createElement('li'), b = document.createElement('button');
-        b.type = 'button';
-        const t = document.createElement('b'); t.textContent = it.code + ' ';
-        const n = document.createElement('span'); n.textContent = it.name;
-        const s = document.createElement('small'); s.textContent = it.loc + ', ' + it.qty + ' available';
-        b.append(t, n, document.createElement('br'), s);
-        b.addEventListener('click', () => { sheet.hidden = true; goTo(it); });
-        li.appendChild(b); list.appendChild(li);
+      // codes, then locations, then names; each time the ones on the plan first, then any with no bay on the plan yet
+      const each = (list, ok) => { for (const it of list) if (ok(it)) add(it); for (const it of stock.all) if (!it.pl && ok(it)) add(it); };
+      if (/^[0-9][0-9A-Z]{0,4}$/.test(qc)) each(stock.items, (it) => it.code.indexOf(qc) === 0);
+      if (lq) each(byLoc, (it) => lq.some((p) => it.loc.indexOf(p) === 0));
+      each(stock.items, (it) => words.every((w) => it.name.toLowerCase().indexOf(w) >= 0));
+      for (const it of out.slice(0, MAX)) {
+        if (it.pl) list.appendChild(listButton(it.code + ' ' + it.name, it.loc + ', ' + it.qty + ' available', it.code, () => { sheet.hidden = true; goTo(it); }));
+        else list.appendChild(listButton(it.code + ' ' + it.name, it.loc + ', ' + it.qty + ' available (no bay for ' + it.loc.slice(0, 3) + ' on the plan)', it.code, () => { sheet.hidden = true; showNowhere(it); }));
       }
       if (!out.length) { const li = document.createElement('li'); li.className = 'none'; li.textContent = 'Nothing found'; list.appendChild(li); }
+      else count('findCount', out.length > MAX ? nf(out.length) + ' found: the first ' + MAX + ' are here, type more to narrow it down' : out.length === 1 ? '1 found' : nf(out.length) + ' found');
     }
-    function setSheet(open) {
+    function runFree() {
+      const list = $('freeList'), chips = $('freeAreas');
+      list.innerHTML = ''; chips.innerHTML = ''; count('freeCount', '');
+      if (!stock || !free) return;
+      $('freeShow').checked = freeOn;
+      $('freeInfo').textContent = nf(free.positions) + ' free positions' + (free.shelves ? ' and ' + free.shelves + ' empty shelves' : '') + ' with nothing nailed to them.';
+      const q = $('freeBox').value.trim(), lq = q ? locQuery(q) : null;
+      for (const a of Object.keys(free.byArea).sort()) {
+        const o = free.byArea[a], b = document.createElement('button');
+        b.type = 'button'; b.textContent = a + ' ' + nf(o.positions) + (o.shelves ? ' + ' + o.shelves + (o.shelves > 1 ? ' shelves' : ' shelf') : '');
+        if (lq && lq.length === 1 && lq[0] === a) b.className = 'on';
+        b.addEventListener('click', () => { $('freeBox').value = b.className === 'on' ? '' : a; runFree(); });
+        chips.appendChild(b);
+      }
+      if (q && !lq) { const li = document.createElement('li'); li.className = 'none'; li.textContent = 'Type an area, bay or shelf, like AAC, AAC-03 or AAC-03-12'; list.appendChild(li); return; }
+      const match = (r) => !lq || lq.some((p) => {
+        const parts = p.split('-');
+        if (parts.length === 4) { const pos = +parts[3]; return r.key === parts.slice(0, 3).join('-') && (r.kind === 'shelf' || (pos >= r.from && pos <= r.to)); }
+        return r.key.indexOf(p) === 0;
+      });
+      let runs = free.runs.filter(match);
+      if ($('freeSort').value === 'big') runs = runs.slice().sort((a, b) => (b.kind === 'shelf') - (a.kind === 'shelf') || b.n - a.n);
+      const MAX = 150;
+      for (const r of runs.slice(0, MAX)) list.appendChild(listButton(runTitle(r), runNote(r), undefined, () => { sheet.hidden = true; goToFree(r); }, 'free'));
+      const n = runs.reduce((s, r) => s + r.n, 0), sh = runs.filter((r) => r.kind === 'shelf').length;
+      if (!runs.length) {
+        const li = document.createElement('li'), it = lq && lq.length === 1 ? itemAt.get(lq[0]) : null;
+        li.className = 'none'; li.textContent = it ? lq[0] + ' is not free: ' + it.code + ' ' + it.name + ' is nailed there' : 'No free spots there';
+        list.appendChild(li);
+      }
+      else count('freeCount', (lq ? lq.join(', ') + ': ' : '') + nf(n) + ' free' + (sh ? ' and ' + sh + (sh > 1 ? ' empty shelves' : ' empty shelf') : '') + (runs.length > MAX ? '. The first ' + MAX + ' are here: pick an area or type a bay to see the rest' : ''));
+    }
+    function setSheet(open, which, query) {
       if (open && locked()) document.exitPointerLock();
       sheet.hidden = !open;
-      if (open) { sheetState(); if (stock && !pasting) $('findBox').focus(); }
+      if (!open) return;
+      if (which === 'find') { tab = 'find'; $('findBox').value = query || ''; }
+      if (which === 'free') { tab = 'free'; $('freeBox').value = query || ''; }
+      sheetState();
+      if (stock && !pasting && tab === 'find' && matchMedia('(any-hover: hover)').matches) $('findBox').focus();
     }
     $('stockBtn').hidden = !sidx;
     $('stockBtn').addEventListener('click', () => setSheet(sheet.hidden));
     $('sheetClose').addEventListener('click', () => setSheet(false));
     $('findBox').addEventListener('input', runFind);
+    $('findBox').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const b = $('findList').querySelector('button'); if (b) b.click(); } });
+    $('freeBox').addEventListener('input', runFree);
+    $('freeSort').addEventListener('change', runFree);
     // a paste or an uploaded file: the same report either way
     function submitStock(raw) {
       const msg = $('stockMsg');
@@ -1109,10 +1539,10 @@
         r = { items: stock.all.concat(r.items.filter((x) => !seen.has(x.code + x.loc))) };
         stockCut = stockCut || stock.cut;
       }
-      FS.storage.save(r);
+      if (!FS.storage.save(r)) flash("This device wouldn't keep the list, so you'll need to load it again next time.");
       pasting = false; adding = false;
-      applyStock(r.items); sheetState(); $('findBox').value = ''; runFind();
-      if (!sheet.hidden && !$('sheetFind').hidden) $('findBox').focus();
+      applyStock(r.items); $('findBox').value = ''; $('freeBox').value = ''; tab = 'find'; sheetState();
+      if (!sheet.hidden && !$('sheetFind').hidden && matchMedia('(any-hover: hover)').matches) $('findBox').focus();
       return true;
     }
     $('stockGo').addEventListener('click', () => submitStock($('stockText').value));
@@ -1130,11 +1560,15 @@
     sheet.addEventListener('drop', (e) => { e.preventDefault(); if (e.dataTransfer && e.dataTransfer.files.length) readFile(e.dataTransfer.files[0]); });
     $('stockAdd').addEventListener('click', () => { pasting = true; adding = true; sheetState(); $('stockText').focus(); });
     $('stockNew').addEventListener('click', () => { pasting = true; adding = false; sheetState(); $('stockText').focus(); });
-    $('stockClear').addEventListener('click', () => { FS.storage.clear(); stock = null; pasting = false; closeCard(); clearProducts(); sheetState(); $('findList').innerHTML = ''; dirty = true; });
+    $('stockClear').addEventListener('click', () => {
+      FS.storage.clear(); stock = null; pasting = false; closeCard(); clearProducts(); setFree(false); $('freeBtn').hidden = true;
+      sheetState(); $('findList').innerHTML = ''; dirty = true;
+    });
     if (navigator.clipboard && navigator.clipboard.readText) {
       $('stockClip').hidden = false;
       $('stockClip').addEventListener('click', () => { navigator.clipboard.readText().then((t) => { $('stockText').value = t; }).catch(() => { $('stockMsg').textContent = "The browser wouldn't let me read the clipboard. Paste into the box with Ctrl+V."; $('stockMsg').hidden = false; }); });
     }
+
     if (sidx) { const saved = FS.storage.load(); if (saved) applyStock(saved.items); }
 
     /* ---------- mouse look (PC) ---------- */
@@ -1178,6 +1612,7 @@
       for (const btn of document.querySelectorAll('.fp-modes button')) { const on = btn.dataset.mode === m; btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', String(on)); }
       const walking = m === 'walk';
       groups.cut.visible = !walking; groups.full.visible = walking; groups.walk.visible = walking;
+      shelfTags.visible = m !== 'plan'; // seen from above they'd sit in a pile
       stage.classList.toggle('walking', walking);
       // in Walk the row letters hang above head height and smaller, like aisle signs
       for (const r of rowSigns) { r.sprite.scale.copy(r.scale).multiplyScalar(walking ? 0.55 : 1); r.sprite.position.y = walking ? Math.max(r.z, 3.35) : r.z; }
@@ -1221,8 +1656,16 @@
         dirty = true;
         if (k >= 1) { const closing = slide.closing; slide = null; if (closing) removeTray(); }
       }
+      if (dirty) { // photos follow the camera: at most every 0.3 s while it moves, and once more when it stops
+        const c = cam(), q = c.quaternion, p = c.position;
+        const sig = mode + ((p.x * 40) | 0) + ',' + ((p.y * 40) | 0) + ',' + ((p.z * 40) | 0) + ',' + ((q.x * 300) | 0) + ',' + ((q.y * 300) | 0) + ',' + ((q.z * 300) | 0) + ',' + (orbit.r | 0);
+        if (sig !== photoSig) { photoSig = sig; if (!photoDue) photoDue = now + 300; }
+      }
+      if (photoDue && now >= photoDue) { photoDue = 0; updatePhotos(); }
+      if (photoRedraw && now - photoRedrawAt > 150) { photoRedraw = false; photoRedrawAt = now; dirty = true; } // photos arriving
       if (!dirty) return;
       dirty = false;
+      sizePin();
       renderer.render(scene, cam());
       if (mode === 'walk') drawMini();
     }
@@ -1232,8 +1675,9 @@
     say('');
     $('side').hidden = false; $('bar').hidden = false;
     setMode('orbit');
+    try { if (stock && localStorage.getItem('fp-free-v1') === '1') { seenHint.free = 1; setFree(true); } } catch (e) { /* private mode */ }
     requestAnimationFrame(frame);
     // for testing in a browser console: FloorPlan.bays, FloorPlan.setMode('walk')
-    window.FloorPlan = { bays, setMode, showBay, showDrawer, showProduct, goTo, applyStock, walkTo, scene, renderer, get mode() { return mode; }, get stock() { return stock; }, get drawers() { return drawerList; }, get products() { return products; }, get tray() { return tray; }, walk, orbit, top, tapAt, setSheet };
+    window.FloorPlan = { bays, setMode, showBay, showDrawer, showProduct, showFree, goTo, goToFree, applyStock, walkTo, setFree, scene, renderer, get mode() { return mode; }, get stock() { return stock; }, get drawers() { return drawerList; }, get products() { return products; }, get tray() { return tray; }, get free() { return free; }, get freeCells() { return freeCells; }, get photoPlanes() { return photoPlanes; }, get photos() { return photos; }, get camera() { return cam(); }, walk, orbit, top, tapAt, setSheet };
   }
 })();
