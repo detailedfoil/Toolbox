@@ -70,5 +70,5 @@ test('stock locations: every one belongs to a real bay, none is claimed twice, a
   assert.ok(by.K1f.x0 < by.K6f.x0, 'bay 1 is the middle-aisle (left) end');
   assert.equal(by.D4f.where, 'BBA 1+2'); assert.ok(by.D4f.x0 > by.D1b.x0, 'in the left block bay 1 is at the aisle (right) end');
   assert.equal(by.C4.where, 'BBC 1+2, BBD 1+2'); assert.equal(by.E2.where, 'BBI 3+4, BBK'); assert.equal(by.P1.where, 'LAC 1+2');
-  assert.ok(by.L3.holding && by.L4.holding);
+  assert.ok(by.L2.holding && by.L4.holding); assert.equal(by.L1.where, 'LAB 1+2'); assert.equal(by.L3.where, 'LAB 3+4');
 });
