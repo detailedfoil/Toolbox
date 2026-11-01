@@ -394,6 +394,8 @@
   /* ---------- where each line sits: bay by bay, top shelf first, left to right ---------- */
 
   function shelvesOf(b) { return b.shelves && b.shelves.length ? b.shelves : [{ label: '', codes: b.codes || [] }]; }
+  // NEW marks a line only in the bay it was added to (plus any listed in `also`), not everywhere the code sits
+  function newKeys(a) { return [a.bay].concat(a.also || []).map(function (b) { return a.code + '|' + b; }); }
   function places(bays) {
     var out = [];
     (bays || []).forEach(function (b, bi) {
@@ -419,7 +421,7 @@
     var P = data.products || {};
     out.added = out.added.map(function (a) {
       var p = P[a.code];
-      return { code: a.code, bay: a.bay, where: a.where, note: a.note, name: (p && p.name) || a.name || null, price: p && p.price != null ? p.price : null };
+      return { code: a.code, bay: a.bay, also: a.also, where: a.where, note: a.note, name: (p && p.name) || a.name || null, price: p && p.price != null ? p.price : null };
     });
     return out.added.length || out.removed.length ? out : null;
   }
@@ -650,7 +652,7 @@
 
     var pc = planChanges(data), newCodes = {};
     if (pc) {
-      pc.added.forEach(function (a) { newCodes[a.code] = 1; });
+      pc.added.forEach(function (a) { newKeys(a).forEach(function (k) { newCodes[k] = 1; }); });
       var prow = function (kind, x) {
         var name = [{ t: x.name || '(name not found yet)' }, { br: 1 }, { t: (kind === 'add' ? 'Now at: ' : 'Was at: ') + x.where + (x.note ? ' (' + x.note + ')' : ''), size: 8, color: BAYS }];
         var priceCell = kind === 'add'
@@ -681,7 +683,7 @@
         var named = shelvesOf(b).length > 1 || (shelvesOf(b)[0] || {}).label;
         mine.forEach(function (s) {
           if (named && s.si !== last) { rows.push({ kind: 'shelf', label: s.shelf || 'Shelf ' + (s.si + 1), h: RH.shelf }); last = s.si; k = 0; }
-          var p = prod(s.code), chg = isChange(s.code), r = { kind: 'item', code: s.code, pos: (newCodes[s.code] ? 'NEW' + (s.pos ? ' ' + s.pos : '') : s.pos), name: p.name || '', h: chg ? RH.chg : RH.item, price: p.price };
+          var p = prod(s.code), chg = isChange(s.code), r = { kind: 'item', code: s.code, pos: (newCodes[s.code + '|' + s.bay] ? 'NEW' + (s.pos ? ' ' + s.pos : '') : s.pos), name: p.name || '', h: chg ? RH.chg : RH.item, price: p.price };
           if (chg) { r.changed = true; r.up = p.price > p.prev; r.was = p.prev; }
           else {
             if (p.status === 'not_found') r.na = 'not found online';
@@ -738,7 +740,7 @@
     var notChecked = codes.filter(function (c) { var s = prod(c).status; return s !== 'ok' && s !== 'changed' && s !== 'not_found'; }).length;
     var store = plan.store || 'Screwfix', planName = plan.name || 'Shop plan', shortName = plan.short || planName;
     var pc = planChanges(data), isNew = {};
-    if (pc) pc.added.forEach(function (a) { isNew[a.code] = 1; });
+    if (pc) pc.added.forEach(function (a) { newKeys(a).forEach(function (k) { isNew[k] = 1; }); });
 
     var W = LW - 2 * LM, TOP = LH - LM, BOTTOM = LM + 5 * MM, HEAD = 8 * MM;
 
@@ -869,7 +871,7 @@
       var p = prod(s.code), chg = isChange(s.code), cx = x + w / 2, inner = w - (chg ? 7 : 3);
       if (chg) g.rect(x, y, w, h, CHG);
       // SKU
-      var sku = fitText('CB', 9.5, 6.5, inner - (isNew[s.code] ? 0 : 0), s.code);
+      var sku = fitText('CB', 9.5, 6.5, inner - 0, s.code);
       var skuY = y + h - 3.2 - sku.size * 0.75;
       g.text('CB', sku.size, 0, cx - width('CB', sku.size, sku.s) / 2, skuY, sku.s);
       // price
@@ -902,7 +904,7 @@
         var b2 = fitText('H', 6, 4.5, inner, bits.join('  '));
         g.text('H', b2.size, GREY, cx - width('H', b2.size, b2.s) / 2, by, b2.s);
       }
-      if (isNew[s.code]) {
+      if (isNew[s.code + '|' + s.bay]) {
         var nw = width('HB', 5.5, 'NEW') + 3;
         g.rect(x + 1.5, y + 1.5, nw, 6.5, BLACK);
         g.text('HB', 5.5, WHITE, x + 3, y + 3.4, 'NEW');
@@ -983,7 +985,7 @@
         lg.text('HB', 6, 0.35, nx, base + 0.5, ps);
         nx += width('HB', 6, ps) + 4;
       }
-      if (isNew[s.code]) {
+      if (isNew[s.code + '|' + s.bay]) {
         var nw = width('HB', 5.5, 'NEW') + 3;
         lg.rect(nx, base - 1.2, nw, 6.5, BLACK);
         lg.text('HB', 5.5, WHITE, nx + 1.5, base + 0.7, 'NEW');
