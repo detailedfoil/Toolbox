@@ -1,12 +1,12 @@
 {
- "name": "Autumn 2 front of house",
- "short": "Autumn 2 FOH",
+ "name": "Autumn 3 front of house",
+ "short": "Autumn 3 FOH",
  "store": "Screwfix Dunstable",
- "brief": "Autumn 2 UK main campaign brief, updated 23.10.26",
+ "brief": "Autumn 3 UK main campaign brief, updated 30.10.26",
  "order": "Each bay is listed top shelf first, left to right along each shelf.",
  "bays": [
   {
-   "page": 11,
+   "page": 10,
    "name": "Low level bay 1: Everyday best sellers",
    "shelves": [
     {
@@ -89,7 +89,7 @@
    ]
   },
   {
-   "page": 11,
+   "page": 10,
    "name": "Low level bay 2: Decorating",
    "shelves": [
     {
@@ -161,7 +161,7 @@
    ]
   },
   {
-   "page": 11,
+   "page": 10,
    "name": "Low level bay 3: Everyday best sellers",
    "shelves": [
     {
@@ -250,7 +250,7 @@
    ]
   },
   {
-   "page": 12,
+   "page": 11,
    "name": "Low level bay 4: Decorating",
    "shelves": [
     {
@@ -331,7 +331,7 @@
    ]
   },
   {
-   "page": 12,
+   "page": 11,
    "name": "Low level bay 5: Everyday best sellers",
    "shelves": [
     {
@@ -395,7 +395,7 @@
    ]
   },
   {
-   "page": 12,
+   "page": 11,
    "name": "Low level bay 6: Everyday best sellers",
    "shelves": [
     {
@@ -462,7 +462,7 @@
    ]
   },
   {
-   "page": 13,
+   "page": 12,
    "name": "Footwear (HLB 1)",
    "shelves": [
     {
@@ -473,15 +473,15 @@
       "486KR",
       "412EA",
       "287EA",
-      "7001V"
+      "8452V"
      ]
     },
     {
      "label": "Shelf 2",
      "codes": [
-      "8452V",
       "599CJ",
       "252VN",
+      "340FN",
       "252CH",
       "469AV",
       "534JJ"
@@ -505,7 +505,7 @@
       "969RL",
       "364PT",
       "3180T",
-      "340FN",
+      "7001V",
       "274RL"
      ]
     }
@@ -516,10 +516,10 @@
     "486KR",
     "412EA",
     "287EA",
-    "7001V",
     "8452V",
     "599CJ",
     "252VN",
+    "340FN",
     "252CH",
     "469AV",
     "534JJ",
@@ -533,21 +533,21 @@
     "969RL",
     "364PT",
     "3180T",
-    "340FN",
+    "7001V",
     "274RL"
    ]
   },
   {
-   "page": 14,
+   "page": 13,
    "name": "Workwear: Site (HLB 2)",
    "shelves": [
     {
      "label": "Shelf 1",
      "codes": [
-      "950YW",
+      "332YW",
       "3463P",
       "335YW",
-      "479YW",
+      "385YW",
       "250YW"
      ]
     },
@@ -556,7 +556,7 @@
      "codes": [
       "942YW",
       "191YW",
-      "140RV",
+      "699XR",
       "182GX",
       "674YW",
       "535EN",
@@ -583,14 +583,14 @@
     }
    ],
    "codes": [
-    "950YW",
+    "332YW",
     "3463P",
     "335YW",
-    "479YW",
+    "385YW",
     "250YW",
     "942YW",
     "191YW",
-    "140RV",
+    "699XR",
     "182GX",
     "674YW",
     "535EN",
@@ -606,7 +606,7 @@
    ]
   },
   {
-   "page": 14,
+   "page": 13,
    "name": "Workwear: Big brands (HLB 3)",
    "shelves": [
     {
@@ -652,7 +652,7 @@
       "852XR",
       "313RV",
       "111JJ",
-      "434CH",
+      "301AV",
       "216KY",
       "1783R"
      ]
@@ -684,13 +684,13 @@
     "852XR",
     "313RV",
     "111JJ",
-    "434CH",
+    "301AV",
     "216KY",
     "1783R"
    ]
   },
   {
-   "page": 15,
+   "page": 14,
    "name": "For the Van (HLB 4)",
    "note": "Stores with dummy Nebo boxes",
    "shelves": [
@@ -761,7 +761,7 @@
    ]
   },
   {
-   "page": 16,
+   "page": 15,
    "name": "Plumbing (HLB 5)",
    "shelves": [
     {
@@ -880,7 +880,7 @@
    ]
   },
   {
-   "page": 17,
+   "page": 15,
    "name": "Electrical (HLB 6)",
    "shelves": [
     {
@@ -987,7 +987,7 @@
    ]
   },
   {
-   "page": 18,
+   "page": 16,
    "name": "Dump bins",
    "shelves": [
     {
@@ -1016,8 +1016,9 @@
      "label": "Dump bin 4",
      "codes": [
       "590FK",
+      "856AH",
       "410AH",
-      "856AH"
+      "7902G"
      ]
     },
     {
@@ -1036,20 +1037,22 @@
     "403XR",
     "31536",
     "590FK",
-    "410AH",
     "856AH",
+    "410AH",
+    "7902G",
     "72357"
    ]
   },
   {
-   "page": 18,
+   "page": 16,
    "name": "Dump stacks",
    "shelves": [
     {
      "label": "Dump stacks",
      "codes": [
-      "718JK",
-      "40237",
+      "284PV",
+      "412HV",
+      "545PJ",
       "472KJ",
       "64253",
       "872RE",
@@ -1065,8 +1068,9 @@
     }
    ],
    "codes": [
-    "718JK",
-    "40237",
+    "284PV",
+    "412HV",
+    "545PJ",
     "472KJ",
     "64253",
     "872RE",
@@ -1081,7 +1085,7 @@
    ]
   },
   {
-   "page": 19,
+   "page": 17,
    "name": "AOV 1",
    "shelves": [
     {
@@ -1140,7 +1144,7 @@
    ]
   },
   {
-   "page": 19,
+   "page": 17,
    "name": "AOV 2",
    "shelves": [
     {
@@ -1159,8 +1163,8 @@
     {
      "label": "Shelf B",
      "codes": [
-      "5169D",
-      "4635K"
+      "4392V",
+      "979PH"
      ],
      "pos": [
       "2B",
@@ -1181,13 +1185,13 @@
     "4107P",
     "111JR",
     "12492",
-    "5169D",
-    "4635K",
+    "4392V",
+    "979PH",
     "765YT"
    ]
   },
   {
-   "page": 19,
+   "page": 17,
    "name": "AOV 3",
    "shelves": [
     {
@@ -1266,7 +1270,7 @@
    ]
   },
   {
-   "page": 19,
+   "page": 17,
    "name": "AOV 4",
    "shelves": [
     {
@@ -1285,8 +1289,8 @@
     {
      "label": "Shelf B",
      "codes": [
-      "777PH",
-      "7390P"
+      "9419V",
+      "446CE"
      ],
      "pos": [
       "4B",
@@ -1296,8 +1300,8 @@
     {
      "label": "Shelf C",
      "codes": [
-      "950YW",
-      "723JF"
+      "723JF",
+      "332YW"
      ],
      "pos": [
       "4C_2",
@@ -1309,14 +1313,14 @@
     "707KC",
     "579JP",
     "323FV",
-    "777PH",
-    "7390P",
-    "950YW",
-    "723JF"
+    "9419V",
+    "446CE",
+    "723JF",
+    "332YW"
    ]
   },
   {
-   "page": 19,
+   "page": 17,
    "name": "AOV 5",
    "shelves": [
     {
@@ -1360,43 +1364,43 @@
    ]
   },
   {
-   "page": 9,
+   "page": 8,
    "name": "Till points",
    "shelves": [
     {
-     "label": "Till point 2 (sum up CDU)",
+     "label": "Countertop 2 (FireAngel CDU)",
      "codes": [
-      "532JF",
-      "446CE"
+      "396CC",
+      "707KC"
      ]
     }
    ],
    "codes": [
-    "532JF",
-    "446CE"
+    "396CC",
+    "707KC"
    ]
   },
   {
-   "page": 20,
+   "page": 18,
    "name": "Behind the counter: power tools (bay 1)",
    "shelves": [
     {
      "label": "Top to bottom",
      "codes": [
-      "362JT",
+      "625KN",
       "782KN",
-      "979HF"
+      "362JT"
      ]
     }
    ],
    "codes": [
-    "362JT",
+    "625KN",
     "782KN",
-    "979HF"
+    "362JT"
    ]
   },
   {
-   "page": 22,
+   "page": 20,
    "name": "Behind the counter: bays 2 to 4",
    "shelves": [
     {
@@ -1439,7 +1443,7 @@
    ]
   },
   {
-   "page": 23,
+   "page": 21,
    "name": "1M Bosch bay",
    "shelves": [
     {
@@ -2002,7 +2006,7 @@
    ]
   },
   {
-   "page": 25,
+   "page": 22,
    "name": "1M DeWalt bay",
    "shelves": [
     {
@@ -2108,7 +2112,7 @@
    ]
   },
   {
-   "page": 26,
+   "page": 23,
    "name": "1/2 DeWalt bay",
    "shelves": [
     {
@@ -2190,7 +2194,7 @@
    ]
   },
   {
-   "page": 28,
+   "page": 26,
    "name": "Weather reactive",
    "note": "Only when the weather calls for it",
    "shelves": [
@@ -2208,8 +2212,8 @@
       "821RW",
       "457RW",
       "468PR",
-      "600CJ",
       "482KY",
+      "600CJ",
       "639FV"
      ]
     },
@@ -2263,8 +2267,8 @@
     "821RW",
     "457RW",
     "468PR",
-    "600CJ",
     "482KY",
+    "600CJ",
     "639FV",
     "338PY",
     "296FG",
@@ -2301,7 +2305,7 @@
    ]
   },
   {
-   "page": 27,
+   "page": 25,
    "name": "Contingencies",
    "note": "Temporary stand-ins for out of stock lines",
    "shelves": [
@@ -2369,12 +2373,11 @@
     {
      "label": "For Low level bay 6",
      "codes": [
-      "729YW",
       "489RR",
       "482GT",
       "2948F",
-      "90147",
       "191LH",
+      "90147",
       "940LU",
       "957LU"
      ]
@@ -2389,8 +2392,6 @@
     {
      "label": "For HLB 2",
      "codes": [
-      "594RR",
-      "416YW",
       "121VM"
      ]
     },
@@ -2409,7 +2410,8 @@
     {
      "label": "For HLB 3",
      "codes": [
-      "129RG"
+      "129RG",
+      "434CH"
      ]
     },
     {
@@ -2428,15 +2430,6 @@
      "label": "For Dump bins",
      "codes": [
       "940LU"
-     ]
-    },
-    {
-     "label": "For Power Tool Bay",
-     "codes": [
-      "436TM",
-      "625KN",
-      "462CH",
-      "415AH"
      ]
     }
    ],
@@ -2467,18 +2460,15 @@
     "850JC",
     "5771X",
     "474EK",
-    "729YW",
     "489RR",
     "482GT",
     "2948F",
-    "90147",
     "191LH",
+    "90147",
     "940LU",
     "957LU",
     "59707",
     "84584",
-    "594RR",
-    "416YW",
     "121VM",
     "839YW",
     "94227",
@@ -2488,73 +2478,259 @@
     "445FR",
     "491YW",
     "129RG",
+    "434CH",
     "670CU",
-    "774FR",
-    "436TM",
-    "625KN",
-    "462CH",
-    "415AH"
+    "774FR"
    ]
   }
  ],
  "changes": {
-  "brief": "23.10.26",
-  "since": "16.10.26",
+  "brief": "30.10.26 (Autumn 3)",
+  "since": "23.10.26 (Autumn 2)",
   "added": [
    {
-    "code": "182GX",
+    "code": "332YW",
     "bay": "Workwear: Site (HLB 2)",
-    "where": "Workwear: Site (HLB 2), Gloves, 4th (replaces 980YW)",
-    "name": "Site Thermal Gloves Orange Large"
+    "where": "Workwear: Site (HLB 2), Shelf 1, first (replaces 950YW); also AOV 4 shelf C",
+    "name": "Site Safety Specs Clear",
+    "also": [
+     "AOV 4"
+    ]
    },
    {
-    "code": "973EA",
+    "code": "385YW",
+    "bay": "Workwear: Site (HLB 2)",
+    "where": "Workwear: Site (HLB 2), Shelf 1, 4th (replaces 479YW)",
+    "name": "Site Clear Lens Safety Specs"
+   },
+   {
+    "code": "699XR",
+    "bay": "Workwear: Site (HLB 2)",
+    "where": "Workwear: Site (HLB 2), Gloves, 3rd (replaces 140RV)",
+    "name": "Site Touchscreen Gloves"
+   },
+   {
+    "code": "301AV",
     "bay": "Workwear: Big brands (HLB 3)",
-    "where": "Workwear: Big brands (HLB 3), Gloves, 3rd (replaces 610RV)",
-    "name": null
+    "where": "Workwear: Big brands (HLB 3), Trouser D-bar, 8th (replaces 434CH)",
+    "name": "DeWalt Red Cloud Gilet L"
    },
    {
-    "code": "771LU",
-    "bay": "Contingencies",
-    "where": "Contingencies, for Low level bay 4",
-    "name": "UltraGrime Pro Multiuse Infinity Plastic Free XXL"
+    "code": "7902G",
+    "bay": "Dump bins",
+    "where": "Dump bin 4, last",
+    "name": "Masterplug 13A 4-Gang Switched Extension Lead 2m"
    },
    {
-    "code": "940LU",
-    "bay": "Contingencies",
-    "where": "Contingencies, for Low level bay 6 and Dump bins",
-    "name": "Big Wipes Plastic Free Multi-Surface Wipes Tub 100"
+    "code": "284PV",
+    "bay": "Dump stacks",
+    "where": "Dump stacks, first",
+    "name": "Numatic NSR240 9Ltr Vacuum"
    },
    {
-    "code": "957LU",
+    "code": "412HV",
+    "bay": "Dump stacks",
+    "where": "Dump stacks, second",
+    "name": "25M Cable Reel 13A 4Gang Therm cut out+switch +LED"
+   },
+   {
+    "code": "545PJ",
+    "bay": "Dump stacks",
+    "where": "Dump stacks, third",
+    "name": "Magnusson Interlocking Organiser 17 3/4\" x 11 1/2\"",
+    "note": "also on Low level bay 5"
+   },
+   {
+    "code": "4392V",
+    "bay": "AOV 2",
+    "where": "AOV 2, shelf B (replaces 5169D)",
+    "name": "Erbauer Wood Plunge Blade"
+   },
+   {
+    "code": "979PH",
+    "bay": "AOV 2",
+    "where": "AOV 2, shelf B (replaces 4635K)",
+    "name": "Erbauer Wood and Metal Jigsaw Blade Set"
+   },
+   {
+    "code": "9419V",
+    "bay": "AOV 4",
+    "where": "AOV 4, shelf B (replaces 777PH)",
+    "name": "Erbauer Tin Metal Set"
+   },
+   {
+    "code": "446CE",
+    "bay": "AOV 4",
+    "where": "AOV 4, shelf B (replaces 7390P)",
+    "name": "Sum Up Solo Lite Contactless Card Reader",
+    "note": "also on For the Van"
+   },
+   {
+    "code": "396CC",
+    "bay": "Till points",
+    "where": "Countertop 2, FireAngel CDU",
+    "name": "FireAngel Optical Smoke Alarm"
+   },
+   {
+    "code": "707KC",
+    "bay": "Till points",
+    "where": "Countertop 2, FireAngel CDU",
+    "name": "FireAngel FA6813 Battery Standalone Carbon Monoxide Alarm",
+    "note": "also on AOV 4"
+   },
+   {
+    "code": "625KN",
+    "bay": "Behind the counter: power tools (bay 1)",
+    "where": "Behind the counter bay 1, top (replaces 979HF)",
+    "name": "Milwaukee Next Generation M18BLPDRC-502C 18V 2 x 5.0Ah Li-Ion RedLithium Brushless Cordless Combi Drill",
+    "note": "was a contingency line"
+   },
+   {
+    "code": "434CH",
     "bay": "Contingencies",
-    "where": "Contingencies, for Low level bay 6",
-    "name": "UltraGrime Plastic Free power clean wipes 70pk"
+    "where": "Contingencies, for HLB 3 (off the Big brands trouser D-bar)",
+    "name": "DEWALT Palm Beach Sweatshirt Black Large 42-44\" Chest"
    }
   ],
   "removed": [
    {
-    "code": "980YW",
+    "code": "950YW",
+    "bay": "Workwear: Site (HLB 2)",
+    "where": "Workwear: Site (HLB 2), Shelf 1 and AOV 4 shelf C",
+    "name": "Site SEY300 Clear Lens Sports Style Safety Specs",
+    "price": 7.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "479YW",
+    "bay": "Workwear: Site (HLB 2)",
+    "where": "Workwear: Site (HLB 2), Shelf 1",
+    "name": "Site SEY500 Tinted Lens Safety Specs",
+    "price": 3.19,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "140RV",
     "bay": "Workwear: Site (HLB 2)",
     "where": "Workwear: Site (HLB 2), Gloves",
-    "name": "Site Gloves Black Large",
+    "name": "Site Grip Gloves Blue / Black Large",
     "price": 3.69,
     "on": "2026-10-26"
    },
    {
-    "code": "610RV",
-    "bay": "Workwear: Big brands (HLB 3)",
-    "where": "Workwear: Big brands (HLB 3), Gloves",
-    "name": "Site Cut-Resistant Gloves Grey/Black Large",
-    "price": 2.99,
+    "code": "5169D",
+    "bay": "AOV 2",
+    "where": "AOV 2, shelf B",
+    "name": "Erbauer Hex Shank Impact Nut Driver 8mmx65mm",
+    "price": 3.89,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "4635K",
+    "bay": "AOV 2",
+    "where": "AOV 2, shelf B",
+    "name": "DEWALT Multi-Material Drill Bit Set 23 Pieces",
+    "price": 12.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "777PH",
+    "bay": "AOV 4",
+    "where": "AOV 4, shelf B",
+    "name": "Erbauer Straight Shank Masonry Drill Bits 10 Piece Set",
+    "price": 19.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "7390P",
+    "bay": "AOV 4",
+    "where": "AOV 4, shelf B",
+    "name": "Erbauer Multi-Material Cutting Blade Set 8 Pcs",
+    "price": 24.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "532JF",
+    "bay": "Till points",
+    "where": "Till point 2, sum up CDU",
+    "name": "Sum Up Solo Smart Card Terminal",
+    "price": 99.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "979HF",
+    "bay": "Behind the counter: power tools (bay 1)",
+    "where": "Behind the counter bay 1",
+    "name": "DEWALT DCD778M2T-SFGB 18V 2 x 4.0Ah Li-Ion XR Brushless Cordless Combi Drill",
+    "price": 139.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "718JK",
+    "bay": "Dump stacks",
+    "where": "Dump stacks",
+    "name": "DEWALT ToughSystem 2 Storage Tower 3 Pcs",
+    "price": 149.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "40237",
+    "bay": "Dump stacks",
+    "where": "Dump stacks",
+    "name": "TurboGold PZ Double-Countersunk Woodscrews Trade Pack 1400 Pcs",
+    "price": 19.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "729YW",
+    "bay": "Contingencies",
+    "where": "Contingencies, for Low level bay 6",
+    "name": "Site SDG310 Nitrile Powder-Free Disposable Grip Gloves Orange X Large 50 Pack",
+    "price": 14.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "594RR",
+    "bay": "Contingencies",
+    "where": "Contingencies, for HLB 2",
+    "name": "Site Vinyl Powder-Free Disposable Gloves White Medium 100 Pack",
+    "price": 8.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "416YW",
+    "bay": "Contingencies",
+    "where": "Contingencies, for HLB 2",
+    "name": "Site Nitrile Powder-Free Disposable Gloves Blue Large 50 Pack",
+    "price": 9.19,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "436TM",
+    "bay": "Contingencies",
+    "where": "Contingencies, for Power Tool Bay",
+    "name": "Makita DLX2283STJ 18V 2 x 5.0Ah Li-Ion LXT Brushless Cordless Twin Kit",
+    "price": 249.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "462CH",
+    "bay": "Contingencies",
+    "where": "Contingencies, for Power Tool Bay",
+    "name": "DEWALT DCD789P2T-GB 18V 2 x 5.0Ah Li-Ion XR Brushless Cordless Combi Drill",
+    "price": 199.99,
+    "on": "2026-10-26"
+   },
+   {
+    "code": "415AH",
+    "bay": "Contingencies",
+    "where": "Contingencies, for Power Tool Bay",
+    "name": "DEWALT DCD778M1T-SFGB 18V 1 x 4.0Ah Li-Ion XR Brushless Cordless Combi Drill",
+    "price": 129.99,
     "on": "2026-10-26"
    }
   ],
   "check": [
-   {
-    "code": "99915",
-    "why": "the Plumbing POS dispose note now lists it, but it is still on shelf 5 of the planogram"
-   },
    {
     "code": "652GT",
     "why": "its ticket is to be disposed, but it is still on Low level bay 6, shelf 3"
