@@ -1,9 +1,9 @@
 {
-  "updated": "2026-11-07T02:52:16.250Z",
-  "lastRun": {"date":"2026-11-07","started":"2026-11-07T01:24:38.087Z","tried":69,"found":54,"missing":0,"failed":15,"photos":0,"nophoto":0,"pauses":2,"stopped":null,"timeUp":false},
-  "named": 11264,
+  "updated": "2026-11-07T03:58:00.124Z",
+  "lastRun": {"date":"2026-11-07","started":"2026-11-07T01:24:38.087Z","tried":70,"found":55,"missing":0,"failed":15,"photos":0,"nophoto":0,"pauses":2,"stopped":null,"timeUp":false},
+  "named": 11265,
   "photos": 11708,
-  "described": 11259,
+  "described": 11260,
   "of": 11880,
   "products": {
     "1001X": {"p":1,"name":"Roughneck 4tpi Hardwood Pointed Bow Saw 21\" (530mm)","a":0,"d":1,"at":"2026-10-21"},
@@ -7168,7 +7168,7 @@
     "6237G": {"p":1,"name":"Mila iDeal Window Friction Hinges Top-Hung 262mm 2 Pack","a":0,"d":1,"at":"2026-10-24"},
     "6237V": {"p":1,"name":"Magnusson 1.5tpi Wood Aerated Block Saw 16\" (405mm)","a":0,"d":1,"at":"2026-10-24"},
     "62394": {"p":1,"name":"Flomasta Brass Compression Reducing Tee 22mm x 15mm x 15mm","a":0,"d":1,"at":"2026-10-24"},
-    "62397": {"p":1,"tries":2,"at":"2026-10-31","why":"turned away (other, HTTP 200)"},
+    "62397": {"p":1,"at":"2026-11-07","name":"LAP 2-Gang Dual Voltage Shaver Socket 115 / 230V Brushed Stainless Steel with White Inserts","a":0,"d":1},
     "623EG": {"p":1,"name":"Yale Fire Rated 1 Star 6-Pin Euro Cylinder 40-40 (80mm) Satin Nickel","a":0,"d":1,"at":"2026-10-25"},
     "623JC": {"p":1,"name":"Luceco Essence Outdoor LED Floodlight with Ball Joint With PIR Sensor Black 20W 2100lm","a":0,"d":1,"at":"2026-10-21"},
     "623PV": {"p":1,"name":"Makita MR007GZ 230V or 12/18/40V DAB+ / FM Bluetooth Site Radio","a":0,"d":1,"at":"2026-10-21"},
