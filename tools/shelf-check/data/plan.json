@@ -2,7 +2,7 @@
  "name": "Autumn 3 front of house",
  "short": "Autumn 3 FOH",
  "store": "Screwfix Dunstable",
- "brief": "Autumn 3 UK main campaign brief, updated 30.10.26",
+ "brief": "Autumn 3 UK main campaign brief, updated 06.11.26",
  "order": "Each bay is listed top shelf first, left to right along each shelf.",
  "bays": [
   {
@@ -502,7 +502,7 @@
      "label": "Shelf 4",
      "codes": [
       "950KH",
-      "969RL",
+      "754EE",
       "364PT",
       "3180T",
       "7001V",
@@ -530,7 +530,7 @@
     "8699P",
     "3770D",
     "950KH",
-    "969RL",
+    "754EE",
     "364PT",
     "3180T",
     "7001V",
@@ -544,7 +544,7 @@
     {
      "label": "Shelf 1",
      "codes": [
-      "332YW",
+      "950YW",
       "3463P",
       "335YW",
       "385YW",
@@ -570,7 +570,7 @@
       "150RR",
       "512XR",
       "966YW",
-      "603RT"
+      "534VE"
      ]
     },
     {
@@ -583,7 +583,7 @@
     }
    ],
    "codes": [
-    "332YW",
+    "950YW",
     "3463P",
     "335YW",
     "385YW",
@@ -599,7 +599,7 @@
     "150RR",
     "512XR",
     "966YW",
-    "603RT",
+    "534VE",
     "694VM",
     "502RR",
     "74372"
@@ -1301,7 +1301,7 @@
      "label": "Shelf C",
      "codes": [
       "723JF",
-      "332YW"
+      "950YW"
      ],
      "pos": [
       "4C_2",
@@ -1316,7 +1316,7 @@
     "9419V",
     "446CE",
     "723JF",
-    "332YW"
+    "950YW"
    ]
   },
   {
@@ -2367,7 +2367,8 @@
       "3305V",
       "850JC",
       "5771X",
-      "474EK"
+      "474EK",
+      "324XG"
      ]
     },
     {
@@ -2402,7 +2403,6 @@
       "94227",
       "89679",
       "439HY",
-      "534VE",
       "445FR",
       "491YW"
      ]
@@ -2430,6 +2430,12 @@
      "label": "For Dump bins",
      "codes": [
       "940LU"
+     ]
+    },
+    {
+     "label": "For Dump stacks",
+     "codes": [
+      "29PMM"
      ]
     }
    ],
@@ -2460,6 +2466,7 @@
     "850JC",
     "5771X",
     "474EK",
+    "324XG",
     "489RR",
     "482GT",
     "2948F",
@@ -2474,260 +2481,79 @@
     "94227",
     "89679",
     "439HY",
-    "534VE",
     "445FR",
     "491YW",
     "129RG",
     "434CH",
     "670CU",
-    "774FR"
+    "774FR",
+    "29PMM"
    ]
   }
  ],
  "changes": {
-  "brief": "30.10.26 (Autumn 3)",
-  "since": "23.10.26 (Autumn 2)",
+  "brief": "06.11.26",
+  "since": "30.10.26",
   "added": [
    {
-    "code": "332YW",
+    "code": "754EE",
+    "bay": "Footwear (HLB 1)",
+    "where": "Footwear (HLB 1), Shelf 4, 2nd (replaces 969RL)",
+    "name": "DeWalt Crossett Size 9"
+   },
+   {
+    "code": "950YW",
     "bay": "Workwear: Site (HLB 2)",
-    "where": "Workwear: Site (HLB 2), Shelf 1, first (replaces 950YW); also AOV 4 shelf C",
-    "name": "Site Safety Specs Clear",
     "also": [
      "AOV 4"
-    ]
+    ],
+    "where": "Workwear: Site (HLB 2), Shelf 1, first, and AOV 4 shelf C (both replace 332YW)",
+    "name": "Site Sports Safety Specs Clear Lens"
    },
    {
-    "code": "385YW",
+    "code": "534VE",
     "bay": "Workwear: Site (HLB 2)",
-    "where": "Workwear: Site (HLB 2), Shelf 1, 4th (replaces 479YW)",
-    "name": "Site Clear Lens Safety Specs"
-   },
-   {
-    "code": "699XR",
-    "bay": "Workwear: Site (HLB 2)",
-    "where": "Workwear: Site (HLB 2), Gloves, 3rd (replaces 140RV)",
-    "name": "Site Touchscreen Gloves"
-   },
-   {
-    "code": "301AV",
-    "bay": "Workwear: Big brands (HLB 3)",
-    "where": "Workwear: Big brands (HLB 3), Trouser D-bar, 8th (replaces 434CH)",
-    "name": "DeWalt Red Cloud Gilet L"
-   },
-   {
-    "code": "7902G",
-    "bay": "Dump bins",
-    "where": "Dump bin 4, last",
-    "name": "Masterplug 13A 4-Gang Switched Extension Lead 2m"
-   },
-   {
-    "code": "284PV",
-    "bay": "Dump stacks",
-    "where": "Dump stacks, first",
-    "name": "Numatic NSR240 9Ltr Vacuum"
-   },
-   {
-    "code": "412HV",
-    "bay": "Dump stacks",
-    "where": "Dump stacks, second",
-    "name": "25M Cable Reel 13A 4Gang Therm cut out+switch +LED"
-   },
-   {
-    "code": "545PJ",
-    "bay": "Dump stacks",
-    "where": "Dump stacks, third",
-    "name": "Magnusson Interlocking Organiser 17 3/4\" x 11 1/2\"",
-    "note": "also on Low level bay 5"
-   },
-   {
-    "code": "4392V",
-    "bay": "AOV 2",
-    "where": "AOV 2, shelf B (replaces 5169D)",
-    "name": "Erbauer Wood Plunge Blade"
-   },
-   {
-    "code": "979PH",
-    "bay": "AOV 2",
-    "where": "AOV 2, shelf B (replaces 4635K)",
-    "name": "Erbauer Wood and Metal Jigsaw Blade Set"
-   },
-   {
-    "code": "9419V",
-    "bay": "AOV 4",
-    "where": "AOV 4, shelf B (replaces 777PH)",
-    "name": "Erbauer Tin Metal Set"
-   },
-   {
-    "code": "446CE",
-    "bay": "AOV 4",
-    "where": "AOV 4, shelf B (replaces 7390P)",
-    "name": "Sum Up Solo Lite Contactless Card Reader",
-    "note": "also on For the Van"
-   },
-   {
-    "code": "396CC",
-    "bay": "Till points",
-    "where": "Countertop 2, FireAngel CDU",
-    "name": "FireAngel Optical Smoke Alarm"
-   },
-   {
-    "code": "707KC",
-    "bay": "Till points",
-    "where": "Countertop 2, FireAngel CDU",
-    "name": "FireAngel FA6813 Battery Standalone Carbon Monoxide Alarm",
-    "note": "also on AOV 4"
-   },
-   {
-    "code": "625KN",
-    "bay": "Behind the counter: power tools (bay 1)",
-    "where": "Behind the counter bay 1, top (replaces 979HF)",
-    "name": "Milwaukee Next Generation M18BLPDRC-502C 18V 2 x 5.0Ah Li-Ion RedLithium Brushless Cordless Combi Drill",
+    "where": "Workwear: Site (HLB 2), D-bar, last (replaces 603RT)",
+    "name": "DeWalt Barstow Stone Holster Trouser W34 L31",
     "note": "was a contingency line"
    },
    {
-    "code": "434CH",
+    "code": "324XG",
     "bay": "Contingencies",
-    "where": "Contingencies, for HLB 3 (off the Big brands trouser D-bar)",
-    "name": "DEWALT Palm Beach Sweatshirt Black Large 42-44\" Chest"
+    "where": "Contingencies, for Low level bay 5",
+    "name": "Easydrive PZ Countersunk Woodscrews Trade Pack 1000 Pcs"
+   },
+   {
+    "code": "29PMM",
+    "bay": "Contingencies",
+    "where": "Contingencies, for Dump stacks",
+    "name": "Leonardo Paper Rolls Blue 2-Ply 167mm x 150m 6 Pack"
    }
   ],
   "removed": [
    {
-    "code": "950YW",
+    "code": "969RL",
+    "bay": "Footwear (HLB 1)",
+    "where": "Footwear (HLB 1), Shelf 4",
+    "name": "DEWALT Reynolds Size 9 Stone Waterproof Steel Toe Cap Safety Boots",
+    "price": 64.99,
+    "on": "2026-11-09"
+   },
+   {
+    "code": "332YW",
     "bay": "Workwear: Site (HLB 2)",
     "where": "Workwear: Site (HLB 2), Shelf 1 and AOV 4 shelf C",
-    "name": "Site SEY300 Clear Lens Sports Style Safety Specs",
-    "price": 7.99,
-    "on": "2026-10-26"
+    "name": "Site SEY228R Clear Lens Safety Specs",
+    "price": 2.69,
+    "on": "2026-11-09"
    },
    {
-    "code": "479YW",
+    "code": "603RT",
     "bay": "Workwear: Site (HLB 2)",
-    "where": "Workwear: Site (HLB 2), Shelf 1",
-    "name": "Site SEY500 Tinted Lens Safety Specs",
-    "price": 3.19,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "140RV",
-    "bay": "Workwear: Site (HLB 2)",
-    "where": "Workwear: Site (HLB 2), Gloves",
-    "name": "Site Grip Gloves Blue / Black Large",
-    "price": 3.69,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "5169D",
-    "bay": "AOV 2",
-    "where": "AOV 2, shelf B",
-    "name": "Erbauer Hex Shank Impact Nut Driver 8mmx65mm",
-    "price": 3.89,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "4635K",
-    "bay": "AOV 2",
-    "where": "AOV 2, shelf B",
-    "name": "DEWALT Multi-Material Drill Bit Set 23 Pieces",
-    "price": 12.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "777PH",
-    "bay": "AOV 4",
-    "where": "AOV 4, shelf B",
-    "name": "Erbauer Straight Shank Masonry Drill Bits 10 Piece Set",
-    "price": 19.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "7390P",
-    "bay": "AOV 4",
-    "where": "AOV 4, shelf B",
-    "name": "Erbauer Multi-Material Cutting Blade Set 8 Pcs",
-    "price": 24.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "532JF",
-    "bay": "Till points",
-    "where": "Till point 2, sum up CDU",
-    "name": "Sum Up Solo Smart Card Terminal",
-    "price": 99.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "979HF",
-    "bay": "Behind the counter: power tools (bay 1)",
-    "where": "Behind the counter bay 1",
-    "name": "DEWALT DCD778M2T-SFGB 18V 2 x 4.0Ah Li-Ion XR Brushless Cordless Combi Drill",
-    "price": 139.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "718JK",
-    "bay": "Dump stacks",
-    "where": "Dump stacks",
-    "name": "DEWALT ToughSystem 2 Storage Tower 3 Pcs",
-    "price": 149.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "40237",
-    "bay": "Dump stacks",
-    "where": "Dump stacks",
-    "name": "TurboGold PZ Double-Countersunk Woodscrews Trade Pack 1400 Pcs",
-    "price": 19.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "729YW",
-    "bay": "Contingencies",
-    "where": "Contingencies, for Low level bay 6",
-    "name": "Site SDG310 Nitrile Powder-Free Disposable Grip Gloves Orange X Large 50 Pack",
-    "price": 14.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "594RR",
-    "bay": "Contingencies",
-    "where": "Contingencies, for HLB 2",
-    "name": "Site Vinyl Powder-Free Disposable Gloves White Medium 100 Pack",
-    "price": 8.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "416YW",
-    "bay": "Contingencies",
-    "where": "Contingencies, for HLB 2",
-    "name": "Site Nitrile Powder-Free Disposable Gloves Blue Large 50 Pack",
-    "price": 9.19,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "436TM",
-    "bay": "Contingencies",
-    "where": "Contingencies, for Power Tool Bay",
-    "name": "Makita DLX2283STJ 18V 2 x 5.0Ah Li-Ion LXT Brushless Cordless Twin Kit",
-    "price": 249.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "462CH",
-    "bay": "Contingencies",
-    "where": "Contingencies, for Power Tool Bay",
-    "name": "DEWALT DCD789P2T-GB 18V 2 x 5.0Ah Li-Ion XR Brushless Cordless Combi Drill",
-    "price": 199.99,
-    "on": "2026-10-26"
-   },
-   {
-    "code": "415AH",
-    "bay": "Contingencies",
-    "where": "Contingencies, for Power Tool Bay",
-    "name": "DEWALT DCD778M1T-SFGB 18V 1 x 4.0Ah Li-Ion XR Brushless Cordless Combi Drill",
-    "price": 129.99,
-    "on": "2026-10-26"
+    "where": "Workwear: Site (HLB 2), D-bar",
+    "name": "Site Brochman Stretch Holster Pocket Trousers Black/Grey 34\" W 32\" L",
+    "price": 39.99,
+    "on": "2026-11-09"
    }
   ],
   "check": [
