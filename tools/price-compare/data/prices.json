@@ -1,17 +1,17 @@
 {
- "checked": "2026-11-08T13:29:07.523Z",
- "run": {"mode":"all","started":"2026-11-08T13:29:07.525Z","took":977,"tried":68,"read":58,"failed":10},
+ "checked": "2026-11-09T06:38:25.107Z",
+ "run": {"mode":"all","started":"2026-11-09T06:38:25.108Z","took":765,"tried":68,"read":64,"failed":4},
  "items": {
   "cu15": {
    "screwfix": {"price":15.6,"name":"Wednesbury Copper Pipe 15mm x 3m(98683)","url":"https://www.screwfix.com/p/wednesbury-copper-pipe-15mm-x-3m/98683","since":"2026-10-26T02:14:27.045Z"},
    "toolstation": {"price":15.6,"name":"Wednesbury Copper Pipe 15mm x 3m","url":"https://www.toolstation.com/wednesbury-copper-pipe/p82026","since":"2026-10-26T02:14:27.045Z"},
    "wickes": {"price":16.35,"name":"Wednesbury Copper Pipe - 15mm x 3m","url":"https://www.wickes.co.uk/Wednesbury-Copper-Pipe---15mm-x-3m/p/9000279730","since":"2026-10-29T06:17:43.455Z","moves":[{"on":"2026-10-29T06:17:43.455Z","from":16,"to":16.35}]},
    "bq": {"price":15.6,"name":"Wednesbury Copper Compression Pipe (L)3m (Dia)15mm","url":"https://www.diy.com/departments/wednesbury-copper-compression-pipe-l-3m-dia-15mm/33952_BQ.prd","since":"2026-10-26T02:14:27.045Z"},
-   "travisperkins": {"price":16.99,"name":"Wednesbury Copper Tube Plain Lengths 15mm x 3m","url":"https://www.travisperkins.co.uk/copper-pipe/wednesbury-copper-tube-plain-lengths-15mm-x-3m/p/313813","since":"2026-11-04T06:35:42.897Z","moves":[{"on":"2026-11-04T06:35:42.897Z","from":17.24,"to":16.99}],"fail":{"since":"2026-11-08T13:29:07.523Z","why":"no price on the page","n":1,"direct":"an empty page"}},
+   "travisperkins": {"price":16.99,"name":"Wednesbury Copper Tube Plain Lengths 15mm x 3m","url":"https://www.travisperkins.co.uk/copper-pipe/wednesbury-copper-tube-plain-lengths-15mm-x-3m/p/313813","since":"2026-11-04T06:35:42.897Z","moves":[{"on":"2026-11-04T06:35:42.897Z","from":17.24,"to":16.99}]},
    "cityplumbing": {"price":15.59,"name":"Wednesbury Plain Copper Tube Length 15mm x 3m X015L-3","url":"https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-15mm-x-3m/p/313813","since":"2026-10-26T02:14:27.045Z"},
    "selco": {"price":14.71,"name":"Copper Pipe 15mm x 3m","url":"https://www.selcobw.com/copper-pipe-15mm-x-3m","since":"2026-11-02T13:47:15.421Z","moves":[{"on":"2026-11-02T13:47:15.421Z","from":14.4,"to":14.71}]},
    "builderdepot": {"price":14.1,"name":"Copper Tube 15mm x 3m","url":"https://www.builderdepot.co.uk/copper-tube-15mm-x-3m","since":"2026-10-26T02:57:48.529Z"},
-   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":35,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ1503/plain-copper-tube-15mm-x-3mtr"}},
+   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":36,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ1503/plain-copper-tube-15mm-x-3mtr"}},
    "bes": {"price":17.66,"name":"Copper Tube - 15mm x 3m","url":"https://www.bes.co.uk/15-mm-x-3-m-copper-tube","since":"2026-10-26T02:57:48.529Z"}
   },
   "cu22": {
@@ -19,21 +19,21 @@
    "toolstation": {"price":31.31,"name":"Wednesbury Copper Pipe 22mm x 3m","url":"https://www.toolstation.com/wednesbury-copper-pipe/p39919","since":"2026-10-26T02:14:27.045Z"},
    "wickes": {"price":32.8,"name":"Wednesbury Copper Pipe - 22mm x 3m","url":"https://www.wickes.co.uk/Wednesbury-Copper-Pipe---22mm-x-3m/p/9000279729","since":"2026-10-29T06:17:43.455Z","moves":[{"on":"2026-10-29T06:17:43.455Z","from":32.5,"to":32.8}]},
    "bq": {"price":31.31,"name":"Wednesbury Copper Compression Pipe (L)3m (Dia)22mm","url":"https://www.diy.com/departments/wednesbury-copper-compression-pipe-l-3m-dia-22mm/33951_BQ.prd","since":"2026-10-26T02:14:27.045Z"},
-   "travisperkins": {"price":35.46,"name":"Wednesbury Copper Tube Plain Lengths 22mm x 3m","url":"https://www.travisperkins.co.uk/copper-pipe/wednesbury-copper-tube-plain-lengths-22mm-x-3m/p/119745","since":"2026-11-05T06:36:12.626Z","moves":[{"on":"2026-11-04T06:35:42.897Z","from":35.89,"to":35.5},{"on":"2026-11-05T06:36:12.626Z","from":35.5,"to":35.46}],"fail":{"since":"2026-11-08T13:29:07.523Z","why":"no price on the page","n":1,"direct":"an empty page"}},
+   "travisperkins": {"price":35.46,"name":"Wednesbury Copper Tube Plain Lengths 22mm x 3m","url":"https://www.travisperkins.co.uk/copper-pipe/wednesbury-copper-tube-plain-lengths-22mm-x-3m/p/119745","since":"2026-11-05T06:36:12.626Z","moves":[{"on":"2026-11-04T06:35:42.897Z","from":35.89,"to":35.5},{"on":"2026-11-05T06:36:12.626Z","from":35.5,"to":35.46}]},
    "cityplumbing": {"price":31.28,"name":"Wednesbury Plain Copper Tube Length 22mm x 3m X022L-3","url":"https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-22mm-x-3m/p/119745","since":"2026-10-26T02:14:27.045Z"},
    "selco": {"price":29.52,"name":"Copper Pipe 22mm x 3m","url":"https://www.selcobw.com/copper-pipe-22mm-x-3m","since":"2026-11-02T13:47:15.421Z","moves":[{"on":"2026-11-02T13:47:15.421Z","from":29.24,"to":29.52}]},
    "builderdepot": {"price":28.5,"name":"Copper Tube 22mm x 3m","url":"https://www.builderdepot.co.uk/copper-tube-22mm-x-3m","since":"2026-10-26T02:57:48.529Z"},
-   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":35,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ2203/plain-copper-tube-22mm-x-3mtr"}},
+   "graham": {"fail":{"since":"2026-10-26T02:14:27.045Z","why":"their website's security certificate has run out","n":36,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ2203/plain-copper-tube-22mm-x-3mtr"}},
    "bes": {"price":35.3,"name":"Copper Tube - 22mm x 3m","url":"https://www.bes.co.uk/copper-tube-22mm-x-3m-10312/","since":"2026-10-26T02:57:48.529Z"}
   },
   "cu28": {
    "screwfix": {"price":34.9,"name":"Wednesbury Copper Pipe 28mm x 3m(57188)","url":"https://www.screwfix.com/p/wednesbury-copper-pipe-28mm-x-3m/57188","since":"2026-10-26T12:07:01.037Z"},
    "toolstation": {"price":34.89,"name":"Wednesbury Copper Pipe 28mm x 3m","url":"https://www.toolstation.com/wednesbury-copper-pipe/p49958","since":"2026-10-26T12:07:01.037Z"},
-   "travisperkins": {"price":44.6,"name":"Wednesbury Copper Tube Plain Lengths 28mm x 3m","url":"https://www.travisperkins.co.uk/copper-pipe/wednesbury-copper-tube-plain-lengths-28mm-x-3m/p/701953","since":"2026-11-05T06:36:12.626Z","moves":[{"on":"2026-11-05T06:36:12.626Z","from":45.14,"to":44.6}],"fail":{"since":"2026-11-08T13:29:07.523Z","why":"no price on the page","n":1,"direct":"an empty page"}},
+   "travisperkins": {"price":44.6,"name":"Wednesbury Copper Tube Plain Lengths 28mm x 3m","url":"https://www.travisperkins.co.uk/copper-pipe/wednesbury-copper-tube-plain-lengths-28mm-x-3m/p/701953","since":"2026-11-05T06:36:12.626Z","moves":[{"on":"2026-11-05T06:36:12.626Z","from":45.14,"to":44.6}]},
    "cityplumbing": {"price":37.8,"name":"Wednesbury Plain Copper Tube Length 28mm x 3m X028L-3","url":"https://www.cityplumbing.co.uk/Wednesbury-Copper-Pipe-28mm-x-3m/p/701953","since":"2026-10-26T12:07:01.037Z"},
    "selco": {"price":40.8,"name":"Copper Pipe 28mm x 3m","url":"https://www.selcobw.com/copper-pipe-28mm-x-3m","since":"2026-10-26T12:07:01.037Z"},
    "builderdepot": {"price":34.74,"name":"Copper Tube 28mm x 3m","url":"https://www.builderdepot.co.uk/copper-tube-28mm-x-3m","since":"2026-10-26T12:07:01.037Z"},
-   "graham": {"fail":{"since":"2026-10-26T12:07:01.037Z","why":"their website's security certificate has run out","n":29,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ2803/plain-copper-tube-28mm-x-3mtr"}},
+   "graham": {"fail":{"since":"2026-10-26T12:07:01.037Z","why":"their website's security certificate has run out","n":30,"url":"https://www.grahamplumbersmerchant.co.uk/plumbing-plastics/copper-tube-insulation/products/TXZZ2803/plain-copper-tube-28mm-x-3mtr"}},
    "bes": {"price":48.3,"name":"Copper Tube - 28mm x 3m","url":"https://www.bes.co.uk/28-mm-x-3-m-copper-tube","since":"2026-10-26T12:07:01.037Z"}
   },
   "dewalt5": {
@@ -41,12 +41,12 @@
    "toolstation": {"price":79.99,"name":"DeWalt XR 18V Battery 5.0Ah","url":"https://www.toolstation.com/dewalt-xr-18v-battery/p93235","since":"2026-10-26T12:07:01.037Z"},
    "wickes": {"price":80,"name":"DEWALT DCB184-XJ 18V 5.0AH Battery","url":"https://www.wickes.co.uk/DEWALT-DCB184-XJ-18V-5-0AH-Battery/p/175991","since":"2026-10-26T12:07:01.037Z"},
    "bq": {"price":57,"name":"DeWalt 18V 5Ah Li-ion Battery - DCB184-XJ","url":"https://www.diy.com/departments/dewalt-18v-5ah-li-ion-battery-dcb184-xj/980951_BQ.prd","since":"2026-10-30T06:17:33.332Z","moves":[{"on":"2026-10-30T06:17:33.332Z","from":53,"to":57}]},
-   "travisperkins": {"price":72,"name":"DeWalt DCB184-XJ 18V 5.0AH Battery Pack","url":"https://www.travisperkins.co.uk/batteries-and-chargers/dewalt-dcb184-xj-18v-5-0ah-battery-pack/p/732870","since":"2026-10-26T12:07:01.037Z","fail":{"since":"2026-11-08T13:29:07.523Z","why":"a different product (\"URL Source: https://www.travisperkins.co.uk/batteries-and-chargers/...\")","n":1,"direct":"an empty page"}},
+   "travisperkins": {"price":72,"name":"DeWalt DCB184-XJ 18V 5.0AH Battery Pack","url":"https://www.travisperkins.co.uk/batteries-and-chargers/dewalt-dcb184-xj-18v-5-0ah-battery-pack/p/732870","since":"2026-10-26T12:07:01.037Z"},
    "its": {"price":54.98,"was":71.99,"name":"Dewalt DCB184 5.0Ah 18V XR Li-Ion Battery","url":"https://www.its.co.uk/pd/DCB184-Dewalt-DCB184-50Ah-18V-XR-Li-Ion-Battery-_DEWDCB184.htm","since":"2026-10-26T12:07:01.037Z"},
    "angliatoolcentre": {"price":59.99,"name":"DEWALT DCB184-XJ 18v 5.0AH XR LI-ON BATTERIES","url":"https://www.angliatoolcentre.co.uk/dewalt-dcb184-xj-18v-5-0ah-xr-li-ion-battery-pid41213.html","since":"2026-10-26T12:07:01.037Z"},
    "tooledup": {"price":59.95,"name":"DeWalt DCB184 18v XR Cordless Li-ion Battery 5ah","url":"https://www.tooled-up.com/dewalt-dcb184-18v-xr-cordless-li-ion-battery-5ah/prod/220892/","since":"2026-10-26T12:07:01.037Z"},
    "powertoolworld": {"price":50,"name":"DeWalt DCB184 18v 5Ah Li-Ion XR Slide Battery","url":"https://www.powertoolworld.co.uk/dewalt-dcb184-18v-5ah-li-ion-xr-slide-battery","since":"2026-10-28T13:36:04.107Z","moves":[{"on":"2026-10-28T13:36:04.107Z","from":49.99,"to":50}]},
-   "machinemart": {"price":62.39,"was":68.39,"name":"DEWALT DCB184 18V 5Ah XR Li-Ion Battery","url":"https://www.machinemart.co.uk/p/dewalt-dcb184-18v-5ah-xr-li-ion-battery/","since":"2026-10-26T12:07:01.037Z","fail":{"since":"2026-11-03T06:31:49.290Z","why":"the store's bot check (error 403)","n":12}}
+   "machinemart": {"price":62.39,"was":68.39,"name":"DEWALT DCB184 18V 5Ah XR Li-Ion Battery","url":"https://www.machinemart.co.uk/p/dewalt-dcb184-18v-5ah-xr-li-ion-battery/","since":"2026-10-26T12:07:01.037Z","fail":{"since":"2026-11-03T06:31:49.290Z","why":"the store's bot check (error 403)","n":13}}
   },
   "makita5": {
    "screwfix": {"price":69.99,"name":"Makita BL1850B 18V 5.0Ah Li-Ion LXT Battery(676YX)","url":"https://www.screwfix.com/p/makita-bl1850b-18v-5-0ah-li-ion-lxt-battery/676YX","since":"2026-10-26T12:07:01.037Z"},
@@ -70,7 +70,7 @@
    "toolstation": {"price":94.99,"name":"Pitacs Twin & Earth Cable (6242Y) Grey 2.5mm2 Drum","url":"https://www.toolstation.com/pitacs-twin-earth-cable-6242y-grey/p51466","since":"2026-11-06T13:46:33.627Z","moves":[{"on":"2026-11-06T13:46:33.627Z","from":93.99,"to":94.99}]},
    "wickes": {"price":99,"name":"Twin & Earth Cable - 2.5mm2 x 100m","url":"https://www.wickes.co.uk/Twin+Earth-Cable---2-5mm2-x-100m/p/156254","since":"2026-10-26T12:07:01.037Z"},
    "bq": {"price":92.89,"name":"Prysmian Grey Twin & earth Cable 2.5mm² x 100m","url":"https://www.diy.com/departments/prysmian-grey-twin-earth-cable-2-5mm-x-100m/33833_BQ.prd","since":"2026-10-26T12:07:01.037Z"},
-   "travisperkins": {"price":91.2,"name":"Time 6242YH 2.5mm Twin & Earth Cable Grey 100m","url":"https://www.travisperkins.co.uk/cable-drums/time-6242yh-2-5mm-twin-and-earth-cable-grey-100m/p/802436","since":"2026-10-26T12:07:01.037Z","fail":{"since":"2026-11-08T13:29:07.523Z","why":"a different product (\"URL Source: https://www.travisperkins.co.uk/cable-drums/time-6242yh...\")","n":1,"direct":"an empty page"}},
+   "travisperkins": {"price":91.2,"name":"Time 6242YH 2.5mm Twin & Earth Cable Grey 100m","url":"https://www.travisperkins.co.uk/cable-drums/time-6242yh-2-5mm-twin-and-earth-cable-grey-100m/p/802436","since":"2026-10-26T12:07:01.037Z"},
    "selco": {"price":101.46,"name":"2.5mm Twin & Earth Cable Grey 100m","url":"https://www.selcobw.com/2-5mm-twin-earth-cable-grey-100m","since":"2026-10-26T12:07:01.037Z"},
    "builderdepot": {"price":93.96,"name":"2.5mm Twin and Earth Cable 100m Drum 6242Y","url":"https://www.builderdepot.co.uk/2-5mm-twin-and-earth-cable-100m-drum-6242y","since":"2026-10-26T12:07:01.037Z"},
    "tlc": {"price":94.8,"name":"2.5mm² 6242Y Grey Twin & Earth Cable - 100m Reel Special Offer","url":"https://www.tlc-direct.co.uk/Products/CA2dot5G.html","since":"2026-10-26T12:07:01.037Z"},
@@ -81,7 +81,7 @@
    "toolstation": {"price":62.99,"name":"Pitacs Twin & Earth Cable (6242Y) Grey 1.5mm2 Drum","url":"https://www.toolstation.com/pitacs-twin-earth-cable-6242y-grey/p45731","since":"2026-10-26T12:07:01.037Z"},
    "wickes": {"price":69,"name":"Twin & Earth Cable - 1.5mm2 x 100m","url":"https://www.wickes.co.uk/Twin+Earth-Cable---1-5mm2-x-100m/p/156252","since":"2026-10-26T12:07:01.037Z"},
    "bq": {"price":64.89,"name":"Prysmian Grey Twin & earth Cable 1.5mm² x 100m","url":"https://www.diy.com/departments/prysmian-grey-twin-earth-cable-1-5mm-x-100m/33835_BQ.prd","since":"2026-10-26T12:07:01.037Z"},
-   "travisperkins": {"price":67.2,"name":"Time 6242YH 1.5mm Twin & Earth Cable Grey 100m","url":"https://www.travisperkins.co.uk/cable-drums/time-6242yh-1-5mm-twin-and-earth-cable-grey-100m/p/414299","since":"2026-10-26T12:07:01.037Z","fail":{"since":"2026-11-08T13:29:07.523Z","why":"a different product (\"URL Source: https://www.travisperkins.co.uk/cable-drums/time-6242yh...\")","n":1,"direct":"an empty page"}},
+   "travisperkins": {"price":67.2,"name":"Time 6242YH 1.5mm Twin & Earth Cable Grey 100m","url":"https://www.travisperkins.co.uk/cable-drums/time-6242yh-1-5mm-twin-and-earth-cable-grey-100m/p/414299","since":"2026-10-26T12:07:01.037Z"},
    "builderdepot": {"price":62.82,"name":"1.5mm Twin and Earth Cable 100m Drum 6242Y","url":"https://www.builderdepot.co.uk/1-5mm-twin-and-earth-cable-100m-drum-6242y","since":"2026-10-26T12:07:01.037Z"},
    "tlc": {"price":63.6,"name":"1.5mm² 6242Y Grey Twin & Earth Cable - 100m Reel","url":"https://www.tlc-direct.co.uk/Products/CA1dot5G.html","since":"2026-10-26T12:07:01.037Z"},
    "yesss": {"price":79.22,"name":"Twin and Earth Cable, 1.5mm² PVC, Grey, H6242Y Range (100m Drum)","url":"https://www.yesss.co.uk/h-6242y-15-grey-100-mtr-rls","since":"2026-10-26T12:07:01.037Z"}
