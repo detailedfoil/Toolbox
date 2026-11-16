@@ -2,7 +2,7 @@
   "plan": "Black Friday front of house",
   "checked": "2026-11-16",
   "previous_checked": "2026-11-09",
-  "run": {"week":"2026-11-16","started":"2026-11-16T11:18:15.079Z","finished":"2026-11-16T15:55:51.745Z","trigger":"schedule","complete":false,"total":561,"checked":283,"changed":13,"up":2,"down":11,"not_found":0,"unchecked":278,"stopped":"278 lines could not be checked"},
+  "run": {"week":"2026-11-16","started":"2026-11-16T11:18:15.079Z","finished":"2026-11-16T21:17:13.968Z","trigger":"schedule","complete":false,"total":561,"checked":283,"changed":13,"up":2,"down":11,"not_found":0,"unchecked":278,"stopped":"278 lines could not be checked"},
   "products": {
     "10171": {"name":"Essentials Pop-Up Garden Bag 690 x 560mm 170Ltr","price":12.99,"prev":null,"status":"ok","was":null,"on":"2026-11-16"},
     "10955": {"name":"Flomasta Washing Machine Inlet Hose Blue 2.5m x 3/4\"","price":5.99,"prev":null,"status":"ok","was":null,"on":"2026-11-16"},
