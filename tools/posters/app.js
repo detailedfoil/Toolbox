@@ -31,7 +31,7 @@
       id: r.id || uid(), code: r.code, price: r.price || '', product: r.product || '',
       status: r.status === 'looking' ? 'manual' : (r.status || 'manual'), checkedAt: r.checkedAt || 0,
       was: r.was || '', editedPrice: !!r.editedPrice, editedProduct: !!r.editedProduct, editedWas: !!r.editedWas, unsure: !!r.unsure,
-      age: !!r.age, ageSet: typeof r.ageSet === 'boolean' ? r.ageSet : null,
+      age: !!r.age, ageSet: typeof r.ageSet === 'boolean' ? r.ageSet : null, savedOn: r.savedOn || '', savedFrom: r.savedFrom || '',
       photos: Array.isArray(r.photos) ? r.photos.filter(function (x) { return typeof x === 'string'; }) : [],
       photo: r.photo && (r.photo.kind === 'sf' || r.photo.kind === 'own') ? r.photo : null,
       scale: scaleOf(r.scale), pos: posOf(r.pos),
@@ -50,7 +50,7 @@
       store(ROWS_KEY, rows.map(function (r) {
         return { id: r.id, code: r.code, price: r.price, product: r.product, status: r.status === 'looking' ? 'manual' : r.status,
                  checkedAt: r.checkedAt, was: r.was, editedPrice: r.editedPrice, editedProduct: r.editedProduct, editedWas: r.editedWas, unsure: r.unsure,
-                 age: r.age, ageSet: r.ageSet, photos: r.photos, photo: r.photo, scale: r.scale, pos: r.pos };
+                 age: r.age, ageSet: r.ageSet, savedOn: r.savedOn, savedFrom: r.savedFrom, photos: r.photos, photo: r.photo, scale: r.scale, pos: r.pos };
       }));
     };
     if (now) write(); else saveTimer = setTimeout(write, 250);
@@ -106,11 +106,14 @@
     return E.ukDate(d).iso === E.ukDate().iso ? timeFmt.format(d) : dayFmt.format(d);
   }
 
+  function savedDay(iso) { return iso ? dayFmt.format(new Date(iso + 'T12:00:00Z')) : ''; }
+
   function statusOf(r) {
     var s = r.status;
     var filled = !!(r.price && r.product);
     if (s === 'looking') return ['busy', r.retrying ? 'Screwfix is slow to answer. Trying again…' : 'Checking Screwfix…'];
     if (s === 'notfound') return ['bad', filled ? 'Not found on Screwfix now. Check the code' : 'Not found on Screwfix. Check the code, digits often get swapped'];
+    if (s === 'saved') return ['warn', 'This network blocks the live lookup, so this is the price saved by the ' + r.savedFrom + ' on ' + savedDay(r.savedOn) + '. Check it before printing'];
     if (s === 'blocked' && r.reason === 'network') return ['warn', filled ? "Couldn't connect to the price lookup (this network may block it), so this is the last price you had"
                                                                    : "Couldn't connect to the price lookup. This network may block it: try your phone, or type the price and name"];
     if (s === 'blocked') return ['warn', filled ? "Couldn't reach Screwfix, so this is the last price you had. Tap ↻ to try again" : "Couldn't reach Screwfix just now. Tap ↻ to try again, or type the price and name"];
@@ -886,6 +889,33 @@
 
   function apply(r, token, code, res) {
     if (r.token !== token || r.code !== code) return;
+    if (res.status === 'blocked' && !res.savedTried && window.SavedPrices) {
+      // the live lookup is blocked (some work networks block the relays): use the Toolbox's own saved prices
+      return window.SavedPrices.find(code).then(function (sv) {
+        if (r.token !== token || r.code !== code) return;
+        var newer = sv && sv.price && (!r.price || !r.checkedAt || sv.on >= E.ukDate(new Date(r.checkedAt)).iso);
+        if (!newer) {
+          if (sv && sv.name && !r.product) r.product = sv.name;
+          if (sv && !r.price && r.ageSet == null) r.age = sv.age;
+          res.savedTried = true;
+          return apply(r, token, code, res);
+        }
+        r.status = 'saved';
+        r.reason = res.reason || '';
+        r.savedOn = sv.on; r.savedFrom = sv.from;
+        if (!r.editedPrice) r.price = sv.price;
+        if (!r.editedProduct) r.product = sv.name || r.product;
+        if (!r.editedWas) r.was = sv.was;
+        r.unsure = false;
+        r.age = sv.age;
+        r.checkedAt = 0;
+        if (typeof res.trace !== 'undefined') { r.trace = res.trace || []; r.traceAt = Date.now(); }
+        paint(r);
+        persist();
+        refreshBar();
+        warmSoon();
+      });
+    }
     r.status = res.status;
     r.retrying = 0;
     r.reason = res.status === 'blocked' ? res.reason || '' : '';
