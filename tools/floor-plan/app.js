@@ -408,7 +408,7 @@
       const r = rows[b.row] || (rows[b.row] = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9, h: 0, along: b.along, n: 0 });
       r.x0 = Math.min(r.x0, b.x0); r.y0 = Math.min(r.y0, b.y0); r.x1 = Math.max(r.x1, b.x1); r.y1 = Math.max(r.y1, b.y1); r.h = Math.max(r.h, b.h); r.n++;
     }
-    const AISLE_X0 = shiftMode ? 18 : 10.3, AISLE_X1 = shiftMode ? 22 : 11.95;
+    const AISLE_X0 = shiftMode ? W / 2 - 4 : 10.3, AISLE_X1 = shiftMode ? W / 2 + 4 : 11.95;
     const rowSigns = []; // the middle aisle between the left and right blocks
     for (const [row, r] of Object.entries(rows)) {
       const cy = (r.y0 + r.y1) / 2;
@@ -496,7 +496,7 @@
 
     /* ---------- roof and lights (Walk only) ---------- */
     plane(M.roof, -WT, -WT, W + WT, D + WT, H, 'walk', true);
-    const LAMP_Z = 4.4;
+    const LAMP_Z = shiftMode ? H - 0.25 : 4.4;
     function lampAt(x, y, alongX) {
       if (alongX) { box(M.lampBox, x - 0.75, y - 0.08, LAMP_Z, x + 0.75, y + 0.08, LAMP_Z + 0.07, 'walk'); box(M.lamp, x - 0.72, y - 0.06, LAMP_Z - 0.012, x + 0.72, y + 0.06, LAMP_Z, 'walk'); }
       else { box(M.lampBox, x - 0.08, y - 0.75, LAMP_Z, x + 0.08, y + 0.75, LAMP_Z + 0.07, 'walk'); box(M.lamp, x - 0.06, y - 0.72, LAMP_Z - 0.012, x + 0.06, y + 0.72, LAMP_Z, 'walk'); }

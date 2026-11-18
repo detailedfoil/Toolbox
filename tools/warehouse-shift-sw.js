@@ -1,5 +1,5 @@
 /* Only the Warehouse Shift page needs offline navigation. The viewer shares its path. */
-const CACHE = 'toolbox-warehouse-shift-v1';
+const CACHE = 'toolbox-warehouse-shift-v2';
 const GAME = new URL('floor-plan.html?shift=1', self.location.href).href;
 const ROOT = new URL('.', GAME);
 self.addEventListener('install', (event) => {

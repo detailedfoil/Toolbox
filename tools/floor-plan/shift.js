@@ -5,18 +5,18 @@
   // Ten short cross aisles, each with five bays on either side of the central walkway.
   function warehouse() {
     const layout = {
-      building: { w: 40, d: 34, h: 5, t: 0.2 }, rooms: [], walls: [], openings: [], racks: [],
-      start: { x: 20, y: 31.8, facing: 'N' },
-      objects: [{ name: 'Trade counter', kind: 'counter', x0: 17, x1: 23, y0: 32.4, y1: 33.2 }],
-      lights: [{ x0: 20, y0: 2, y1: 30 }],
+      building: { w: 50, d: 48, h: 7, t: 0.2 }, rooms: [], walls: [], openings: [], racks: [],
+      start: { x: 25, y: 44.8, facing: 'N' },
+      objects: [{ name: 'Trade counter', kind: 'counter', x0: 21, x1: 29, y0: 45.4, y1: 46.3 }],
+      lights: [8, 25, 42].map((x) => ({ x0: x, y0: 3, y1: 43 })),
     };
     const locations = { bays: {}, areas: {} };
     for (let row = 0; row < 10; row++) {
       for (const right of [false, true]) {
         const area = right ? (row < 5 ? 'AAA' : 'BAA') : 'BBB';
         const first = 1 + (right ? row % 5 : row) * 5;
-        const edges = Array.from({ length: 6 }, (_, i) => (right ? 22 : 2) + i * 3.2);
-        const y = 29 - row * 3;
+        const edges = Array.from({ length: 6 }, (_, i) => (right ? 29 : 3) + i * 3.6);
+        const y = 39 - row * 4;
         const key = area + '/' + row + '/';
         layout.racks.push({ row: key, along: 'x', first, edges, x0: edges[0], x1: edges[5],
           y0: y - 0.7, y1: y, h: 2.1, levels: 5, kind: 'shelf', open: 'S' });
