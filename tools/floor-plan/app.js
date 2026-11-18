@@ -15,6 +15,12 @@
   const STORE = 'LB1';
   const $ = (id) => document.getElementById(id);
   const stage = $('stage'), canvas = $('view'), msg = $('msg');
+  const shiftMode = new URLSearchParams(location.search).get('shift') === '1';
+  if (shiftMode) {
+    document.title = document.querySelector('.fp-top h1').textContent = 'Warehouse Shift';
+    stage.classList.add('shift');
+    $('mini').setAttribute('aria-label', 'Warehouse map with your position and the current collection point');
+  }
 
   function signedInAs() {
     try { return (localStorage.getItem('toolbox.signedIn.area20') || '').toUpperCase(); } catch (e) { return ''; }
@@ -35,7 +41,7 @@
     if (!me) return; // the sign-in screen is up; its "toolbox:login" event brings us back here
     booted = true;
     if (me !== STORE) { say('The 3D floor plan is only for Dunstable (LB1).'); return; }
-    if (!window.THREE || !window.FloorBays || !window.FloorStock) { say("The 3D viewer didn't load. Check your signal and reload the page."); return; }
+    if (!window.THREE || !window.FloorBays || !window.FloorStock || (shiftMode && !window.WarehouseShift)) { say("The 3D viewer didn't load. Check your signal and reload the page."); return; }
     const get = (f) => fetch('floor-plan/data/' + f, { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
     progress(0.08, 'Loading the store\u2026');
     // the stock locations are a bonus: without them the bays just keep their temporary names
@@ -541,6 +547,7 @@
     const top = { cx: W / 2, cy: D / 2, ppm: 20 };
     const walk = { x: L.start.x, y: L.start.y, yaw: FACING[L.start.facing] || 0, pitch: -0.06, fwd: 0, side: 0, turn: 0, run: false };
     let mode = 'orbit';
+    let shift = null;
     const cam = () => (mode === 'orbit' ? persp : mode === 'plan' ? ortho : eye);
     const BAR_PX = 70; // the view buttons cover the bottom of the screen
 
@@ -792,7 +799,8 @@
         if (!card.hidden) { closeCard(); e.preventDefault(); return; }
       }
       if (typing || e.altKey || e.ctrlKey || e.metaKey) return; // typing in the stock box
-      if (e.key === '/' && sidx) { e.preventDefault(); setSheet(true, stock ? 'find' : undefined); return; }
+      if (shift && e.code === 'KeyF') { e.preventDefault(); if (!e.repeat) shift.act(); return; }
+      if (!shiftMode && e.key === '/' && sidx) { e.preventDefault(); setSheet(true, stock ? 'find' : undefined); return; }
       if (mode !== 'walk') return;
       if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); wake(); }
       walk.run = e.shiftKey;
@@ -836,6 +844,7 @@
       if (!blocked(nx, walk.y)) walk.x = nx;
       if (!blocked(walk.x, ny)) walk.y = ny;
       applyWalk();
+      if (shift) shift.updatePosition();
       return true;
     }
 
@@ -882,6 +891,7 @@
       mctx.beginPath(); mctx.arc(px, py, 4.5, 0, Math.PI * 2); mctx.fill(); mctx.stroke();
     }
     mini.addEventListener('pointerdown', (e) => {
+      if (shiftMode) return;
       const r = mini.getBoundingClientRect();
       const x = (e.clientX - r.left - mPad) / mScale, y = (e.clientY - r.top - mPad) / mScale;
       [walk.x, walk.y] = nearestFree(Math.min(W, Math.max(0, x)), Math.min(D, Math.max(0, y)));
@@ -1664,6 +1674,10 @@
       return b ? { kind: 'bay', b } : null;
     }
     function tapAt(cx, cy, centre) {
+      if (shiftMode) {
+        if (shift) shift.selectBay(bayAt(cx, cy, centre));
+        return;
+      }
       const k = pickAt(cx, cy, centre);
       if (!k) { if (shown) closeCard(); return; }
       if (k.kind === 'drawer') showDrawer(k.i); else if (k.kind === 'product') showProduct(k.i); else if (k.kind === 'free') showFree(k.i); else showBay(k.b);
@@ -1837,7 +1851,7 @@
     mouseBtn.hidden = !hasMouse;
     mouseBtn.setAttribute('aria-pressed', String(mouseLook));
     mouseBtn.addEventListener('click', () => setMouseLook(!mouseLook));
-    document.addEventListener('pointerlockchange', () => { cross.hidden = !locked(); redraw(); if (locked()) flash('Mouse captured: move it to look, click to pick. Esc lets go.'); });
+    document.addEventListener('pointerlockchange', () => { cross.hidden = !locked(); redraw(); if (locked()) flash(shiftMode ? 'WASD to walk. F to pick or hand over. Esc releases the mouse.' : 'Mouse captured: move it to look, click to pick. Esc lets go.'); });
     document.addEventListener('mousemove', (e) => {
       if (!locked() || Math.abs(e.movementX) > 300 || Math.abs(e.movementY) > 300) return; // some browsers send one huge jump as the mouse is captured
       walk.yaw -= e.movementX * 0.0022; walk.pitch -= e.movementY * 0.0022;
@@ -1870,7 +1884,14 @@
       if (walking) { sizeMini(); [walk.x, walk.y] = nearestFree(walk.x, walk.y); applyWalk(); canvas.focus({ preventScroll: true }); }
       if (!walking && locked()) document.exitPointerLock();
       if (!card.hidden) refreshCard();
-      if (!seenHint[m]) { seenHint[m] = 1; flash(walking && hasMouse && mouseLook ? MOUSE_HINT : HINTS[m]); }
+      if (!seenHint[m]) {
+        seenHint[m] = 1;
+        if (shiftMode) {
+          flash(stick.hidden ? 'WASD to walk. Click the view to use mouse look. F to pick.' : 'Use the stick to walk and drag the view to look round.');
+        } else {
+          flash(walking && hasMouse && mouseLook ? MOUSE_HINT : HINTS[m]);
+        }
+      }
       redraw();
     }
     for (const btn of document.querySelectorAll('.fp-modes button')) btn.addEventListener('click', () => setMode(btn.dataset.mode));
@@ -1878,6 +1899,7 @@
       if (mode === 'orbit') { fitOrbit(); applyOrbit(); }
       else if (mode === 'plan') { fitTop(); applyTop(); }
       else { walk.x = L.start.x; walk.y = L.start.y; walk.yaw = FACING[L.start.facing] || 0; walk.pitch = -0.06; eye.fov = 70; resize(); }
+      if (shift) shift.updatePosition();
       redraw();
     });
     const namesBtn = $('namesBtn');
@@ -1951,16 +1973,45 @@
     new ResizeObserver(resize).observe(stage);
     resize();
     renderer.shadowMap.needsUpdate = true; // the one time the shadows are drawn (cut walls showing)
-    progress(0.45, 'Putting your stock on the shelves\u2026'); await breathe();
-    if (sidx) { const saved = FS.storage.load(); if (saved) applyStock(saved.items); }
+    progress(0.45, shiftMode ? 'Preparing the warehouse\u2026' : 'Putting your stock on the shelves\u2026'); await breathe();
+    if (sidx && !shiftMode) { const saved = FS.storage.load(); if (saved) applyStock(saved.items); }
     progress(0.6, 'Making the location labels\u2026'); await breathe();
     buildLabels();
     progress(0.75, 'Getting the graphics ready\u2026'); await breathe();
     await warmUp();
     progress(1, 'Ready'); await breathe();
     say('');
-    $('side').hidden = false; $('bar').hidden = false;
-    setMode('orbit');
+    if (shiftMode) {
+      const counter = L.objects.find((o) => o.kind === 'counter' && o.name === 'Trade counter');
+      const parcel = new T.Mesh(unitBox, lam(0xe2b277));
+      const labelStrip = new T.Mesh(unitBox, lam(0xffedab));
+      parcel.scale.set(0.42, 0.28, 0.28);
+      labelStrip.scale.set(0.3, 1.01, 1.01);
+      parcel.add(labelStrip);
+      scene.add(parcel);
+      groups.names.visible = true;
+      setMode('walk');
+      shift = window.WarehouseShift.start({
+        bays, walk, counter,
+        setTarget(bay, returning) {
+          parcel.visible = !!bay;
+          if (bay) {
+            const x = (bay.x0 + bay.x1) / 2;
+            const y = bay.open.includes('S') ? bay.y1 - 0.16 : bay.y0 + 0.16;
+            const shelfHeight = bay.zs ? bay.zs[1] : 0.12 + (bay.h - 0.2) / (bay.levels - 1);
+            parcel.position.copy(V(x, y, shelfHeight + 0.15));
+            setPin(bay.where || bay.id, x, y, shelfHeight + 0.33);
+          } else if (returning) {
+            setPin('Trade counter', L.start.x, (counter.y0 + counter.y1) / 2, 1.32, true);
+          } else {
+            clearPin();
+          }
+        },
+      });
+    } else {
+      $('side').hidden = false; $('bar').hidden = false;
+      setMode('orbit');
+    }
     try { if (stock && localStorage.getItem('fp-free-v1') === '1') { seenHint.free = 1; setFree(true); } } catch (e) { /* private mode */ }
     loading.classList.add('done'); setTimeout(() => { loading.hidden = true; }, 400);
     redraw();
