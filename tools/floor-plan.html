@@ -8,8 +8,9 @@
 <meta name="apple-mobile-web-app-title" content="Toolbox">
 <title>3D Floor Plan</title>
 <link rel="manifest" href="../manifest.json">
+<script>if (new URLSearchParams(location.search).get("shift") === "1") document.querySelector('link[rel="manifest"]').href = "warehouse-shift.webmanifest";</script>
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
-<link rel="stylesheet" href="floor-plan/floor-plan.css?v=2def58b79c">
+<link rel="stylesheet" href="floor-plan/floor-plan.css?v=bc76d7c2f5">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -18,6 +19,7 @@
 <header class="fp-top">
   <a class="back" href="../index.html">&larr; Toolbox</a>
   <h1>3D Floor Plan</h1>
+  <button class="fp-install" id="installGame" type="button" hidden>Install game</button>
   <span class="fp-store">Dunstable</span>
 </header>
 <main class="fp-stage" id="stage">
@@ -41,10 +43,16 @@
       <h2 id="orderTitle">Order</h2>
       <span id="ordersServed">0 served</span>
     </div>
-    <ol id="orderItems"></ol>
+    <div id="scannerItem">
+      <strong id="pickLoc"></strong>
+      <div class="fp-sku"><span id="pickSku"></span><b id="pickQty"></b></div>
+      <div id="pickName"></div>
+    </div>
+    <label id="pickedField" hidden>Picked <input id="pickedQty" type="text" inputmode="numeric" pattern="[0-9]+" autocomplete="off" size="3"></label>
     <p id="orderStatus" role="status"></p>
   </section>
   <div class="fp-order-action" id="orderControls" hidden>
+    <button id="squatBtn" type="button" aria-pressed="false" title="Squat or stand (C)">Squat</button>
     <button id="orderAction" type="button" disabled></button>
     <kbd aria-hidden="true">F</kbd>
   </div>
@@ -125,7 +133,8 @@
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
 <script src="floor-plan/bays.js?v=484c5d728e"></script>
 <script src="floor-plan/stock.js?v=9e1042f66f"></script>
-<script src="floor-plan/shift.js?v=81b5303a8c"></script>
-<script src="floor-plan/app.js?v=51e6b41d39"></script>
+<script src="floor-plan/install.js?v=5201eefa93"></script>
+<script src="floor-plan/shift.js?v=aea5d27acc"></script>
+<script src="floor-plan/app.js?v=83204365e9"></script>
 </body>
 </html>

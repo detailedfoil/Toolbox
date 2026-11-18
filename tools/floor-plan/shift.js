@@ -1,115 +1,133 @@
-/* Warehouse Shift uses a practice catalogue tied to the model's existing bays. */
 (function () {
   'use strict';
+  const pad = (n) => String(n).padStart(2, '0');
 
-  const ORDERS = [
-    [
-      { name: 'Wood screws, 4 × 40 mm', bay: 'K1f', qty: 2 },
-      { name: 'Wall plugs, 6 mm', bay: 'H2f', qty: 1 },
-    ],
-    [
-      { name: 'PTFE tape', bay: 'D4f', qty: 3 },
-      { name: '15 mm copper elbows', bay: 'F2f', qty: 2 },
-      { name: 'Adjustable spanner', bay: 'K3f', qty: 1 },
-    ],
-    [
-      { name: 'Masking tape, 25 mm', bay: 'W6', qty: 2 },
-      { name: 'Decorator’s caulk', bay: 'G3f', qty: 1 },
-      { name: 'Filling knife', bay: 'H4f', qty: 1 },
-    ],
-  ];
-
-  function start({ bays, walk, counter, setTarget }) {
-    const findBay = new Map(bays.map((bay) => [bay.id, bay]));
-    const orders = ORDERS.map((order) => order.map((item) => ({ ...item, shelf: findBay.get(item.bay) })));
-    const $ = (id) => document.getElementById(id);
-    const title = $('orderTitle'), count = $('ordersServed'), list = $('orderItems');
-    const status = $('orderStatus'), button = $('orderAction');
-    let ticket = 1, picked = 0, handedOver = false;
-    const order = () => orders[(ticket - 1) % orders.length];
-    const current = () => handedOver ? undefined : order()[picked];
-
-    function atPickFace({ shelf }) {
-      // Check the open face and stay within the bay's span, so the next aisle or bay cannot count.
-      const { x0, x1, y0, y1, open } = shelf;
-      const inX = walk.x >= x0 && walk.x <= x1;
-      const inY = walk.y >= y0 && walk.y <= y1;
-      return (inX && open.includes('S') && walk.y >= y1 && walk.y - y1 <= 0.9)
-        || (inX && open.includes('N') && walk.y <= y0 && y0 - walk.y <= 0.9)
-        || (inY && open.includes('E') && walk.x >= x1 && walk.x - x1 <= 0.9)
-        || (inY && open.includes('W') && walk.x <= x0 && x0 - walk.x <= 0.9);
-    }
-
-    function atCounter() {
-      return walk.x >= counter.x0 && walk.x <= counter.x1
-        && walk.y <= counter.y0 && counter.y0 - walk.y <= 0.95;
-    }
-
-    function updatePosition() {
-      const item = current();
-      button.disabled = !handedOver && !(item ? atPickFace(item) : atCounter());
-    }
-
-    function showOrder() {
-      const item = current();
-      title.textContent = 'Order #' + String(ticket).padStart(3, '0');
-      count.textContent = (ticket - 1 + Number(handedOver)) + ' served';
-      const rows = order().map((line, i) => {
-        const row = document.createElement('li');
-        const product = document.createElement('span');
-        const location = document.createElement('strong');
-        product.textContent = (i < picked ? '✓ ' : '') + line.qty + ' × ' + line.name;
-        location.textContent = line.shelf.where || line.bay;
-        row.append(product, location);
-        row.classList.toggle('picked', i < picked);
-        if (line === item) row.setAttribute('aria-current', 'step');
-        return row;
-      });
-      list.replaceChildren(...rows);
-      let action, message;
-      if (handedOver) {
-        action = 'Next order';
-        message = 'Order handed over. The next customer is ready.';
-      } else if (item) {
-        action = 'Pick ×' + item.qty;
-        message = 'Go to ' + (item.shelf.where || item.bay) + ' and collect the marked product.';
-      } else {
-        action = 'Hand over order';
-        message = 'All items picked. Return to the trade counter.';
+  // Ten short cross aisles, each with five bays on either side of the central walkway.
+  function warehouse() {
+    const layout = {
+      building: { w: 40, d: 34, h: 5, t: 0.2 }, rooms: [], walls: [], openings: [], racks: [],
+      start: { x: 20, y: 31.8, facing: 'N' },
+      objects: [{ name: 'Trade counter', kind: 'counter', x0: 17, x1: 23, y0: 32.4, y1: 33.2 }],
+      lights: [{ x0: 20, y0: 2, y1: 30 }],
+    };
+    const locations = { bays: {}, areas: {} };
+    for (let row = 0; row < 10; row++) {
+      for (const right of [false, true]) {
+        const area = right ? (row < 5 ? 'AAA' : 'BAA') : 'BBB';
+        const first = 1 + (right ? row % 5 : row) * 5;
+        const edges = Array.from({ length: 6 }, (_, i) => (right ? 22 : 2) + i * 3.2);
+        const y = 29 - row * 3;
+        const key = area + '/' + row + '/';
+        layout.racks.push({ row: key, along: 'x', first, edges, x0: edges[0], x1: edges[5],
+          y0: y - 0.7, y1: y, h: 2.1, levels: 5, kind: 'shelf', open: 'S' });
+        locations.areas[area] = { shelves: 5, positions: 10 };
+        for (let i = 0; i < 5; i++) {
+          const number = first + i;
+          locations.bays[key + number] = [area + '-' + pad(right ? number : first + 4 - i)];
+        }
       }
-      status.textContent = message;
-      button.textContent = action;
-      setTarget(item?.shelf, !handedOver && !item);
+    }
+    return [layout, locations];
+  }
+
+  function stockItems(catalogue, segments) {
+    const stock = [];
+    for (const seg of segments) {
+      for (let shelf = 1; shelf <= 5; shelf++) {
+        for (let slot = 1; slot <= 10; slot++) {
+          const [code, name] = catalogue[stock.length];
+          stock.push({ code, name, qty: 50, loc: [seg.area, pad(seg.no), pad(shelf), pad(slot)].join('-') });
+        }
+      }
+    }
+    return stock;
+  }
+
+  function start({ products, walk, counter, setTarget, postureChanged }) {
+    const $ = (id) => document.getElementById(id);
+    const button = $('orderAction'), input = $('pickedQty'), squat = $('squatBtn');
+    let ticket = 1, index = 0, phase, lines;
+    const current = () => lines[index];
+    function nextOrder() {
+      const chosen = new Set();
+      const length = ticket === 1 ? 2 : 2 + Math.floor(Math.random() * 3);
+      while (chosen.size < length) chosen.add(products[Math.floor(Math.random() * products.length)]);
+      lines = Array.from(chosen, (product) => ({ product, qty: 1 + Math.floor(Math.random() * 6) }));
+      phase = 'scan'; index = 0;
+    }
+
+    function nearby(item) {
+      const r = item.rect;
+      return walk.y >= r.y1 && walk.y <= r.y1 + 1.15 && Math.abs(walk.x - (r.x0 + r.x1) / 2) <= 0.48;
+    }
+    function updatePosition() {
+      const item = current()?.product;
+      const near = item && nearby(item);
+      const low = item && item.pl.shelf === 1;
+      let message = '';
+      let ready = true;
+      if (phase === 'scan') {
+        ready = near && (!low || walk.squatting);
+        message = !near ? 'Walk to the marked shelf.' : low && !walk.squatting ? 'Squat to scan this low shelf.' : 'Scan this location.';
+      } else if (phase === 'quantity') {
+        message = 'Enter the quantity you picked.';
+      } else if (phase === 'return') {
+        ready = walk.x >= counter.x0 && walk.x <= counter.x1 && walk.y <= counter.y0 && walk.y >= counter.y0 - 1.15;
+        message = 'Take the tote to the trade counter.';
+      } else message = 'Order handed over.';
+      if ($('orderStatus').textContent !== message) $('orderStatus').textContent = message;
+      button.disabled = !ready;
+    }
+
+    function render() {
+      const line = current();
+      $('orderTitle').textContent = 'Order ' + String(ticket).padStart(3, '0');
+      $('ordersServed').textContent = line ? 'Pick ' + (index + 1) + ' / ' + lines.length : ticket - Number(phase === 'return') + ' served';
+      $('scannerItem').hidden = !line;
+      if (line) {
+        $('pickLoc').textContent = line.product.loc;
+        $('pickSku').textContent = 'SKU ' + line.product.code;
+        $('pickName').textContent = line.product.name;
+        $('pickQty').textContent = 'Qty ' + line.qty;
+      }
+      $('pickedField').hidden = phase !== 'quantity';
+      button.textContent = { scan: 'Scan', quantity: 'Enter', return: 'Hand over', done: 'Next order' }[phase];
+      setTarget(line?.product, phase === 'return');
       updatePosition();
     }
 
     function act() {
       updatePosition();
       if (button.disabled) return;
-      if (handedOver) {
-        ticket++;
-        picked = 0;
-        handedOver = false;
-      } else if (current()) {
-        picked++;
-      } else {
-        handedOver = true;
+      if (phase === 'scan') {
+        phase = 'quantity'; input.value = ''; input.setCustomValidity('');
+        if (document.pointerLockElement) document.exitPointerLock();
+        render(); input.focus(); return;
       }
-      showOrder();
+      if (phase === 'quantity') {
+        if (Number(input.value) !== current().qty) {
+          input.setCustomValidity('Pick ' + current().qty + ' to complete this line.');
+          input.reportValidity(); input.select(); return;
+        }
+        input.blur(); index++; phase = current() ? 'scan' : 'return';
+      } else if (phase === 'return') phase = 'done';
+      else { ticket++; nextOrder(); }
+      render();
     }
 
+    function toggleSquat() {
+      walk.squatting = !walk.squatting;
+      squat.setAttribute('aria-pressed', String(walk.squatting));
+      squat.textContent = walk.squatting ? 'Stand' : 'Squat';
+      postureChanged(); updatePosition();
+    }
+    input.addEventListener('input', () => input.setCustomValidity(''));
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) act(); } });
     button.addEventListener('click', act);
-    $('orderPanel').hidden = false;
-    $('orderControls').hidden = false;
-    showOrder();
-    return {
-      act,
-      updatePosition,
-      selectBay(bay) {
-        if (bay && current()?.shelf === bay) act();
-      },
-    };
+    squat.addEventListener('click', toggleSquat);
+    $('orderControls').hidden = $('orderPanel').hidden = false;
+    nextOrder(); render();
+    return { act, updatePosition, toggleSquat, selectProduct(item) { if (phase === 'scan' && current().product === item) act(); } };
   }
-
-  window.WarehouseShift = { start };
+  window.WarehouseShift = { warehouse, stockItems, start };
 })();

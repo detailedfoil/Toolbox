@@ -183,3 +183,15 @@ body.fp{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;fle
   .fp-stage.shift .fp-stick{width:85px;height:85px}
   .fp-stage.shift .fp-hint{display:none}
 }
+
+.fp-order{border-top:4px solid #60dec0}
+#pickLoc{display:block;color:#9cf8de;font:750 clamp(1rem,3.8vw,1.65rem)/1.15 ui-monospace,monospace;margin:9px 0}
+.fp-sku{display:flex;justify-content:space-between;gap:6px;color:#cfdbeb;font:600 .77rem ui-monospace,monospace}
+#pickName{margin:5px 0;font-size:.94rem;line-height:1.2;overflow-wrap:anywhere}
+#pickedField{font-size:.85rem}
+#pickedQty{width:4em;font-size:16px;margin:4px;padding:4px}
+#squatBtn,.fp-install{color:#eef4fa;background:#29354a}
+#squatBtn[aria-pressed="true"]{background:#11634e}
+.fp-install{min-height:38px;padding:0 12px;border:0;border-radius:9px;cursor:pointer}
+.fp-stage.shift .fp-order{max-height:55%;overflow:auto}
+@media(max-width:550px){.fp-stage.shift .fp-mini{max-width:23%;height:auto!important}.fp-stage.shift .fp-order{width:calc(75% - 17px)}}

@@ -19,6 +19,8 @@
   if (shiftMode) {
     document.title = document.querySelector('.fp-top h1').textContent = 'Warehouse Shift';
     stage.classList.add('shift');
+    document.querySelector('.fp-store').hidden = true;
+    canvas.setAttribute('aria-label', 'Fictional warehouse');
     $('mini').setAttribute('aria-label', 'Warehouse map with your position and the current collection point');
   }
 
@@ -45,7 +47,9 @@
     const get = (f) => fetch('floor-plan/data/' + f, { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
     progress(0.08, 'Loading the store\u2026');
     // the stock locations are a bonus: without them the bays just keep their temporary names
-    Promise.all([get('layout.json'), get('locations.json').catch(() => null)])
+    const data = shiftMode ? Promise.resolve(window.WarehouseShift.warehouse())
+      : Promise.all([get('layout.json'), get('locations.json').catch(() => null)]);
+    data
       .then(async ([layout, locs]) => {
         progress(0.25, 'Building the racking\u2026'); await breathe();
         try { await start(layout, locs); } catch (e) { console.error(e); say('Something went wrong drawing the store. Reload the page to try again.'); }
@@ -394,7 +398,7 @@
       b.box = new T.Box3(new T.Vector3(b.x0, 0, b.y0), new T.Vector3(b.x1, b.h, b.y1));
       bays.push(b);
       drawBay(b);
-      const tag = label(b.where || b.id, { size: 0.3, bg: 'rgba(255,210,0,.97)', fg: '#14171f', weight: 800 });
+      const tag = label(shiftMode ? b.codes[0] : b.where || b.id, { size: shiftMode ? 0.48 : 0.3, bg: 'rgba(255,210,0,.97)', fg: '#14171f', weight: 800 });
       tag.position.copy(V((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, b.h + 0.24));
       groups.names.add(tag);
     }
@@ -404,14 +408,14 @@
       const r = rows[b.row] || (rows[b.row] = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9, h: 0, along: b.along, n: 0 });
       r.x0 = Math.min(r.x0, b.x0); r.y0 = Math.min(r.y0, b.y0); r.x1 = Math.max(r.x1, b.x1); r.y1 = Math.max(r.y1, b.y1); r.h = Math.max(r.h, b.h); r.n++;
     }
-    const AISLE_X0 = 10.3, AISLE_X1 = 11.95;
+    const AISLE_X0 = shiftMode ? 18 : 10.3, AISLE_X1 = shiftMode ? 22 : 11.95;
     const rowSigns = []; // the middle aisle between the left and right blocks
     for (const [row, r] of Object.entries(rows)) {
       const cy = (r.y0 + r.y1) / 2;
       let x = (r.x0 + r.x1) / 2, y = cy, z = r.h + 0.75;
       if (r.along === 'x' && r.n > 2 && r.x1 <= AISLE_X0 + 0.2) { x = r.x1 + 0.3; z = 3.9; }
       else if (r.along === 'x' && r.n > 2 && r.x0 >= AISLE_X1 - 0.2) { x = r.x0 - 0.3; z = 3.9; }
-      const sprite = putLabel('signs', row, x, y, z, { size: 0.7, weight: 800 });
+      const sprite = putLabel('signs', shiftMode ? row.split('/')[0] : row, x, y, z, { size: 0.7, weight: 800 });
       rowSigns.push({ sprite, z, scale: sprite.scale.clone() });
     }
 
@@ -581,7 +585,7 @@
     }
     function applyWalk() {
       walk.pitch = Math.min(1.35, Math.max(-1.35, walk.pitch));
-      eye.position.set(walk.x, 1.62, walk.y);
+      eye.position.set(walk.x, walk.squatting ? 0.65 : 1.62, walk.y);
       eye.rotation.set(walk.pitch, walk.yaw, 0);
     }
     function resize() {
@@ -799,6 +803,7 @@
         if (!card.hidden) { closeCard(); e.preventDefault(); return; }
       }
       if (typing || e.altKey || e.ctrlKey || e.metaKey) return; // typing in the stock box
+      if (shift && e.code === 'KeyC') { e.preventDefault(); if (!e.repeat) shift.toggleSquat(); return; }
       if (shift && e.code === 'KeyF') { e.preventDefault(); if (!e.repeat) shift.act(); return; }
       if (!shiftMode && e.key === '/' && sidx) { e.preventDefault(); setSheet(true, stock ? 'find' : undefined); return; }
       if (mode !== 'walk') return;
@@ -1337,7 +1342,7 @@
         for (let sh = b.kind === 'pallet' ? 2 : 1; sh <= b.levels; sh++) {
           if (cfg.drawers && sh <= cfg.drawers) continue;
           const z = FS.shelfZ(b, sh) - 0.04, cells = shelfCells.get(seg.area + '-' + pad2(no) + '-' + pad2(sh)) || per;
-          const w = Math.min(0.115, (seg.u1 - seg.u0) / cells * 0.92);
+          const w = Math.min(shiftMode ? 0.29 : 0.115, (seg.u1 - seg.u0) / cells * 0.92);
           for (let i = 0; i < cells; i++) {
             const r = FS.cellRect(seg, i, cells, 0, 1);
             const x = f[0] ? (f[0] > 0 ? r.x1 : r.x0) + f[0] * 0.004 : (r.x0 + r.x1) / 2, y = f[1] ? (f[1] > 0 ? r.y1 : r.y0) + f[1] * 0.004 : (r.y0 + r.y1) / 2;
@@ -1675,7 +1680,10 @@
     }
     function tapAt(cx, cy, centre) {
       if (shiftMode) {
-        if (shift) shift.selectBay(bayAt(cx, cy, centre));
+        if (shift) {
+          const hit = pickAt(cx, cy, centre);
+          if (hit?.kind === 'product') shift.selectProduct(products[hit.i]);
+        }
         return;
       }
       const k = pickAt(cx, cy, centre);
@@ -1887,7 +1895,7 @@
       if (!seenHint[m]) {
         seenHint[m] = 1;
         if (shiftMode) {
-          flash(stick.hidden ? 'WASD to walk. Click the view to use mouse look. F to pick.' : 'Use the stick to walk and drag the view to look round.');
+          flash(stick.hidden ? 'WASD to walk. Click to look. C to squat, F to scan.' : 'Use the stick to walk and drag the view to look round.');
         } else {
           flash(walking && hasMouse && mouseLook ? MOUSE_HINT : HINTS[m]);
         }
@@ -1974,6 +1982,12 @@
     resize();
     renderer.shadowMap.needsUpdate = true; // the one time the shadows are drawn (cut walls showing)
     progress(0.45, shiftMode ? 'Preparing the warehouse\u2026' : 'Putting your stock on the shelves\u2026'); await breathe();
+    if (shiftMode) {
+      const response = await fetch('floor-plan/data/shift-catalogue.json');
+      if (!response.ok) throw new Error('Could not load the game catalogue');
+      const catalogue = await response.json();
+      applyStock(window.WarehouseShift.stockItems(catalogue, sidx.list));
+    }
     if (sidx && !shiftMode) { const saved = FS.storage.load(); if (saved) applyStock(saved.items); }
     progress(0.6, 'Making the location labels\u2026'); await breathe();
     buildLabels();
@@ -1983,24 +1997,15 @@
     say('');
     if (shiftMode) {
       const counter = L.objects.find((o) => o.kind === 'counter' && o.name === 'Trade counter');
-      const parcel = new T.Mesh(unitBox, lam(0xe2b277));
-      const labelStrip = new T.Mesh(unitBox, lam(0xffedab));
-      parcel.scale.set(0.42, 0.28, 0.28);
-      labelStrip.scale.set(0.3, 1.01, 1.01);
-      parcel.add(labelStrip);
-      scene.add(parcel);
       groups.names.visible = true;
       setMode('walk');
       shift = window.WarehouseShift.start({
-        bays, walk, counter,
-        setTarget(bay, returning) {
-          parcel.visible = !!bay;
-          if (bay) {
-            const x = (bay.x0 + bay.x1) / 2;
-            const y = bay.open.includes('S') ? bay.y1 - 0.16 : bay.y0 + 0.16;
-            const shelfHeight = bay.zs ? bay.zs[1] : 0.12 + (bay.h - 0.2) / (bay.levels - 1);
-            parcel.position.copy(V(x, y, shelfHeight + 0.15));
-            setPin(bay.where || bay.id, x, y, shelfHeight + 0.33);
+        products, walk, counter,
+        postureChanged() { applyWalk(); redraw(); },
+        setTarget(item, returning) {
+          if (item) {
+            const x = (item.rect.x0 + item.rect.x1) / 2;
+            setPin(item.loc, x, item.rect.y1, item.z0 + item.h / 2);
           } else if (returning) {
             setPin('Trade counter', L.start.x, (counter.y0 + counter.y1) / 2, 1.32, true);
           } else {
@@ -2012,7 +2017,7 @@
       $('side').hidden = false; $('bar').hidden = false;
       setMode('orbit');
     }
-    try { if (stock && localStorage.getItem('fp-free-v1') === '1') { seenHint.free = 1; setFree(true); } } catch (e) { /* private mode */ }
+    try { if (!shiftMode && stock && localStorage.getItem('fp-free-v1') === '1') { seenHint.free = 1; setFree(true); } } catch (e) { /* private mode */ }
     loading.classList.add('done'); setTimeout(() => { loading.hidden = true; }, 400);
     redraw();
     // for testing in a browser console: FloorPlan.bays, FloorPlan.setMode('walk')
