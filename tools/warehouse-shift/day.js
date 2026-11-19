@@ -14,7 +14,7 @@
    too, A and the number on its despatch note, but not one of the day's picks).
 
    A day is 15 to 25 picks, 20 or so (detailedfoil, 19 Nov 2026). Before opening 3 to 6 of them are c picks (two or more different
-   products, no customer): pick them, put them in the holding area, then the front door is unlocked ("Time to open").
+   products, no customer): pick them, put them in the holding area, and the shop opens by itself ("Doors open").
    Around 40% (35 to 45) are till or kiosk orders, the rest an even-ish split of click and collect customers with one
    product (picked from the warehouse) and customers who collect a bag already in the holding area (several products;
    no warehouse walk, bags may have been there since before opening). A customer who walks up is greeted first (an
@@ -49,7 +49,7 @@
     this.canTill = !!(this.requests && this.requests.need && this.requests.need.length);
     this.t = 0; this.nextId = 1; this.used = {};
     this.orders = []; this.customers = []; this.owners = []; this.log = [];
-    this.phase = 'closed';                 // closed (c picks, door locked), unlock (waiting for the door), open, lock (waiting for the door)
+    this.phase = 'closed';                 // closed (c picks, before opening), open, lock (everything's done: waiting for you to lock the front door), done
     this.done = 0; this.released = 0; this.over = false;
     // the holding area: what's in each OC spot, and who's on their way to it (fetching it, or filling it)
     this.hold = {}; this.busy = {};
@@ -64,7 +64,7 @@
     for (var i = 0; i < this.total; i++) this.plan.push(i < this.first ? 'c' : null);
     this.fillPlan(true);
     this.wait = 1.0;                       // seconds to the next pick
-    if (this.first === 0) this.phase = 'unlock';
+    if (this.first === 0) { this.phase = 'open'; this.wait = 3 + 3 * this.r(); }
   }
   Day.prototype.emit = function (name, a, b) { var f = this.env[name]; if (typeof f === 'function') return f.call(this.env, a, b); return undefined; };
   Day.prototype.pick = function (list) { return list[Math.floor(this.r() * list.length)]; };
@@ -331,9 +331,9 @@
     var lo = [4, 12, 20, 30, 40][L], hi = [9, 26, 40, 55, 70][L];
     return lo + (hi - lo) * r;
   };
-  // the door: the c picks are all in the holding area, so it's time to open
-  Day.prototype.unlock = function () {
-    if (this.phase !== 'unlock') return false;
+  // the c picks are all in the holding area: the shop opens by itself (detailedfoil: no unlocking, only locking up at the end)
+  Day.prototype.open = function () {
+    if (this.phase !== 'closed') return false;
     this.phase = 'open'; this.wait = 3 + 3 * this.r();
     this.emit('unlocked');
     return true;
@@ -349,7 +349,7 @@
   Day.prototype.tick = function (dt) {
     if (this.over) return;
     this.t += dt;
-    if (this.phase === 'unlock' || this.phase === 'lock') return;
+    if (this.phase === 'lock') return;
     var left = this.released < this.plan.length;
     if (this.phase === 'closed' && this.released >= this.first) { this.check(); return; } // the c picks are out: waiting for them to be put away
     // the next pick
@@ -378,15 +378,26 @@
     if (this.over) return;
     if (this.released < this.plan.length) {
       if (this.phase === 'closed' && this.released >= this.first && !this.orders.some(function (o) { return o.status !== 'done'; })) {
-        this.phase = 'unlock'; this.emit('opening');
+        this.open();
       }
       return;
     }
-    if (this.phase === 'closed') { if (this.orders.some(function (o) { return o.status !== 'done'; })) return; this.phase = 'unlock'; this.emit('opening'); return; }
+    if (this.phase === 'closed') { if (this.orders.some(function (o) { return o.status !== 'done'; })) return; this.open(); return; }
     if (this.phase !== 'open') return;
     if (this.orders.some(function (o) { return o.status !== 'done'; })) return;
     if (this.present().length) return;
     this.phase = 'lock'; this.emit('closing');
+  };
+  // someone leaves the shift part way (Sam taken off): what they had goes back on the list, their customer back in the queue
+  Day.prototype.release = function (who) {
+    var self = this;
+    this.orders.forEach(function (o) {
+      if (o.by !== who || o.status === 'done' || o.status === 'listed') return;
+      if (o.kind === 'hold' && o.hold && o.status === 'picked') { self.hold[o.hold.code] = o.hold.parcel; self.busy[o.hold.code] = 'fetch:' + o.id; self.emit('holdSet', o.hold.code, o.hold.parcel); }
+      o.status = 'listed'; o.by = null; self.emit('changed', o);
+    });
+    this.customers.forEach(function (c) { if (c.by === who && c.state === 'serving') self.unserve(c); });
+    for (var k in this.busy) if (this.busy[k] === 'put:' + who) this.busy[k] = null;
   };
   // how the day went, from one person's point of view (who: whatever they passed to take())
   Day.prototype.summary = function (who) {

@@ -367,10 +367,9 @@ explain changes in plain English and say what they'll see.
 
     **Round 2 (19 Nov 2026, evening; detailedfoil: Alex renamed Sam and given an afro, `afro: true` in the `hire` call).** A day
     is now 15 to 25 picks (about 20). Before opening 3 to 6 c picks (two or more products, no customer, as many as the
-    holding area has room for) are on the list; when they're all put away a "Time to open" banner appears and you unlock the
-    front door (a Unlock door / Lock door button by the entrance, also Scan / RT); customers only arrive after that, and when
-    everything's done "Lock the front door" shows and only locking it brings the end of day screen (`day.phase`: closed, unlock,
-    open, lock, done; `unlock()`, `lock()`, env `opening/unlocked/closing/locked`). The rest: about 40% (35 to 45) till or
+    holding area has room for) are on the list; when they're all put away a "Time to open" banner appears and the shop opens by
+    itself ("Doors open"; detailedfoil asked for no unlocking); customers only arrive after that, and when
+    everything's done "Lock the front door" shows and only you locking it (a Lock door button by the entrance, also Scan / RT) brings the end of day screen (`day.phase`: closed, open, lock, done; `open()`, `lock()`, env `unlocked/closing/locked`). Function menu 7 removes Sam or brings Sam back (`ws-sam` = off in localStorage; `day.release('Sam')` puts what Sam had back on the list). The rest: about 40% (35 to 45) till or
     kiosk orders, the others click and collect customers with ONE product (picked from the warehouse, any quantity) or bag
     collections (several products, from the holding area, no warehouse walk, bags may be there from before opening; they count as
     picks and the label shows the bag's real locs:items). Customers are greeted before they say anything: they arrive in state

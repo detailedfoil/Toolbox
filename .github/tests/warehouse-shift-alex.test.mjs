@@ -31,13 +31,11 @@ function shift(seed, opts = {}) {
   const dayEnv = {
     customer: (c) => later(9, () => day.arrived(c)),
     step: (c) => { if (c.state === 'leaving') later(6, () => day.gone(c)); },
-    opening: () => later(5, () => day.unlock()),   // the door: somebody unlocks it, and locks it at the end
     closing: () => later(5, () => day.lock())
   };
   const arrived = new Map();
   dayEnv.customer = (c) => { arrived.set(c, T + 9); later(9, () => day.arrived(c)); };
   day = Day.create({ world, World: W, Till, requests, rand: rng, env: dayEnv });
-  if (day.phase === 'unlock') dayEnv.opening();
   const env = {
     board: () => ({ orders: day.list(), queue: day.queueLate(), greet: day.ungreeted().filter((c) => T - (arrived.get(c) || 0) > 10) }),
     greet: (b, c) => day.greet(c, 'Sam'),
@@ -58,7 +56,7 @@ function shift(seed, opts = {}) {
     T += dt;
     for (let i = timers.length - 1; i >= 0; i--) if (timers[i].t <= T) { const f = timers[i].f; timers.splice(i, 1); f(); }
     day.tick(dt);
-    if (day.over) { day = Day.create({ world, World: W, Till, requests, rand: rng, env: dayEnv, hold: day.hold }); if (day.phase === 'unlock') dayEnv.opening(); out.days = (out.days || 0) + 1; }
+    if (day.over) { day = Day.create({ world, World: W, Till, requests, rand: rng, env: dayEnv, hold: day.hold }); out.days = (out.days || 0) + 1; }
     if (opts.you) opts.you(you, bot, T);
     bot.update(dt, [you]);
     out.closestWall = Math.min(out.closestWall, nav.clear(bot.x, bot.y));

@@ -360,7 +360,6 @@
       changed: (o) => { for (const p of players) p.changed(o); tidyScreens(); },
       customer: (c) => comeIn(c),
       step: (c) => onStep(c),
-      opening: () => { for (const p of players) { p.banner('Time to open', 'Go to the front door and unlock it', 6000); p.queueChanged(); } SFX.order(); },
       unlocked: () => { for (const p of players) { p.banner('Doors open', 'Customers will be in shortly', 2600); p.queueChanged(); } },
       closing: () => { for (const p of players) { p.banner('All done', 'Lock the front door', 6000); p.queueChanged(); } SFX.order(); },
       locked: () => { SFX.key(); },
@@ -373,7 +372,6 @@
       dayNo++;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
       for (const p of players) p.newDay();
-      if (day.phase === 'unlock') dayEnv.opening();
       dirty = true;
     }
 
@@ -444,8 +442,29 @@
       return b;
     }
     // Sam starts the shift coming out of the staff room, and works the till at the end of the counter by the gap
-    hire({ name: 'Sam', till: ALEX_TILL, skin: 0xd6a57c, hair: 0x2b1d14, afro: true,
-      start: staffRoom ? { x: staffRoom.x1 + 0.6, y: staffRoom.y0 + 0.65, yaw: Math.PI / 2 } : null });
+    // Sam can be taken off the shift and brought back from the Function menu (detailedfoil, 19 Nov 2026); it's remembered
+    const SAM = { name: 'Sam', till: ALEX_TILL, skin: 0xd6a57c, hair: 0x2b1d14, afro: true,
+      start: staffRoom ? { x: staffRoom.x1 + 0.6, y: staffRoom.y0 + 0.65, yaw: Math.PI / 2 } : null };
+    let samSaved = null, samOff = false;
+    try { samOff = localStorage.getItem('ws-sam') === 'off'; } catch (e) { /* fine */ }
+    function removeSam() {
+      const b = crew.find((x) => x.name === 'Sam');
+      if (!b) return;
+      if (day) day.release('Sam');
+      crew.splice(crew.indexOf(b), 1);
+      speeches.delete(b);
+      b.fig.group.visible = false; b.fig.trolley.group.visible = false;
+      samSaved = b; samOff = true; dirty = true;
+      try { localStorage.setItem('ws-sam', 'off'); } catch (e) { /* fine */ }
+    }
+    function bringSam() {
+      if (crew.some((x) => x.name === 'Sam')) return;
+      if (samSaved) { samSaved.fig.group.visible = false; samSaved.fig.trolley.group.visible = false; samSaved = null; }
+      hire(SAM);
+      samOff = false; dirty = true;
+      try { localStorage.removeItem('ws-sam'); } catch (e) { /* fine */ }
+    }
+    if (!samOff) hire(SAM);
     // Sam and their trolley are in your way like anything else (you can step away from them, never into them)
     function trolleyGap(b, x, y) { // how far a point is from the edge of Sam's trolley
       const t = b.trolley;
@@ -639,7 +658,6 @@
         let note = '', cls = 'warn';
         if (showMsg) { note = msg.text; cls = msg.cls || 'warn'; }
         else if (state === 'end') { note = 'Day done'; cls = 'ok'; }
-        else if (day && day.phase === 'unlock') note = 'Time to open: unlock the front door';
         else if (day && day.phase === 'lock') note = 'All done: lock the front door';
         else if (day && day.ungreeted().length) note = 'Customer waiting: say hello';
         else if (day && day.queue().length && !P.tillCust) note = 'Till customer waiting';
@@ -1063,6 +1081,7 @@
           ['4', 'Look: ' + LOOKS[lookPick][0].toLowerCase(), () => { lookPick = (lookPick + 1) % LOOKS.length; try { localStorage.setItem('ws-look', LOOKS[lookPick][0]); } catch (e) { /* fine */ } toast('Look speed: ' + LOOKS[lookPick][0].toLowerCase()); }],
           ['5', 'Picks: ' + MODES[mode][1], () => { mode = (mode + 1) % MODES.length; try { localStorage.setItem('ws-orders', MODES[mode][0]); } catch (e) { /* fine */ } if (day) day.setMode(MODES[mode][0]); toast('Picks still to come: ' + MODES[mode][2]); }],
           ['6', 'Help', () => showHelp(true)],
+          ['7', crew.length ? 'Remove Sam' : 'Bring Sam back', () => { if (crew.length) { removeSam(); toast('Sam has gone home'); } else { bringSam(); toast('Sam is back'); } }],
           ['0', 'Close', () => {}]
         ];
         D.scMenu.replaceChildren();
@@ -1106,21 +1125,21 @@
             let gd = 2.4;
             for (const c of day.ungreeted()) { if (!c.fig) continue; const d = Math.abs(me.x - c.fig.group.position.x); if (d < gd) { gd = d; g = c; } }
           }
-          if ((day.phase === 'unlock' || day.phase === 'lock') && Math.hypot(me.x - entX, me.y - (world.D - 0.4)) < 2.0) dr = day.phase;
+          if (day.phase === 'lock' && Math.hypot(me.x - entX, me.y - (world.D - 0.4)) < 2.0) dr = day.phase;
         }
         const key = (best ? 't' : '') + (g ? 'g' + g.id : '') + (dr || '');
         const old = (nearTill ? 't' : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '');
         nearTill = best; greetC = g; doorOn = dr;
         if (key === old) return;
         D.tillBtn.hidden = !(nearTill || greetC || doorOn) || !active;
-        D.tillBtn.firstChild.nodeValue = doorOn ? (doorOn === 'unlock' ? 'Unlock door' : 'Lock door') : greetC ? 'Greet' : 'Use till';
+        D.tillBtn.firstChild.nodeValue = doorOn ? 'Lock door' : greetC ? 'Greet' : 'Use till';
         renderScanner();
       }
-      // the button, or Scan: unlock or lock the door, say hello to the customer, or open the till
+      // the button, or Scan: lock the door, say hello to the customer, or open the till
       function useAction() {
         if (doorOn && day) {
-          const ok = doorOn === 'unlock' ? day.unlock() : day.lock();
-          if (ok) { SFX.order(); toast(doorOn === 'unlock' ? 'Door unlocked' : 'Door locked'); nearTill = greetC = doorOn = null; checkTill(); }
+          const ok = day.lock();
+          if (ok) { SFX.order(); toast('Door locked'); nearTill = greetC = doorOn = null; checkTill(); }
           return true;
         }
         if (greetC && day) {

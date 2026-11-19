@@ -36,13 +36,11 @@ function runDay(seed, opts = {}) {
     changed: () => { ev.changed++; },
     customer: (c) => { arrivals.set(c, T + 9); ev.firstCust = ev.firstCust === undefined ? T : ev.firstCust; later(9, () => day.arrived(c)); },
     step: (c) => { if (c.state === 'leaving') later(6, () => day.gone(c)); },
-    opening: () => { ev.opening = T; later(8, () => day.unlock()); },
     unlocked: () => { ev.unlocked = T; },
     closing: () => { ev.closing = T; later(8, () => day.lock()); },
     over: () => { ev.over = T; }
   };
   day = Day.create({ world, World: W, Till, requests, rand: rng, env, mode: opts.mode, total: opts.total });
-  if (day.phase === 'unlock') env.opening();
   const choices = [];
   const crewEnv = {
     board: () => ({ orders: day.list(), queue: day.queueLate(), greet: day.ungreeted().filter((c) => T - ev.arrivedAt(c) > 10) }),
@@ -102,7 +100,7 @@ function runDay(seed, opts = {}) {
 const days = [11, 23, 37].map((s) => runDay(s));
 const alone = runDay(5, { you: false });
 
-test('a day is 15 to 25 picks, the first 3 to 6 of them c picks before opening; the door is unlocked to start and locked to finish', () => {
+test('a day is 15 to 25 picks, the first 3 to 6 of them c picks before opening; it opens by itself and you lock the door to finish', () => {
   for (const d of days.concat([alone])) {
     const day = d.day;
     assert.ok(day.over, 'the day ended (after ' + (d.T / 60).toFixed(1) + ' min)');
@@ -117,9 +115,9 @@ test('a day is 15 to 25 picks, the first 3 to 6 of them c picks before opening; 
     assert.ok(d.T > 6 * 60 && d.T < 55 * 60, 'about a shift: ' + (d.T / 60).toFixed(1) + ' min');
     // the door: nobody comes in before it's unlocked, and the day only ends after it's locked
     const { ev } = d;
-    assert.ok(ev.opening > 0 && ev.unlocked > ev.opening, 'time to open, then unlocked');
-    assert.ok(ev.firstCust >= ev.unlocked, 'no customer before the door is unlocked');
-    assert.ok(ev.closing > ev.unlocked && ev.over > ev.closing, 'all done, then locked, then the end of day');
+    assert.ok(ev.unlocked > 0 || day.first === 0, 'the shop opens by itself once the c picks are away');
+    assert.ok(ev.firstCust >= (ev.unlocked || 0), 'no customer before it opens');
+    assert.ok(ev.closing > (ev.unlocked || 0) && ev.over > ev.closing, 'all done, then you lock up, then the end of day');
     assert.equal(day.phase, 'done');
   }
 });
@@ -161,16 +159,19 @@ test('a customer waits to be greeted: nothing is said until someone says hello, 
   assert.ok(day.queue().length === 1 && day.queue()[0] === t);
 });
 
-test('the door: unlock when the c picks are away, lock when everything is done', () => {
+test('the door: the shop opens by itself when the c picks are away, and only locking up at the end ends the day', () => {
   const day = Day.create({ world, World: W, Till, requests, rand: W.rng(9), env: {} });
-  assert.equal(day.phase, 'closed'); assert.equal(day.unlock(), false, 'locked until the c picks are away');
+  assert.equal(day.phase, 'closed'); assert.equal(typeof day.unlock, 'undefined', 'no unlocking');
   for (let i = 0; i < 4000 && day.phase === 'closed'; i++) {
     day.tick(0.1);
     for (const o of day.list()) { day.take(o, 'p1'); day.picked(o); day.putAway(o, day.freeSpots()[0], 'p1'); }
   }
-  assert.equal(day.phase, 'unlock');
-  assert.equal(day.customers.length, 0, 'nobody in while it\'s locked');
-  assert.equal(day.lock(), false); assert.equal(day.unlock(), true); assert.equal(day.phase, 'open');
+  assert.equal(day.phase, 'open');
+  assert.equal(day.lock(), false, 'not locking while the day is on');
+  // Sam taken off the shift: what Sam had goes back on the list
+  const o = day.makeOrder('ck', W.order(world, W.rng(3), 1), null, true);
+  day.take(o, 'Sam'); day.release('Sam');
+  assert.equal(o.status, 'listed'); assert.equal(o.by, null); assert.ok(day.list().includes(o));
 });
 
 test('the list stays steady: never more than 5 on it, never more than 3 customers in, and seldom 3 for long', () => {
@@ -277,7 +278,7 @@ test('the page: day.js loads first, the till customer answers when you copy a co
   assert.ok(at('day.js?v=') > 0 && at('day.js') < at('bot.js') && at('bot.js') < at('game.js'), 'day.js, bot.js, then game.js');
   assert.match(html, /id="dayCover"/); assert.match(html, /All picks clear/);
   const gm = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/game.js'), 'utf8');
-  assert.match(gm, /'Time to open'/); assert.match(gm, /Lock the front door/);
+  assert.match(gm, /Lock the front door/); assert.ok(!/Time to open/.test(gm), 'nothing to unlock'); assert.match(gm, /Remove Sam/); assert.match(gm, /Bring Sam back/);
   const ui = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/tillui.js'), 'utf8');
   assert.match(ui, /function copyCode[\s\S]{0,400}showCustomer\(code\)/, 'copying a code shows it to the customer');
   const bot = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/bot.js'), 'utf8');
