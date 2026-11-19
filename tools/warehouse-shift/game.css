@@ -48,7 +48,7 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 /* each player's own things (one container each; split screen puts player 1 in the top half, player 2 below) */
 .ws-pv{position:absolute;inset:0;pointer-events:none}
 .ws-pv .sc,.ws-pv .tl,.ws-pv .ws-squat,.ws-pv .ws-tillbtn,.ws-pv .ws-chips{pointer-events:auto}
-.ws-chips{position:absolute;top:max(8px,env(safe-area-inset-top));left:calc(max(8px,env(safe-area-inset-left)) + 138px);display:flex;gap:6px;z-index:5}
+.ws-chips{position:absolute;top:max(8px,env(safe-area-inset-top));left:calc(max(8px,env(safe-area-inset-left)) + 164px);display:flex;gap:6px;z-index:5}
 .ws-stage.split .ws-pv{overflow:hidden}
 .ws-stage.split #pv1{bottom:50%}
 .ws-stage.split .ws-pv.p2{top:50%;border-top:3px solid #0d1117}

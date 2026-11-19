@@ -251,6 +251,18 @@ explain changes in plain English and say what they'll see.
     pick!" when an order needs no hint and has no wrong scan. Landscape first
     (detailedfoil), a rotate prompt on phones held upright with "Play upright anyway". Phone: left-thumb stick (pushed right out =
     jog), drag to look, tap to scan. PC: WASD, mouse look (pointer lock), F/click scan, C squat, H hint, Tab menu.
+    **Controllers** (Gamepad API, standard layout; detailedfoil, 19 Nov 2026): left stick walks (right out to jog), right
+    stick looks, RT scans, A is Enter (his swap), B Back, X squat, Y hint, d-pad up and down the pick list, Start the
+    Function menu (highlighted), View help, LT held jogs; A also starts the shift and the end screens. At the till a yellow
+    highlight moves between buttons, boxes and rows (tillui.js `pad()`): A presses, a box brings up the on-screen keyboard
+    (the highlight moves round its keys), B deletes or leaves, RT Enter, LB/RB tabs, Y Ask again, Start leaves.
+    **Two players** (computers only: the Start screen's Two players button, hidden on touch screens and windows under 900
+    px): split screen, one above the other, sharing the day's list, Alex and the tills. Each joins on the join screen with
+    a press (A on a controller, or a key or click for the keyboard and mouse; first to join is the top half). Each player's
+    things are in their own container (`#pv1` in the page, copied for player 2 by `addPlayer2`, elements found by
+    `data-el`); `makePlayer` holds everything per player; `drawViews` draws each half with its own glow and aim box;
+    keyboard and mouse go to `kbPlayer()`. Two people can share an aisle; they can't walk through each other (`peerStop`)
+    or open the same till (`tillAt`). Tested with two fake controllers in headless Chrome; not yet on real ones.
     Installable: `warehouse-shift.webmanifest` (fullscreen, landscape) and `warehouse-shift-sw.js` (scope "warehouse-shift":
     page site-first with a 4 s fallback, its files and photos kept-first; a copy still registered at the old floor-plan scope
     removes itself). Stats (orders, lines, units) stay on the device (`ws-stats-v1`).

@@ -1644,8 +1644,7 @@
     // plays in the top half. Both share the day's list, Alex and the tills; each has their own scanner and till screen.
     let joining = false;
     const joined = [];
-    const SPLIT_READY = false; // split screen is built but not tried yet: the button stays hidden until it has been
-    $('twoBtn').hidden = !SPLIT_READY || touch || window.innerWidth < 900;
+    $('twoBtn').hidden = touch || window.innerWidth < 900; // computers only
     function renderJoin() {
       ['joinTop', 'joinBottom'].forEach((id, i) => {
         const j = joined[i], el = $(id);
