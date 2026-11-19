@@ -132,6 +132,10 @@
 .fu-line.wrong td.d{text-decoration:line-through}
 .fu-line td.out{color:#c62828;font-weight:700}
 .fu-q{width:46px;height:26px;padding:0 5px;border:1px solid #8a8a8a;border-radius:3px;background:#fff;font:15px Arial,sans-serif;outline:none}
+/* a line with the wrong quantity: its Qty box is the one to change (detailedfoil) */
+.fu-line.qty .fu-q{width:58px;height:32px;border:2px solid #e08a00;background:#fffbe8;font-weight:700;animation:fuFix 1.2s ease-in-out infinite}
+@keyframes fuFix{50%{box-shadow:0 0 0 4px #ffb40066}}
+.fu-fix{color:#9a5b00;font-style:normal}
 .fu-del{width:22px;height:22px;padding:0;border:0;border-radius:50%;background:#d32f2f;color:#fff;font:700 15px/1 Arial,sans-serif}
 .fu-tot{display:flex;justify-content:space-between;gap:12px;padding:9px 14px;color:#fff;font-size:17px}
 .fu-tot .red{color:#ff6f61}
@@ -329,4 +333,4 @@
   .fx-top{grid-template-columns:1fr auto}.fx-top>span:first-child{display:none}
   .tl-tab{flex-basis:150px}
 }
-@media (prefers-reduced-motion:reduce){.fx-wait i{animation:none}.tl-toast{transition:none}}
+@media (prefers-reduced-motion:reduce){.fx-wait i{animation:none}.tl-toast{transition:none}.fu-line.qty .fu-q{animation:none}}

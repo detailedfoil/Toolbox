@@ -976,6 +976,28 @@
     const hold = holdingArea();
     flush();
 
+    /* ---------- the tills' screens: an order finished at the till stays up until its tote goes over ---------- */
+    const tillScreens = world.objects.filter((o) => o.kind === 'till' && o.x0 >= counter.x0 - 0.01 && o.x1 <= counter.x1 + 0.01).sort((a, b) => a.x0 - b.x0).map((o) => {
+      const c = canvas(256, 128), tex = new T.CanvasTexture(c);
+      tex.colorSpace = T.SRGBColorSpace;
+      const m = new T.Mesh(new T.PlaneGeometry(o.x1 - o.x0 + 0.02, 0.17), new T.MeshBasicMaterial({ map: tex }));
+      m.position.copy(V((o.x0 + o.x1) / 2, o.y0 + 0.007, 1.245)); m.rotation.y = TURN.N; m.visible = false;
+      groups.shop.add(m);
+      return { m, c, tex };
+    });
+    function tillScreen(i, no) {
+      const s = tillScreens[i];
+      if (!s) return;
+      if (!no) { s.m.visible = false; return; }
+      const g = s.c.getContext('2d'), w = 256, h = 128;
+      g.fillStyle = '#0d2a5c'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = '700 22px ' + FONT; g.fillText('Order Complete', w / 2, 22);
+      g.fillStyle = '#ffd34d'; fit(g, no, 900, 60, w - 20); g.fillText(no, w / 2, 68);
+      g.fillStyle = '#c9d6ea'; g.font = '600 17px ' + FONT; g.fillText('Customer waiting', w / 2, 110);
+      s.tex.needsUpdate = true; s.m.visible = true;
+    }
+
     /* ---------- the holding area: bagged click and collects (world.js holding) ---------- */
     // Long-span shelving like the real one in detailedfoil's floor plan: blue uprights, orange beams, chipboard decks.
     // Blue totes with a big green OC label on the front hold the yellow bags; the big items bay holds loose boxes.
@@ -1143,6 +1165,37 @@
       m.userData.own = true; t.add(m);
     }
 
+    /* ---------- Alex's trolley: a stack of blue totes on a grey base with wheels (detailedfoil) ---------- */
+    // Long side along its local z; the handle at the -z end, where Alex pushes. Picks go in the top tote.
+    const M_TBASE = lam(0x8d939b), M_WHEEL = lam(0x1f2226), M_HANDLE = lam(0xa7adb5);
+    const geoT = { wheel: new T.CylinderGeometry(0.05, 0.05, 0.035, 14).rotateZ(Math.PI / 2), bar: new T.CylinderGeometry(0.012, 0.012, 1, 8) };
+    function trolleyTote(t, y) { const g = tote.clone(); g.rotation.y = Math.PI / 2; g.position.set(0, y, 0.04); t.group.add(g); return g; }
+    function makeTrolley() {
+      const group = new T.Group(), t = { group, top: null, n: 0 };
+      const add = (geo, mat, x, y, z, sx, sy, sz) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); if (sx) m.scale.set(sx, sy, sz); group.add(m); return m; };
+      add(unitBox, M_TBASE, 0, 0.11, 0, 0.5, 0.05, 0.78);                                   // the base
+      for (const [x, z] of [[-0.2, -0.31], [0.2, -0.31], [-0.2, 0.31], [0.2, 0.31]]) { add(geoT.wheel, M_WHEEL, x, 0.05, z); add(unitBox, M_TBASE, x, 0.075, z, 0.03, 0.05, 0.05); }
+      for (const x of [-0.21, 0.21]) { const b = add(geoT.bar, M_HANDLE, x, 0.6, -0.37); b.scale.set(1, 0.98, 1); }  // the handle
+      const top = add(geoT.bar, M_HANDLE, 0, 1.09, -0.37); top.rotation.z = Math.PI / 2; top.scale.set(1, 0.44, 1);
+      for (let i = 0; i < 3; i++) trolleyTote(t, 0.14 + i * 0.17);                               // the stack
+      t.top = trolleyTote(t, 0.14 + 3 * 0.17);                                                  // what's being picked
+      scene.add(group);
+      return t;
+    }
+    function poseTrolley(t, b) { if (!t || !b.trolley) return; t.group.position.set(b.trolley.x, 0, b.trolley.y); t.group.rotation.y = b.trolley.phi; }
+    // a picked line into the top tote (hex), or the tote emptied (null: the order went in the holding area)
+    function trolleyTop(t, hex) {
+      if (hex === null || hex === undefined) { for (const m of t.top.children.slice()) if (m.userData.own) { t.top.remove(m); m.material.dispose(); } t.n = 0; return; }
+      toteBox(t.top, hex, t.n++);
+    }
+    // the top tote off the trolley, for the counter; an empty one takes its place
+    function trolleyTake(t) {
+      const g = t.top;
+      scene.attach(g);
+      t.top = trolleyTote(t, 0.14 + 3 * 0.17); t.n = 0;
+      return g;
+    }
+
     /* ---------- coworkers (bot.js): Alex, in uniform ---------- */
     // A figure with knees and elbows, so they can kneel at the bottom shelves, carry a tote and type at the till.
     // Screwfix staff wear navy with a yellow logo: the patch carries the Toolbox's own made-up brand (CrashFix, as on
@@ -1213,6 +1266,7 @@
       const holding = b.carry && !b.toteDown;
       if (holding) { sL = sR = -0.45; zL = 0.14; zR = -0.14; eL = eR = -1.05; }
       if (b.atTill && !b.giving && !holding) { sL = sR = -0.42; zL = 0.1; zR = -0.1; eL = eR = -1.1; headX = 0.22; lean = 0.05; }
+      if (b.walking && !b.carry && !(b.queue && b.queue.there) && b.trolley) { sL = sR = -0.75; zL = 0.1; zR = -0.1; eL = eR = -0.55; lean = 0.08; }
       if (b.typing) { eL += Math.sin(w.t * 23) * 0.07; eR += Math.sin(w.t * 19 + 1) * 0.07; headX = 0.3; }
       if (b.reading) { sR = -0.55; zR = -0.05; eR = -1.6; headX = 0.4; }
       if (b.kneeling) { hipY = 0.5; lean = 0.32; thL = -1.5; knL = 1.5; thR = 0.12; knR = 1.62; headX = 0.25; if (!holding) { sL = -0.5; eL = -0.7; } }
@@ -1304,6 +1358,7 @@
     return {
       scene, groups, photos: { update: updatePhotos, flush: flushPhotos, fill: fillPhotos, setExtra: (list) => { extra = list; }, slots: SLOTS, big },
       labelMesh, labelMat, trays, trayOf, placeTray, placeItem, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, toteBox, makeWorker, poseWorker, lamps, M,
+      makeTrolley, poseTrolley, trolleyTop, trolleyTake, tillScreen,
       hold: hold ? { spots: hold.spots, set: setParcel, carry: carryParcel } : null,
       clockTick, counts: { tags: tags.length, trays: trays.size, items: world.items.length }
     };

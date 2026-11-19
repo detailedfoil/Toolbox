@@ -8,7 +8,10 @@
    till's web address and anyone's details (the customers are made up in till.js).
 
    game.js makes one with create({...}) and tells it when a till customer arrives (serve) and leaves; this file runs
-   the conversation and calls back when the order is paid for (onComplete), so the pick list can go to the scanner.
+   the conversation and calls back when the order is paid for (onComplete), which puts it on the shared pick list and
+   hands back its order number. Copying a product's code on CrashFix shows it to the customer, who says straight away
+   whether it's the right one (detailedfoil); a line with the right product but the wrong quantity is put right by
+   typing the new quantity in its own Qty box (or the same part number again).
    Kiosk orders (detailedfoil, 19 Nov 2026): some till customers have already sent their order from the kiosk. After
    the postcode and surname search they say so and give the name they used (usually their first name); open Kiosk
    Orders, pick theirs and the basket fills itself. The customer says card or cash at the checkout and puts you right
@@ -19,6 +22,9 @@
   'use strict';
 
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
+  // a right product: never "that's it", which sounds like the end of the order (detailedfoil)
+  const RIGHT = ["Yes, that's the one!", "Spot on, that's the one.", "That's the one, cheers.", 'Perfect, that one.', "Yep, that's the one."];
+  const WRONG = ["No, that's not it.", 'Not that one, mate.', "No, that's not what I'm after.", "Nope, that's not it.", "That's not the one."];
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   /* ---------- icons ---------- */
@@ -128,7 +134,7 @@
       <section class="fx fx-done" data-scr="done" hidden>
         <h1>Order Complete</h1>
         <p class="fx-no">Order number: <u data-v="orderno"></u></p>
-        <p class="fx-next">The pick list is on your scanner. Pick it, then hand the tote over at the counter.</p>
+        <p class="fx-next" data-v="donetext">It's on the pick list for whoever gets to it first. The customer waits by the counter.</p>
         <button class="fx-go" type="button" data-act="leave">Back to the warehouse</button>
       </section>
     </div>
@@ -365,15 +371,22 @@
       s.basket = k.lines.map((l, i) => { const p = product(l.item.code); return { code: l.item.code, name: p ? p.name : l.item.name, qty: l.qty, price: p ? p.price : Till.price(l.item), avail: Till.avail(l.item), item: l.item, status: 'ok', line: i }; });
       s.cur = s.lines.length; s.ready = true; s.stage = 'ordering';
       renderBasket(); show('order'); sfx('good');
-      say(pick(["That's the one, yeah.", "Yep, that's mine.", "That's it, cheers."]));
+      say(pick(["That's the one, yeah.", "Yep, that's mine.", "That's mine, cheers."]));
       later(1300, () => say(pick(["That's everything. How much is that?", "That's the lot.", "That's all of it, I think."])));
     }
 
     // Customer Order: the basket
     function basketTotal() { return S.session ? S.session.basket.reduce((t, r) => t + r.price * r.qty, 0) : 0; }
+    let drawing = false;
     function renderBasket() {
+      // taking the rows away blurs a Qty box being typed in, and its change event comes back here: once is enough
+      if (drawing) return;
+      drawing = true;
+      try { drawBasket(); } finally { drawing = false; }
+    }
+    function drawBasket() {
       const s = S.session, rows = s ? s.basket : [];
-      qa('tr.fu-line').forEach((tr) => tr.remove());
+      qa('tr.fu-line').forEach((tr) => { if (tr.parentNode) tr.parentNode.removeChild(tr); });
       const body = V.basket;
       rows.forEach((r, i) => {
         const tr = document.createElement('tr');
@@ -385,6 +398,7 @@
       });
       V.count.textContent = String(rows.length);
       V.total.textContent = Till.money(basketTotal());
+      updatePaste();
     }
     function addLine() {
       const s = S.session;
@@ -397,6 +411,8 @@
       if (!p) { fuMsg('Part number ' + code + ' not found.' + (P.searcher ? '' : ' (Still loading the full list.)')); sfx('bad'); return; }
       if (!s || !s.selected) { fuMsg('Identify the customer first.'); sfx('bad'); return; }
       F.part.value = ''; F.qty.value = '';
+      const same = s.basket.findIndex((r) => r.code === code && r.status === 'qty');
+      if (same >= 0) { rowQty(same, qty); focusDefault(); return; }
       const row = { code, name: p.name, qty, price: p.price, avail: p.avail, item: p.item, status: 'pending', line: -1 };
       s.basket.push(row);
       sfx('beep');
@@ -420,7 +436,7 @@
       if (verdict === 'wrong') {
         row.status = 'wrong'; s.slips++; if (o.onSlip) o.onSlip();
         renderBasket(); sfx('bad');
-        say(pick(["No, that's not it.", 'Not that one, mate.', "No, that's not what I'm after.", "Nope, that's not it.", "That's not the one."]));
+        say(pick(WRONG));
         later(1400, () => removeRow(row));
         return;
       }
@@ -428,18 +444,21 @@
       if (verdict === 'qty') {
         row.status = 'qty'; renderBasket(); sfx('bad');
         say("That's the one, but I need " + ln.qty + '.');
+        fixQty(row);
         return;
       }
       lineDone(row);
     }
     function lineDone(row) {
       const s = S.session, ln = s.lines[row.line];
+      const quiet = ln.shown === row.code; // they said it was the one when you copied it
       row.status = 'ok'; ln.done = true;
       renderBasket(); sfx('good');
-      say(pick(["Yes, that's the one!", "Spot on, that's it.", "That's it, cheers.", 'Perfect, that one.', 'Yep, that\'s the one.']));
+      if (quiet) say(pick(['Lovely.', 'Cheers.', 'Nice one.', 'Ta.']));
+      if (!quiet) say(pick(RIGHT));
       const next = s.lines.findIndex((l) => !l.done);
       if (next < 0) { s.cur = s.lines.length; s.ready = true; later(1100, () => say(pick(["That's everything. I'll pay now.", "That's the lot, cheers.", "That's all I need. How much is that?"]))); }
-      else { s.cur = next; later(1300, () => sayRequest(false)); }
+      else { s.cur = next; later(quiet ? 900 : 1300, () => sayRequest(false)); }
     }
     function removeRow(row) {
       const s = S.session;
@@ -454,6 +473,18 @@
       }
       renderBasket();
     }
+    // the Qty box on a line with the wrong quantity: selected, so typing the right number replaces it
+    function fixQty(row) {
+      const s = S.session, i = s ? s.basket.indexOf(row) : -1;
+      if (i < 0) return;
+      later(60, () => {
+        const box = el.querySelector('.fu-q[data-row="' + i + '"]');
+        if (!box || !S.open || S.tab !== 'fusion') return;
+        if (osk()) { box.focus({ preventScroll: true }); showKb(box); box.select(); }
+        else if (!touch) { box.focus({ preventScroll: true }); box.select(); }
+      });
+      toast('Type the right quantity in the Qty box, then Enter');
+    }
     function rowQty(i, val) {
       const s = S.session, row = s && s.basket[i];
       if (!row) return;
@@ -463,7 +494,7 @@
       if (row.status === 'qty' || row.status === 'ok') {
         const ln = s.lines[row.line];
         if (Till.judge(ln, row.code, n) === 'right') { if (row.status === 'qty') lineDone(row); else renderBasket(); }
-        else { row.status = 'qty'; ln.done = false; s.ready = false; s.cur = s.lines.findIndex((l) => !l.done); renderBasket(); say("No, I need " + ln.qty + '.'); }
+        else { row.status = 'qty'; ln.done = false; s.ready = false; s.cur = s.lines.findIndex((l) => !l.done); renderBasket(); say("No, I need " + ln.qty + '.'); fixQty(row); }
       } else renderBasket();
     }
 
@@ -515,14 +546,15 @@
     function complete(how) {
       const s = S.session; if (!s || s.stage !== 'paying') return;
       s.stage = 'done';
-      s.orderNo = Till.orderNumber(Math.random);
+      const lines = s.basket.filter((r) => r.status === 'ok').map((r) => ({ item: r.item, qty: r.qty }));
+      s.orderNo = (o.onComplete && o.onComplete({ lines, slips: s.slips, how })) || Till.orderNumber(Math.random);
       V.orderno.textContent = s.orderNo;
+      V.donetext.textContent = "It's on the pick list for whoever gets to it first. The customer waits by the counter.";
       V.modal.hidden = true;
       show('done');
       sfx('done');
       renderSay();
       later(400, () => say(pick(["Cheers. I'll wait here.", "Lovely, I'll wait over here.", 'Thanks, I\'ll be by the counter.'])));
-      if (o.onComplete) o.onComplete({ lines: s.basket.filter((r) => r.status === 'ok').map((r) => ({ item: r.item, qty: r.qty })), orderNo: s.orderNo, slips: s.slips, how });
     }
 
     /* ---------- CrashFix: the search, the same as the Product Search page's ---------- */
@@ -627,6 +659,21 @@
       toast('Copied ' + code + (touch ? ': paste it on the Fusion tab' : ''));
       try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).catch(() => {}); } catch (e) { /* fine */ }
       updatePaste();
+      showCustomer(code);
+    }
+    function showCustomer(code) {
+      const s = S.session, ln = s && s.stage === 'ordering' ? s.lines[s.cur] : null;
+      if (!ln || ln.done) return;
+      if (ln.accept.indexOf(code) >= 0) {
+        if (ln.shown === code) return;
+        ln.shown = code; sfx('good');
+        say({ text: pick(RIGHT) + ' Pop it on the order.', qty: ln.qty > 1 ? 'I need ' + ln.qty + '.' : '' });
+        return;
+      }
+      ln.wrong = ln.wrong || {};
+      if (ln.wrong[code]) return; // they've told you already
+      ln.wrong[code] = 1; s.slips++; if (o.onSlip) o.onSlip(); sfx('bad');
+      say(pick(WRONG));
     }
 
     /* ---------- the on-screen keyboard (phones) ---------- */
@@ -643,7 +690,8 @@
     function updatePaste() {
       const b = q('[data-k="paste"]'); b.hidden = !S.clip; b.textContent = S.clip ? 'Paste ' + S.clip : '';
       // with the phone's own keyboard, a Paste button sits by the part number box instead
-      V.tip.innerHTML = S.clip && touch && !S.osk ? '<button type="button" class="fu-paste" data-act="paste">Paste ' + esc(S.clip) + '</button> then the quantity' : 'Type the part number, then the quantity, then Enter';
+      const fix = S.session && S.session.basket.some((r) => r.status === 'qty');
+      V.tip.innerHTML = fix ? '<b class="fu-fix">Change the quantity in the yellow line\'s Qty box</b>' : S.clip && touch && !S.osk ? '<button type="button" class="fu-paste" data-act="paste">Paste ' + esc(S.clip) + '</button> then the quantity' : 'Type the part number, then the quantity, then Enter';
     }
     function type(k) {
       const f = S.focus;
@@ -809,15 +857,22 @@
         opts = opts || {};
         reset();
         const kind = opts.kind === 'kiosk' ? 'kiosk' : 'till';
-        S.session = { cust, lines: kind === 'kiosk' ? [] : lines, cur: 0, stage: 'arrived', selected: false, basket: [], slips: 0, ready: false, since: Date.now(), colour,
-          kind, kiosk: opts.kiosk || null, pay: opts.pay || { how: 'card', say: 'Card, please.' } };
+        S.session = { cust, lines: kind === 'kiosk' ? [] : lines.map((l) => Object.assign({}, l, { done: false, shown: null, wrong: null, asked: 0, clued: false })), cur: 0, stage: 'arrived', selected: false, basket: [], slips: 0, ready: false, since: Date.now(), colour,
+          kind, kiosk: opts.kiosk || null, pay: opts.pay || { how: 'card', say: 'Card, please.' }, dayCust: opts.dayCust || null };
         renderSay();
-        say(kind === 'kiosk' ? pick(['Morning! Can you sort my order out?', 'Hiya, I need to pay for an order.', 'Alright? Got an order to pay for.', 'Hello, can you put my order through?'])
-          : pick(['Morning! Can I order a few bits?', "Hiya, I'd like to order some stuff.", 'Alright? Need to order a couple of things.', "Hello, I'd like to place an order.", 'Can I order some bits, please?']));
+        say(opts.hello || (kind === 'kiosk' ? pick(['Morning! Can you sort my order out?', 'Hiya, I need to pay for an order.', 'Alright? Got an order to pay for.', 'Hello, can you put my order through?'])
+          : pick(['Morning! Can I order a few bits?', "Hiya, I'd like to order some stuff.", 'Alright? Need to order a couple of things.', "Hello, I'd like to place an order.", 'Can I order some bits, please?'])));
         if (S.open) begin();
       },
       // the customer's gone (handed over or skipped)
       clear() { reset(); S.session = null; renderSay(); },
+      // nobody to serve: the last order finished at this till, and where it's got to
+      showDone(no, text) {
+        if (S.session) return;
+        V.orderno.textContent = no; V.donetext.textContent = text || '';
+        V.modal.hidden = true;
+        show('done');
+      },
       stage: () => (S.session ? S.session.stage : 'none'),
       session: () => S.session,
       preload: loadProducts,

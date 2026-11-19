@@ -223,44 +223,68 @@ explain changes in plain English and say what they'll see.
     a line per position, back on top); the area names on signs on the END of each row facing the centre aisle (with BAYS 01-07 and
     an arrow to its aisle); fire exit / goods in / trade counter signs flat on walls. No sprites (a test checks).
     Files: `world.js` (the layout, every location, putting products on them, orders, `locationAt` for scans; shared with
-    `.github/tests/warehouse-shift.test.mjs`), `scene.js` (three.js drawing: racking, trays, product boxes in their photo's
-    colour, the label shader, photo atlas, shop floor, props, customers, tote), `game.js` (camera, controls, scanner, sounds, the
-    game), `game.css`, `data/catalogue.json` (made by `.github/warehouse-shift/make-catalogue.py` from product-search's
+    `.github/tests/warehouse-shift.test.mjs`), `day.js` (the day's pick list, customers and holding area, see below),
+    `scene.js` (three.js drawing: racking, trays, product boxes in their photo's colour, the label shader, photo atlas, shop
+    floor, props, customers, tote, Alex and their trolley, the tills' screens), `game.js` (the shared world: customers walking
+    about, totes over the counter, Alex's part in it, sounds; and `makePlayer`: each player's own camera, controls, scanner and
+    till, so a second player can be added), `game.css`, `data/catalogue.json` (made by `.github/warehouse-shift/make-catalogue.py` from product-search's
     products.json: every product without flag 32 = the 10,999 nailed ones, each with a group, a size T tray / S shelf / B bulky
     from name keywords, its photo's colour and whether it has a photo; rerun it after a new products.json). The same seed puts
     every product in the same place on every phone (learnable); ~17% of places are left empty. Photos: the Toolbox's own
     product-search/photos (never Screwfix), loaded 12 at a time for boxes within 14 m that you can see, into a 4096 px texture
     (1,000 at once; 2048 / 250 if the phone can't); detailedfoil asked for more loaded than the floor plan. Labels drawn to 18 m.
-    Play: the scanner is drawn like the Symbol handsets in his photos (Today Picking / Pick To Tote/Trolley, location, SKU, name
-    cut at 20 characters, Qty, Function / Scan / Enter, Log Off / Back, arrows); the blue `<F4> Stock Problem` bar is now
-    `<F4> Hint` (detailedfoil: no stock problem button): the location and its row-end sign glow for 12 s. One pick at a time:
-    look at the label or tray and Scan (or tap it on a phone; within 2.05 m), a tray slides out showing what's in it, and
-    each scan of that location is one item (detailedfoil, 19 Nov: no typing, tap it as many times as the gun's Qty; the
-    "Picked" count fills, Back puts one back); the line finishes when the count matches and the item flies into the tote. Below 0.45 m you must squat (button, or C). Then take the
-    tote to the counter (Enter inside `world.handover`): it slides to the customer, who walks out with it, and the next one walks
-    in with a new order. No score or timer (his say); the Function menu has squat, hint, sound, look speed, skip order and help; "Perfect pick!" when an order needs no hint and has no wrong scan or quantity. Landscape first
+    Play: the scanner is drawn like the Symbol handsets in his photos. **The pick list** (detailedfoil, 19 Nov 2026, from his
+    photo): Today Picking, ORDER underlined, a `>` in a light box by the chosen order, Select_ at the bottom; up and down (the
+    big arrows, << >>, the arrow keys, or tap a row) choose, Enter starts it. Each order reads `A4821 2:3 CK`: A and four
+    numbers, then locations:items (1 silicone and 2 screws = 2:3), then CK (a click and collect customer is here now), c (no
+    customer: it goes in the holding area) or nothing (bought at the till). An order comes off everyone's list once started,
+    and there's no backing out: Back says "Finish task" (it only puts the last scanned item back). Picking (Pick To
+    Tote/Trolley, location, SKU, name cut at 20 characters, Qty; the blue `<F4> Hint` bar, not Stock Problem, makes the
+    location and its row-end sign glow for 12 s): look at the label or tray and Scan (or tap it on a phone; within 2.05 m), a
+    tray slides out, and each scan is one item (no typing, as many scans as the Qty; Back puts one back); when they're all
+    scanned it says Press Enter, and Enter moves on to the next location (detailedfoil: you press Enter after each location;
+    a scan past the Qty is refused). Below 0.45 m you must squat (button, or C). Then a customer's tote goes to the counter
+    (Enter inside `world.handover`): it goes on the counter at the nearest free place, its customer comes over from where
+    they're waiting, it slides across and they walk out with it. A c pick goes in the holding area instead: scan the label
+    of any empty OC spot (a full one says so). No score or timer (his say); the Function menu has squat, hint, sound, look
+    speed, picks (mixed / C&C / holding / till / kiosk, for practice: changes the picks still to come) and help; "Perfect
+    pick!" when an order needs no hint and has no wrong scan. Landscape first
     (detailedfoil), a rotate prompt on phones held upright with "Play upright anyway". Phone: left-thumb stick (pushed right out =
     jog), drag to look, tap to scan. PC: WASD, mouse look (pointer lock), F/click scan, C squat, H hint, Tab menu.
     Installable: `warehouse-shift.webmanifest` (fullscreen, landscape) and `warehouse-shift-sw.js` (scope "warehouse-shift":
     page site-first with a 4 s fallback, its files and photos kept-first; a copy still registered at the old floor-plan scope
     removes itself). Stats (orders, lines, units) stay on the device (`ws-stats-v1`).
-    **Customers** (detailedfoil, 19 Nov 2026): a quarter each (never three of one kind in a row; the scanner's Function
-    menu has "Orders: mixed / C&C pick / holding / till / kiosk", `ws-orders`): a single item click and collect (one pick on
-    the scanner), a **holding area** click and collect, a till search order and a **kiosk** order (both below).
-    **Holding area** (`world.holding`, drawn by scene.js `holdingArea`): long-span shelving (blue uprights, orange beams,
+    **The day** (`day.js`, detailedfoil, 19 Nov 2026; tested in `.github/tests/warehouse-shift-day.test.mjs` with whole days
+    simulated): 20 picks of any kind, the first 2 to 4 of them c picks on the list as the day starts. The rest are a mix of
+    c (online orders), CK (a click and collect customer walks in and their order isn't picked yet) and till and kiosk
+    customers (never three of a kind in a row). The list stays steady: at most 5 at once (counting customers on their way in
+    who'll add one, and till customers not yet paid), the next one after a wait that's shorter the emptier it is (4 to 9 s
+    when empty, up to about a minute when 4 are on it). At most 3 customers in at once, and a third only after a while (it
+    was at 3 two thirds of the time before). Some online orders' customers come in later the same day (`owners`): if their c
+    is still on the list it turns into a CK (if someone's picking it, their scanner says to take it to the counter instead),
+    if it's in the holding area a CK line fetches it. Other customers come for bags already there (`collect`). A fetch line
+    is `A` + the despatch note's 4 digits, 1:1 CK, and isn't one of the 20. The day ends when all 20 are done and nobody's
+    waiting: "All picks clear" with your own figures only (nothing about Alex's), and Start the next day (the holding area
+    carries over). Till customers wait at the counter (a till's place, never Alex's) until someone serves them; once paid
+    they, and every click and collect customer, wait by the gap at the end of the counter beside Alex's till (detailedfoil:
+    the left-hand till from behind the counter, the only end with a gap), `WAIT` in game.js.
+    **Holding area** (`world.holding`, drawn by scene.js `holdingArea`; what's in each spot is `day.hold`): long-span shelving (blue uprights, orange beams,
     like the real one in his floor plan) against the staff room wall beside goods in, facing goods in, a "HOLDING AREA"
     sign over it. On your left as you face it the big items bay: OC-001 on the floor, OC-002 on the shelf above (loose
     cartons, the OC labels on the shelf edge); on your right blue totes, six a shelf on the bottom two shelves, OC-003 to
     OC-008 at the bottom and OC-009 to OC-014 above, from the left, each with a big green OC label on its front and an
     order in a yellow bag. The shelves above stay empty. Each order has a despatch note drawn on a canvas (CrashFix, a
     4-digit number and the surname big, Collection No., Despatch Note A9...; no highlighting or Challenge 25 line, the
-    top strip left blank: his say). Every surname there is different (for now). The customer says the OC location and
-    their surname (`Till.holdSay`); the scanner shows both; scan that tote (Scan or tap, `holdHit`), the bag comes out,
-    take it to the counter and Enter: the customer leaves carrying it and a new order fills the spot 4 s later. A wrong
-    tote counts against a perfect pick. Hint glows the tote.
+    top strip left blank: his say). Every surname there is different (for now). A collection's line on the scanner gives
+    the OC location and surname (the customer says them too, `Till.holdSay`); scan that tote (Scan or tap, `holdHit`), the
+    bag comes out, take it to the counter and Enter. A wrong tote counts against a perfect pick. Hint glows the tote (or,
+    putting a c pick away, the nearest empty spot). About half the spots start the first day full.
     **Till orders**: A till customer walks up and the scanner says "Till
     order"; walk behind the counter to one of the four trade counter tills and press Use till (or Scan, or tap the till).
-    The till is a browser with two tabs at the top, like the real trade counter PCs: **Fusion** (the till system, drawn
+    Walk behind the counter to one of your three tills (the one by the gap is Alex's) and press Use till (or Scan, or tap
+    it): the next till customer comes over (the one you're talking to follows you to another till; one you'd called but
+    not started on goes back to the queue if you leave). The till is a browser with two tabs at the top, like the real
+    trade counter PCs: **Fusion** (the till system, drawn
     from his photos: Identify Customer, Search Results, Customer Order, the white Checkout page, Order Complete; the logo
     is plain text, the username is Trainee01, no real addresses) and **CrashFix** (the Product Search page's own
     search.js over products.json, web-names.json and desc-words.json, built with the same fields as product-search/app.js
@@ -270,15 +294,20 @@ explain changes in plain English and say what they'll see.
     sometimes someone else at the same address, then they say their first name); you Search, pick them, Select. Then
     they ask for one thing at a time: by code, by describing it ("a pack of 100 ... screws 5mm x 80mm", from its
     screwfix.com name, half without the make) or by quoting a sentence of its description ("I need the one that says:
-    ...", plus a hint like "The 30m one." when several products say the same). Find it on CrashFix (tap the code to
-    copy; phones get a Paste key), switch to Fusion, type the part number and quantity, Enter: the customer says right
-    or wrong, any product that fits counts, a wrong quantity can be fixed in the line. Ask again repeats it; twice gives
+    ...", plus a hint like "The 30m one." when several products say the same). Find it on CrashFix and tap its code to
+    copy it: that shows it to the customer, who says right or wrong straight away (detailedfoil; a wrong one counts against
+    a perfect pick once). Then switch to Fusion (phones get a Paste key), type the part number and quantity, Enter; any
+    product that fits counts. A wrong quantity lights that line's Qty box up, selected, so typing the right number and
+    Enter fixes it (typing the same part number again does too: no second line). A right product is never "that's it"
+    (detailedfoil: sounds like the end of the order). Ask again repeats it; twice gives
     a clue (the first 3 characters of the code), which counts against a perfect pick like wrong lines do. Pay & Go,
     then Card or Cash, whichever the customer says when you reach the checkout (`Till.payment`; the other button, or
-    Trade Credit etc., gets "No, I said card." and counts against a perfect pick). Order Complete gives a made-up
-    A9 + 9 digit number (one digit short of a real one, so it can never match; customer numbers start 00 for the same
-    reason) and the pick list
-    (the products actually added, in location order) goes to the scanner; hand the tote over as usual. Prices and stock
+    Trade Credit etc., gets "No, I said card." and counts against a perfect pick). Order Complete gives the order's number
+    from the pick list (A and four numbers; customer numbers start 00, which a real one never does) and the order goes on
+    everyone's list with no letter after it; the customer waits by the gap and the next one can be served. The order
+    stays on that till's screen in 3D (Order Complete, the number, Customer waiting: scene.js `tillScreen`) until its tote
+    goes over, and on Fusion's done page if you open that till with nobody to serve (detailedfoil: so you know which pick
+    is for the till customer). Prices and stock
     (Avail) are made up from the code (`price`, `avail`), VAT is included at 20% like the real checkout. Speech shows in
     a bubble over the customer and in a yellow bar on the till. **Kiosk orders**: the same postcode, surname, Select;
     then the customer says they sent it from the kiosk / screen / iPad and the name they used (usually their first name,
@@ -302,22 +331,27 @@ explain changes in plain English and say what they'll see.
     (whole shifts simulated with a pretend page): `Nav` (the floor on a 10 cm grid with each cell's distance to the
     nearest obstacle; A* that keeps to the middle of aisles, pulled straight) and `create()` (`update(dt, others)` each
     frame; the job is a generator whose steps wait seconds or for a condition). Alex comes out of the staff room at the
-    start and serves their own customers at the right-hand till (who come down the right-hand side of the shop, `lanes`
-    in game.js, and are never dressed in navy, the staff colour): the same four kinds, a quarter each, with the till's
-    own customer lines. They pick from the same shelves (trays slide out, boxes pull forward) into a tote from the stack
-    by the counter, kneel on one knee for the bottom shelves (below 0.45 m, the tote on the floor beside them) and hand
-    over at the counter like you. Timings are `PACE` in bot.js (walk 1.32 m/s, find a product by code 3.5-7 s, by
+    start and works from the same list (`choose`, detailedfoil's order): a pick a customer is waiting for (CK, till, a
+    holding area fetch), then the next customer at the till (served at their own till, the one by the gap, with the till's
+    own customer lines; customers are never dressed in navy, the staff colour), then c picks; free again, they look at the
+    list straight away. They pick from the same shelves (trays slide out, boxes pull forward) into the top tote of their
+    **trolley** (detailedfoil: the blue stack of totes on a grey base with wheels; scene.js `makeTrolley`, `TROLLEY` in
+    bot.js): pushed in front while they walk, parked behind them, across the aisle, while they pick, so Alex and the trolley
+    fill the aisle and you can't get past (you can't walk through either: game.js `crewStop`, `trolleyGap`; it swings round
+    them the short way, never into the shelf, and stays inside the aisle). They kneel on one knee for the bottom shelves
+    (below 0.45 m), hand the top tote over at their till (the customer comes over), and put c picks in the nearest empty
+    OC spot (a tote rather than the big items bay), going to the counter instead if the customer walks in meanwhile. Timings are `PACE` in bot.js (walk 1.32 m/s, find a product by code 3.5-7 s, by
     description 8-18 s, by a quote 12-28 s, each item 0.6-1.2 s ...), each varying, times a personal pace; about one
     thing in 15 goes wrong just to slow it down (`SLIP`: a wrong scan, the wrong aisle, a typo, the wrong product shown,
-    one too many picked). **One person to a pick aisle** (detailedfoil: "whoever was in the aisle first gets priority";
-    the aisles off the centre aisle, not the centre aisle): `aisleAt` in bot.js. You can't walk into an aisle Alex is in
-    (game.js `crewStop`: a toast, and Alex says "Won't be a sec!"), and Alex waits to one side of the end of yours
-    (`startQueue`), where you can see them from inside. In the open Alex goes round you, slides past at close quarters,
-    takes another spot if you're on theirs (`alts`) and says excuse me after a moment. The holding area is shared:
-    `reserved` in game.js keeps an OC location for whichever customer (yours or Alex's) has come for it. The till Alex
-    is standing at isn't offered to you. Drawn by scene.js `makeWorker` / `poseWorker` (navy uniform with a CrashFix
-    patch and an ALEX badge, knees and elbows, the scanner's red line), speech in small grey bubbles only when near and
-    in sight (`placeBubs`), sounds quieter with distance. `__shift.tick(sec)` fast-forwards the game for playtests.
+    one too many picked). **Aisles** (the ones off the centre aisle, `aisleAt` in bot.js): Alex waits to one side of the
+    end of one you're already in (`startQueue`, detailedfoil: "whoever was in the aisle first gets priority"), where you can
+    see them from inside, so they never trap you. Two human players can share an aisle (detailedfoil); what stops you
+    passing Alex is the trolley, not a rule. In the open Alex goes round you, slides past at close quarters,
+    takes another spot if you're on theirs (`alts`) and says excuse me after a moment. The holding area is shared through
+    day.js (`busy`: a spot being fetched from or filled is kept for whoever's on the way). Drawn by scene.js `makeWorker` /
+    `poseWorker` (navy uniform with a CrashFix patch and an ALEX badge, knees and elbows, both hands on the trolley handle
+    while walking, the scanner's red line), speech in small grey bubbles only when near and in sight (`placeBubs`, drawn
+    by each player), sounds quieter with distance. `__shift.tick(sec)` fast-forwards the game for playtests.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

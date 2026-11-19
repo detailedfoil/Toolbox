@@ -175,6 +175,20 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .sc-flash.go{animation:scFlash .35s ease-out}
 .sc-flash.bad{background:#ff4b4b}
 @keyframes scFlash{0%{opacity:.35}100%{opacity:0}}
+/* the pick list, like the handset in detailedfoil's photo: Today Picking, ORDER underlined, a > in a box by the
+   order you're on, Select_ at the bottom */
+.sc-list{position:absolute;left:3%;width:74%;top:5.6%;text-align:left;line-height:1.25}
+.sc-lt{font-size:1.38em;padding-left:.9em;white-space:nowrap}
+.sc-lh{margin-top:.15em;font-size:1.34em;border-bottom:.12em solid #f4f6fb;padding-bottom:.02em;letter-spacing:.02em}
+.sc-rows{margin:.25em 0 0;padding:0;list-style:none}
+.sc-rows li{display:flex;align-items:center;gap:.25em;font-size:1.42em;white-space:nowrap;overflow:hidden;letter-spacing:-.04em;padding:.12em 0;cursor:pointer}
+.sc-rows li b{display:inline-grid;place-items:center;width:.85em;height:1.05em;font-weight:700;color:#0a0f26;flex:none}
+.sc-rows li.on b{background:#cfe0f5}
+.sc-rows li.none{color:#9fb0c9;padding-left:1.1em;cursor:default}
+.sc-note{position:absolute;left:2.5%;width:73%;top:50.5%;font-size:1.3em;white-space:nowrap;overflow:hidden;text-align:center}
+.sc-note.warn{color:#ffd34d}.sc-note.err{color:#ff7b7b}.sc-note.ok{color:#7dff8b}.sc-note.dim{color:#9fb0c9}
+.sc-select{position:absolute;left:3%;top:62%;font-size:1.5em;white-space:nowrap}
+
 /* the number pad that slides up after a good scan */
 .sc-pad{position:absolute;left:0;right:0;bottom:0;height:37%;padding:2.5%;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:2.2%;
   background:#1d2433;border-top:.12em solid #3a4560;transform:translateY(102%);visibility:hidden;transition:transform .18s ease-out,visibility 0s .18s;z-index:2}

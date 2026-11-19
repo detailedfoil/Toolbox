@@ -12,8 +12,8 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=f0eb9a1e5d">
-<link rel="stylesheet" href="warehouse-shift/till.css?v=5ee2931e70">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=93c7aef5ad">
+<link rel="stylesheet" href="warehouse-shift/till.css?v=100c56c6a5">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -47,10 +47,13 @@
           <span><svg viewBox="0 0 24 20" aria-hidden="true"><path d="M12 19L1 6a16 16 0 0 1 22 0z"/></svg><svg viewBox="0 0 12 24" aria-hidden="true"><rect x="3" y="0" width="6" height="3"/><rect x="0" y="3" width="12" height="21" rx="1.5"/></svg><b id="scTime">7:24</b></span>
         </div>
         <div class="sc-text" id="scText"></div>
+        <div class="sc-list" id="scList" hidden><div class="sc-lt">Today Picking</div><div class="sc-lh">ORDER</div><ol class="sc-rows" id="scRows"></ol></div>
+        <div class="sc-note" id="scNote" hidden></div>
+        <div class="sc-select" id="scSelect" hidden>Select<span class="sc-cur line"></span></div>
         <div class="sc-side">
           <button class="sc-ico sc-kbd" id="scKbd" type="button" aria-label="Number pad"><svg viewBox="0 0 64 40" aria-hidden="true"><rect x="2" y="2" width="60" height="36" rx="5" fill="none" stroke="#fff" stroke-width="3.5"/><g fill="#fff"><rect x="9" y="9" width="6" height="5"/><rect x="18" y="9" width="6" height="5"/><rect x="27" y="9" width="6" height="5"/><rect x="36" y="9" width="6" height="5"/><rect x="45" y="9" width="10" height="5"/><rect x="9" y="17" width="6" height="5"/><rect x="18" y="17" width="6" height="5"/><rect x="27" y="17" width="6" height="5"/><rect x="36" y="17" width="6" height="5"/><rect x="45" y="17" width="10" height="5"/><rect x="13" y="26" width="34" height="5"/><rect x="50" y="22" width="5" height="9"/></g></svg></button>
-          <button class="sc-ico" id="scUp" type="button" aria-label="Previous line"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 11l-11 12h7v13h8V23h7z" fill="#fff"/></svg></button>
-          <button class="sc-ico" id="scDown" type="button" aria-label="Next line"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 37l11-12h-7V12h-8v13h-7z" fill="#fff"/></svg></button>
+          <button class="sc-ico" id="scUp" type="button" aria-label="Up"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 11l-11 12h7v13h8V23h7z" fill="#fff"/></svg></button>
+          <button class="sc-ico" id="scDown" type="button" aria-label="Down"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 37l11-12h-7V12h-8v13h-7z" fill="#fff"/></svg></button>
         </div>
         <button class="sc-hint" id="scHint" type="button"><span>&lt;F4&gt;</span><span>Hint</span></button>
         <div class="sc-picked" id="scPicked">Picked : <span class="val" id="scQty"></span><span class="sc-cur line" id="scCur"></span></div>
@@ -91,7 +94,7 @@
   <div class="ws-cover" id="startCover" hidden>
     <div class="ws-card">
       <h1>Warehouse Shift</h1>
-      <p>Customers come to the trade counter. Some have a click and collect; others order at the till, where you find what they ask for on CrashFix and add it in Fusion. Pick each line from its location, then bring the tote back and hand it over. The scanner sends you up the right side and back down the left.</p>
+      <p>A day is 20 picks on one list, shared with Alex. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
       <div id="startStats"></div>
       <div class="ws-row">
         <button class="ws-go" id="startBtn" type="button">Start shift</button>
@@ -108,28 +111,35 @@
       <h1>How to play</h1>
       <div class="ws-cols2">
         <div>
+          <h2>The pick list</h2>
+          <ul>
+            <li>The scanner lists today's picks: <b>A4821 2:3 CK</b> is order A4821, 2 locations, 3 items. <b>CK</b>: a click and collect customer is at the counter. <b>c</b>: nobody's here yet, it goes in the holding area. Nothing after it: bought at the till, the customer's waiting.</li>
+            <li>Up and down choose an order, <b>Enter</b> starts it. Once started it's yours: Back says <b>Finish task</b>.</li>
+            <li>A day is <b>20 picks</b>. It ends when they're all done and nobody's waiting.</li>
+          </ul>
           <h2>Picking</h2>
           <ul>
-            <li>The scanner shows one pick at a time: the <b>location</b>, the SKU, the product and how many.</li>
-            <li>Walk to the location, look at it and press <b>Scan</b> (or tap it) <b>once for each item</b>: Qty 3 is three scans. The line's done when the count matches.</li>
-            <li>After the last pick, take the tote to the <b>trade counter</b> and press Enter to hand it over.</li>
-            <li>Some click and collects are already bagged in the <b>holding area</b> by goods in. The customer gives the <b>OC location</b> (big green label on the tote) and their surname: scan that tote, then take the bag to the counter.</li>
+            <li>The scanner shows one location at a time: the <b>location</b>, the SKU, the product and how many.</li>
+            <li>Walk to it, look at it and press <b>Scan</b> (or tap it) <b>once for each item</b>: Qty 3 is three scans. Then press <b>Enter</b> for the next location.</li>
+            <li>Then take the tote to the <b>trade counter</b> and press Enter: its customer comes over for it.</li>
+            <li>A <b>c</b> pick goes in the <b>holding area</b> by goods in: scan the label of any empty OC spot.</li>
+            <li>Some click and collects are already bagged in the holding area: the line on the scanner gives the <b>OC location</b> (big green label) and surname. Scan that tote, then take the bag to the counter.</li>
             <li>Bottom shelves are low: <b>squat</b> to scan them. Stuck? <b>Hint</b> makes the location glow.</li>
           </ul>
           <h2>Alex</h2>
           <ul>
-            <li><b>Alex</b> works the shift with you. They serve their own customers at the till on the right and do the same jobs, at the same pace as a person.</li>
-            <li><b>One person to an aisle</b> (not the centre aisle): whoever's in first has it. If Alex is down an aisle, wait for them to come out. Alex waits for you too.</li>
+            <li><b>Alex</b> works from the same list, at the same pace as a person: picks with a customer waiting first, then the next customer at the till, then c picks.</li>
+            <li>Alex pushes a <b>trolley</b>. While they pick it blocks the aisle, so you can't get past. Alex won't go down an aisle you're in.</li>
             <li>Alex walks round you, and says excuse me if you're in the way.</li>
           </ul>
           <h2>At the till</h2>
           <ul>
-            <li>Some customers order at the till. Walk behind the counter to a till and press <b>Use till</b> (or Scan).</li>
+            <li>Some customers order at the till. Walk behind the counter to a till and press <b>Use till</b> (or Scan): the next one comes over. The till by the gap is Alex's.</li>
             <li>They give their <b>postcode</b>, then their <b>surname</b>: type them in Fusion's Identify Customer, Search, pick them, Select.</li>
             <li>Sent it from the <b>kiosk</b>? They tell you the name they used: open <b>Kiosk Orders</b>, pick theirs, Select, and the basket fills itself.</li>
-            <li>They ask for one thing at a time: a <b>code</b>, a <b>description</b>, or a quote from the website. Find it on the <b>CrashFix</b> tab (tap a result to read its description, tap its code to copy it).</li>
-            <li>Back on the <b>Fusion</b> tab, type the part number and quantity, Enter. The customer says if it's right; any product that fits counts. <b>Ask again</b> repeats it, twice gives a clue.</li>
-            <li>When they've got everything: <b>Pay &amp; Go</b>, then <b>Card</b> or <b>Cash</b>, whichever they say. The pick list goes to your scanner.</li>
+            <li>They ask for one thing at a time: a <b>code</b>, a <b>description</b>, or a quote from the website. Find it on the <b>CrashFix</b> tab (tap a result to read its description) and tap its code to copy it: the customer says straight away if it's the one. Any product that fits counts.</li>
+            <li>Back on the <b>Fusion</b> tab, type the part number and quantity, Enter. Wrong quantity? Type the right one in that line's Qty box. <b>Ask again</b> repeats what they want, twice gives a clue.</li>
+            <li>When they've got everything: <b>Pay &amp; Go</b>, then <b>Card</b> or <b>Cash</b>, whichever they say. The order goes on the pick list (its number stays on the till's screen) and the customer waits by the gap at the end of the counter.</li>
             <li>On a phone, Fusion uses the phone's keyboard; the keyboard button at the top swaps to an on-screen one.</li>
           </ul>
           <h2>Reading a location</h2>
@@ -144,7 +154,7 @@
           <h2>Phone</h2>
           <ul><li>Left thumb: walk (push further to jog)</li><li>Drag the view to look round</li><li>Tap a label to scan it</li><li>Squat button next to the scanner</li></ul>
           <h2>Computer</h2>
-          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or <kbd>F</kbd> scan, <kbd>C</kbd> squat, <kbd>H</kbd> hint</li><li>Scan once per item</li><li><kbd>Tab</kbd> opens the scanner's Function menu</li></ul>
+          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or <kbd>F</kbd> scan, <kbd>Enter</kbd> next, <kbd>C</kbd> squat, <kbd>H</kbd> hint</li><li><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose on the pick list</li><li><kbd>Tab</kbd> opens the scanner's Function menu</li></ul>
         </div>
       </div>
       <div class="ws-row"><button class="ws-go" id="helpClose" type="button">Got it</button></div>
@@ -156,6 +166,15 @@
       <h1>End of shift</h1>
       <div id="endStats"></div>
       <div class="ws-row"><button class="ws-go" id="keepBtn" type="button">Keep picking</button><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div>
+    </div>
+  </div>
+
+  <div class="ws-cover" id="dayCover" hidden>
+    <div class="ws-card">
+      <h1 id="dayTitle">All picks clear</h1>
+      <p>Every pick on today's list is done and nobody's waiting. Your day:</p>
+      <div id="dayStats"></div>
+      <div class="ws-row"><button class="ws-go" id="nextDayBtn" type="button">Start the next day</button><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div>
     </div>
   </div>
 
@@ -172,11 +191,12 @@
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
 <script src="warehouse-shift/world.js?v=20b638507a"></script>
-<script src="warehouse-shift/scene.js?v=ef7b0d69e2"></script>
+<script src="warehouse-shift/scene.js?v=3007bf7549"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=3cd5363ffe"></script>
-<script src="warehouse-shift/bot.js?v=640f2b8591"></script>
-<script src="warehouse-shift/tillui.js?v=bbb9518044"></script>
-<script src="warehouse-shift/game.js?v=f9db93fd2a"></script>
+<script src="warehouse-shift/day.js?v=e00a95a97f"></script>
+<script src="warehouse-shift/bot.js?v=16749e0cba"></script>
+<script src="warehouse-shift/tillui.js?v=a0ab6396c4"></script>
+<script src="warehouse-shift/game.js?v=755a5a6312"></script>
 </body>
 </html>

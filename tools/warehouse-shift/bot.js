@@ -1,11 +1,14 @@
 /* Warehouse Shift: Alex, a coworker who does the same job as you (detailedfoil, 19 Nov 2026: "like a coworker, and
    they do the same thing, and they take as long to do everything as a human would"). A scripted worker, not an AI
-   model. Shared by the page (game.js draws Alex and their customers) and the tests.
+   model. Shared by the page (game.js draws Alex and the customers) and the tests.
 
-   Alex serves their own customers at the right-hand till of the trade counter, the same four kinds as yours, a quarter
-   each: a single item click and collect (picked from the warehouse into a tote), a bagged click and collect from the
-   holding area, a till order (postcode, surname, then each product asked for, card or cash, then picked) and a kiosk
-   order (found on Kiosk Orders, paid for, picked). Everything takes as long as it would take a person: walking at about
+   Alex works from the same pick list as you (day.js), in detailedfoil's order: first any pick a customer is waiting
+   for (CK, and orders paid for at the till), then the next customer at the till, then the c picks for the holding
+   area. Free again, they look at the list straight away. They serve till customers at the right-hand till of the trade
+   counter (postcode, surname, then each product asked for, card or cash; kiosk orders found on Kiosk Orders), and the
+   order goes on the list for whoever gets to it first. Once they start an order they finish it: picked into a tote,
+   then over the counter to its customer, or into an empty OC spot in the holding area for a c pick (to the counter
+   instead if its customer walks in meanwhile). Everything takes as long as it would take a person: walking at about
    1.3 m/s, reading the scanner, putting the tote down, kneeling for the bottom shelves, aiming the scanner and a moment
    per item, typing at the till and searching for what was asked for. Every timing varies, and about one thing in
    fifteen goes wrong and costs a few seconds (a wrong scan, the wrong aisle, a typo, the wrong product shown to the
@@ -15,13 +18,13 @@
    (detailedfoil, 19 Nov 2026): whoever is in an aisle first has it, and anyone else waits by its end until they come
    out. Alex waits beside the opening, clear of the way out; you can't walk in while Alex is in there (game.js). In the
    open (the centre aisle, the back walkway, behind the counter, goods in) Alex walks round you and any other
-   coworker: they stop when you're in the way, go round if there's room, and say excuse me if you don't move. The
-   holding area is shared: a customer's OC location is kept for them (game.js) so you and Alex never go for the same bag.
+   coworker: they stop when you're in the way, go round if there's room, and say excuse me if you don't move.
 
    Nav(world): the floor on a 10 cm grid, how far each spot is from the nearest obstacle, and the shortest way round.
    create(opts): a worker. update(dt, others) once a frame (others: you and any other worker, {x, y, r, moving}); the
    drawing reads where they are and what they're doing (x, y, yaw, speed, kneeling, aim, carry ...). opts.env does
-   the rest: walking their customers in, the speech bubbles, the sounds, the trays and the hand over. */
+   the rest: board() (what's on the list and who's at the till), take, serve, picked, holdFree, reserve, unreserve,
+   putAway, holdTake, tillDone and handOver (all passed on to day.js), and the speech bubbles, the sounds and the trays. */
 (function (root) {
   'use strict';
 
@@ -31,6 +34,9 @@
   var FAR = 1.0;         // clearance is worked out up to a metre
   var SOFT = 0.5;        // closer than this to a shelf costs a little more, so paths keep to the middle of aisles
   var DI = [1, -1, 0, 0, 1, 1, -1, -1], DJ = [0, 0, 1, -1, 1, -1, 1, -1], DIAG = CELL * Math.SQRT2;
+  // Alex's trolley (detailedfoil, 19 Nov 2026): a stack of blue totes on a grey base with wheels. Pushed in front
+  // while walking; parked behind them while they pick, across the aisle, so nobody gets past
+  var TROLLEY = { len: 0.78, wide: 0.5, ahead: 0.6, behind: 0.56 };
 
   function Nav(world) {
     var nx = Math.ceil(world.W / CELL), ny = Math.ceil(world.D / CELL), n = nx * ny, clr = new Float32Array(n);
@@ -204,42 +210,39 @@
     describe: [8, 18],     // finding one they described
     need: [12, 28],        // finding one from a sentence of its description
     add: [3, 5],           // switching to Fusion, typing the part number and quantity
+    put: [0.8, 1.5],       // putting a bagged order into its OC tote
     reply: [0.6, 1.3],     // the customer answering
     card: [4, 8],          // the customer tapping their card
     cash: [7, 14],         // counting cash, then the change
     give: [0.6, 1.0],      // putting the tote on the counter
-    gap: [3, 8]            // between one customer leaving and the next walking in
+    look: [0.5, 1.2]       // standing at the till with nothing to do: how often they check the scanner again
   };
   var SLIP = 1 / 15;       // about one thing in fifteen goes wrong (detailedfoil: "just to slow it down a bit")
 
   /* ---------- what Alex says ---------- */
   var SAY = {
     greet: ['Hiya, you alright?', 'Morning! What can I do for you?', 'Hi there, how can I help?', 'Alright? What can I get you?'],
-    cc: ["No problem, I'll go and grab it.", "Lovely, won't be a minute.", "Two minutes, I'll fetch it.", "Bear with me, I'll get that now."],
-    hold: ['{oc}? Back in a sec.', "Lovely, I'll grab that from the holding area.", "No worries, it's just out the back."],
     again: ['Sorry, say that again?', 'Sorry, what was the postcode?', "Sorry, didn't catch that."],
     more: ['Anything else?', 'What else can I get you?', 'Got it. Anything else?', 'Lovely. Next one?'],
     total: ["That's {m}, please.", 'That comes to {m}.', '{m} altogether, please.'],
-    going: ["Lovely, I'll go and pick those for you.", "Cheers, I'll be back in a minute.", 'Right, let me go and get those.'],
+    going: ["Lovely, it'll be out in a minute.", "Cheers, we'll get that picked for you now.", "Right, it's on the pick list. Won't be long."],
     done: ['There you go!', 'Here you go, all done.', 'There you are. Have a good one!', 'All yours, cheers!'],
     excuse: ['Excuse me!', 'Sorry, can I just get past?', 'Just squeezing by, sorry!', 'Scuse me!'],
     queue: ["I'll wait till you're out.", "No rush, I'll wait.", "I'll go down after you."],
     busy: ["Won't be a sec!", 'Two secs, nearly done.', "I'm just in here, won't be long."],
-    // the customers (the till's own lines are in till.js and tillui.js)
-    ccAsk: ['Click and collect for {n}, please.', "Hiya, I've got a click and collect. Name's {n}.", 'Got an order to collect, under {n}.'],
+    // the customers (the till's own lines are in till.js, day.js and tillui.js); a right product is never "that's it",
+    // which sounds like the end of the order (detailedfoil)
     tillHi: ['Morning! Can I order a few bits?', "Hiya, I'd like to order some stuff.", 'Alright? Need to order a couple of things.', "Hello, I'd like to place an order."],
     kioskHi: ['Morning! Can you sort my order out?', 'Hiya, I need to pay for an order.', 'Alright? Got an order to pay for.', 'Hello, can you put my order through?'],
-    right: ["Yes, that's the one!", "Spot on, that's it.", "That's it, cheers.", 'Perfect, that one.'],
+    right: ["Yes, that's the one!", "Spot on, that's the one.", "That's the one, cheers.", 'Perfect, that one.', 'Yep, that one.'],
     wrong: ["No, that's not it.", 'Not that one, mate.', "No, that's not what I'm after."],
     all: ["That's everything. I'll pay now.", "That's the lot, cheers.", "That's all I need. How much is that?"],
-    mine: ["That's the one, yeah.", "Yep, that's mine.", "That's it, cheers."],
+    mine: ["That's the one, yeah.", "Yep, that's mine.", "That's mine, cheers."],
     notMine: ["That's not mine."],
     tap: ['Tapping now.', "There's my card.", 'Contactless OK?'],
     wait: ["Cheers. I'll wait here.", "Lovely, I'll wait over here.", "Thanks, I'll be by the counter."],
     thanks: ['Cheers!', 'Thanks, see you.', 'Nice one, ta.', 'Brilliant, thanks.']
   };
-  var KINDS = ['pick', 'hold', 'till', 'kiosk'];
-
   /* ---------- a worker ---------- */
   // opts: world, World (world.js), Till (till.js), requests (data/requests.json), nav, env, rand, id, name,
   // till (the till they use: a world object), start {x, y, yaw}
@@ -264,6 +267,7 @@
     var s = o.start || this.post;
     this.x = s.x; this.y = s.y; this.yaw = s.yaw || 0;
     this.speed = 0; this.moving = false; this.turning = 0;
+    this.trolley = { x: this.x + Math.sin(this.yaw) * TROLLEY.ahead, y: this.y + Math.cos(this.yaw) * TROLLEY.ahead, theta: this.yaw, d: TROLLEY.ahead, phi: this.yaw };
     // what the drawing shows
     this.kneeling = false; this.bending = false; this.typing = false; this.reading = false; this.giving = false; this.lookT = 0;
     this.aim = null; this.beam = 0; this.beamTo = null;
@@ -272,9 +276,9 @@
     // walking
     this.walking = false; this.arrived = true; this.goal = null; this.path = null; this.pi = 0; this.faceYaw = null;
     this.waitT = 0; this.replanT = 0; this.excused = 0; this.noPath = 0; this.altI = -1; this.queue = null; this.others = [];
-    // the job in hand
-    this.t = 0; this.sleep = 0; this.until = null; this.cust = null; this.kinds = []; this.log = []; this.slips = 0;
-    this.stats = { orders: 0, lines: 0, units: 0, slips: 0 };
+    // the job in hand: the order they're picking, the till customer they're serving
+    this.t = 0; this.sleep = 0; this.until = null; this.order = null; this.cust = null; this.log = []; this.slips = 0; this.jobs = [];
+    this.stats = { orders: 0, lines: 0, units: 0, slips: 0, tills: 0 };
     this.job = this.life();
     void self;
   }
@@ -285,11 +289,16 @@
     var r = this.rand;
     return (lo + (hi - lo) * (r() + r()) / 2) * this.pace;
   };
-  Bot.prototype.slip = function () { if (this.rand() < SLIP) { this.slips++; this.stats.slips++; if (this.cust) this.cust.slips++; return true; } return false; };
+  Bot.prototype.slip = function () { if (this.rand() < SLIP) { this.slips++; this.stats.slips++; return true; } return false; };
   Bot.prototype.pick = function (list) { return list[Math.floor(this.rand() * list.length)]; };
   Bot.prototype.emit = function (name, a, b, c) { var f = this.env[name]; if (typeof f === 'function') return f.call(this.env, this, a, b, c); return undefined; };
   Bot.prototype.say = function (text) { this.emit('say', 'me', { text: text }); this.log.push({ t: this.t, who: 'me', text: text }); };
-  Bot.prototype.cSay = function (line) { if (typeof line === 'string') line = { text: line }; this.emit('say', 'cust', line); this.log.push({ t: this.t, who: 'cust', text: line.text }); };
+  // what a customer says (c: the customer, or the one at the till)
+  Bot.prototype.cSay = function (line, c) {
+    if (typeof line === 'string') line = { text: line };
+    c = c || this.cust;
+    this.emit('say', 'cust', line, c); this.log.push({ t: this.t, who: 'cust', text: line.text });
+  };
 
   /* ---------- each frame ---------- */
   Bot.prototype.update = function (dt, others) {
@@ -299,7 +308,27 @@
     if (this.beam > 0) this.beam -= dt;
     if (this.lookT > 0) this.lookT -= dt;
     this.move(dt, others);
+    this.moveTrolley(dt);
     this.run(dt);
+  };
+  // the trolley swings round them (the short way, so never into the shelf they face) and keeps inside the aisle
+  Bot.prototype.moveTrolley = function (dt) {
+    var t = this.trolley;
+    if (!t) return;
+    var parked = !this.walking || !!(this.queue && this.queue.there);
+    var wantT = parked ? this.yaw + Math.PI : this.yaw, wantD = parked ? TROLLEY.behind : TROLLEY.ahead, wantF = parked ? this.yaw + Math.PI / 2 : this.yaw;
+    var k = Math.min(1, dt * 5);
+    t.theta = ang(t.theta + ang(wantT - t.theta) * k);
+    t.d += (wantD - t.d) * k;
+    var df = ang(wantF - t.phi);
+    if (df > Math.PI / 2) df -= Math.PI; else if (df < -Math.PI / 2) df += Math.PI; // a box looks the same turned round
+    t.phi = ang(t.phi + df * k);
+    t.x = this.x + Math.sin(t.theta) * t.d; t.y = this.y + Math.cos(t.theta) * t.d;
+    var a = aisleAt(this.world, this.x, this.y);
+    if (a) { // its width across the aisle, wherever it's pointing
+      var half = (Math.abs(Math.cos(t.phi)) * TROLLEY.len + Math.abs(Math.sin(t.phi)) * TROLLEY.wide) / 2 + 0.02;
+      t.y = Math.max(a.y0 + half, Math.min(a.y1 - half, t.y));
+    }
   };
   // the job is a list of steps written as a generator: each step hands back how long to wait (seconds), or a test to
   // wait for (a function), or nothing for "next frame"
@@ -390,7 +419,7 @@
       if (who) {
         if (!q.there) { if (this.follow(dt, others, q.spot) === 'arrived') { q.there = true; this.path = null; } }
         else { this.brake(dt); this.turnTo(q.yaw, dt, PACE.turn * 0.8); }
-        if (q.t > 4.5 && !q.said && who.id === 0) { q.said = true; this.say(this.pick(SAY.queue)); }
+        if (q.t > 4.5 && !q.said && (who.human || who.id <= 0)) { q.said = true; this.say(this.pick(SAY.queue)); }
         return;
       }
       this.queue = null; this.path = null; this.replanT = 0; this.waitT = 0; // they're out: my turn
@@ -530,106 +559,133 @@
     return { spot: sp, at: { x: h.front + 0.5, y: y, yaw: -Math.PI / 2, alts: [{ x: h.front + 0.5, y: y + 0.3 }, { x: h.front + 0.5, y: y - 0.3 }, { x: h.front + 0.75, y: y }] } };
   };
 
-  /* ---------- the shift: one customer after another ---------- */
+  /* ---------- the shift: whatever needs doing most, one job after another ---------- */
   Bot.prototype.life = function* () {
-    var first = !this.started;
-    this.started = true;
-    if (first) {
-      this.nextCustomer(this.T(1.5, 3));
-      yield* this.walkTo(this.post);
-    }
+    if (!this.started) { this.started = true; yield* this.walkTo(this.post); }
     for (;;) {
-      if (!this.cust) this.nextCustomer(this.T(PACE.gap));
-      var c = this.cust;
-      if (!this.atPost()) yield* this.walkTo(this.post);
-      this.atTill = this.till;
-      yield* this.face(0);
-      yield function () { return c.here; };
-      c.t0 = this.t;
-      yield this.T(0.4, 1.1);
-      if (c.kind === 'pick') yield* this.clickCollect(c);
-      else if (c.kind === 'hold') yield* this.holdCollect(c);
-      else yield* this.tillOrder(c);
-      this.cust = null;
-      yield this.T(0.8, 1.6);
+      var job = this.choose();
+      if (!job) { // nothing to do: back at the till, an eye on the scanner
+        if (!this.atPost()) yield* this.walkTo(this.post);
+        this.atTill = this.till;
+        if (Math.abs(ang(this.yaw)) > 0.05) yield* this.face(0);
+        yield this.T(PACE.look);
+        continue;
+      }
+      this.jobs.push(job.serve ? 'serve' : job.pick.kind);
+      if (job.serve) yield* this.serveTill(job.serve);
+      else yield* this.doOrder(job.pick);
+      yield this.T(0.5, 1.1);
     }
   };
   Bot.prototype.atPost = function () {
     var p = this.post;
     return Math.hypot(this.x - p.x, this.y - p.y) < 0.6 && !this.walking;
   };
-  // the next customer: what they've come for, then walked in by the page (env.customer); c.here once at the counter
-  Bot.prototype.nextCustomer = function (delay) {
-    var r = this.rand, w = this.world, Till = this.Till, k = this.pick(KINDS), h = this.kinds;
-    if (h.length >= 2 && h[h.length - 1] === k && h[h.length - 2] === k) k = KINDS[(KINDS.indexOf(k) + 1 + Math.floor(r() * 3)) % 4]; // never three the same in a row
-    if (k === 'till' && !(this.requests && this.requests.need && this.requests.need.length)) k = 'kiosk';
-    var c = { id: ++this.custNo || (this.custNo = 1), kind: k, here: false, slips: 0, lines: null, cust: null, hold: null, kiosk: null, pay: null };
-    if (k === 'hold') { c.hold = this.emit('holdReserve') || null; if (!c.hold) k = c.kind = 'pick'; }
-    if (k === 'till') {
-      c.lines = Till.makeOrder(w, this.requests, r).map(function (l) { return { item: l.item, qty: l.qty, ask: l }; });
-      if (!c.lines.length) k = c.kind = 'kiosk';
-    }
-    if (k === 'till' || k === 'kiosk') { c.cust = Till.makeCustomer(r); c.pay = Till.payment(r); }
-    if (k === 'kiosk') { c.kiosk = Till.makeKiosk(w, r, c.cust); c.lines = c.kiosk.list[c.kiosk.mine].lines.map(function (l) { return { item: l.item, qty: l.qty }; }); }
-    if (k === 'pick') c.lines = this.World.order(w, r, 1).map(function (l) { return { item: l.item, qty: l.qty }; });
-    c.name = c.cust ? c.cust.surname : c.hold ? c.hold.parcel.surname : this.pick(Till.SURNAMES);
-    h.push(k); if (h.length > 4) h.shift();
-    this.cust = c;
-    var self = this;
-    this.emit('customer', c, delay || 0, function () { c.here = true; });
-    void self;
-    return c;
+  // detailedfoil's order: a pick a customer is waiting for, then the next customer at the till, then a c pick
+  Bot.prototype.choose = function () {
+    var b = this.emit('board') || {}, orders = b.orders || [], queue = b.queue || [], i;
+    for (i = 0; i < orders.length; i++) if (orders[i].kind !== 'c') return { pick: orders[i] };
+    if (queue.length) return { serve: queue[0] };
+    for (i = 0; i < orders.length; i++) if (orders[i].kind === 'c') return { pick: orders[i] };
+    return null;
   };
 
-  /* ---------- a single item click and collect ---------- */
-  Bot.prototype.clickCollect = function* (c) {
-    this.cSay(this.pick(SAY.ccAsk).replace('{n}', c.name));
-    yield this.T(1.1, 2.0);
-    this.say(this.pick(SAY.cc));
+  /* ---------- an order off the list: picked, then to its customer or into the holding area ---------- */
+  Bot.prototype.doOrder = function* (o) {
+    if (!this.emit('take', o)) return; // someone got there first
+    this.order = o;
+    var t0 = this.t, s0 = this.slips;
     yield* this.readScanner();
-    yield* this.pickRun(c.lines);
-    yield* this.handOver(c);
+    if (o.kind === 'hold') yield* this.fetchHold(o);
+    else {
+      yield* this.pickRun(o.lines);
+      this.emit('picked', o);
+      if (!o.cust) yield* this.putAway(o);
+    }
+    if (o.status !== 'done') yield* this.handOver(o);
+    this.log.push({ t: this.t, done: o.kind, no: o.no, lines: o.lines.length || 1, took: this.t - t0, slips: this.slips - s0 });
+    this.order = null;
   };
-
-  /* ---------- a bagged click and collect from the holding area ---------- */
-  Bot.prototype.holdCollect = function* (c) {
-    var code = c.hold.code;
-    this.cSay(this.Till.holdSay(this.rand, code, c.hold.parcel.surname));
-    yield this.T(1.1, 2.0);
-    this.say(this.pick(SAY.hold).replace('{oc}', code));
-    yield this.T(0.6, 1.2);
-    var hs = this.holdStand(code), sp = hs.spot;
+  // the label on the front of an OC spot: on its tote, or on the shelf edge
+  function ocFront(s) { return { x: s.x1 + 0.01, y: (s.y0 + s.y1) / 2, z: s.kind === 'tote' ? s.z0 + 0.2 : s.kind === 'floor' ? 0.1 : s.z0 - 0.035 }; }
+  // a bag from the holding area, for a customer at the counter
+  Bot.prototype.fetchHold = function* (o) {
+    var code = o.hold.code, hs = this.holdStand(code), sp = hs.spot;
     yield* this.walkTo(hs.at);
     var low = sp.z0 < 0.4;
     if (low) yield* this.kneelDown(true);
     yield this.T(PACE.label);
-    var front = function (s) { return { x: s.x1 + 0.01, y: (s.y0 + s.y1) / 2, z: s.kind === 'tote' ? s.z0 + 0.2 : s.kind === 'floor' ? 0.1 : s.z0 - 0.035 }; };
     if (sp.kind === 'tote' && this.slip()) { // the tote next to it first
-      var others = this.world.holding.spots.filter(function (s) { return s.kind === 'tote' && s.z0 === sp.z0 && s.code !== code; });
-      others.sort(function (a, b) { return Math.abs(a.y0 - sp.y0) - Math.abs(b.y0 - sp.y0); });
-      if (others[0]) yield* this.scan(front(others[0]), false);
+      var near = this.world.holding.spots.filter(function (s) { return s.kind === 'tote' && s.z0 === sp.z0 && s.code !== code; });
+      near.sort(function (a, b) { return Math.abs(a.y0 - sp.y0) - Math.abs(b.y0 - sp.y0); });
+      if (near[0]) yield* this.scan(ocFront(near[0]), false);
     }
-    yield* this.scan(front(sp), true);
+    yield* this.scan(ocFront(sp), true);
     yield this.T(0.5, 1.0);
-    this.bagMesh = this.emit('holdTake', code) || true;
+    this.bagMesh = this.emit('holdTake', o) || true;
     this.carry = sp.kind === 'tote' ? 'bag' : 'box';
     yield this.T(0.6, 1.1);
     this.aim = null;
     if (low) yield* this.kneelDown(false);
-    yield* this.handOver(c);
+  };
+  // a c pick into an empty OC spot, or to the counter if its customer walks in meanwhile
+  Bot.prototype.putAway = function* (o) {
+    var h = this.world.holding, self = this;
+    if (!h) return;
+    yield* this.walkTo({ x: h.front + 1.0, y: (h.y0 + h.y1) / 2, yaw: -Math.PI / 2 });
+    // the nearest empty spot, a tote rather than the big items bay
+    var near = function (s) { return Math.hypot(s.at.x - self.x, s.at.y - self.y) + (s.spot.kind === 'tote' ? 0 : 1.5); };
+    var code = null, guard = 0;
+    while (!code) {
+      if (o.cust) return;
+      var free = (this.emit('holdFree') || []).map(function (k) { return self.holdStand(k); });
+      free.sort(function (a, b) { return near(a) - near(b); });
+      for (var i = 0; i < free.length && !code; i++) if (this.emit('reserve', free[i].spot.code)) code = free[i].spot.code;
+      if (!code) { if (++guard > 90) return; yield this.T(2, 4); } // full: wait for someone to collect
+    }
+    var hs = this.holdStand(code), sp = hs.spot;
+    yield* this.walkTo(hs.at);
+    if (o.cust) { this.emit('unreserve', code); return; }
+    var low = sp.z0 < 0.4;
+    if (low) yield* this.kneelDown(true);
+    yield this.T(PACE.label);
+    yield* this.scan(ocFront(sp), true);
+    yield this.T(PACE.put);
+    this.aim = null;
+    if (o.cust) { this.emit('unreserve', code); if (low) yield* this.kneelDown(false); return; }
+    this.emit('putAway', o, code);
+    this.carry = null; this.items = []; this.toteDown = false;
+    this.stats.orders++;
+    yield this.T(0.3, 0.6);
+    if (low) yield* this.kneelDown(false);
   };
 
-  /* ---------- an order at the till, or one sent from the kiosk ---------- */
+  /* ---------- the next customer at the till: their order (or kiosk order) paid for, then onto the list ---------- */
+  Bot.prototype.serveTill = function* (c) {
+    if (!this.atPost()) yield* this.walkTo(this.post);
+    this.atTill = this.till;
+    yield* this.face(0);
+    if (!this.emit('serve', c)) return; // someone else is serving them
+    this.cust = c;
+    yield function () { return c.ready || c.state !== 'serving'; }; // walking over to this till
+    if (c.state === 'serving') {
+      yield this.T(0.4, 1.1);
+      yield* this.tillOrder(c);
+      this.stats.tills++;
+    }
+    this.cust = null;
+  };
   Bot.prototype.typeIn = function* (text) {
     this.typing = true;
     yield String(text).length * this.T(PACE.key) + this.T(0.3, 0.7);
     this.typing = false;
   };
   Bot.prototype.tillOrder = function* (c) {
-    var Till = this.Till, cu = c.cust, kiosk = c.kind === 'kiosk';
+    var Till = this.Till, cu = c.cust, kiosk = c.kind === 'kiosk', t0 = this.t, s0 = this.slips;
+    var lines = kiosk ? c.kiosk.list[c.kiosk.mine].lines : c.lines;
     this.say(this.pick(SAY.greet));
     yield this.T(0.8, 1.5);
-    this.cSay(this.pick(kiosk ? SAY.kioskHi : SAY.tillHi));
+    this.cSay(c.say || this.pick(kiosk ? SAY.kioskHi : SAY.tillHi));
     yield this.T(1.0, 1.8);
     this.cSay("Postcode's " + cu.postcode + '.');
     yield this.T(0.4, 0.8);
@@ -663,25 +719,24 @@
       this.cSay(this.pick(SAY.mine));
       yield this.T(1.0, 2.0);
     } else {
-      for (var i = 0; i < c.lines.length; i++) {
-        var ln = c.lines[i].ask;
+      for (var i = 0; i < lines.length; i++) {
+        var ln = lines[i], find = PACE[ln.kind] || PACE.describe;
         if (i) { this.say(this.pick(SAY.more)); yield this.T(PACE.reply); }
         this.cSay({ text: ((ln.next ? ln.next + ' ' : '') + ln.say).trim(), quote: ln.quote, hint: ln.hint, qty: ln.qtySay });
-        yield this.T(PACE[ln.kind] || PACE.describe);
-        if (this.slip()) { // shows them the wrong one first
-          yield this.T(PACE.add);
+        yield this.T(find); // found on CrashFix, its code copied: the customer says straight away if it's right
+        if (this.slip()) { // the wrong one first
           this.cSay(this.pick(SAY.wrong));
-          yield this.T((PACE[ln.kind] || PACE.describe)[0] * 0.6, (PACE[ln.kind] || PACE.describe)[1] * 0.6);
+          yield this.T(find[0] * 0.6, find[1] * 0.6);
         }
-        yield this.T(PACE.add);
         this.cSay(this.pick(SAY.right));
-        yield this.T(0.8, 1.5);
+        yield this.T(PACE.add); // then into Fusion
+        yield this.T(0.3, 0.8);
       }
       this.cSay(this.pick(SAY.all));
       yield this.T(1.0, 1.8);
     }
     // Pay & Go
-    var total = c.lines.reduce(function (s, l) { return s + Till.price(l.item) * l.qty; }, 0);
+    var total = lines.reduce(function (s, l) { return s + Till.price(l.item) * l.qty; }, 0);
     yield this.T(1.0, 2.0);
     this.say(this.pick(SAY.total).replace('{m}', Till.money(total)));
     yield this.T(PACE.reply);
@@ -699,16 +754,15 @@
       this.emit('sfx', 'drawer');
       yield this.T(1.5, 3.0);
     }
+    // paid for: onto the pick list, for whoever gets to it first
+    this.emit('tillDone', c, lines.map(function (l) { return { item: l.item, qty: l.qty }; }));
     this.say(this.pick(SAY.going));
     yield this.T(0.6, 1.2);
-    this.cSay(this.pick(SAY.wait));
-    this.atTill = null;
-    yield* this.readScanner();
-    yield* this.pickRun(c.lines);
-    yield* this.handOver(c);
+    this.cSay(this.pick(SAY.wait), c);
+    this.log.push({ t: this.t, done: 'till', kind: c.kind, took: this.t - t0, slips: this.slips - s0 });
   };
 
-  /* ---------- picking: a tote off the stack, each line in location order, back to the counter ---------- */
+  /* ---------- picking: each line in location order, into the top tote on the trolley ---------- */
   Bot.prototype.readScanner = function* () {
     this.reading = true;
     yield this.T(PACE.read);
@@ -726,24 +780,11 @@
     this.emit('sfx', right ? 'scan' : 'bad', p);
     yield right ? 0.25 : this.T(1.2, 2.4);
   };
-  Bot.prototype.putTote = function* (down) {
-    if (this.carry !== 'tote' || this.toteDown === down) return;
-    this.bending = true; this.toteDown = down;
-    yield this.T(PACE.tote);
-    this.bending = false;
-  };
   Bot.prototype.pickRun = function* (lines) {
     var w = this.world, self = this;
     lines = lines.map(function (l) { return { item: l.item, loc: l.item.loc, qty: l.qty }; }).filter(function (l) { return l.loc; });
     lines.sort(function (a, b) { return a.loc.order - b.loc.order; });
-    if (this.toteSpot) {
-      yield* this.walkTo(this.toteSpot);
-      this.bending = true;
-      yield this.T(PACE.grab);
-      this.bending = false;
-      this.carry = 'tote'; this.items = []; this.toteDown = false;
-      this.emit('tote');
-    }
+    this.items = [];
     for (var i = 0; i < lines.length; i++) {
       var ln = lines[i], loc = ln.loc, a = loc.face.aisle;
       if (this.slip()) { // into the aisle next door, then a look round
@@ -755,7 +796,6 @@
         }
       }
       yield* this.walkTo(this.standFor(loc));
-      yield* this.putTote(true);
       var low = loc.z0 < 0.45, high = loc.z0 > 1.9;
       if (low) yield* this.kneelDown(true);
       yield this.T(PACE.label);
@@ -775,32 +815,29 @@
       this.emit('close', loc);
       this.aim = null;
       if (low) yield* this.kneelDown(false);
-      yield* this.putTote(false);
     }
     void self;
   };
 
-  /* ---------- the hand over ---------- */
-  Bot.prototype.handOver = function* (c) {
+  /* ---------- the hand over: at their till; the customer comes over from where they're waiting ---------- */
+  Bot.prototype.handOver = function* (o) {
     yield* this.walkTo(this.post);
     this.atTill = this.till;
     this.giving = true;
     yield this.T(PACE.give);
-    this.emit('handOver', c);
+    this.emit('handOver', o);
     this.carry = null; this.items = []; this.bagMesh = null; this.toteDown = false;
     this.say(this.pick(SAY.done));
     yield this.T(0.4, 0.8);
     this.giving = false;
-    c.t1 = this.t;
     this.stats.orders++;
-    this.log.push({ t: this.t, done: c.kind, lines: c.lines ? c.lines.length : 1, took: c.t1 - c.t0, slips: c.slips });
     yield this.T(0.6, 1.2);
-    this.cSay(this.pick(SAY.thanks));
+    if (o.cust) this.cSay(this.pick(SAY.thanks), o.cust);
   };
 
   function create(o) { return new Bot(o); }
 
-  var api = { Nav: Nav, create: create, Bot: Bot, aisleAt: aisleAt, inAisle: inAisle, PACE: PACE, SLIP: SLIP, BODY: BODY, CELL: CELL, labelAt: labelAt, nextTo: nextTo, pathLength: pathLength, KINDS: KINDS };
+  var api = { Nav: Nav, create: create, Bot: Bot, aisleAt: aisleAt, inAisle: inAisle, PACE: PACE, SLIP: SLIP, BODY: BODY, CELL: CELL, labelAt: labelAt, nextTo: nextTo, ocFront: ocFront, pathLength: pathLength, TROLLEY: TROLLEY };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftBot = api;
 })(typeof window !== 'undefined' ? window : this);
