@@ -11,9 +11,9 @@
    Plan coordinates are metres: x across from the inside of the left wall, y from the inside of the back wall
    towards the shop front, z up. One straight centre aisle runs from the back walkway to the front. The right side
    holds the small parts and boxed stock, front to back: AAA (quad trays), AAB to AAE (double trays on the bottom ten
-   shelves), BAA to BAG. The left side holds the bulky stock, back to front: BBA to BBJ. Every pick aisle has stock on
-   both sides. Sorting a pick list by location code therefore walks you up the right side and back down the left
-   (detailedfoil's order). The first area of each aisle is on your right as you walk in from the centre aisle.
+   shelves), BAA to BAG. The left side holds the bulky stock, BBA nearest the front to BBJ at the back. Every pick aisle has stock on
+   both sides. A pick list is sorted AA, BA, then BBJ down to BBA, so it walks you up the right side and back down
+   the left (detailedfoil's order). The first area of each aisle is on your right as you walk in from the centre aisle.
 
    build(catalogue) -> the world: faces, aisles, locations, the products on them, the shop floor and what blocks
    walking. Products come from data/catalogue.json (made by .github/warehouse-shift/make-catalogue.py): all 10,999
@@ -55,7 +55,11 @@
   // the rows: right side from the front, left side from the back. s = the face that looks south (you stand south
   // of it), n = the face that looks north.
   var RIGHT = [{ n: 'AAA' }, { s: 'AAB', n: 'AAC' }, { s: 'AAD', n: 'AAE' }, { s: 'BAA', n: 'BAB' }, { s: 'BAC', n: 'BAD' }, { s: 'BAE', n: 'BAF' }, { s: 'BAG' }];
-  var LEFT = [{ s: 'BBA' }, { n: 'BBB', s: 'BBC' }, { n: 'BBD', s: 'BBE' }, { n: 'BBF', s: 'BBG' }, { n: 'BBH', s: 'BBI' }, { n: 'BBJ' }];
+  // the left side from the back: BBA is the row nearest the front, BBB next, and so on to BBJ at the back (detailedfoil, 19 Nov 2026)
+  var LEFT = [{ s: 'BBJ' }, { s: 'BBH', n: 'BBI' }, { s: 'BBF', n: 'BBG' }, { s: 'BBD', n: 'BBE' }, { s: 'BBB', n: 'BBC' }, { n: 'BBA' }];
+  // the order a pick list walks: up the right side, then back down the left from BBJ at the back to BBA at the front
+  var WALK = ['AAA', 'AAB', 'AAC', 'AAD', 'AAE', 'BAA', 'BAB', 'BAC', 'BAD', 'BAE', 'BAF', 'BAG', 'BBJ', 'BBI', 'BBH', 'BBG', 'BBF', 'BBE', 'BBD', 'BBC', 'BBB', 'BBA'];
+  var HALFGAP = 0.06;                 // extra space each side of the middle of a half-width bay (AAA-01 | AAA-02)
 
   function shelfZ(kind, s) {
     if (kind === 'AA') {
@@ -137,6 +141,10 @@
       // on its outer end (the two halves share one bay of racking)
       var drawn = cfg.half ? Math.floor(b / 2) : b, dx0 = row.side === 'R' ? row.x0 + drawn * BAY : row.x1 - (drawn + 1) * BAY;
       var ux0 = Math.max(bx0, dx0 + POST / 2 + 0.035), ux1 = Math.min(bx0 + w, dx0 + BAY - POST / 2 - 0.035);
+      if (cfg.half) { // a little space between the two halves that share a bay, so the locations are easy to tell apart
+        var first = b % 2 === 0;
+        if ((row.side === 'R') === first) ux1 -= HALFGAP; else ux0 += HALFGAP;
+      }
       f.bays.push({ no: b + 1, x0: bx0, x1: bx0 + w, ux0: ux0, ux1: ux1, drawn: drawn });
     }
     for (var s = 1; s <= SHELVES[k]; s++) {
@@ -173,7 +181,11 @@
         });
       });
     });
-    list.sort(function (a, b) { return a.code < b.code ? -1 : a.code > b.code ? 1 : 0; });
+    list.sort(function (a, b) {
+      var ra = WALK.indexOf(a.face.area), rb = WALK.indexOf(b.face.area);
+      if (ra !== rb) return ra - rb;
+      return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
+    });
     list.forEach(function (l, i) { l.order = i; });
     return { list: list, byCode: byCode };
   }
@@ -431,7 +443,7 @@
     return world;
   }
 
-  var api = { build: build, order: order, quantity: quantity, locationAt: locationAt, sameSpot: sameSpot, shelfZ: shelfZ, rng: rng, hash: hash, pad2: pad2,
+  var api = { WALK: WALK, build: build, order: order, quantity: quantity, locationAt: locationAt, sameSpot: sameSpot, shelfZ: shelfZ, rng: rng, hash: hash, pad2: pad2,
     AREAS: AREAS, SHELVES: SHELVES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftWorld = api;

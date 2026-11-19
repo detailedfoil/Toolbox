@@ -77,7 +77,7 @@ test('every pick aisle has stock on both sides, and the first area is on your ri
     assert.equal(a.faces.length, 2);
     const [first, second] = a.faces;
     assert.ok(first.aisle === a && second.aisle === a);
-    assert.ok(first.area < second.area, a.no + ': ' + first.area + ' then ' + second.area);
+    assert.ok(W.WALK.indexOf(first.area) < W.WALK.indexOf(second.area), a.no + ': ' + first.area + ' then ' + second.area);
     // walking in from the centre aisle: east on the right side (south on your right), west on the left (north on your right)
     if (a.side === 'R') assert.equal(first.facing, 'N', 'AA/BA aisles: the first face is the one to the south'); else assert.equal(first.facing, 'S');
     for (const f of a.faces) { const width = a.y1 - a.y0; assert.ok(width > 1.2 && width < 1.6, a.no + ' is ' + width.toFixed(2) + ' m wide'); }
@@ -93,15 +93,19 @@ test('the arrow on each row-end sign points to that area\'s own aisle', () => {
   }
   assert.equal(world.faceOf.AAA.arrow, -1, 'AAA faces north into aisle 1: left as you look east');
   assert.equal(world.faceOf.AAB.arrow, 1, 'AAB faces south into aisle 1: right as you look east');
-  assert.equal(world.faceOf.BBJ.arrow, 1, 'BBJ faces north into aisle 11: right as you look west');
+  assert.equal(world.faceOf.BBJ.arrow, -1, 'BBJ faces south into aisle 7: left as you look west');
+  assert.equal(world.faceOf.BBA.arrow, 1, 'BBA faces north into aisle 11: right as you look west');
 });
 
 test('in location order you walk up the right side (AA then BA) and back down the left (BB)', () => {
-  const faces = [...world.faces].sort((p, q) => (p.area < q.area ? -1 : 1));
+  const faces = [...world.faces].sort((p, q) => W.WALK.indexOf(p.area) - W.WALK.indexOf(q.area));
   const codes = faces.map((f) => f.area);
   assert.deepEqual(codes.slice(0, 5), ['AAA', 'AAB', 'AAC', 'AAD', 'AAE']);
   assert.deepEqual(codes.slice(5, 12), ['BAA', 'BAB', 'BAC', 'BAD', 'BAE', 'BAF', 'BAG']);
-  assert.deepEqual(codes.slice(12), ['BBA', 'BBB', 'BBC', 'BBD', 'BBE', 'BBF', 'BBG', 'BBH', 'BBI', 'BBJ']);
+  assert.deepEqual(codes.slice(12), ['BBJ', 'BBI', 'BBH', 'BBG', 'BBF', 'BBE', 'BBD', 'BBC', 'BBB', 'BBA']);
+  // BBA is the row nearest the front, then BBB, and so on back to BBJ (detailedfoil, 19 Nov 2026)
+  const bb = world.faces.filter((x) => x.side === 'L').sort((p, q) => (p.area < q.area ? -1 : 1));
+  for (let i = 1; i < bb.length; i++) assert.ok(bb[i].front <= bb[i - 1].front + 0.01, bb[i].area + ' is further forward than ' + bb[i - 1].area);
   let lastY = Infinity;
   for (const f of faces.filter((x) => x.side === 'R')) { assert.ok(f.front <= lastY + 0.01, f.area + ' is further back'); lastY = f.front; }
   lastY = -Infinity;
@@ -112,7 +116,7 @@ test('in location order you walk up the right side (AA then BA) and back down th
   for (let i = 0; i < 200; i++) {
     const lines = W.order(world, r);
     assert.ok(lines.length >= 1 && lines.length <= 5);
-    for (let k = 1; k < lines.length; k++) assert.ok(lines[k - 1].loc.code < lines[k].loc.code, 'sorted by location');
+    for (let k = 1; k < lines.length; k++) assert.ok(lines[k - 1].loc.order < lines[k].loc.order, 'sorted by location');
     assert.equal(new Set(lines.map((l) => l.item.code)).size, lines.length, 'no product twice in one order');
     for (const l of lines) assert.ok(l.qty >= 1 && l.qty <= 50);
   }

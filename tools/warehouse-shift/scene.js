@@ -422,7 +422,7 @@
         g.fillStyle = '#c3222b';
         g.beginPath(); g.moveTo(w / 2 - 14, 515); g.lineTo(w / 2 - 34, 482); g.lineTo(w / 2 + 6, 482); g.closePath(); g.fill();
         g.fillStyle = '#1d232c'; g.font = '800 30px ' + FONT;
-        g.fillText('Up the right: AAA to BAG', w / 2, 560); g.fillText('Down the left: BBA to BBJ', w / 2, 604);
+        g.fillText('Up the right: AAA to BAG', w / 2, 560); g.fillText('Down the left: BBJ to BBA', w / 2, 604);
       });
       flat(path, x0 + 1.6, y, 1.55, 0.5, 0.625, 0);
       const ppe = signTex(512, 640, (g, w, h) => {
@@ -1165,8 +1165,8 @@
       m.userData.own = true; t.add(m);
     }
 
-    /* ---------- Alex's trolley: a stack of blue totes on a grey base with wheels (detailedfoil) ---------- */
-    // Long side along its local z; the handle at the -z end, where Alex pushes. Picks go in the top tote.
+    /* ---------- Sam's trolley: a stack of blue totes on a grey base with wheels (detailedfoil) ---------- */
+    // Long side along its local z; Sam pushes at the -z end (no handle: detailedfoil, 19 Nov 2026). Picks go in the top tote.
     const M_TBASE = lam(0x8d939b), M_WHEEL = lam(0x1f2226), M_HANDLE = lam(0xa7adb5);
     const geoT = { wheel: new T.CylinderGeometry(0.05, 0.05, 0.035, 14).rotateZ(Math.PI / 2), bar: new T.CylinderGeometry(0.012, 0.012, 1, 8) };
     function trolleyTote(t, y) { const g = tote.clone(); g.rotation.y = Math.PI / 2; g.position.set(0, y, 0.04); t.group.add(g); return g; }
@@ -1175,8 +1175,6 @@
       const add = (geo, mat, x, y, z, sx, sy, sz) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); if (sx) m.scale.set(sx, sy, sz); group.add(m); return m; };
       add(unitBox, M_TBASE, 0, 0.11, 0, 0.5, 0.05, 0.78);                                   // the base
       for (const [x, z] of [[-0.2, -0.31], [0.2, -0.31], [-0.2, 0.31], [0.2, 0.31]]) { add(geoT.wheel, M_WHEEL, x, 0.05, z); add(unitBox, M_TBASE, x, 0.075, z, 0.03, 0.05, 0.05); }
-      for (const x of [-0.21, 0.21]) { const b = add(geoT.bar, M_HANDLE, x, 0.6, -0.37); b.scale.set(1, 0.98, 1); }  // the handle
-      const top = add(geoT.bar, M_HANDLE, 0, 1.09, -0.37); top.rotation.z = Math.PI / 2; top.scale.set(1, 0.44, 1);
       for (let i = 0; i < 3; i++) trolleyTote(t, 0.14 + i * 0.17);                               // the stack
       t.top = trolleyTote(t, 0.14 + 3 * 0.17);                                                  // what's being picked
       scene.add(group);
@@ -1196,7 +1194,7 @@
       return g;
     }
 
-    /* ---------- coworkers (bot.js): Alex, in uniform ---------- */
+    /* ---------- coworkers (bot.js): Sam, in uniform ---------- */
     // A figure with knees and elbows, so they can kneel at the bottom shelves, carry a tote and type at the till.
     // Screwfix staff wear navy with a yellow logo: the patch carries the Toolbox's own made-up brand (CrashFix, as on
     // the despatch notes) and a white badge has their name. Nothing floats: the name is on the badge, not over their head.
@@ -1228,7 +1226,7 @@
       const plate = (map, x, y, w, h) => { const m = new T.Mesh(geoW.plate, new T.MeshBasicMaterial({ map })); m.position.set(x, y, 0.117); m.scale.set(w, h, 1); P.torso.add(m); return m; };
       plate(signTex(256, 128, (g, w, h) => { // the name badge
         g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.fillStyle = '#15396b'; g.fillRect(0, 0, w, 26);
-        g.fillStyle = '#15396b'; g.textAlign = 'center'; g.textBaseline = 'middle'; fit(g, o.name || 'Alex', 900, 74, w - 24); g.fillText((o.name || 'Alex').toUpperCase(), w / 2, 80);
+        g.fillStyle = '#15396b'; g.textAlign = 'center'; g.textBaseline = 'middle'; fit(g, o.name || 'Sam', 900, 74, w - 24); g.fillText((o.name || 'Sam').toUpperCase(), w / 2, 80);
       }), 0.075, 0.36, 0.085, 0.043);
       plate(signTex(256, 128, (g, w, h) => { // the logo patch
         g.fillStyle = '#f2c400'; g.fillRect(0, 0, w, h); g.fillStyle = '#15396b'; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -1236,7 +1234,11 @@
       }), -0.075, 0.37, 0.085, 0.043);
       P.head = joint(0, 0.67, 0, P.torso);
       const head = add(geoC.head, skin, 0, 0, 0, P.head); head.scale.set(0.92, 1.05, 1);
-      add(geoC.hair, hair, 0, 0.012, -0.008, P.head); add(geoC.nose, skin, 0, -0.005, 0.1, P.head);
+      if (o.afro) { // an afro: a big round puff of hair round the top and back of the head (detailedfoil, 19 Nov 2026)
+        if (!geoC.afro) geoC.afro = new T.SphereGeometry(0.15, 20, 16);
+        const puff = add(geoC.afro, hair, 0, 0.09, -0.06, P.head); puff.scale.set(1, 0.95, 1);
+      } else add(geoC.hair, hair, 0, 0.012, -0.008, P.head);
+      add(geoC.nose, skin, 0, -0.005, 0.1, P.head);
       add(geoC.eye, M.black, -0.036, 0.02, 0.093, P.head); add(geoC.eye, M.black, 0.036, 0.02, 0.093, P.head);
       for (const side of [1, -1]) {
         const sh = joint(0.235 * side, 0.46, 0, P.torso), el = joint(0, -0.3, 0, sh);
@@ -1250,7 +1252,7 @@
       scene.add(group);
       return { group, parts: P, carry, beam, phase: 0, t: 0, held: null };
     }
-    // Alex's pose from what the worker (bot.js) is doing: walking, kneeling, carrying, typing, scanning, handing over
+    // Sam's pose from what the worker (bot.js) is doing: walking, kneeling, carrying, typing, scanning, handing over
     const _wq = new T.Quaternion(), _we = new T.Euler(), _wv = new T.Vector3(), _wv2 = new T.Vector3(), DOWN = new T.Vector3(0, -1, 0);
     function poseWorker(w, b, dt) {
       const P = w.parts, k = Math.min(1, dt * 10), kb = Math.min(1, dt * 6.5);

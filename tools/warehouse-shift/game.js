@@ -1,6 +1,6 @@
 /* Warehouse Shift (Dunstable, LB1 only): a picking game in a made-up Screwfix-style warehouse.
 
-   The day's work is one pick list on the scanner (day.js), shared with Alex (bot.js). The scanner is drawn like the
+   The day's work is one pick list on the scanner (day.js), shared with Sam (bot.js). The scanner is drawn like the
    Symbol handsets in detailedfoil's photos: Today Picking, ORDER, a > by the order you're on, Select_. Each order is A
    and four numbers, how many locations and items (2:3), then CK (a click and collect customer is at the counter), c
    (nobody's here: it goes in the holding area) or nothing (bought at the till; the customer's waiting). Up and down
@@ -13,13 +13,13 @@
    all done and nobody's waiting. Hint makes the location glow; squat for the bottom shelves. Played mainly with the
    phone sideways: left thumb walks, drag to look. On a computer: WASD, mouse look.
 
-   Alex (bot.js) works from the same list, pushing a trolley that blocks the aisle while they pick. On a computer two
+   Sam (bot.js) works from the same list, pushing a trolley that blocks the aisle while they pick. On a computer two
    people can play at once: split screen, one above the other, each with their own scanner, till and controls (a
    controller each, or one on the keyboard and mouse).
 
    world.js makes the warehouse, day.js the day's orders and customers, scene.js draws it, till.js and tillui.js are
-   the till, bot.js is Alex. This file is the rest: the shared things (customers walking about, totes going over the
-   counter, Alex's part in the world, the sounds) and each player's own (camera, controls, scanner, till). */
+   the till, bot.js is Sam. This file is the rest: the shared things (customers walking about, totes going over the
+   counter, Sam's part in the world, the sounds) and each player's own (camera, controls, scanner, till). */
 (function () {
   'use strict';
 
@@ -136,7 +136,7 @@
       chime: () => { [880, 1109, 1319].forEach((f, i) => tone(f, i * 0.08, 0.2, 'triangle', 0.06)); },
       dayEnd: () => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.12, 0.3, 'triangle', 0.07)); }
     };
-    // how far the nearest player is (Alex's sounds get quieter with distance)
+    // how far the nearest player is (Sam's sounds get quieter with distance)
     function nearestPlayer(x, y) { let d = Infinity; for (const p of players) d = Math.min(d, Math.hypot(p.me.x - x, p.me.y - y)); return d; }
 
     /* ---------- the counter: where customers stand ---------- */
@@ -156,9 +156,9 @@
     const ALEX_TILL = tills[tills.length - 1]; // the left-hand one from behind the counter, by the gap
     const tillX = (t) => (t.x0 + t.x1) / 2;
     const CY = counter.y1 + 0.42, MID = counter.y1 + 0.95;
-    // places at the counter: the left end, then across from each till (the last is Alex's)
+    // places at the counter: the left end, then across from each till (the last is Sam's)
     const SPOTS = [{ x: counter.x0 + 0.34, y: CY }].concat(tills.map((t) => ({ x: tillX(t), y: CY, till: t })));
-    // waiting for their order: by the gap at the end of the counter, beside Alex's till (detailedfoil)
+    // waiting for their order: by the gap at the end of the counter, beside Sam's till (detailedfoil)
     const WAIT = [{ x: counter.x1 + 0.3, y: counter.y1 + 0.47, wait: true }, { x: counter.x1 - 0.15, y: counter.y1 + 0.85, wait: true }, { x: counter.x1 - 0.25, y: counter.y1 + 1.4, wait: true }];
     const IN = [[entX, world.D - 0.5], [LANE - 0.18, world.D - 1.2], [LANE - 0.18, MID]];
     const OUT = [[LANE + 0.22, MID], [LANE + 0.22, world.D - 1.2], [entX, world.D - 0.5], [entX, world.D + 0.6]];
@@ -204,7 +204,7 @@
       if (s) taken.set(s, c);
       c.spot = s || null;
     }
-    function freeSpot(near) { // a free place at the counter (not Alex's), the nearest to near
+    function freeSpot(near) { // a free place at the counter (not Sam's), the nearest to near
       let best = null, bd = Infinity;
       for (const s of SPOTS) { if (s.till === ALEX_TILL || taken.get(s)) continue; const d = Math.abs(s.x - near); if (d < bd) { bd = d; best = s; } }
       return best;
@@ -221,6 +221,7 @@
     function onStep(c) {
       const f = c.fig;
       if (!f) return;
+      if (c.state === 'greet') { for (const p of players) p.queueChanged(); return; } // at the counter, waiting to be said hello to
       if (c.state === 'counter') { // a till customer, waiting to be served
         if (!c.hello) { c.hello = true; speakFig(c, { text: c.say }); }
         for (const p of players) p.queueChanged();
@@ -244,7 +245,7 @@
       standAt(c, null);
       walk(c, [[clampX(f.group.position.x), MID]].concat(OUT), () => { freeFig(f); d.gone(c); });
     }
-    // called over to a till (yours or Alex's): anyone standing there swaps places
+    // called over to a till (yours or Sam's): anyone standing there swaps places
     function callTo(c, till, then) {
       const s = SPOTS.find((x) => x.till === till);
       const other = taken.get(s);
@@ -272,7 +273,7 @@
         totes.push({ t: 0, tote, from: tote.position.clone(), to: new T.Vector3(x, 1.0, counter.y1 - 0.2), c });
       });
     }
-    // where a hand over happens: the free place at the counter nearest x (not Alex's)
+    // where a hand over happens: the free place at the counter nearest x (not Sam's)
     function handX(x) { const s = freeSpot(x); return s ? s.x : Math.max(counter.x0 + 0.4, Math.min(counter.x1 - 0.4, x)); }
     function updateFigs(dt) {
       let any = false;
@@ -359,6 +360,10 @@
       changed: (o) => { for (const p of players) p.changed(o); tidyScreens(); },
       customer: (c) => comeIn(c),
       step: (c) => onStep(c),
+      opening: () => { for (const p of players) { p.banner('Time to open', 'Go to the front door and unlock it', 6000); p.queueChanged(); } SFX.order(); },
+      unlocked: () => { for (const p of players) { p.banner('Doors open', 'Customers will be in shortly', 2600); p.queueChanged(); } },
+      closing: () => { for (const p of players) { p.banner('All done', 'Lock the front door', 6000); p.queueChanged(); } SFX.order(); },
+      locked: () => { SFX.key(); },
       holdSet: (code, parcel) => { if (S.hold) S.hold.set(code, parcel); dirty = true; },
       over: () => dayOver()
     };
@@ -368,13 +373,14 @@
       dayNo++;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
       for (const p of players) p.newDay();
+      if (day.phase === 'unlock') dayEnv.opening();
       dirty = true;
     }
 
-    /* ---------- Alex, a coworker (bot.js) ---------- */
+    /* ---------- Sam, a coworker (bot.js) ---------- */
     // detailedfoil, 19 Nov 2026: a coworker doing the same job as you, at a person's pace, from the same pick list:
     // picks a customer is waiting for first, then the next customer at the till, then c picks. They push a trolley
-    // (a stack of blue totes on a grey base with wheels) that blocks the aisle while they pick. Alex won't go down an
+    // (a stack of blue totes on a grey base with wheels) that blocks the aisle while they pick. Sam won't go down an
     // aisle someone's already in.
     const crew = [];
     function crewSound(b, name) {
@@ -388,7 +394,8 @@
     }
     const pulling = new Set(); // boxes moving forward or back
     const crewEnv = {
-      board: () => (day && active ? { orders: day.list(), queue: day.queue() } : { orders: [], queue: [] }),
+      board: () => (day && active ? { orders: day.list(), queue: day.queue(), greet: day.ungreeted().filter((c) => day.t - c.here > 4.5) } : { orders: [], queue: [], greet: [] }),
+      greet: (b, c) => { if (day) day.greet(c, b.name); },
       take: (b, o) => !!day && day.take(o, b.name),
       serve(b, c) { if (!day || !day.serve(c, b.name)) return false; showScreen(b.till, null); callTo(c, b.till); return true; },
       picked: (b, o) => day.picked(o),
@@ -430,17 +437,17 @@
     const staffRoom = world.rooms.find((r) => r.name === 'Staff room');
     function hire(o) {
       const b = Crew.create({ world, World, Till, requests, nav: hire.nav || (hire.nav = new Crew.Nav(world)), env: crewEnv, id: crew.length + 1, name: o.name, till: o.till, start: o.start, rand: Math.random });
-      b.fig = S.makeWorker({ name: o.name, skin: o.skin, hair: o.hair });
+      b.fig = S.makeWorker({ name: o.name, skin: o.skin, hair: o.hair, afro: o.afro });
       b.fig.trolley = S.makeTrolley();
       S.poseWorker(b.fig, b, 0.02); S.poseTrolley(b.fig.trolley, b);
       crew.push(b);
       return b;
     }
-    // Alex starts the shift coming out of the staff room, and works the till at the end of the counter by the gap
-    hire({ name: 'Alex', till: ALEX_TILL, skin: 0xd6a57c, hair: 0x2b1d14,
+    // Sam starts the shift coming out of the staff room, and works the till at the end of the counter by the gap
+    hire({ name: 'Sam', till: ALEX_TILL, skin: 0xd6a57c, hair: 0x2b1d14, afro: true,
       start: staffRoom ? { x: staffRoom.x1 + 0.6, y: staffRoom.y0 + 0.65, yaw: Math.PI / 2 } : null });
-    // Alex and their trolley are in your way like anything else (you can step away from them, never into them)
-    function trolleyGap(b, x, y) { // how far a point is from the edge of Alex's trolley
+    // Sam and their trolley are in your way like anything else (you can step away from them, never into them)
+    function trolleyGap(b, x, y) { // how far a point is from the edge of Sam's trolley
       const t = b.trolley;
       if (!t) return Infinity;
       const dx = x - t.x, dy = y - t.y, s = Math.sin(t.phi), c = Math.cos(t.phi);
@@ -467,7 +474,7 @@
     }
     const _frus = new T.Frustum(), _fm = new T.Matrix4(), _sph = new T.Sphere(new T.Vector3(), 1.3);
     let crewIdle = 0;
-    function updateCrew(dt) { // true when Alex needs drawing again
+    function updateCrew(dt) { // true when Sam needs drawing again
       if (!crew.length) return false;
       const people = players.map((p, i) => ({ id: -1 - i, x: p.me.x, y: p.me.y, r: BODY, moving: p.me.speed > 0.15, human: true }));
       let seen = false, busy = false;
@@ -632,6 +639,9 @@
         let note = '', cls = 'warn';
         if (showMsg) { note = msg.text; cls = msg.cls || 'warn'; }
         else if (state === 'end') { note = 'Day done'; cls = 'ok'; }
+        else if (day && day.phase === 'unlock') note = 'Time to open: unlock the front door';
+        else if (day && day.phase === 'lock') note = 'All done: lock the front door';
+        else if (day && day.ungreeted().length) note = 'Customer waiting: say hello';
         else if (day && day.queue().length && !P.tillCust) note = 'Till customer waiting';
         D.scNote.textContent = note; D.scNote.className = 'sc-note ' + cls; D.scNote.hidden = !note;
       }
@@ -769,6 +779,7 @@
       function shut() { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; }
       function scanAt(nx, ny) {
         if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } return; }
+        if ((doorOn || greetC) && (state === 'list' || state === 'end') && useAction()) return;
         if (nearTill && (state === 'list' || state === 'end' || tillHit(nx, ny))) { openTill(); return; }
         if (state === 'list' || state === 'end') { const n = day ? day.list().length : 0; say(n ? 'Press Enter to start a pick' : 'No picks yet', 'dim'); SFX.miss(); return; }
         if (state === 'hold') { scanHold(nx, ny); return; }
@@ -1082,17 +1093,45 @@
       /* ---------- the till ---------- */
       let nearTill = null;
       P.tillCust = null;
-      function checkTill() { // standing behind the counter at one of your tills (the one by the gap is Alex's)
-        let best = null;
-        if (me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75) {
+      let greetC = null, doorOn = null;
+      function checkTill() { // standing behind the counter at one of your tills (the one by the gap is Sam's), or by the door, or by a customer to greet
+        let best = null, g = null, dr = null;
+        const behind = me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75;
+        if (behind) {
           let bd = 0.95;
           for (const t of tills) { if (t === ALEX_TILL || players.some((q) => q !== P && q.tillAt() === t)) continue; const d = Math.abs(me.x - tillX(t)); if (d < bd) { bd = d; best = t; } }
         }
-        if (best === nearTill) return;
-        nearTill = best;
-        D.tillBtn.hidden = !nearTill || !active;
+        if (day && active && !(till && till.isOpen())) {
+          if (behind && me.x > counter.x0 - 0.4 && me.x < counter.x1 + 0.4) {
+            let gd = 2.4;
+            for (const c of day.ungreeted()) { if (!c.fig) continue; const d = Math.abs(me.x - c.fig.group.position.x); if (d < gd) { gd = d; g = c; } }
+          }
+          if ((day.phase === 'unlock' || day.phase === 'lock') && Math.hypot(me.x - entX, me.y - (world.D - 0.4)) < 2.0) dr = day.phase;
+        }
+        const key = (best ? 't' : '') + (g ? 'g' + g.id : '') + (dr || '');
+        const old = (nearTill ? 't' : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '');
+        nearTill = best; greetC = g; doorOn = dr;
+        if (key === old) return;
+        D.tillBtn.hidden = !(nearTill || greetC || doorOn) || !active;
+        D.tillBtn.firstChild.nodeValue = doorOn ? (doorOn === 'unlock' ? 'Unlock door' : 'Lock door') : greetC ? 'Greet' : 'Use till';
         renderScanner();
       }
+      // the button, or Scan: unlock or lock the door, say hello to the customer, or open the till
+      function useAction() {
+        if (doorOn && day) {
+          const ok = doorOn === 'unlock' ? day.unlock() : day.lock();
+          if (ok) { SFX.order(); toast(doorOn === 'unlock' ? 'Door unlocked' : 'Door locked'); nearTill = greetC = doorOn = null; checkTill(); }
+          return true;
+        }
+        if (greetC && day) {
+          const c = greetC;
+          if (day.greet(c, P.id)) { SFX.key(); toast('Hello!'); say('Hello, how can I help?', 'dim', 1600); }
+          greetC = null; checkTill();
+          return true;
+        }
+        return false;
+      }
+      P.useAction = useAction;
       function openTill() {
         if (!till || till.isOpen() || !nearTill) return;
         if (idx === 0 && locked()) document.exitPointerLock();
@@ -1189,7 +1228,7 @@
       });
       P.till = till;
 
-      /* ---------- speech bubbles: Alex and the customers, only when near and nothing tall is in the way ---------- */
+      /* ---------- speech bubbles: Sam and the customers, only when near and nothing tall is in the way ---------- */
       const bubs = new Map(); // who -> {el, p}
       function bubFor(key, cls) {
         let b = bubs.get(key);
@@ -1268,7 +1307,7 @@
       press(D.scBack, () => back());
       press(D.scLogoff, () => { SFX.key(); endShift(); });
       press(D.scHint, () => useHint());
-      press(D.tillBtn, () => openTill());
+      press(D.tillBtn, () => { if (!useAction()) openTill(); });
       press(D.scKbd, () => { SFX.key(); toast(state === 'list' ? 'Up and down choose, Enter starts the pick' : 'No typing: scan the location once for each item'); });
       press(D.scUp, () => page(-1)); press(D.scDown, () => page(1));
       press(D.scPrev, () => page(-1)); press(D.scNext, () => page(1));
@@ -1315,7 +1354,7 @@
           const d = steer(true);
           if (d) till.pad(d);
           if (hit(0)) till.pad('a'); if (hit(1)) till.pad('b'); if (hit(2)) till.pad('x'); if (hit(3)) till.pad('y');
-          if (hit(7)) till.pad('rt'); if (hit(4)) till.pad('lb'); if (hit(5)) till.pad('rb');
+          if (hit(6)) till.pad('tabL'); if (hit(7)) till.pad('tabR'); if (hit(4)) till.pad('rt'); if (hit(5)) till.pad('rb');
           if (hit(9)) closeTill();
           return;
         }
@@ -1366,7 +1405,7 @@
       P.start = () => { if (state === 'idle') state = day && day.over ? 'end' : 'list'; renderScanner(); };
       P.show = () => { D.scanner.hidden = false; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; };
       // things the controls and the tests use
-      Object.assign(P, { scanAt, enter, back, page, digit, useHint, toggleSquat, openTill, closeTill, countOne, confirmQty, handOver, hitAt, holdHit, scanHold, scanPut, tapRow,
+      Object.assign(P, { banner, scanAt, enter, back, page, digit, useHint, toggleSquat, openTill, closeTill, countOne, confirmQty, handOver, hitAt, holdHit, scanHold, scanPut, tapRow,
         state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
       renderScanner();
       return P;
@@ -1572,7 +1611,7 @@
       $('endCover').hidden = false;
     }
     $('keepBtn').addEventListener('click', () => { $('endCover').hidden = true; });
-    // all 20 picks done and nobody waiting: your own day, nothing about Alex's (detailedfoil)
+    // all 20 picks done and nobody waiting: your own day, nothing about Sam's (detailedfoil)
     function dayOver() {
       SFX.dayEnd();
       for (const p of players) p.dayOver();
@@ -1641,7 +1680,7 @@
 
     /* ---------- two players (computers only): split screen, one above the other ---------- */
     // Each joins with a press: A on a controller, or any key or a click for the keyboard and mouse. The first to join
-    // plays in the top half. Both share the day's list, Alex and the tills; each has their own scanner and till screen.
+    // plays in the top half. Both share the day's list, Sam and the tills; each has their own scanner and till screen.
     let joining = false;
     const joined = [];
     $('twoBtn').hidden = touch || window.innerWidth < 900; // computers only

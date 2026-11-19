@@ -225,8 +225,8 @@ explain changes in plain English and say what they'll see.
     Files: `world.js` (the layout, every location, putting products on them, orders, `locationAt` for scans; shared with
     `.github/tests/warehouse-shift.test.mjs`), `day.js` (the day's pick list, customers and holding area, see below),
     `scene.js` (three.js drawing: racking, trays, product boxes in their photo's colour, the label shader, photo atlas, shop
-    floor, props, customers, tote, Alex and their trolley, the tills' screens), `game.js` (the shared world: customers walking
-    about, totes over the counter, Alex's part in it, sounds; and `makePlayer`: each player's own camera, controls, scanner and
+    floor, props, customers, tote, Sam and their trolley, the tills' screens), `game.js` (the shared world: customers walking
+    about, totes over the counter, Sam's part in it, sounds; and `makePlayer`: each player's own camera, controls, scanner and
     till, so a second player can be added), `game.css`, `data/catalogue.json` (made by `.github/warehouse-shift/make-catalogue.py` from product-search's
     products.json: every product without flag 32 = the 10,999 nailed ones, each with a group, a size T tray / S shelf / B bulky
     from name keywords, its photo's colour and whether it has a photo; rerun it after a new products.json). The same seed puts
@@ -257,7 +257,7 @@ explain changes in plain English and say what they'll see.
     highlight moves between buttons, boxes and rows (tillui.js `pad()`): A presses, a box brings up the on-screen keyboard
     (the highlight moves round its keys), B deletes or leaves, RT Enter, LB/RB tabs, Y Ask again, Start leaves.
     **Two players** (computers only: the Start screen's Two players button, hidden on touch screens and windows under 900
-    px): split screen, one above the other, sharing the day's list, Alex and the tills. Each joins on the join screen with
+    px): split screen, one above the other, sharing the day's list, Sam and the tills. Each joins on the join screen with
     a press (A on a controller, or a key or click for the keyboard and mouse; first to join is the top half). Each player's
     things are in their own container (`#pv1` in the page, copied for player 2 by `addPlayer2`, elements found by
     `data-el`); `makePlayer` holds everything per player; `drawViews` draws each half with its own glow and aim box;
@@ -276,9 +276,9 @@ explain changes in plain English and say what they'll see.
     is still on the list it turns into a CK (if someone's picking it, their scanner says to take it to the counter instead),
     if it's in the holding area a CK line fetches it. Other customers come for bags already there (`collect`). A fetch line
     is `A` + the despatch note's 4 digits, 1:1 CK, and isn't one of the 20. The day ends when all 20 are done and nobody's
-    waiting: "All picks clear" with your own figures only (nothing about Alex's), and Start the next day (the holding area
-    carries over). Till customers wait at the counter (a till's place, never Alex's) until someone serves them; once paid
-    they, and every click and collect customer, wait by the gap at the end of the counter beside Alex's till (detailedfoil:
+    waiting: "All picks clear" with your own figures only (nothing about Sam's), and Start the next day (the holding area
+    carries over). Till customers wait at the counter (a till's place, never Sam's) until someone serves them; once paid
+    they, and every click and collect customer, wait by the gap at the end of the counter beside Sam's till (detailedfoil:
     the left-hand till from behind the counter, the only end with a gap), `WAIT` in game.js.
     **Holding area** (`world.holding`, drawn by scene.js `holdingArea`; what's in each spot is `day.hold`): long-span shelving (blue uprights, orange beams,
     like the real one in his floor plan) against the staff room wall beside goods in, facing goods in, a "HOLDING AREA"
@@ -293,7 +293,7 @@ explain changes in plain English and say what they'll see.
     putting a c pick away, the nearest empty spot). About half the spots start the first day full.
     **Till orders**: A till customer walks up and the scanner says "Till
     order"; walk behind the counter to one of the four trade counter tills and press Use till (or Scan, or tap the till).
-    Walk behind the counter to one of your three tills (the one by the gap is Alex's) and press Use till (or Scan, or tap
+    Walk behind the counter to one of your three tills (the one by the gap is Sam's) and press Use till (or Scan, or tap
     it): the next till customer comes over (the one you're talking to follows you to another till; one you'd called but
     not started on goes back to the queue if you leave). The till is a browser with two tabs at the top, like the real
     trade counter PCs: **Fusion** (the till system, drawn
@@ -337,33 +337,48 @@ explain changes in plain English and say what they'll see.
     offline worker keeps the till files too (Product Search's lists: kept copy at once, a fresh one for next time).
     Untested so far: on a real phone, and how players get on with the description quotes (detailedfoil expects to test a
     lot by hand).
-    **Alex, a coworker** (detailedfoil, 19 Nov 2026: "an AI that does all this as well ... like a coworker ... they take
+    **Sam, a coworker** (detailedfoil, 19 Nov 2026: "an AI that does all this as well ... like a coworker ... they take
     as long to do everything as a human would"): a scripted worker, not an AI model; always on, one for now, nothing on
     screen counts their orders (his say). `bot.js` is the brain, shared with `.github/tests/warehouse-shift-alex.test.mjs`
     (whole shifts simulated with a pretend page): `Nav` (the floor on a 10 cm grid with each cell's distance to the
     nearest obstacle; A* that keeps to the middle of aisles, pulled straight) and `create()` (`update(dt, others)` each
-    frame; the job is a generator whose steps wait seconds or for a condition). Alex comes out of the staff room at the
+    frame; the job is a generator whose steps wait seconds or for a condition). Sam comes out of the staff room at the
     start and works from the same list (`choose`, detailedfoil's order): a pick a customer is waiting for (CK, till, a
     holding area fetch), then the next customer at the till (served at their own till, the one by the gap, with the till's
     own customer lines; customers are never dressed in navy, the staff colour), then c picks; free again, they look at the
     list straight away. They pick from the same shelves (trays slide out, boxes pull forward) into the top tote of their
     **trolley** (detailedfoil: the blue stack of totes on a grey base with wheels; scene.js `makeTrolley`, `TROLLEY` in
-    bot.js): pushed in front while they walk, parked behind them, across the aisle, while they pick, so Alex and the trolley
+    bot.js): pushed in front while they walk, parked behind them, across the aisle, while they pick, so Sam and the trolley
     fill the aisle and you can't get past (you can't walk through either: game.js `crewStop`, `trolleyGap`; it swings round
     them the short way, never into the shelf, and stays inside the aisle). They kneel on one knee for the bottom shelves
     (below 0.45 m), hand the top tote over at their till (the customer comes over), and put c picks in the nearest empty
     OC spot (a tote rather than the big items bay), going to the counter instead if the customer walks in meanwhile. Timings are `PACE` in bot.js (walk 1.32 m/s, find a product by code 3.5-7 s, by
     description 8-18 s, by a quote 12-28 s, each item 0.6-1.2 s ...), each varying, times a personal pace; about one
     thing in 15 goes wrong just to slow it down (`SLIP`: a wrong scan, the wrong aisle, a typo, the wrong product shown,
-    one too many picked). **Aisles** (the ones off the centre aisle, `aisleAt` in bot.js): Alex waits to one side of the
+    one too many picked). **Aisles** (the ones off the centre aisle, `aisleAt` in bot.js): Sam waits to one side of the
     end of one you're already in (`startQueue`, detailedfoil: "whoever was in the aisle first gets priority"), where you can
     see them from inside, so they never trap you. Two human players can share an aisle (detailedfoil); what stops you
-    passing Alex is the trolley, not a rule. In the open Alex goes round you, slides past at close quarters,
+    passing Sam is the trolley, not a rule. In the open Sam goes round you, slides past at close quarters,
     takes another spot if you're on theirs (`alts`) and says excuse me after a moment. The holding area is shared through
     day.js (`busy`: a spot being fetched from or filled is kept for whoever's on the way). Drawn by scene.js `makeWorker` /
     `poseWorker` (navy uniform with a CrashFix patch and an ALEX badge, knees and elbows, both hands on the trolley handle
     while walking, the scanner's red line), speech in small grey bubbles only when near and in sight (`placeBubs`, drawn
     by each player), sounds quieter with distance. `__shift.tick(sec)` fast-forwards the game for playtests.
+
+    **Round 2 (19 Nov 2026, evening; detailedfoil: Alex renamed Sam and given an afro, `afro: true` in the `hire` call).** A day
+    is now 15 to 25 picks (about 20). Before opening 3 to 6 c picks (two or more products, no customer, as many as the
+    holding area has room for) are on the list; when they're all put away a "Time to open" banner appears and you unlock the
+    front door (a Unlock door / Lock door button by the entrance, also Scan / RT); customers only arrive after that, and when
+    everything's done "Lock the front door" shows and only locking it brings the end of day screen (`day.phase`: closed, unlock,
+    open, lock, done; `unlock()`, `lock()`, env `opening/unlocked/closing/locked`). The rest: about 40% (35 to 45) till or
+    kiosk orders, the others click and collect customers with ONE product (picked from the warehouse, any quantity) or bag
+    collections (several products, from the holding area, no warehouse walk, bags may be there from before opening; they count as
+    picks and the label shows the bag's real locs:items). Customers are greeted before they say anything: they arrive in state
+    `greet`, you press Greet (the Use till button changes, or Scan / RT) while behind the counter near them, or Sam does it after
+    about 4.5 s (`day.greet(c, who)`, `ungreeted()`). The owner/late-customer idea was removed. At the till LT and RT switch tabs
+    (LT Fusion, RT CrashFix), LB is Enter. The left side is now BBA at the FRONT to BBJ at the back; pick lists walk AAA to BAG, then
+    BBJ down to BBA (`WALK` in world.js; `loc.order` follows it, don't sort by code). The two halves of a shared AAA bay have a
+    12 cm gap (`HALFGAP`). The trolley has no handle.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

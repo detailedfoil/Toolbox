@@ -1,4 +1,4 @@
-// Warehouse Shift: Alex, the coworker (tools/warehouse-shift/bot.js). Alex can reach every location without walking
+// Warehouse Shift: Sam, the coworker (tools/warehouse-shift/bot.js). Sam can reach every location without walking
 // into anything, works from the shared pick list (day.js) at a person's pace (till customers, picks, c picks into the
 // holding area, bags fetched from it), won't go down an aisle you're already in, walks round you, and pushes a
 // trolley that stays inside the aisle. Each shift here is simulated with a pretend page (no 3D), on the game's clock.
@@ -22,7 +22,7 @@ const START = { x: 3.75, y: 17.78, yaw: Math.PI / 2 };   // outside the staff ro
 const YOU = 0.22;
 
 // a pretend page with a day's work (day.js): customers take 9 s to walk in and 6 s to walk out, and 3 s to come over
-// to Alex's till. Nobody else picks, so Alex does everything.
+// to Sam's till. Nobody else picks, so Sam does everything.
 function shift(seed, opts = {}) {
   const rng = W.rng(seed);
   let T = 0, day = null;
@@ -30,18 +30,24 @@ function shift(seed, opts = {}) {
   const later = (s, f) => timers.push({ t: T + s, f });
   const dayEnv = {
     customer: (c) => later(9, () => day.arrived(c)),
-    step: (c) => { if (c.state === 'leaving') later(6, () => day.gone(c)); }
+    step: (c) => { if (c.state === 'leaving') later(6, () => day.gone(c)); },
+    opening: () => later(5, () => day.unlock()),   // the door: somebody unlocks it, and locks it at the end
+    closing: () => later(5, () => day.lock())
   };
+  const arrived = new Map();
+  dayEnv.customer = (c) => { arrived.set(c, T + 9); later(9, () => day.arrived(c)); };
   day = Day.create({ world, World: W, Till, requests, rand: rng, env: dayEnv });
+  if (day.phase === 'unlock') dayEnv.opening();
   const env = {
-    board: () => ({ orders: day.list(), queue: day.queue() }),
-    take: (b, o) => day.take(o, 'Alex'),
-    serve: (b, c) => { if (!day.serve(c, 'Alex')) return false; later(3, () => { c.ready = true; }); return true; },
+    board: () => ({ orders: day.list(), queue: day.queue(), greet: day.ungreeted().filter((c) => T - (arrived.get(c) || 0) > 4.5) }),
+    greet: (b, c) => day.greet(c, 'Sam'),
+    take: (b, o) => day.take(o, 'Sam'),
+    serve: (b, c) => { if (!day.serve(c, 'Sam')) return false; later(3, () => { c.ready = true; }); return true; },
     picked: (b, o) => day.picked(o), holdFree: () => day.freeSpots(),
-    reserve: (b, k) => day.reserve(k, 'Alex'), unreserve: (b, k) => day.unreserve(k, 'Alex'),
-    putAway: (b, o, k) => { events.push({ put: k, free: !day.hold[k] }); return day.putAway(o, k, 'Alex'); },
+    reserve: (b, k) => day.reserve(k, 'Sam'), unreserve: (b, k) => day.unreserve(k, 'Sam'),
+    putAway: (b, o, k) => { events.push({ put: k, free: !day.hold[k] }); return day.putAway(o, k, 'Sam'); },
     holdTake: (b, o) => { events.push({ take: o.hold.code, kept: day.busy[o.hold.code] === 'fetch:' + o.id }); day.fetch(o); return true; },
-    tillDone: (b, c, lines) => day.tillDone(c, lines), handOver: (b, o) => day.handOver(o, 'Alex'),
+    tillDone: (b, c, lines) => day.tillDone(c, lines), handOver: (b, o) => day.handOver(o, 'Sam'),
     say(b, who, line) { events.push({ t: T, who, text: line.text }); }
   };
   const bot = B.create({ world, World: W, Till, requests, nav, env, rand: rng, till: ALEX_TILL, start: START });
@@ -52,7 +58,7 @@ function shift(seed, opts = {}) {
     T += dt;
     for (let i = timers.length - 1; i >= 0; i--) if (timers[i].t <= T) { const f = timers[i].f; timers.splice(i, 1); f(); }
     day.tick(dt);
-    if (day.over) { day = Day.create({ world, World: W, Till, requests, rand: rng, env: dayEnv, hold: day.hold }); out.days = (out.days || 0) + 1; }
+    if (day.over) { day = Day.create({ world, World: W, Till, requests, rand: rng, env: dayEnv, hold: day.hold }); if (day.phase === 'unlock') dayEnv.opening(); out.days = (out.days || 0) + 1; }
     if (opts.you) opts.you(you, bot, T);
     bot.update(dt, [you]);
     out.closestWall = Math.min(out.closestWall, nav.clear(bot.x, bot.y));
@@ -69,7 +75,7 @@ function shift(seed, opts = {}) {
 }
 const avg = (a) => a.reduce((s, x) => s + x, 0) / a.length;
 
-test('Alex can reach every location, the holding area, the tote stack and their till, standing clear of everything', () => {
+test('Sam can reach every location, the holding area, the tote stack and their till, standing clear of everything', () => {
   const bot = B.create({ world, World: W, Till, requests, nav, env: {}, rand: W.rng(1), till: ALEX_TILL, start: START });
   // everywhere a body fits that can be walked to from the till
   const nx = nav.nx, ny = nav.ny, seen = new Uint8Array(nx * ny), q = [];
@@ -111,7 +117,7 @@ test('Alex can reach every location, the holding area, the tote stack and their 
   }
 });
 
-test('a shift on their own: Alex serves the till, picks every kind of order and puts c picks away, at a person\'s pace', () => {
+test('a shift on their own: Sam serves the till, picks every kind of order and puts c picks away, at a person\'s pace', () => {
   const s = shift(20261119, { minutes: 45 });
   const by = {};
   for (const d of s.done) (by[d.done] = by[d.done] || []).push(d.took);
@@ -136,14 +142,14 @@ test('a shift on their own: Alex serves the till, picks every kind of order and 
   assert.match(said, /Postcode's LU[89] \d[A-Z]{2}\.\nSurname's /);
 });
 
-test('the holding area: Alex fetches the bag on the line they took, kept for that customer', () => {
+test('the holding area: Sam fetches the bag on the line they took, kept for that customer', () => {
   let takes = [];
   for (const seed of [77, 78, 79]) takes = takes.concat(shift(seed, { minutes: 25 }).events.filter((e) => e.take));
   assert.ok(takes.length >= 2, takes.length + ' bags fetched');
-  for (const t of takes) assert.ok(t.kept, t.take + ' was kept for the customer whose line Alex took');
+  for (const t of takes) assert.ok(t.kept, t.take + ' was kept for the customer whose line Sam took');
 });
 
-test('one person to a pick aisle (detailedfoil): Alex waits by the end of an aisle you\'re in, and never touches you', () => {
+test('one person to a pick aisle (detailedfoil): Sam waits by the end of an aisle you\'re in, and never touches you', () => {
   for (const seed of [3, 8, 21]) {
     let mode = 'idle', since = 0, aisle = null;
     const s = shift(seed, {
@@ -159,11 +165,11 @@ test('one person to a pick aisle (detailedfoil): Alex waits by the end of an ais
         } else if (mode === 'out' && T - since > 40) { mode = 'idle'; you.x = 1.0; you.y = 0.9; }
       }
     });
-    assert.equal(s.intoYourAisle, 0, 'seed ' + seed + ': Alex went into the aisle you were in');
-    assert.ok(s.queued > 0, 'seed ' + seed + ': Alex waited for you');
-    assert.ok(s.closestYou >= 2 * YOU, 'seed ' + seed + ': Alex came within ' + s.closestYou.toFixed(3) + ' m of you');
+    assert.equal(s.intoYourAisle, 0, 'seed ' + seed + ': Sam went into the aisle you were in');
+    assert.ok(s.queued > 0, 'seed ' + seed + ': Sam waited for you');
+    assert.ok(s.closestYou >= 2 * YOU, 'seed ' + seed + ': Sam came within ' + s.closestYou.toFixed(3) + ' m of you');
     assert.ok(s.done.length >= 6, 'seed ' + seed + ': ' + s.done.length + ' jobs done');
-    assert.ok(s.events.some((e) => e.who === 'me' && /wait|after you/.test(e.text)), 'seed ' + seed + ': Alex says they\'ll wait');
+    assert.ok(s.events.some((e) => e.who === 'me' && /wait|after you/.test(e.text)), 'seed ' + seed + ': Sam says they\'ll wait');
   }
   // the rule itself: an aisle is the space between two rows of racking, not the centre aisle or the open floor
   const a = world.aisles[0];
@@ -172,12 +178,12 @@ test('one person to a pick aisle (detailedfoil): Alex waits by the end of an ais
   assert.equal(B.aisleAt(world, world.W / 2, world.BACK / 2), null, 'so is the back walkway');
 });
 
-test('Alex walks round you: standing on their spot, in the centre aisle, or walking up and down it', () => {
+test('Sam walks round you: standing on their spot, in the centre aisle, or walking up and down it', () => {
   const mid = (world.LX1 + world.RX0) / 2;
   const cases = {
-    post: (you, bot) => { you.x = bot.post.x; you.y = bot.post.y; },      // on Alex's spot at the till, all shift
+    post: (you, bot) => { you.x = bot.post.x; you.y = bot.post.y; },      // on Sam's spot at the till, all shift
     centre: (you) => { you.x = mid; you.y = 8; },                           // in the middle of the centre aisle
-    pacing: (() => { let dir = 1; return (you, bot) => {                    // up and down it, stopping for Alex
+    pacing: (() => { let dir = 1; return (you, bot) => {                    // up and down it, stopping for Sam
       const ny = you.y + dir * 1.5 * 0.05;
       if (you.y < 2 || you.y > 17) { you.x = mid + 0.2; you.y = Math.max(2.5, Math.min(16.5, you.y)); }
       if (Math.hypot(mid + 0.2 - bot.x, ny - bot.y) >= 2 * YOU) { you.y = ny; you.x = mid + 0.2; you.moving = true; } else you.moving = false;
@@ -191,18 +197,18 @@ test('Alex walks round you: standing on their spot, in the centre aisle, or walk
   }
 });
 
-test('the game: Alex is on the page, has their own till, and you can\'t walk through Alex or their trolley', () => {
+test('the game: Sam is on the page, has their own till, and you can\'t walk through Sam or their trolley', () => {
   const html = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift.html'), 'utf8');
   assert.ok(html.indexOf('warehouse-shift/bot.js') > 0 && html.indexOf('warehouse-shift/bot.js') < html.indexOf('warehouse-shift/game.js'), 'bot.js loads before game.js');
   const game = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/game.js'), 'utf8');
-  assert.match(game, /!blocked\(nx, me\.y\) && !crewStop\(me, nx, me\.y\)/, 'your walking checks Alex');
+  assert.match(game, /!blocked\(nx, me\.y\) && !crewStop\(me, nx, me\.y\)/, 'your walking checks Sam');
   assert.match(game, /const g = trolleyGap\(b, x, y\);\s*if \(g < BODY/, 'and their trolley');
-  assert.match(game, /if \(t === ALEX_TILL\) continue;/, 'the till by the gap is Alex\'s');
-  assert.ok(!/is down this aisle/.test(game), 'two people can share an aisle: Alex\'s trolley does the blocking (detailedfoil)');
+  assert.match(game, /if \(t === ALEX_TILL\) continue;/, 'the till by the gap is Sam\'s');
+  assert.ok(!/is down this aisle/.test(game), 'two people can share an aisle: Sam\'s trolley does the blocking (detailedfoil)');
   const scene = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/scene.js'), 'utf8');
   assert.match(scene, /function makeWorker/); assert.match(scene, /function makeTrolley/);
-  assert.ok(!/\bSprite\b/.test(scene), 'Alex\'s name is on their badge, not floating over their head');
-  // parked to pick, the trolley and Alex fill the aisle: nobody gets past
+  assert.ok(!/\bSprite\b/.test(scene), 'Sam\'s name is on their badge, not floating over their head');
+  // parked to pick, the trolley and Sam fill the aisle: nobody gets past
   const bot = B.create({ world, World: W, Till, requests, nav, env: {}, rand: W.rng(9), till: ALEX_TILL, start: START });
   const loc = world.locs.byCode['AAC-03-12-02'], st = bot.standFor(loc);
   bot.x = st.x; bot.y = st.y; bot.yaw = st.yaw; bot.walking = false;
@@ -213,5 +219,5 @@ test('the game: Alex is on the page, has their own till, and you can\'t walk thr
   void across;
   const lo = Math.min(bot.y - B.BODY, ty0) - a.y0, hi = a.y1 - Math.max(bot.y + B.BODY, ty1);
   assert.ok(Math.max(lo, hi) < 2 * YOU, 'room left beside them: ' + lo.toFixed(2) + ' and ' + hi.toFixed(2) + ' m (' + gaps.map((g) => g.toFixed(2)).join(', ') + ')');
-  assert.ok(Math.abs(t.y - bot.y) > B.BODY + B.TROLLEY.wide / 2 - 0.02, 'and Alex isn\'t standing in it');
+  assert.ok(Math.abs(t.y - bot.y) > B.BODY + B.TROLLEY.wide / 2 - 0.02, 'and Sam isn\'t standing in it');
 });

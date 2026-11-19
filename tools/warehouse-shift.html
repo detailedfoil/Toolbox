@@ -12,7 +12,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=48e35baa18">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=569405ab70">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=16b209e198">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
@@ -100,7 +100,7 @@
   <div class="ws-cover" id="startCover" hidden>
     <div class="ws-card">
       <h1>Warehouse Shift</h1>
-      <p>A day is 20 picks on one list, shared with Alex. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
+      <p>A day is 20 picks on one list, shared with Sam. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
       <div id="startStats"></div>
       <div class="ws-row">
         <button class="ws-go" id="startBtn" type="button">Start shift</button>
@@ -115,7 +115,7 @@
   <div class="ws-cover" id="joinCover" hidden>
     <div class="ws-card">
       <h1>Two players</h1>
-      <p>Split screen, one above the other, sharing the same pick list (and Alex). Each player presses something to join: <b>A</b> on a controller, or any key or a click for the keyboard and mouse. The first to join plays in the top half.</p>
+      <p>Split screen, one above the other, sharing the same pick list (and Sam). Each player presses something to join: <b>A</b> on a controller, or any key or a click for the keyboard and mouse. The first to join plays in the top half.</p>
       <div class="ws-join"><div id="joinTop"><b>Top</b><span>Waiting for a player</span></div><div id="joinBottom"><b>Bottom</b><span>Waiting for a player</span></div></div>
       <div class="ws-row"><button class="ws-go" id="joinGo" type="button" disabled>Start shift</button><button class="ws-alt" id="joinBack" type="button">Back</button></div>
     </div>
@@ -142,15 +142,15 @@
             <li>Some click and collects are already bagged in the holding area: the line on the scanner gives the <b>OC location</b> (big green label) and surname. Scan that tote, then take the bag to the counter.</li>
             <li>Bottom shelves are low: <b>squat</b> to scan them. Stuck? <b>Hint</b> makes the location glow.</li>
           </ul>
-          <h2>Alex</h2>
+          <h2>Sam</h2>
           <ul>
-            <li><b>Alex</b> works from the same list, at the same pace as a person: picks with a customer waiting first, then the next customer at the till, then c picks.</li>
-            <li>Alex pushes a <b>trolley</b>. While they pick it blocks the aisle, so you can't get past. Alex won't go down an aisle you're in.</li>
-            <li>Alex walks round you, and says excuse me if you're in the way.</li>
+            <li><b>Sam</b> works from the same list, at the same pace as a person: picks with a customer waiting first, then the next customer at the till, then c picks.</li>
+            <li>Sam pushes a <b>trolley</b>. While they pick it blocks the aisle, so you can't get past. Sam won't go down an aisle you're in.</li>
+            <li>Sam walks round you, and says excuse me if you're in the way.</li>
           </ul>
           <h2>At the till</h2>
           <ul>
-            <li>Some customers order at the till. Walk behind the counter to a till and press <b>Use till</b> (or Scan): the next one comes over. The till by the gap is Alex's.</li>
+            <li>Some customers order at the till. Walk behind the counter to a till and press <b>Use till</b> (or Scan): the next one comes over. The till by the gap is Sam's.</li>
             <li>They give their <b>postcode</b>, then their <b>surname</b>: type them in Fusion's Identify Customer, Search, pick them, Select.</li>
             <li>Sent it from the <b>kiosk</b>? They tell you the name they used: open <b>Kiosk Orders</b>, pick theirs, Select, and the basket fills itself.</li>
             <li>They ask for one thing at a time: a <b>code</b>, a <b>description</b>, or a quote from the website. Find it on the <b>CrashFix</b> tab (tap a result to read its description) and tap its code to copy it: the customer says straight away if it's the one. Any product that fits counts.</li>
@@ -163,14 +163,14 @@
             <li><b>AAB-03-07-02</b>: area AAB, bay 03, shelf 07, position 02. The area is on the end of the racking.</li>
             <li>Bay 01 is at the centre aisle end. Shelf 01 is the bottom. Positions count from the left as you face the shelf.</li>
             <li>Trays hold 2 positions (4 in AAA), listed on the label with the back one on top.</li>
-            <li>Right side, front to back: AAA to AAE (trays), then BAA to BAG. Left side, back to front: BBA to BBJ (bulky).</li>
+            <li>Right side, front to back: AAA to AAE (trays), then BAA to BAG. Left side, BBA at the front to BBJ at the back (bulky). Picks go up the right, then down the left from BBJ to BBA.</li>
           </ul>
         </div>
         <div>
           <h2>Phone</h2>
           <ul><li>Left thumb: walk (push further to jog)</li><li>Drag the view to look round</li><li>Tap a label to scan it</li><li>Squat button next to the scanner</li></ul>
           <h2>Controller</h2>
-          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>RT</b> Enter, <b>LB</b>/<b>RB</b> switch tabs, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
+          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
           <h2>Computer</h2>
           <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or <kbd>F</kbd> scan, <kbd>Enter</kbd> next, <kbd>C</kbd> squat, <kbd>H</kbd> hint</li><li><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose on the pick list</li><li><kbd>Tab</kbd> opens the scanner's Function menu</li></ul>
         </div>
@@ -208,13 +208,13 @@
   <div class="ws-cover" id="msg" hidden><div class="ws-card"><p id="msgText"></p><div class="ws-row"><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div></div></div>
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
-<script src="warehouse-shift/world.js?v=20b638507a"></script>
-<script src="warehouse-shift/scene.js?v=3007bf7549"></script>
+<script src="warehouse-shift/world.js?v=5be146ce6e"></script>
+<script src="warehouse-shift/scene.js?v=b96042b9c5"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=3cd5363ffe"></script>
-<script src="warehouse-shift/day.js?v=e00a95a97f"></script>
-<script src="warehouse-shift/bot.js?v=16749e0cba"></script>
-<script src="warehouse-shift/tillui.js?v=dd3d1c0d18"></script>
-<script src="warehouse-shift/game.js?v=ab448cc371"></script>
+<script src="warehouse-shift/day.js?v=3b17b21038"></script>
+<script src="warehouse-shift/bot.js?v=7377f95d85"></script>
+<script src="warehouse-shift/tillui.js?v=74eefb8b16"></script>
+<script src="warehouse-shift/game.js?v=2fe3e1369d"></script>
 </body>
 </html>

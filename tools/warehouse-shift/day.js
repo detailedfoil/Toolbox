@@ -1,5 +1,5 @@
 /* Warehouse Shift: the day's work (detailedfoil, 19 Nov 2026). Shared by the page (game.js, which also passes it on
-   to Alex in bot.js) and the tests. No drawing here: game.js walks the customers about and draws the holding area.
+   to Sam in bot.js) and the tests. No drawing here: game.js walks the customers about and draws the holding area.
 
    One pick list on everyone's scanner. Each order on it is A and four numbers, then how many locations and how many
    items (1 silicone and 2 boxes of screws is 2:3), then what it's for:
@@ -13,9 +13,14 @@
    instead of the holding area); one whose order is already in the holding area gets it fetched from there (a CK line
    too, A and the number on its despatch note, but not one of the day's picks).
 
-   A day is 20 picks of any kind; the first 2 to 4 are c picks, waiting when the day starts. The list stays steady: at
-   most 5 at once, new ones coming in unevenly, now and then empty for a few seconds. At most 3 customers in at once,
-   and seldom 3 for long. The day ends when all 20 are done and nobody is waiting.
+   A day is 15 to 25 picks, 20 or so (detailedfoil, 19 Nov 2026). Before opening 3 to 6 of them are c picks (two or more different
+   products, no customer): pick them, put them in the holding area, then the front door is unlocked ("Time to open").
+   Around 40% (35 to 45) are till or kiosk orders, the rest an even-ish split of click and collect customers with one
+   product (picked from the warehouse) and customers who collect a bag already in the holding area (several products;
+   no warehouse walk, bags may have been there since before opening). A customer who walks up is greeted first (an
+   input from you or Sam), then tells you what they're here for. When all 20 are done and nobody is waiting, the door
+   is locked, and only then does the end of day screen come. The list stays steady: at most 5 at once, now and then
+   empty for a few seconds. At most 3 customers in at once, and seldom 3 for long.
 
    create(opts): opts.world, World (world.js), Till (till.js), requests (data/requests.json), rand, total, mode, and
    env, told what happens: listed(order), changed(order), customer(c) (walk them in, then call arrived(c) at the
@@ -23,12 +28,11 @@
 (function (root) {
   'use strict';
 
-  var TOTAL = 20;          // picks in a day (detailedfoil)
+  var TOTAL = 20;          // picks in a day, about (15 to 25 when not told)
   var MAX_LIST = 5;        // on the pick list at once
   var MAX_IN = 3;          // customers in at once
-  var OWNER = 0.35;        // how many online orders have their customer come in later the same day
-  // which kinds of pick come after the first c picks (the scanner's Function menu can narrow it, for practice)
-  var MODES = { mixed: ['c', 'ck', 'till', 'kiosk'], pick: ['ck'], hold: ['c'], till: ['till'], kiosk: ['kiosk'] };
+  // which kinds of pick come after the opening c picks (the scanner's Function menu can narrow it, for practice)
+  var MODES = { mixed: ['ck', 'collect', 'till', 'kiosk'], pick: ['ck'], hold: ['collect'], till: ['till'], kiosk: ['kiosk'] };
   var CC = ['Click and collect for {n}, please.', "Hiya, I've got a click and collect. Name's {n}.", 'Got an order to collect, under {n}.',
     "I've come for my click and collect. It's under {n}."];
   var HELLO = {
@@ -40,42 +44,59 @@
     var self = this;
     this.world = o.world; this.World = o.World; this.Till = o.Till; this.requests = o.requests || null;
     this.r = o.rand || Math.random; this.env = o.env || {};
-    this.total = o.total || TOTAL;
+    this.total = o.total || (15 + Math.floor(this.r() * 11)); // 15 to 25 picks (detailedfoil: it needn't be exactly 20)
     this.mode = MODES[o.mode] ? o.mode : 'mixed';
     this.canTill = !!(this.requests && this.requests.need && this.requests.need.length);
     this.t = 0; this.nextId = 1; this.used = {};
     this.orders = []; this.customers = []; this.owners = []; this.log = [];
+    this.phase = 'closed';                 // closed (c picks, door locked), unlock (waiting for the door), open, lock (waiting for the door)
     this.done = 0; this.released = 0; this.over = false;
     // the holding area: what's in each OC spot, and who's on their way to it (fetching it, or filling it)
     this.hold = {}; this.busy = {};
     var spots = this.world.holding ? this.world.holding.spots : [];
     spots.forEach(function (sp) { self.hold[sp.code] = null; self.busy[sp.code] = null; });
     if (o.hold) { for (var k in o.hold) if (o.hold[k] && k in this.hold) { this.hold[k] = o.hold[k]; this.used[o.hold[k].num] = 1; } }
-    else spots.forEach(function (sp) { if (self.r() < 0.45) self.hold[sp.code] = self.parcel(self.surname(), null); });
-    // the plan: what each of the day's picks will be
-    this.first = 2 + Math.floor(this.r() * 3);
+    else spots.forEach(function (sp) { if (self.r() < 0.45) { var q = self.parcel(self.surname(), null); q.locs = 2 + Math.floor(self.r() * 3); q.units = q.locs + Math.floor(self.r() * 4); self.hold[sp.code] = q; } });
+    // the plan: what each of the day's picks will be (3 to 6 c picks first, as many as the holding area has room for)
+    var free = 0; for (var hk in this.hold) if (!this.hold[hk]) free++;
+    this.first = Math.min(3 + Math.floor(this.r() * 4), free);
     this.plan = [];
     for (var i = 0; i < this.total; i++) this.plan.push(i < this.first ? 'c' : null);
-    this.fillPlan();
+    this.fillPlan(true);
     this.wait = 1.0;                       // seconds to the next pick
-    this.collectT = 40 + 50 * this.r();    // the next customer for a bag in the holding area
+    if (this.first === 0) this.phase = 'unlock';
   }
   Day.prototype.emit = function (name, a, b) { var f = this.env[name]; if (typeof f === 'function') return f.call(this.env, a, b); return undefined; };
   Day.prototype.pick = function (list) { return list[Math.floor(this.r() * list.length)]; };
 
   /* ---------- the plan ---------- */
-  Day.prototype.fillPlan = function () {
-    var kinds = MODES[this.mode], self = this;
-    for (var i = Math.max(this.first, this.released); i < this.plan.length; i++) {
-      var k = this.pick(kinds);
-      // never three the same in a row
-      if (kinds.length > 1 && i >= 2 && this.plan[i - 1] === k && this.plan[i - 2] === k) k = kinds[(kinds.indexOf(k) + 1 + Math.floor(this.r() * (kinds.length - 1))) % kinds.length];
-      if (k === 'till' && !this.canTill) k = 'kiosk';
-      this.plan[i] = k;
+  function shuffle(a, r) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  // after the opening c picks: 8 of the 20 (40%) are till or kiosk orders, the rest click and collect, split about evenly
+  // between one-product customers and bag collections, a little different each day
+  Day.prototype.fillPlan = function (initial) {
+    var self = this, from = Math.max(this.first, this.released), n = this.plan.length - from, rest, i;
+    if (initial && this.mode === 'mixed') {
+      var nt = Math.min(n - 2, Math.round((0.35 + 0.1 * this.r()) * this.total)), tl = Math.max(1, Math.min(nt - 1, Math.round(nt / 2 + (this.r() - 0.5) * 2)));
+      var R = n - nt, C = Math.max(Math.min(2, R - 1), Math.min(R - 1, Math.round(R / 2 + (this.r() - 0.5) * 2)));
+      rest = [];
+      for (i = 0; i < nt; i++) rest.push(i < tl ? 'till' : 'kiosk');
+      for (i = 0; i < R; i++) rest.push(i < C ? 'collect' : 'ck');
+      shuffle(rest, this.r);
+    } else {
+      var kinds = MODES[this.mode];
+      rest = [];
+      for (i = 0; i < n; i++) rest.push(this.pick(kinds));
     }
+    // never three the same in a row
+    var prev = this.plan.slice(0, from);
+    for (i = 0; i < rest.length; i++) {
+      var a = i >= 2 ? rest[i - 1] : prev[prev.length - 1], b = i >= 2 ? rest[i - 2] : prev[prev.length - 2];
+      if (a === rest[i] && b === rest[i]) { for (var j = i + 1; j < rest.length; j++) if (rest[j] !== rest[i]) { var t = rest[i]; rest[i] = rest[j]; rest[j] = t; break; } }
+    }
+    for (i = 0; i < rest.length; i++) this.plan[from + i] = (rest[i] === 'till' && !this.canTill) ? 'kiosk' : rest[i];
     void self;
   };
-  Day.prototype.setMode = function (m) { if (!MODES[m]) return; this.mode = m; this.fillPlan(); };
+  Day.prototype.setMode = function (m) { if (!MODES[m]) return; this.mode = m; this.fillPlan(false); };
 
   /* ---------- numbers and names ---------- */
   // A and four numbers, never the same twice in a day
@@ -108,14 +129,16 @@
     var n = this.list().length;
     this.customers.forEach(function (c) {
       if (c.order) return;
-      if (c.kind === 'till' || c.kind === 'kiosk') { if (c.state === 'coming' || c.state === 'counter' || c.state === 'serving') n++; }
-      else if (c.state === 'coming' && !(c.kind === 'owner' && c.own && c.own.status !== 'done')) n++;
+      if (c.kind === 'till' || c.kind === 'kiosk') { if (c.state === 'coming' || c.state === 'greet' || c.state === 'counter' || c.state === 'serving') n++; }
+      else if (c.state === 'coming' || c.state === 'greet') n++;
     });
     return n;
   };
   Day.prototype.present = function () { return this.customers.filter(function (c) { return c.state !== 'gone' && c.state !== 'leaving'; }); };
   // till customers at the counter that nobody is serving yet
   Day.prototype.queue = function () { return this.customers.filter(function (c) { return c.state === 'counter' && !c.by; }); };
+  // customers at the counter nobody has said hello to yet, the one waiting longest first
+  Day.prototype.ungreeted = function () { return this.customers.filter(function (c) { return c.state === 'greet'; }); };
   Day.prototype.makeOrder = function (kind, lines, cust, counts, extra) {
     lines = (lines || []).filter(function (l) { return l.item && l.item.loc; }).map(function (l) { return { item: l.item, loc: l.item.loc, qty: l.qty }; });
     lines.sort(function (a, b) { return a.loc.order - b.loc.order; });
@@ -161,7 +184,7 @@
   Day.prototype.putAway = function (o, code, who) {
     if (!(code in this.hold) || this.hold[code] || (this.busy[code] && this.busy[code] !== 'put:' + who)) return null;
     var p = this.parcel(o.surname, o.no);
-    p.order = o;
+    p.order = o; p.locs = o.locs; p.units = o.units;
     this.hold[code] = p; this.busy[code] = null;
     o.code = code; o.status = 'done'; o.doneBy = who;
     this.emit('holdSet', code, p);
@@ -210,11 +233,11 @@
     if (c.state === 'gone' || c.state === 'leaving') return;
     var o = c.order;
     if (o && o.status !== 'done') {
-      if (o.kind === 'hold') { this.busy[o.hold.code] = null; o.status = 'done'; }
+      if (o.kind === 'hold') { this.busy[o.hold.code] = null; o.status = 'done'; o.counts = false; this.plan.push('collect'); }
       else if (o.status === 'listed') { o.status = 'done'; o.counts = false; this.plan.push(o.kind === 'till' ? (c.kind === 'kiosk' ? 'kiosk' : 'till') : 'ck'); }
       else o.cust = null; // someone's picking it: it goes in the holding area instead
       if (o.cust === null && o.kind === 'ck') o.kind = 'c';
-    } else if (!o && (c.kind === 'till' || c.kind === 'kiosk' || c.kind === 'ck')) this.plan.push(c.kind);
+    } else if (!o && (c.kind === 'till' || c.kind === 'kiosk' || c.kind === 'ck' || c.kind === 'collect')) this.plan.push(c.kind);
     if (c.code && this.busy[c.code] === 'collect:' + c.id) this.busy[c.code] = null;
     c.state = 'leaving';
     this.emit('step', c);
@@ -244,45 +267,36 @@
     this.emit('customer', c);
     return c;
   };
-  // they've walked up to the counter
+  // they've walked up to the counter and wait to be greeted (detailedfoil: nobody should speak with no one there to hear)
   Day.prototype.arrived = function (c) {
     if (c.state !== 'coming') return;
-    c.here = this.t;
-    if (c.kind === 'till' || c.kind === 'kiosk') { c.state = 'counter'; this.emit('step', c); return; }
-    var o = c.own;
-    if (c.kind === 'owner' && o) {
-      if (o.status !== 'done') { // still on the list, or being picked: it's for a customer at the counter now
-        o.kind = 'ck'; o.cust = c; c.order = o; c.state = 'waiting';
-        this.emit('changed', o); this.emit('step', c);
-        return;
-      }
-      if (o.code && this.hold[o.code] && this.hold[o.code].order === o) c.code = o.code;
-    }
-    if (c.code && this.hold[c.code]) { // in the holding area: a line to fetch it
-      var p = this.hold[c.code];
-      c.state = 'waiting';
-      c.order = this.makeOrder('hold', [], c, false, { no: 'A' + p.num, hold: { code: c.code, parcel: p }, locs: 1, units: 1 });
-      this.busy[c.code] = 'fetch:' + c.order.id;
-      this.emit('step', c);
-      return;
-    }
-    // a click and collect nobody's picked yet: one of the day's picks
-    var u = this.r(), lines = this.World.order(this.world, this.r, u < 0.5 ? 1 : u < 0.8 ? 2 : 3);
-    c.state = 'waiting';
-    c.order = this.makeOrder('ck', lines, c, true);
+    c.here = this.t; c.state = 'greet';
     this.emit('step', c);
   };
-  Day.prototype.gone = function (c) { c.state = 'gone'; this.check(); };
-  // a bag in the holding area nobody's coming for yet
-  Day.prototype.collectable = function () {
-    var self = this, out = [];
-    for (var k in this.hold) {
-      var p = this.hold[k];
-      if (!p || this.busy[k]) continue;
-      if (p.order && this.owners.some(function (w) { return w.order === p.order; })) continue; // its owner's on the way
-      out.push(k);
+  // someone says hello: now they say what they're here for
+  Day.prototype.greet = function (c, who) {
+    if (!c || c.state !== 'greet') return false;
+    c.greeter = who; c.greeted = this.t;
+    if (c.kind === 'till' || c.kind === 'kiosk') { c.state = 'counter'; this.emit('step', c); return true; }
+    if (c.code && this.hold[c.code]) { // a bag in the holding area (several products): a line to fetch it
+      var p = this.hold[c.code];
+      c.state = 'waiting';
+      c.order = this.makeOrder('hold', [], c, true, { no: 'A' + p.num, hold: { code: c.code, parcel: p }, locs: p.locs || 2, units: p.units || 3 });
+      this.busy[c.code] = 'fetch:' + c.order.id;
+      this.emit('step', c);
+      return true;
     }
-    void self;
+    // a click and collect of one product (any quantity), not picked yet: it's picked from the warehouse
+    c.state = 'waiting';
+    c.order = this.makeOrder('ck', this.World.order(this.world, this.r, 1), c, true);
+    this.emit('step', c);
+    return true;
+  };
+  Day.prototype.gone = function (c) { c.state = 'gone'; this.check(); };
+  // a bag (several products) in the holding area nobody's coming for yet
+  Day.prototype.collectable = function () {
+    var out = [];
+    for (var k in this.hold) { if (this.hold[k] && !this.busy[k]) out.push(k); }
     return out.length ? out[Math.floor(this.r() * out.length)] : null;
   };
   // empty OC spots once every c order not yet put away has had one
@@ -297,43 +311,53 @@
   Day.prototype.canStart = function (k) {
     if (this.projected() >= MAX_LIST) return false;
     if (k === 'c') return this.room() > 0;
+    if (k === 'collect') return this.present().length < MAX_IN && !!this.collectable();
     return this.present().length < MAX_IN;
   };
   Day.prototype.start = function (k) {
     this.released++;
-    if (k === 'c') {
-      var o = this.makeOrder('c', this.World.order(this.world, this.r), null, true, { surname: this.surname() });
-      if (this.released > this.first && this.r() < OWNER) this.owners.push({ order: o, at: this.t + 60 + 150 * this.r() });
-      return o;
-    }
+    if (k === 'c') return this.makeOrder('c', this.World.order(this.world, this.r, 2 + Math.floor(this.r() * 3)), null, true, { surname: this.surname() });
+    if (k === 'collect') { var code = this.collectable(); return this.send('collect', { code: code, surname: this.hold[code].surname }); }
     return this.send(k);
   };
   // the wait for the next pick: short when the list is empty, longer the more there is to do
   Day.prototype.gap = function () {
-    if (this.released < this.first) return 0.4 + 0.8 * this.r();
+    if (this.phase === 'closed') return 0.4 + 0.8 * this.r();
     var L = Math.min(4, this.projected()), r = (this.r() + this.r()) / 2;
     var lo = [4, 12, 20, 30, 40][L], hi = [9, 26, 40, 55, 70][L];
     return lo + (hi - lo) * r;
   };
+  // the door: the c picks are all in the holding area, so it's time to open
+  Day.prototype.unlock = function () {
+    if (this.phase !== 'unlock') return false;
+    this.phase = 'open'; this.wait = 3 + 3 * this.r();
+    this.emit('unlocked');
+    return true;
+  };
+  // the day's done: lock up, and only then does it end
+  Day.prototype.lock = function () {
+    if (this.phase !== 'lock') return false;
+    this.phase = 'done'; this.over = true;
+    this.emit('locked');
+    this.emit('over');
+    return true;
+  };
   Day.prototype.tick = function (dt) {
     if (this.over) return;
     this.t += dt;
+    if (this.phase === 'unlock' || this.phase === 'lock') return;
     var left = this.released < this.plan.length;
-    // customers for today's online orders
-    for (var i = this.owners.length - 1; i >= 0; i--) {
-      var w = this.owners[i];
-      if (this.t < w.at) continue;
-      var o = w.order, inHold = o.status === 'done';
-      if (!left || (inHold && !(o.code && this.hold[o.code] && this.hold[o.code].order === o) || (inHold && this.busy[o.code]))) { this.owners.splice(i, 1); continue; }
-      if (this.present().length < MAX_IN - 1 && (!inHold || this.projected() < MAX_LIST)) { this.owners.splice(i, 1); this.send('owner', { own: o, surname: o.surname, code: inHold ? o.code : null }); }
-      else w.at = this.t + 6 + 10 * this.r();
-    }
+    if (this.phase === 'closed' && this.released >= this.first) { this.check(); return; } // the c picks are out: waiting for them to be put away
     // the next pick
     this.wait -= dt;
     if (this.wait <= 0 && left) {
       var k = this.plan[this.released];
       if (k === 'c' && this.room() <= 0) { // the holding area's full: something else first
         for (var j = this.released + 1; j < this.plan.length; j++) if (this.plan[j] !== 'c') { this.plan[this.released] = this.plan[j]; this.plan[j] = 'c'; k = this.plan[this.released]; break; }
+      }
+      if (k === 'collect' && !this.collectable()) { // no bag to collect yet: a one product customer instead
+        for (var m = this.released + 1; m < this.plan.length; m++) if (this.plan[m] !== 'collect') { this.plan[this.released] = this.plan[m]; this.plan[m] = 'collect'; k = this.plan[this.released]; break; }
+        if (k === 'collect') { k = this.plan[this.released] = 'ck'; }
       }
       if (!this.canStart(k)) this.wait = 1 + this.r();
       else if (k !== 'c' && this.present().length >= MAX_IN - 1 && this.projected() > 0 && !(this.crowdT && this.t >= this.crowdT)) {
@@ -342,23 +366,23 @@
         this.wait = 1 + this.r();
       } else { this.crowdT = 0; this.start(k); this.wait = this.gap(); }
     }
-    if (left && this.released >= this.first && this.projected() === 0 && this.wait > 9) this.wait = 4 + 5 * this.r(); // never empty for long
-    // someone for a bag in the holding area (not one of the day's picks)
-    this.collectT -= dt;
-    if (this.collectT <= 0) {
-      this.collectT = 50 + 70 * this.r();
-      var code = left && this.released >= this.first && this.present().length < MAX_IN - 1 && this.projected() < MAX_LIST ? this.collectable() : null;
-      if (code) this.send('collect', { code: code, surname: this.hold[code].surname });
-    }
+    if (this.phase === 'open' && left && this.projected() === 0 && this.wait > 9) this.wait = 4 + 5 * this.r(); // never empty for long
     this.check();
   };
-  // the day's done: every pick started and finished, nobody waiting, no bag on its way to the counter
+  // c picks all away: time to open. Everything done and nobody waiting: time to lock up.
   Day.prototype.check = function () {
-    if (this.over || this.released < this.plan.length) return;
+    if (this.over) return;
+    if (this.released < this.plan.length) {
+      if (this.phase === 'closed' && this.released >= this.first && !this.orders.some(function (o) { return o.status !== 'done'; })) {
+        this.phase = 'unlock'; this.emit('opening');
+      }
+      return;
+    }
+    if (this.phase === 'closed') { if (this.orders.some(function (o) { return o.status !== 'done'; })) return; this.phase = 'unlock'; this.emit('opening'); return; }
+    if (this.phase !== 'open') return;
     if (this.orders.some(function (o) { return o.status !== 'done'; })) return;
     if (this.present().length) return;
-    this.over = true;
-    this.emit('over');
+    this.phase = 'lock'; this.emit('closing');
   };
   // how the day went, from one person's point of view (who: whatever they passed to take())
   Day.prototype.summary = function (who) {
@@ -367,7 +391,7 @@
       putAway: mine.filter(function (o) { return o.kind === 'c' && o.code; }).length, total: this.total, minutes: this.t / 60 };
   };
 
-  function create(o) { return new Day(o); }
+  function create(o) { var d = new Day(o); return d; }
   var api = { create: create, Day: Day, TOTAL: TOTAL, MAX_LIST: MAX_LIST, MAX_IN: MAX_IN, MODES: MODES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftDay = api;

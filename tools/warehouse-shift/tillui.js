@@ -895,7 +895,7 @@
           later(30, () => padMark(padStart(padItems())));
         } else if (padEl) padPress();
       }
-      else if (act === 'lb' || act === 'rb') { setTab(act === 'lb' ? 'fusion' : 'crashfix'); padMark(padStart(padItems())); }
+      else if (act === 'lb' || act === 'rb' || act === 'tabL' || act === 'tabR') { setTab(act === 'lb' || act === 'tabL' ? 'fusion' : 'crashfix'); padMark(padStart(padItems())); }
       if (padEl && padItems().indexOf(padEl) < 0) padMark(padStart(padItems()));
     }
 

@@ -1,8 +1,11 @@
 // Warehouse Shift: the day's work (tools/warehouse-shift/day.js). One pick list shared by everyone (detailedfoil, 19
 // Nov 2026): orders are A and four numbers, locations:items, then CK (customer waiting), c (for the holding area) or
-// nothing (bought at the till). A day is 20 picks, the first 2 to 4 of them c; at most 5 on the list and 3 customers
-// in at once; whoever starts an order has it, with no backing out; Alex takes customer picks first, then the next
-// customer at the till, then c picks. Each day here is simulated with Alex and a pretend you (no 3D).
+// nothing (bought at the till). A day is 15 to 25 picks, the first 3 to 6 of them c (several products, before the door
+// is unlocked); about 40% till or kiosk; one product click and collects come from the warehouse, several product ones
+// from the holding area; customers are greeted before they say what they want; the door is unlocked to start and locked
+// to finish. At most 5 on the list and 3 customers in at once; whoever starts an order has it, with no backing out; Sam
+// takes customer picks first, then the next customer at the till, then c picks. Each day is simulated with Sam and a
+// pretend you (no 3D).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -26,31 +29,37 @@ function runDay(seed, opts = {}) {
   const rng = W.rng(seed);
   let T = 0, day = null;
   const timers = [], later = (s, f) => timers.push({ t: T + s, f });
-  const ev = { listed: [], changed: 0 };
+  const arrivals = new Map();
+  const ev = { listed: [], changed: 0, arrivedAt: (c) => arrivals.get(c) || 0 };
   const env = {
     listed: (o) => ev.listed.push({ t: T, label: day.label(o), kind: o.kind, cust: o.cust, here: o.cust ? o.cust.state : null }),
     changed: () => { ev.changed++; },
-    customer: (c) => later(9, () => day.arrived(c)),
+    customer: (c) => { arrivals.set(c, T + 9); ev.firstCust = ev.firstCust === undefined ? T : ev.firstCust; later(9, () => day.arrived(c)); },
     step: (c) => { if (c.state === 'leaving') later(6, () => day.gone(c)); },
+    opening: () => { ev.opening = T; later(8, () => day.unlock()); },
+    unlocked: () => { ev.unlocked = T; },
+    closing: () => { ev.closing = T; later(8, () => day.lock()); },
     over: () => { ev.over = T; }
   };
-  day = Day.create({ world, World: W, Till, requests, rand: rng, env, mode: opts.mode });
+  day = Day.create({ world, World: W, Till, requests, rand: rng, env, mode: opts.mode, total: opts.total });
+  if (day.phase === 'unlock') env.opening();
   const choices = [];
   const crewEnv = {
-    board: () => ({ orders: day.list(), queue: day.queue() }),
-    take: (b, o) => day.take(o, 'Alex'),
-    serve: (b, c) => { if (!day.serve(c, 'Alex')) return false; later(3, () => { c.ready = true; }); return true; },
+    board: () => ({ orders: day.list(), queue: day.queue(), greet: day.ungreeted().filter((c) => T - ev.arrivedAt(c) > 4.5) }),
+    greet: (b, c) => day.greet(c, 'Sam'),
+    take: (b, o) => day.take(o, 'Sam'),
+    serve: (b, c) => { if (!day.serve(c, 'Sam')) return false; later(3, () => { c.ready = true; }); return true; },
     picked: (b, o) => day.picked(o), holdFree: () => day.freeSpots(),
-    reserve: (b, k) => day.reserve(k, 'Alex'), unreserve: (b, k) => day.unreserve(k, 'Alex'),
-    putAway: (b, o, k) => day.putAway(o, k, 'Alex'), holdTake: (b, o) => { day.fetch(o); return true; },
-    tillDone: (b, c, lines) => day.tillDone(c, lines), handOver: (b, o) => day.handOver(o, 'Alex')
+    reserve: (b, k) => day.reserve(k, 'Sam'), unreserve: (b, k) => day.unreserve(k, 'Sam'),
+    putAway: (b, o, k) => day.putAway(o, k, 'Sam'), holdTake: (b, o) => { day.fetch(o); return true; },
+    tillDone: (b, c, lines) => day.tillDone(c, lines), handOver: (b, o) => day.handOver(o, 'Sam')
   };
   const bot = B.create({ world, World: W, Till, requests, nav, env: crewEnv, rand: rng, till: tills[tills.length - 1], start: { x: 3.75, y: 17.78, yaw: Math.PI / 2 } });
-  // what Alex chose, and what was on offer at the time
+  // what Sam chose, and what was on offer at the time
   const choose = bot.choose.bind(bot);
   bot.choose = function () {
     const j = choose();
-    if (j) choices.push({ job: j.serve ? 'serve' : j.pick.kind === 'c' ? 'c' : 'cust', custOn: day.list().some((o) => o.kind !== 'c'), queue: day.queue().length > 0 });
+    if (j && !j.greet) choices.push({ job: j.serve ? 'serve' : j.pick.kind === 'c' ? 'c' : 'cust', custOn: day.list().some((o) => o.kind !== 'c'), queue: day.queue().length > 0 });
     return j;
   };
   const you = { busy: null, until: 0, serving: null };
@@ -62,6 +71,8 @@ function runDay(seed, opts = {}) {
     day.tick(dt);
     bot.update(dt, [{ id: -1, x: 1, y: 0.9, r: 0.22 }]);
     if (opts.you !== false) {
+      const g = day.ungreeted()[0];
+      if (g && rng() < 0.02) day.greet(g, 'p1');
       if (you.serving) { if (T > you.until) { const c = you.serving; you.serving = null; day.tillDone(c, (c.kind === 'kiosk' ? c.kiosk.list[c.kiosk.mine].lines : c.lines).map((l) => ({ item: l.item, qty: l.qty }))); } }
       else if (!you.busy) {
         const q = day.queue()[0], o = day.list()[0];
@@ -91,19 +102,75 @@ function runDay(seed, opts = {}) {
 const days = [11, 23, 37].map((s) => runDay(s));
 const alone = runDay(5, { you: false });
 
-test('a day is 20 picks, the first 2 to 4 of them c picks waiting at the start; it ends when they\'re done and nobody\'s waiting', () => {
+test('a day is 15 to 25 picks, the first 3 to 6 of them c picks before opening; the door is unlocked to start and locked to finish', () => {
   for (const d of days.concat([alone])) {
     const day = d.day;
     assert.ok(day.over, 'the day ended (after ' + (d.T / 60).toFixed(1) + ' min)');
-    assert.equal(day.done, 20);
-    assert.equal(day.orders.filter((o) => o.counts).length, 20, '20 picks');
-    assert.ok(day.first >= 2 && day.first <= 4);
+    assert.ok(day.total >= 15 && day.total <= 25, day.total + ' picks');
+    assert.equal(day.done, day.total);
+    assert.equal(day.orders.filter((o) => o.counts).length, day.total, 'every pick counts');
+    assert.ok(day.first >= 3 && day.first <= 6, day.first + ' c picks');
     const first = d.ev.listed.slice(0, day.first);
-    assert.ok(first.every((e) => e.kind === 'c' && e.t < 6), 'the first ' + day.first + ' are c picks, there from the start: ' + first.map((e) => e.label + '@' + e.t.toFixed(1)).join(' '));
+    assert.ok(first.every((e) => e.kind === 'c' && e.t < 12), 'the first ' + day.first + ' are c picks, there from the start: ' + first.map((e) => e.label + '@' + e.t.toFixed(1)).join(' '));
     assert.ok(day.orders.every((o) => o.status === 'done'), 'every order finished');
     assert.equal(day.present().length, 0, 'nobody left waiting');
-    assert.ok(d.T > 6 * 60 && d.T < 50 * 60, 'about a shift: ' + (d.T / 60).toFixed(1) + ' min');
+    assert.ok(d.T > 6 * 60 && d.T < 55 * 60, 'about a shift: ' + (d.T / 60).toFixed(1) + ' min');
+    // the door: nobody comes in before it's unlocked, and the day only ends after it's locked
+    const { ev } = d;
+    assert.ok(ev.opening > 0 && ev.unlocked > ev.opening, 'time to open, then unlocked');
+    assert.ok(ev.firstCust >= ev.unlocked, 'no customer before the door is unlocked');
+    assert.ok(ev.closing > ev.unlocked && ev.over > ev.closing, 'all done, then locked, then the end of day');
+    assert.equal(day.phase, 'done');
   }
+});
+
+test('the mix: about 40% till or kiosk, the rest one product click and collects and bag collections, both always there', () => {
+  let tillish = 0, all = 0;
+  for (const d of days.concat([alone])) {
+    const os = d.day.orders.filter((o) => o.counts);
+    const till = os.filter((o) => o.kind === 'till').length;
+    tillish += till; all += os.length;
+    const share = till / os.length;
+    assert.ok(share >= 0.25 && share <= 0.55, Math.round(100 * share) + '% till or kiosk');
+    const ck = os.filter((o) => o.kind === 'ck'), hold = os.filter((o) => o.kind === 'hold'), c = os.filter((o) => o.kind === 'c');
+    assert.ok(ck.length >= 1 && hold.length >= 2, 'some of each: ' + ck.length + ' ck, ' + hold.length + ' from holding');
+    // one product (any quantity) comes from the warehouse; several products wait in the holding area; c picks have several
+    assert.ok(ck.every((o) => o.lines.length === 1), 'a click and collect of one product');
+    assert.ok(hold.every((o) => o.locs >= 2 && o.units >= o.locs), 'a bag has several products');
+    assert.ok(c.every((o) => o.lines.length >= 2 && !o.cust), 'a c pick has more than one product and no customer');
+  }
+  assert.ok(tillish / all > 0.3 && tillish / all < 0.5, 'around 40% over the days: ' + Math.round(100 * tillish / all));
+  assert.ok(days.concat([alone]).some((d) => d.day.total !== 20), 'the length changes from day to day');
+});
+
+test('a customer waits to be greeted: nothing is said until someone says hello, then they say what they want', () => {
+  const day = Day.create({ world, World: W, Till, requests, rand: W.rng(8), env: {} });
+  day.phase = 'open';
+  const c = day.send('ck');
+  day.arrived(c);
+  assert.equal(c.state, 'greet'); assert.equal(c.order, null, 'no order until they\'re greeted'); assert.equal(day.list().length, 0);
+  assert.ok(day.ungreeted().length === 1 && day.ungreeted()[0] === c);
+  assert.equal(day.queue().length, 0);
+  assert.equal(day.greet(c, 'p1'), true);
+  assert.equal(c.state, 'waiting'); assert.equal(c.order.kind, 'ck'); assert.equal(c.order.lines.length, 1);
+  assert.equal(day.greet(c, 'Sam'), false, 'only greeted once');
+  const t = day.send('till');
+  day.arrived(t);
+  assert.equal(day.queue().length, 0, 'not at the till until greeted');
+  day.greet(t, 'p1');
+  assert.ok(day.queue().length === 1 && day.queue()[0] === t);
+});
+
+test('the door: unlock when the c picks are away, lock when everything is done', () => {
+  const day = Day.create({ world, World: W, Till, requests, rand: W.rng(9), env: {} });
+  assert.equal(day.phase, 'closed'); assert.equal(day.unlock(), false, 'locked until the c picks are away');
+  for (let i = 0; i < 4000 && day.phase === 'closed'; i++) {
+    day.tick(0.1);
+    for (const o of day.list()) { day.take(o, 'p1'); day.picked(o); day.putAway(o, day.freeSpots()[0], 'p1'); }
+  }
+  assert.equal(day.phase, 'unlock');
+  assert.equal(day.customers.length, 0, 'nobody in while it\'s locked');
+  assert.equal(day.lock(), false); assert.equal(day.unlock(), true); assert.equal(day.phase, 'open');
 });
 
 test('the list stays steady: never more than 5 on it, never more than 3 customers in, and seldom 3 for long', () => {
@@ -120,7 +187,7 @@ test('order numbers, A and four numbers: then locations and items, then CK, c or
     for (const o of day.orders) {
       assert.match(day.label(o), LABEL);
       // locations:items: how many different locations, and how many items altogether
-      if (o.kind === 'hold') assert.equal(day.label(o).split(' ')[1], '1:1');
+      if (o.kind === 'hold') assert.equal(day.label(o).split(' ')[1], o.locs + ':' + o.units);
       else {
         assert.equal(o.locs, new Set(o.lines.map((l) => l.loc.code)).size);
         assert.equal(o.units, o.lines.reduce((t, l) => t + l.qty, 0));
@@ -148,14 +215,14 @@ test('whoever starts an order has it: off the list, nobody else can take it, and
   assert.ok(day.list().includes(o));
   assert.equal(day.take(o, 'p1'), true);
   assert.ok(!day.list().includes(o), 'off the list');
-  assert.equal(day.take(o, 'Alex'), false, 'Alex can\'t have it');
+  assert.equal(day.take(o, 'Sam'), false, 'Sam can\'t have it');
   assert.equal(day.take(o, 'p1'), false, 'and taking it again doesn\'t start it over');
   for (const d of days) assert.ok(d.day.orders.every((x) => x.status === 'done' && x.by), 'every order started was finished by whoever started it');
   const game = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/game.js'), 'utf8');
   assert.match(game, /say\('Finish task', 'err'/, 'Back on the scanner says Finish task');
 });
 
-test('Alex: picks a customer is waiting for, then the next customer at the till, then c picks', () => {
+test('Sam: picks a customer is waiting for, then the next customer at the till, then c picks', () => {
   let n = 0;
   for (const d of days.concat([alone])) {
     for (const c of d.choices) {
@@ -167,38 +234,39 @@ test('Alex: picks a customer is waiting for, then the next customer at the till,
   }
   assert.ok(n > 40, n + ' choices');
   const jobs = alone.bot.jobs;
-  assert.ok(jobs.includes('serve') && jobs.includes('c') && (jobs.includes('ck') || jobs.includes('till')), 'Alex does all of it: ' + jobs.join(' '));
+  assert.ok(jobs.includes('serve') && jobs.includes('c') && (jobs.includes('ck') || jobs.includes('till')), 'Sam does all of it: ' + jobs.join(' '));
   // as long as a person takes
   const took = alone.bot.log.filter((l) => l.done === 'c' || l.done === 'ck' || l.done === 'till');
   assert.ok(took.every((l) => l.took > 15 && l.took < 300), took.map((l) => l.done + ' ' + l.took.toFixed(0)).join(', '));
 });
 
-test('the holding area: c picks go into empty OC spots only, customers collect them, and an early customer turns a c into a CK', () => {
+test('the holding area: c picks go into empty OC spots only, and customers collect the bags (new and old) with no warehouse walk', () => {
   for (const d of days) assert.equal(d.putFull, 0, 'a full OC spot never takes another order');
   const all = days.concat([alone]);
   const put = all.flatMap((d) => d.day.orders.filter((o) => o.kind === 'c' && o.code));
-  assert.ok(put.length >= 6, put.length + ' put away');
+  assert.ok(put.length >= 12, put.length + ' put away');
   const fetched = all.flatMap((d) => d.day.orders.filter((o) => o.kind === 'hold'));
-  assert.ok(fetched.length >= 3, fetched.length + ' bags collected');
-  for (const o of fetched) assert.equal(o.counts, false, 'collecting a bag isn\'t one of the day\'s picks');
-  // a customer for an online order still on the list: it turns into a CK
+  assert.ok(fetched.length >= 8, fetched.length + ' bags collected');
+  for (const o of fetched) assert.equal(o.counts, true, 'collecting a bag is one of the day\'s picks');
   const day = Day.create({ world, World: W, Till, requests, rand: W.rng(4), env: {} });
-  const c = day.makeOrder('c', W.order(world, W.rng(5)), null, true, { surname: 'Testman' });
-  const who = day.send('owner', { own: c, surname: 'Testman' });
-  day.arrived(who);
-  assert.equal(c.kind, 'ck'); assert.equal(c.cust, who); assert.match(day.label(c), / CK$/);
-  assert.equal(day.orders.length, 1, 'the same order, not a new one');
-  // and one whose bag is already in the holding area: a line to fetch it, with the bag's number
-  const c2 = day.makeOrder('c', W.order(world, W.rng(6)), null, true, { surname: 'Bagsworth' });
+  day.phase = 'open';
+  // a bag that was already there when the shop opened: the customer asks for it and a line fetches it
+  const old = Object.keys(day.hold).find((k) => day.hold[k]);
+  assert.ok(old && day.hold[old].locs >= 2, 'bags there from before have several products');
+  const c0 = day.send('collect', { code: old, surname: day.hold[old].surname });
+  day.arrived(c0); day.greet(c0, 'p1');
+  assert.equal(c0.order.kind, 'hold'); assert.equal(c0.order.counts, true);
+  // one the player put away this morning: a line to fetch it, with the bag's number
+  const c2 = day.makeOrder('c', W.order(world, W.rng(6), 3), null, true, { surname: 'Bagsworth' });
   day.take(c2, 'p1'); day.picked(c2);
   const code = day.freeSpots()[0];
   const p = day.putAway(c2, code, 'p1');
   assert.ok(p && day.hold[code] === p && p.surname === 'Bagsworth' && 'A' + p.num === c2.no);
   assert.equal(day.putAway(c2, code, 'p1'), null, 'the spot is full now');
-  const who2 = day.send('owner', { own: c2, surname: 'Bagsworth', code });
-  day.arrived(who2);
+  const who2 = day.send('collect', { surname: 'Bagsworth', code });
+  day.arrived(who2); day.greet(who2, 'p1');
   const f = who2.order;
-  assert.equal(f.kind, 'hold'); assert.equal(f.no, c2.no); assert.equal(day.label(f), c2.no + ' 1:1 CK'); assert.equal(f.hold.code, code);
+  assert.equal(f.kind, 'hold'); assert.equal(f.no, c2.no); assert.equal(day.label(f), c2.no + ' ' + c2.locs + ':' + c2.units + ' CK'); assert.equal(f.hold.code, code);
   day.take(f, 'p1'); day.fetch(f);
   assert.equal(day.hold[code], null, 'the bag\'s gone from its spot');
 });
@@ -208,6 +276,8 @@ test('the page: day.js loads first, the till customer answers when you copy a co
   const at = (f) => html.indexOf('warehouse-shift/' + f);
   assert.ok(at('day.js?v=') > 0 && at('day.js') < at('bot.js') && at('bot.js') < at('game.js'), 'day.js, bot.js, then game.js');
   assert.match(html, /id="dayCover"/); assert.match(html, /All picks clear/);
+  const gm = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/game.js'), 'utf8');
+  assert.match(gm, /'Time to open'/); assert.match(gm, /Lock the front door/);
   const ui = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/tillui.js'), 'utf8');
   assert.match(ui, /function copyCode[\s\S]{0,400}showCustomer\(code\)/, 'copying a code shows it to the customer');
   const bot = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/bot.js'), 'utf8');
@@ -228,6 +298,8 @@ test('controllers: a controller belongs to one player, does everything on the sc
     ['B is Back', /if \(hit\(1\)\) back\(\);/], ['X squats', /if \(hit\(2\)\) toggleSquat\(\);/], ['Y is Hint', /if \(hit\(3\)\) useHint\(\);/], ['Start: the menu', /if \(hit\(9\)\) \{ SFX\.key\(\); menu\(true\); \}/]]) assert.match(game, re, what);
   const ui = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/tillui.js'), 'utf8');
   assert.match(ui, /function pad\(act\)/);
+  assert.match(game, /if \(hit\(6\)\) till\.pad\('tabL'\); if \(hit\(7\)\) till\.pad\('tabR'\);/, 'at the till LT and RT switch tabs');
+  assert.match(ui, /act === 'tabL' \|\| act === 'tabR'/);
   assert.match(ui, /const osk = \(\) => \(touch && S\.osk\) \|\| S\.pad;/, 'with a controller the on-screen keyboard comes up');
   const css = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/till.css'), 'utf8');
   assert.match(css, /\.tl \.pad-on\{/, 'the highlight shows');

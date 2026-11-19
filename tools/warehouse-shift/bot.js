@@ -1,8 +1,8 @@
-/* Warehouse Shift: Alex, a coworker who does the same job as you (detailedfoil, 19 Nov 2026: "like a coworker, and
+/* Warehouse Shift: Sam, a coworker who does the same job as you (detailedfoil, 19 Nov 2026: "like a coworker, and
    they do the same thing, and they take as long to do everything as a human would"). A scripted worker, not an AI
-   model. Shared by the page (game.js draws Alex and the customers) and the tests.
+   model. Shared by the page (game.js draws Sam and the customers) and the tests.
 
-   Alex works from the same pick list as you (day.js), in detailedfoil's order: first any pick a customer is waiting
+   Sam works from the same pick list as you (day.js), in detailedfoil's order: first any pick a customer is waiting
    for (CK, and orders paid for at the till), then the next customer at the till, then the c picks for the holding
    area. Free again, they look at the list straight away. They serve till customers at the right-hand till of the trade
    counter (postcode, surname, then each product asked for, card or cash; kiosk orders found on Kiosk Orders), and the
@@ -16,8 +16,8 @@
 
    The pick aisles (the ones off the centre aisle, not the centre aisle itself) take one person at a time
    (detailedfoil, 19 Nov 2026): whoever is in an aisle first has it, and anyone else waits by its end until they come
-   out. Alex waits beside the opening, clear of the way out; you can't walk in while Alex is in there (game.js). In the
-   open (the centre aisle, the back walkway, behind the counter, goods in) Alex walks round you and any other
+   out. Sam waits beside the opening, clear of the way out; you can't walk in while Sam is in there (game.js). In the
+   open (the centre aisle, the back walkway, behind the counter, goods in) Sam walks round you and any other
    coworker: they stop when you're in the way, go round if there's room, and say excuse me if you don't move.
 
    Nav(world): the floor on a 10 cm grid, how far each spot is from the nearest obstacle, and the shortest way round.
@@ -34,7 +34,7 @@
   var FAR = 1.0;         // clearance is worked out up to a metre
   var SOFT = 0.5;        // closer than this to a shelf costs a little more, so paths keep to the middle of aisles
   var DI = [1, -1, 0, 0, 1, 1, -1, -1], DJ = [0, 0, 1, -1, 1, -1, 1, -1], DIAG = CELL * Math.SQRT2;
-  // Alex's trolley (detailedfoil, 19 Nov 2026): a stack of blue totes on a grey base with wheels. Pushed in front
+  // Sam's trolley (detailedfoil, 19 Nov 2026): a stack of blue totes on a grey base with wheels. Pushed in front
   // while walking; parked behind them while they pick, across the aisle, so nobody gets past
   var TROLLEY = { len: 0.78, wide: 0.5, ahead: 0.6, behind: 0.56 };
 
@@ -219,7 +219,7 @@
   };
   var SLIP = 1 / 15;       // about one thing in fifteen goes wrong (detailedfoil: "just to slow it down a bit")
 
-  /* ---------- what Alex says ---------- */
+  /* ---------- what Sam says ---------- */
   var SAY = {
     greet: ['Hiya, you alright?', 'Morning! What can I do for you?', 'Hi there, how can I help?', 'Alright? What can I get you?'],
     again: ['Sorry, say that again?', 'Sorry, what was the postcode?', "Sorry, didn't catch that."],
@@ -248,7 +248,7 @@
   // till (the till they use: a world object), start {x, y, yaw}
   function Bot(o) {
     var self = this;
-    this.id = o.id || 1; this.name = o.name || 'Alex';
+    this.id = o.id || 1; this.name = o.name || 'Sam';
     this.world = o.world; this.World = o.World; this.Till = o.Till; this.requests = o.requests || null;
     this.nav = o.nav || new Nav(o.world); this.env = o.env || {};
     var r = o.rand || Math.random;
@@ -571,6 +571,13 @@
         yield this.T(PACE.look);
         continue;
       }
+      if (job.greet) { // say hello across the counter (no walking)
+        this.say(this.pick(SAY.greet));
+        yield this.T(0.5, 1.1);
+        this.emit('greet', job.greet);
+        yield this.T(0.3, 0.7);
+        continue;
+      }
       this.jobs.push(job.serve ? 'serve' : job.pick.kind);
       if (job.serve) yield* this.serveTill(job.serve);
       else yield* this.doOrder(job.pick);
@@ -584,6 +591,7 @@
   // detailedfoil's order: a pick a customer is waiting for, then the next customer at the till, then a c pick
   Bot.prototype.choose = function () {
     var b = this.emit('board') || {}, orders = b.orders || [], queue = b.queue || [], i;
+    if (b.greet && b.greet.length) return { greet: b.greet[0] }; // a customer's been waiting at the counter for a hello
     for (i = 0; i < orders.length; i++) if (orders[i].kind !== 'c') return { pick: orders[i] };
     if (queue.length) return { serve: queue[0] };
     for (i = 0; i < orders.length; i++) if (orders[i].kind === 'c') return { pick: orders[i] };
@@ -683,8 +691,7 @@
   Bot.prototype.tillOrder = function* (c) {
     var Till = this.Till, cu = c.cust, kiosk = c.kind === 'kiosk', t0 = this.t, s0 = this.slips;
     var lines = kiosk ? c.kiosk.list[c.kiosk.mine].lines : c.lines;
-    this.say(this.pick(SAY.greet));
-    yield this.T(0.8, 1.5);
+    if (!c.greeter) { this.say(this.pick(SAY.greet)); yield this.T(0.8, 1.5); }
     this.cSay(c.say || this.pick(kiosk ? SAY.kioskHi : SAY.tillHi));
     yield this.T(1.0, 1.8);
     this.cSay("Postcode's " + cu.postcode + '.');
