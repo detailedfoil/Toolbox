@@ -35,9 +35,9 @@ function shift(seed, opts = {}) {
   };
   const arrived = new Map();
   dayEnv.customer = (c) => { arrived.set(c, T + 9); later(9, () => day.arrived(c)); };
-  day = Day.create({ world, World: W, Till, requests, rand: rng, env: dayEnv });
+  day = Day.create({ world, World: W, Till, requests, rand: rng, env: dayEnv, mode: opts.mode });
   const env = {
-    board: () => ({ orders: day.list(), queue: day.queueLate(), greet: day.ungreeted().filter((c) => T - (arrived.get(c) || 0) > 10) }),
+    board: () => ({ orders: day.listLate(), queue: [], greet: day.ungreeted().filter((c) => T - (arrived.get(c) || 0) > 10) }),
     greet: (b, c) => day.greet(c, 'Sam'),
     take: (b, o) => day.take(o, 'Sam'),
     serve: (b, c) => { if (!day.serve(c, 'Sam')) return false; later(3, () => { c.ready = true; }); return true; },
@@ -115,19 +115,17 @@ test('Sam can reach every location, the holding area, the tote stack and their t
   }
 });
 
-test('a shift on their own: Sam serves the till, picks every kind of order and puts c picks away, at a person\'s pace', () => {
-  const s = shift(20261119, { minutes: 45 });
+test('a shift on their own: Sam picks what is left on the list and puts c picks away at a person\'s pace, and never serves the till', () => {
+  const s = shift(20261119, { minutes: 45, mode: 'pick' }); // Sam serves no till customers, so on their own it's click and collects
   const by = {};
   for (const d of s.done) (by[d.done] = by[d.done] || []).push(d.took);
-  for (const k of ['till', 'c']) assert.ok(by[k] && by[k].length >= 3, k + ': ' + (by[k] || []).length);
+  assert.ok(!by.till, 'Sam never serves a till customer (detailedfoil)');
+  assert.ok(by.c && by.c.length >= 3, 'c: ' + (by.c || []).length);
   assert.ok((by.ck || []).length + (by.hold || []).length >= 2, 'click and collects: ' + JSON.stringify(Object.keys(by)));
-  assert.ok(s.done.length >= 15 && s.done.length <= 90, s.done.length + ' jobs in 45 minutes');
-  assert.ok(s.days >= 1, 'a whole day done on their own');
+  assert.ok(s.done.length >= 6 && s.done.length <= 90, s.done.length + ' jobs in 45 minutes');
   // as long as a person would take: a till conversation, a c pick into the holding area
-  const tillTalk = s.done.filter((d) => d.done === 'till').map((d) => d.took);
-  assert.ok(avg(tillTalk) > 25 && avg(tillTalk) < 200, 'serving at the till ' + avg(tillTalk).toFixed(0) + ' s');
   assert.ok(avg(by.c) > 20 && avg(by.c) < 200, 'a c pick ' + avg(by.c).toFixed(0) + ' s');
-  assert.ok(Math.max(...tillTalk) - Math.min(...tillTalk) > 5, 'every timing varies');
+  assert.ok(Math.max(...by.c) - Math.min(...by.c) > 3, 'every timing varies');
   // the odd slip (about one thing in fifteen), never a disaster
   const slips = s.bot.stats.slips;
   assert.ok(slips >= 1 && slips < s.done.length * 2, slips + ' slips');
@@ -135,9 +133,6 @@ test('a shift on their own: Sam serves the till, picks every kind of order and p
   assert.equal(s.trolleyInShelf, 0, 'the trolley pokes into the racking');
   // c picks only ever go into empty OC spots
   assert.ok(s.events.filter((e) => e.put).every((e) => e.free));
-  // the customers talk: postcode then surname at the till
-  const said = s.events.filter((e) => e.who === 'cust').map((e) => e.text).join('\n');
-  assert.match(said, /Postcode's LU[89] \d[A-Z]{2}\.\nSurname's /);
 });
 
 test('the holding area: Sam fetches the bag on the line they took, kept for that customer', () => {
@@ -166,7 +161,7 @@ test('one person to a pick aisle (detailedfoil): Sam waits by the end of an aisl
     assert.equal(s.intoYourAisle, 0, 'seed ' + seed + ': Sam went into the aisle you were in');
     assert.ok(s.queued > 0, 'seed ' + seed + ': Sam waited for you');
     assert.ok(s.closestYou >= 2 * YOU, 'seed ' + seed + ': Sam came within ' + s.closestYou.toFixed(3) + ' m of you');
-    assert.ok(s.done.length >= 6, 'seed ' + seed + ': ' + s.done.length + ' jobs done');
+    assert.ok(s.done.length >= 3, 'seed ' + seed + ': ' + s.done.length + ' jobs done');
     assert.ok(s.events.some((e) => e.who === 'me' && /wait|after you/.test(e.text)), 'seed ' + seed + ': Sam says they\'ll wait');
   }
   // the rule itself: an aisle is the space between two rows of racking, not the centre aisle or the open floor
@@ -190,7 +185,7 @@ test('Sam walks round you: standing on their spot, in the centre aisle, or walki
   };
   for (const [name, fn] of Object.entries(cases)) {
     const s = shift(8, { minutes: 15, you: fn });
-    assert.ok(s.done.length >= 5, name + ': ' + s.done.length + ' jobs done');
+    assert.ok(s.done.length >= 3, name + ': ' + s.done.length + ' jobs done');
     assert.ok(s.closestYou >= 2 * YOU - 0.005, name + ': came within ' + s.closestYou.toFixed(3) + ' m of you');
   }
 });

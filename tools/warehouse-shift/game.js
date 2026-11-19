@@ -392,7 +392,7 @@
     }
     const pulling = new Set(); // boxes moving forward or back
     const crewEnv = {
-      board: () => (day && active ? { orders: day.list(), queue: day.queueLate(), greet: day.ungreeted().filter((c) => day.t - c.here > 10) } : { orders: [], queue: [], greet: [] }),
+      board: () => (day && active ? { orders: day.listLate(), queue: [], greet: day.ungreeted().filter((c) => day.t - c.here > 10) } : { orders: [], queue: [], greet: [] }),
       greet: (b, c) => { if (day) day.greet(c, b.name); },
       take: (b, o) => !!day && day.take(o, b.name),
       serve(b, c) { if (!day || !day.serve(c, b.name)) return false; showScreen(b.till, null); callTo(c, b.till); return true; },

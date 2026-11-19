@@ -137,10 +137,10 @@
   Day.prototype.present = function () { return this.customers.filter(function (c) { return c.state !== 'gone' && c.state !== 'leaving'; }); };
   // till customers at the counter that nobody is serving yet
   Day.prototype.queue = function () { return this.customers.filter(function (c) { return c.state === 'counter' && !c.by; }); };
-  // till customers who've waited a good while for someone to serve them: only then does Sam take one, so there are
-  // plenty for you to serve yourself (detailedfoil, 19 Nov 2026: "I only served 1 customer who didn't just have a click and collect")
-  var LATE = 40;
-  Day.prototype.queueLate = function () { var t = this.t; return this.queue().filter(function (c) { return t - (c.greeted || c.here || 0) > LATE; }); };
+  // picks nobody has started for a while: Sam only takes a pick after it has sat on the list for 15 s, and never serves
+  // a till customer, so what you serve and pick is yours (detailedfoil, 19 Nov 2026)
+  var LATE_PICK = 15;
+  Day.prototype.listLate = function () { var t = this.t; return this.list().filter(function (o) { return t - o.t > LATE_PICK; }); };
   // customers at the counter nobody has said hello to yet, the one waiting longest first
   Day.prototype.ungreeted = function () { return this.customers.filter(function (c) { return c.state === 'greet'; }); };
   Day.prototype.makeOrder = function (kind, lines, cust, counts, extra) {

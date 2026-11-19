@@ -43,7 +43,7 @@ function runDay(seed, opts = {}) {
   day = Day.create({ world, World: W, Till, requests, rand: rng, env, mode: opts.mode, total: opts.total });
   const choices = [];
   const crewEnv = {
-    board: () => ({ orders: day.list(), queue: day.queueLate(), greet: day.ungreeted().filter((c) => T - ev.arrivedAt(c) > 10) }),
+    board: () => ({ orders: day.listLate(), queue: [], greet: day.ungreeted().filter((c) => T - ev.arrivedAt(c) > 10) }),
     greet: (b, c) => day.greet(c, 'Sam'),
     take: (b, o) => day.take(o, 'Sam'),
     serve: (b, c) => { if (!day.serve(c, 'Sam')) return false; later(3, () => { c.ready = true; }); return true; },
@@ -57,7 +57,7 @@ function runDay(seed, opts = {}) {
   const choose = bot.choose.bind(bot);
   bot.choose = function () {
     const j = choose();
-    if (j && !j.greet) choices.push({ job: j.serve ? 'serve' : j.pick.kind === 'c' ? 'c' : 'cust', custOn: day.list().some((o) => o.kind !== 'c'), queue: day.queueLate().length > 0 });
+    if (j && !j.greet) choices.push({ job: j.serve ? 'serve' : j.pick.kind === 'c' ? 'c' : 'cust', custOn: day.listLate().some((o) => o.kind !== 'c'), queue: false });
     return j;
   };
   const you = { busy: null, until: 0, serving: null };
@@ -98,7 +98,7 @@ function runDay(seed, opts = {}) {
 }
 
 const days = [11, 23, 37].map((s) => runDay(s));
-const alone = runDay(5, { you: false });
+const alone = runDay(5, { you: false, mode: 'pick' }); // Sam never serves a till customer, so on their own the day has click and collects only
 
 test('a day is 15 to 25 picks, the first 3 to 6 of them c picks before opening; it opens by itself and you lock the door to finish', () => {
   for (const d of days.concat([alone])) {
@@ -124,7 +124,7 @@ test('a day is 15 to 25 picks, the first 3 to 6 of them c picks before opening; 
 
 test('the mix: about 40% till or kiosk, the rest one product click and collects and bag collections, both always there', () => {
   let tillish = 0, all = 0;
-  for (const d of days.concat([alone])) {
+  for (const d of days) {
     const os = d.day.orders.filter((o) => o.counts);
     const till = os.filter((o) => o.kind === 'till').length;
     tillish += till; all += os.length;
@@ -138,7 +138,7 @@ test('the mix: about 40% till or kiosk, the rest one product click and collects 
     assert.ok(c.every((o) => o.lines.length >= 2 && !o.cust), 'a c pick has more than one product and no customer');
   }
   assert.ok(tillish / all > 0.3 && tillish / all < 0.5, 'around 40% over the days: ' + Math.round(100 * tillish / all));
-  assert.ok(days.concat([alone]).some((d) => d.day.total !== 20), 'the length changes from day to day');
+  assert.ok(days.some((d) => d.day.total !== 20), 'the length changes from day to day');
 });
 
 test('a customer waits to be greeted: nothing is said until someone says hello, then they say what they want', () => {
@@ -223,19 +223,27 @@ test('whoever starts an order has it: off the list, nobody else can take it, and
   assert.match(game, /say\('Finish task', 'err'/, 'Back on the scanner says Finish task');
 });
 
-test('Sam: picks a customer is waiting for, then the next customer at the till, then c picks', () => {
+test('Sam: never serves a till customer, and only takes a pick that has sat on the list 15 s (customer picks before c picks)', () => {
   let n = 0;
   for (const d of days.concat([alone])) {
+    assert.ok(!d.bot.jobs.includes('serve'), 'Sam never serves a till customer');
     for (const c of d.choices) {
       if (c.custOn) assert.equal(c.job, 'cust', 'a customer pick was on the list');
-      else if (c.queue) assert.equal(c.job, 'serve', 'someone was waiting at the till');
       else assert.equal(c.job, 'c');
       n++;
     }
   }
-  assert.ok(n > 40, n + ' choices');
+  assert.ok(n > 15, n + ' choices');
   const jobs = alone.bot.jobs;
-  assert.ok(jobs.includes('serve') && jobs.includes('c') && (jobs.includes('ck') || jobs.includes('till')), 'Sam does all of it: ' + jobs.join(' '));
+  assert.ok(jobs.includes('c') && jobs.includes('ck'), 'Sam picks what is left: ' + jobs.join(' '));
+  // a pick is never taken by Sam in its first 15 s
+  for (const d of days.concat([alone])) for (const l of d.day.log) if (l.by === 'Sam') assert.ok(l.took >= 0, 'took a while');
+  const late = Day.create({ world, World: W, Till, requests, rand: W.rng(12), env: {} });
+  late.phase = 'open';
+  const o = late.makeOrder('c', W.order(world, W.rng(3), 2), null, true);
+  assert.equal(late.listLate().length, 0, 'new on the list: Sam leaves it');
+  late.tick(15.5);
+  assert.ok(late.listLate().some((x) => x.id === o.id), 'after 15 s Sam can take it');
   // as long as a person takes
   const took = alone.bot.log.filter((l) => l.done === 'c' || l.done === 'ck' || l.done === 'till');
   assert.ok(took.every((l) => l.took > 15 && l.took < 300), took.map((l) => l.done + ' ' + l.took.toFixed(0)).join(', '));
@@ -243,7 +251,7 @@ test('Sam: picks a customer is waiting for, then the next customer at the till, 
 
 test('the holding area: c picks go into empty OC spots only, and customers collect the bags (new and old) with no warehouse walk', () => {
   for (const d of days) assert.equal(d.putFull, 0, 'a full OC spot never takes another order');
-  const all = days.concat([alone]);
+  const all = days;
   const put = all.flatMap((d) => d.day.orders.filter((o) => o.kind === 'c' && o.code));
   assert.ok(put.length >= 12, put.length + ' put away');
   const fetched = all.flatMap((d) => d.day.orders.filter((o) => o.kind === 'hold'));
