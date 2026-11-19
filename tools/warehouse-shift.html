@@ -12,7 +12,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=c16c6c3a4b">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=640d718fa4">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=16b209e198">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
@@ -21,51 +21,54 @@
 <body class="ws">
 <main class="ws-stage" id="stage">
   <canvas id="view" tabindex="0" aria-label="The warehouse"></canvas>
-  <div class="ws-cross" id="cross" hidden></div>
-  <div class="ws-toast" id="toast" role="status"></div>
-  <div class="ws-banner" id="banner" role="status"><b id="bannerTitle"></b><span id="bannerText"></span></div>
-  <div class="ws-say" id="say" hidden aria-live="polite"><p id="sayText"></p></div>
 
   <div class="ws-top" id="topBar" hidden>
     <a class="ws-btn" href="../index.html" aria-label="Back to the Toolbox" title="Back to the Toolbox">&larr;</a>
     <button class="ws-btn" id="fullBtn" type="button" aria-label="Full screen" title="Full screen">&#x26F6;</button>
     <button class="ws-btn" id="helpBtn" type="button" aria-label="How to play" title="How to play">?</button>
-    <span class="ws-order" id="orderChip"><span>Orders done</span> <b id="doneCount">0</b></span>
-    <span class="ws-order" id="toteChip" title="Lines in the tote"><svg viewBox="0 0 24 16" width="20" height="14" aria-hidden="true"><path d="M1 3h22l-2 12H3z" fill="#2e66b5" stroke="#9cc0ff" stroke-width="1.2"/><path d="M5 6h14" stroke="#9cc0ff" stroke-width="1.2"/></svg><b id="toteCount">0</b></span>
   </div>
 
-  <div class="ws-stickzone" id="stickZone" hidden><div class="ws-stick" id="stick"><div class="ws-knob" id="knob"></div></div></div>
-  <button class="ws-squat" id="squatBtn" type="button" aria-pressed="false" hidden>Squat<small>C</small></button>
-  <button class="ws-tillbtn" id="tillBtn" type="button" hidden>Use till<small>F</small></button>
-
-  <section class="sc" id="scanner" hidden aria-label="Scanner">
+  <!-- one player's own things; split screen (PC) copies this for player 2 -->
+  <div class="ws-pv" id="pv1">
+  <div class="ws-tag" data-el="tag" hidden>Player 1</div>
+  <div class="ws-cross" id="cross" data-el="cross" hidden></div>
+  <div class="ws-toast" id="toast" data-el="toast" role="status"></div>
+  <div class="ws-banner" id="banner" data-el="banner" role="status"><b id="bannerTitle" data-el="bannerTitle"></b><span id="bannerText" data-el="bannerText"></span></div>
+  <div class="ws-say" id="say" data-el="say" hidden aria-live="polite"><p id="sayText" data-el="sayText"></p></div>
+  <div class="ws-chips" id="chips" data-el="chips" hidden>
+    <span class="ws-order ws-chip-done" id="orderChip" data-el="orderChip"><span>Orders done</span> <b id="doneCount" data-el="doneCount">0</b></span>
+    <span class="ws-order" id="toteChip" data-el="toteChip" title="Lines in the tote"><svg viewBox="0 0 24 16" width="20" height="14" aria-hidden="true"><path d="M1 3h22l-2 12H3z" fill="#2e66b5" stroke="#9cc0ff" stroke-width="1.2"/><path d="M5 6h14" stroke="#9cc0ff" stroke-width="1.2"/></svg><b id="toteCount" data-el="toteCount">0</b></span>
+  </div>
+  <button class="ws-squat" id="squatBtn" data-el="squatBtn" type="button" aria-pressed="false" hidden>Squat<small>C</small></button>
+  <button class="ws-tillbtn" id="tillBtn" data-el="tillBtn" type="button" hidden>Use till<small>F</small></button>
+  <section class="sc" id="scanner" data-el="scanner" hidden aria-label="Scanner">
     <div class="sc-body">
       <span class="sc-speaker"></span><span class="sc-led"></span><span class="sc-power"></span>
-      <div class="sc-screen" id="scScreen">
+      <div class="sc-screen" id="scScreen" data-el="scScreen">
         <div class="sc-status">
           <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="#dfe6f2" stroke-width="2.4"/><circle cx="12" cy="12" r="3.6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="#dfe6f2" stroke-width="2.2"/></svg><svg viewBox="0 0 16 24" aria-hidden="true"><rect x="2" y="4" width="12" height="18" rx="2" fill="none" stroke="#dfe6f2" stroke-width="2"/><rect x="5" y="1" width="6" height="3"/><path d="M5 10l6 6M11 10l-6 6" stroke="#dfe6f2" stroke-width="1.8"/></svg></span>
-          <span><svg viewBox="0 0 24 20" aria-hidden="true"><path d="M12 19L1 6a16 16 0 0 1 22 0z"/></svg><svg viewBox="0 0 12 24" aria-hidden="true"><rect x="3" y="0" width="6" height="3"/><rect x="0" y="3" width="12" height="21" rx="1.5"/></svg><b id="scTime">7:24</b></span>
+          <span><svg viewBox="0 0 24 20" aria-hidden="true"><path d="M12 19L1 6a16 16 0 0 1 22 0z"/></svg><svg viewBox="0 0 12 24" aria-hidden="true"><rect x="3" y="0" width="6" height="3"/><rect x="0" y="3" width="12" height="21" rx="1.5"/></svg><b id="scTime" data-el="scTime">7:24</b></span>
         </div>
-        <div class="sc-text" id="scText"></div>
-        <div class="sc-list" id="scList" hidden><div class="sc-lt">Today Picking</div><div class="sc-lh">ORDER</div><ol class="sc-rows" id="scRows"></ol></div>
-        <div class="sc-note" id="scNote" hidden></div>
-        <div class="sc-select" id="scSelect" hidden>Select<span class="sc-cur line"></span></div>
+        <div class="sc-text" id="scText" data-el="scText"></div>
+        <div class="sc-list" id="scList" data-el="scList" hidden><div class="sc-lt">Today Picking</div><div class="sc-lh">ORDER</div><ol class="sc-rows" id="scRows" data-el="scRows"></ol></div>
+        <div class="sc-note" id="scNote" data-el="scNote" hidden></div>
+        <div class="sc-select" id="scSelect" data-el="scSelect" hidden>Select<span class="sc-cur line"></span></div>
         <div class="sc-side">
-          <button class="sc-ico sc-kbd" id="scKbd" type="button" aria-label="Number pad"><svg viewBox="0 0 64 40" aria-hidden="true"><rect x="2" y="2" width="60" height="36" rx="5" fill="none" stroke="#fff" stroke-width="3.5"/><g fill="#fff"><rect x="9" y="9" width="6" height="5"/><rect x="18" y="9" width="6" height="5"/><rect x="27" y="9" width="6" height="5"/><rect x="36" y="9" width="6" height="5"/><rect x="45" y="9" width="10" height="5"/><rect x="9" y="17" width="6" height="5"/><rect x="18" y="17" width="6" height="5"/><rect x="27" y="17" width="6" height="5"/><rect x="36" y="17" width="6" height="5"/><rect x="45" y="17" width="10" height="5"/><rect x="13" y="26" width="34" height="5"/><rect x="50" y="22" width="5" height="9"/></g></svg></button>
-          <button class="sc-ico" id="scUp" type="button" aria-label="Up"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 11l-11 12h7v13h8V23h7z" fill="#fff"/></svg></button>
-          <button class="sc-ico" id="scDown" type="button" aria-label="Down"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 37l11-12h-7V12h-8v13h-7z" fill="#fff"/></svg></button>
+          <button class="sc-ico sc-kbd" id="scKbd" data-el="scKbd" type="button" aria-label="Number pad"><svg viewBox="0 0 64 40" aria-hidden="true"><rect x="2" y="2" width="60" height="36" rx="5" fill="none" stroke="#fff" stroke-width="3.5"/><g fill="#fff"><rect x="9" y="9" width="6" height="5"/><rect x="18" y="9" width="6" height="5"/><rect x="27" y="9" width="6" height="5"/><rect x="36" y="9" width="6" height="5"/><rect x="45" y="9" width="10" height="5"/><rect x="9" y="17" width="6" height="5"/><rect x="18" y="17" width="6" height="5"/><rect x="27" y="17" width="6" height="5"/><rect x="36" y="17" width="6" height="5"/><rect x="45" y="17" width="10" height="5"/><rect x="13" y="26" width="34" height="5"/><rect x="50" y="22" width="5" height="9"/></g></svg></button>
+          <button class="sc-ico" id="scUp" data-el="scUp" type="button" aria-label="Up"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 11l-11 12h7v13h8V23h7z" fill="#fff"/></svg></button>
+          <button class="sc-ico" id="scDown" data-el="scDown" type="button" aria-label="Down"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 37l11-12h-7V12h-8v13h-7z" fill="#fff"/></svg></button>
         </div>
-        <button class="sc-hint" id="scHint" type="button"><span>&lt;F4&gt;</span><span>Hint</span></button>
-        <div class="sc-picked" id="scPicked">Picked : <span class="val" id="scQty"></span><span class="sc-cur line" id="scCur"></span></div>
+        <button class="sc-hint" id="scHint" data-el="scHint" type="button"><span>&lt;F4&gt;</span><span>Hint</span></button>
+        <div class="sc-picked" id="scPicked" data-el="scPicked">Picked : <span class="val" id="scQty" data-el="scQty"></span><span class="sc-cur line" id="scCur" data-el="scCur"></span></div>
         <div class="sc-keys">
-          <button class="sc-k sc-fn" id="scFn" type="button">Function</button>
-          <button class="sc-k sc-scan" id="scScan" type="button">Scan</button>
-          <button class="sc-k sc-enter" id="scEnter" type="button">Enter</button>
+          <button class="sc-k sc-fn" id="scFn" data-el="scFn" type="button">Function</button>
+          <button class="sc-k sc-scan" id="scScan" data-el="scScan" type="button">Scan</button>
+          <button class="sc-k sc-enter" id="scEnter" data-el="scEnter" type="button">Enter</button>
         </div>
         <div class="sc-bot">
-          <button class="sc-tab" id="scLogoff" type="button">Log Off</button>
-          <button class="sc-tab" id="scBack" type="button">Back</button>
-          <div class="sc-tab page"><span id="scPrev" role="button" aria-label="Previous line">&laquo;</span><span id="scNext" role="button" aria-label="Next line">&raquo;</span></div>
+          <button class="sc-tab" id="scLogoff" data-el="scLogoff" type="button">Log Off</button>
+          <button class="sc-tab" id="scBack" data-el="scBack" type="button">Back</button>
+          <div class="sc-tab page"><span id="scPrev" data-el="scPrev" role="button" aria-label="Previous line">&laquo;</span><span id="scNext" data-el="scNext" role="button" aria-label="Next line">&raquo;</span></div>
         </div>
         <div class="sc-nav" aria-hidden="true">
           <svg viewBox="0 0 30 20"><path d="M9 4L3 10l6 6M3 10h17a6 6 0 0 1 0 12"/></svg>
@@ -73,19 +76,22 @@
           <svg viewBox="0 0 30 20"><path d="M4 5h22M4 10h22M4 15h22"/></svg>
           <svg viewBox="0 0 30 20"><rect x="4" y="4" width="22" height="12" rx="6"/></svg>
         </div>
-        <div class="sc-pad" id="scPad">
+        <div class="sc-pad" id="scPad" data-el="scPad">
           <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
           <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
           <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
           <button type="button" data-k="back" class="pb" aria-label="Delete">&#x232B;</button><button type="button" data-k="0">0</button><button type="button" data-k="enter" class="pe" aria-label="Enter">&#x21B5;</button>
         </div>
-        <div class="sc-menu" id="scMenu" hidden></div>
-        <div class="sc-flash" id="scFlash"></div>
+        <div class="sc-menu" id="scMenu" data-el="scMenu" hidden></div>
+        <div class="sc-flash" id="scFlash" data-el="scFlash"></div>
       </div>
     </div>
   </section>
+  <section class="tl" id="till" data-el="till" hidden aria-label="Till"></section>
+  </div>
 
-  <section class="tl" id="till" hidden aria-label="Till"></section>
+  <div class="ws-stickzone" id="stickZone" hidden><div class="ws-stick" id="stick"><div class="ws-knob" id="knob"></div></div></div>
+
 
   <div class="ws-cover" id="loading">
     <div class="ws-load"><b>Warehouse Shift</b><span id="loadText">Loading the warehouse&hellip;</span><div class="ws-meter"><div id="loadBar"></div></div></div>
@@ -98,10 +104,20 @@
       <div id="startStats"></div>
       <div class="ws-row">
         <button class="ws-go" id="startBtn" type="button">Start shift</button>
+        <button class="ws-alt" id="twoBtn" type="button" hidden>Two players</button>
         <button class="ws-alt" id="howBtn" type="button">How to play</button>
         <button class="ws-alt" id="installBtn" type="button" hidden>Install game</button>
       </div>
       <p class="ws-small">A made-up warehouse with the store's 10,999 nailed products. Best played with your phone sideways.</p>
+    </div>
+  </div>
+
+  <div class="ws-cover" id="joinCover" hidden>
+    <div class="ws-card">
+      <h1>Two players</h1>
+      <p>Split screen, one above the other, sharing the same pick list (and Alex). Each player presses something to join: <b>A</b> on a controller, or any key or a click for the keyboard and mouse. The first to join plays in the top half.</p>
+      <div class="ws-join"><div id="joinTop"><b>Top</b><span>Waiting for a player</span></div><div id="joinBottom"><b>Bottom</b><span>Waiting for a player</span></div></div>
+      <div class="ws-row"><button class="ws-go" id="joinGo" type="button" disabled>Start shift</button><button class="ws-alt" id="joinBack" type="button">Back</button></div>
     </div>
   </div>
 
@@ -154,7 +170,7 @@
           <h2>Phone</h2>
           <ul><li>Left thumb: walk (push further to jog)</li><li>Drag the view to look round</li><li>Tap a label to scan it</li><li>Squat button next to the scanner</li></ul>
           <h2>Controller</h2>
-          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>A</b> scan, <b>RT</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>RT</b> Enter, <b>LB</b>/<b>RB</b> switch tabs, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
+          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>RT</b> Enter, <b>LB</b>/<b>RB</b> switch tabs, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
           <h2>Computer</h2>
           <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or <kbd>F</kbd> scan, <kbd>Enter</kbd> next, <kbd>C</kbd> squat, <kbd>H</kbd> hint</li><li><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose on the pick list</li><li><kbd>Tab</kbd> opens the scanner's Function menu</li></ul>
         </div>
@@ -199,6 +215,6 @@
 <script src="warehouse-shift/day.js?v=e00a95a97f"></script>
 <script src="warehouse-shift/bot.js?v=16749e0cba"></script>
 <script src="warehouse-shift/tillui.js?v=dd3d1c0d18"></script>
-<script src="warehouse-shift/game.js?v=b05e239870"></script>
+<script src="warehouse-shift/game.js?v=32d429e751"></script>
 </body>
 </html>

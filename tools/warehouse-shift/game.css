@@ -45,6 +45,18 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-bub.crew{background:#fffdf2f0}.ws-bub.crew::after{border-top-color:#fffdf2f0}
 @media (max-height:480px){.ws-bub{font-size:11.5px;padding:5px 8px;max-width:min(230px,38vw)}}
 
+/* each player's own things (one container each; split screen puts player 1 in the top half, player 2 below) */
+.ws-pv{position:absolute;inset:0;pointer-events:none}
+.ws-pv .sc,.ws-pv .tl,.ws-pv .ws-squat,.ws-pv .ws-tillbtn,.ws-pv .ws-chips{pointer-events:auto}
+.ws-chips{position:absolute;top:max(8px,env(safe-area-inset-top));left:calc(max(8px,env(safe-area-inset-left)) + 138px);display:flex;gap:6px;z-index:5}
+.ws-stage.split .ws-pv{overflow:hidden}
+.ws-stage.split #pv1{bottom:50%}
+.ws-stage.split .ws-pv.p2{top:50%;border-top:3px solid #0d1117}
+.ws-stage.split .ws-pv.p2 .ws-chips{left:max(8px,env(safe-area-inset-left))}
+.ws-tag{position:absolute;left:max(8px,env(safe-area-inset-left));top:max(8px,env(safe-area-inset-top));z-index:5;padding:4px 10px;border-radius:10px;background:#0b1022c0;border:1px solid #ffffff30;font:800 13px system-ui,sans-serif;color:#ffd34d;pointer-events:none}
+.ws-stage.split #pv1 .ws-tag{left:auto;right:calc(var(--scw,200px) + 18px)}
+.ws-stage.split .ws-pv.p2 .ws-tag{left:auto;right:calc(var(--scw,200px) + 18px)}
+
 /* top left: back, full screen, help */
 .ws-top{position:absolute;top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));display:flex;gap:6px;z-index:5}
 .ws-btn{display:grid;place-items:center;min-width:38px;height:38px;padding:0 10px;border:1px solid #ffffff30;border-radius:12px;background:#0b1022c0;color:#fff;
@@ -55,7 +67,7 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-order.bump{animation:wsBump .45s ease-out}
 @keyframes wsBump{30%{transform:scale(1.18);background:#1b6e33ee}}
 @media (pointer:coarse){.ws-squat small{display:none}}
-@media (max-width:640px){#orderChip span{display:none}}
+@media (max-width:640px){.ws-chip-done span{display:none}}
 
 /* the walking stick (left thumb) and squat (near the scanner) */
 .ws-stickzone{position:absolute;left:0;bottom:0;width:38%;height:62%;z-index:2;touch-action:none}
@@ -207,3 +219,10 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 @media (prefers-reduced-motion:reduce){.sc-cur,.sc-enter.pulse,.sc-scan.pulse,.ws-rotate svg,.ws-tillbtn{animation:none}}
 /* a controller's highlight in the scanner's Function menu */
 .sc-menu button.pad-on{background:#2a3657;outline:.14em solid #ffd34d;outline-offset:-.14em}
+
+/* two players (PC): who's playing on what */
+.ws-join{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 4px}
+.ws-join div{padding:14px 10px;border-radius:14px;background:#1f2633;border:2px dashed #3a4558;text-align:center;min-height:86px;display:grid;place-items:center}
+.ws-join div.on{border:2px solid #ffd34d;background:#2a2f1f}
+.ws-join b{display:block;font-size:1.05rem;color:#fff}
+.ws-join span{font-size:.85rem;color:#c3cede}

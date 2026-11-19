@@ -13,7 +13,9 @@
    all done and nobody's waiting. Hint makes the location glow; squat for the bottom shelves. Played mainly with the
    phone sideways: left thumb walks, drag to look. On a computer: WASD, mouse look.
 
-   Alex (bot.js) works from the same list, pushing a trolley that blocks the aisle while they pick.
+   Alex (bot.js) works from the same list, pushing a trolley that blocks the aisle while they pick. On a computer two
+   people can play at once: split screen, one above the other, each with their own scanner, till and controls (a
+   controller each, or one on the keyboard and mouse).
 
    world.js makes the warehouse, day.js the day's orders and customers, scene.js draws it, till.js and tillui.js are
    the till, bot.js is Alex. This file is the rest: the shared things (customers walking about, totes going over the
@@ -454,6 +456,15 @@
       }
       return false;
     }
+    // two players: neither walks into the other (two can share an aisle, detailedfoil)
+    function peerStop(me, x, y) {
+      for (const q of players) {
+        if (q.me === me) continue;
+        const dn = Math.hypot(x - q.me.x, y - q.me.y);
+        if (dn < 2 * BODY && dn < Math.hypot(me.x - q.me.x, me.y - q.me.y) - 1e-4) return true;
+      }
+      return false;
+    }
     const _frus = new T.Frustum(), _fm = new T.Matrix4(), _sph = new T.Sphere(new T.Vector3(), 1.3);
     let crewIdle = 0;
     function updateCrew(dt) { // true when Alex needs drawing again
@@ -513,10 +524,11 @@
     /* ---------- a player: their camera, controls, scanner and till ---------- */
     // D: the player's own elements; root: where their layout's sizes go
     function makePlayer(idx, D) {
-      const P = { idx, id: 'p' + (idx + 1) };
+      const P = { idx, id: 'p' + (idx + 1), D, kb: idx === 0 };
       const me = { x: world.start.x + idx * 0.7, y: world.start.y, yaw: world.start.yaw, pitch: -0.05, vx: 0, vy: 0, eye: 1.62, squat: false, bob: 0, speed: 0 };
       const cam = new T.PerspectiveCamera(60, 1, 0.03, 120);
       cam.rotation.order = 'YXZ';
+      cam.layers.enable(1 + idx);
       const view = { x: 0, y: 0, w: 1, h: 1, cx: 0.5, cy: 0.5, landscape: true };
       P.me = me; P.cam = cam; P.view = view;
 
@@ -574,8 +586,8 @@
         me.speed = Math.hypot(me.vx, me.vy);
         if (me.speed > 0.01) {
           const nx = me.x + me.vx * dt, ny = me.y + me.vy * dt;
-          if (!blocked(nx, me.y) && !crewStop(me, nx, me.y)) me.x = nx; else me.vx = 0;
-          if (!blocked(me.x, ny) && !crewStop(me, me.x, ny)) me.y = ny; else me.vy = 0;
+          if (!blocked(nx, me.y) && !crewStop(me, nx, me.y) && !peerStop(me, nx, me.y)) me.x = nx; else me.vx = 0;
+          if (!blocked(me.x, ny) && !crewStop(me, me.x, ny) && !peerStop(me, me.x, ny)) me.y = ny; else me.vy = 0;
           me.bob += me.speed * dt * 2.3;
           moved = true;
         } else { me.vx = me.vy = 0; me.speed = 0; }
@@ -594,7 +606,7 @@
       let life = { orders: 0, lines: 0, units: 0 };
       try { life = Object.assign(life, JSON.parse(localStorage.getItem('ws-stats-v1') || '{}')); } catch (e) { /* fine */ }
       P.stats = stats; P.life = life;
-      function saveLife() { try { localStorage.setItem('ws-stats-v1', JSON.stringify(life)); } catch (e) { /* fine */ } }
+      function saveLife() { if (idx) return; try { localStorage.setItem('ws-stats-v1', JSON.stringify(life)); } catch (e) { /* fine */ } } // player 1's, kept on the device
       function lineHtml(text, cls) { const s = document.createElement('span'); s.className = 'sc-line' + (cls ? ' ' + cls : ''); s.textContent = text; return s; }
       function say(text, cls, ms) { msg = { text, cls }; msgUntil = performance.now() + (ms || 1700); renderScanner(); }
       function renderTote() {
@@ -935,8 +947,14 @@
       }
       function updateHint(dt) {
         const on = hint.until > performance.now();
-        if (!on) { if (S.glow.visible || S.signGlow.visible) { S.glow.visible = S.signGlow.visible = false; renderScanner(); return true; } return false; }
-        hint.t += dt;
+        if (!on) { if (hint.shown) { hint.shown = false; renderScanner(); return true; } return false; }
+        hint.t += dt; hint.shown = true;
+        return true;
+      }
+      // the glow in this player's view (the glow and the aim box are one each, shared: set just before each view is drawn)
+      function applyHint() {
+        S.glow.visible = false; S.signGlow.visible = false;
+        if (!(hint.until > performance.now())) return;
         const pulse = 0.5 + 0.5 * Math.sin(hint.t * 6.5);
         S.glowMat.opacity = 0.28 + 0.5 * pulse;
         if (hint.spot) {
@@ -958,8 +976,7 @@
             S.signGlow.scale.set(es.mesh.geometry.parameters.width + 0.14, es.mesh.geometry.parameters.height + 0.14, 1);
             S.signGlow.material.opacity = 0.35 + 0.55 * pulse; S.signGlow.visible = true;
           }
-        } else { S.glow.visible = false; S.signGlow.visible = false; }
-        return true;
+        }
       }
 
       /* ---------- picked items fly into the tote ---------- */
@@ -973,6 +990,7 @@
           const slide = it.trayRef ? 0.32 : (it.pull || 0);
           m.position.set(b.x + (k - (n - 1) / 2) * Math.min(0.04, b.w * 0.3), b.z + b.h / 2, b.y + f.out * slide);
           m.scale.set(Math.max(0.03, b.w * (it.trayRef ? 0.7 : 0.55)), Math.max(0.03, b.h * 0.7), Math.max(0.03, b.d * 0.5));
+          m.layers.set(1 + idx); // only this player sees them fly into their tote
           scene.add(m);
           flyers.push({ m, from: m.position.clone(), s0: m.scale.clone(), t: -k * 0.07, dur: 0.55 });
         }
@@ -1068,7 +1086,7 @@
         let best = null;
         if (me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75) {
           let bd = 0.95;
-          for (const t of tills) { if (t === ALEX_TILL) continue; const d = Math.abs(me.x - tillX(t)); if (d < bd) { bd = d; best = t; } }
+          for (const t of tills) { if (t === ALEX_TILL || players.some((q) => q !== P && q.tillAt() === t)) continue; const d = Math.abs(me.x - tillX(t)); if (d < bd) { bd = d; best = t; } }
         }
         if (best === nearTill) return;
         nearTill = best;
@@ -1132,6 +1150,7 @@
         return o.no;
       }
       P.tillOpen = () => !!(till && till.isOpen());
+      P.tillAt = () => (till && till.isOpen() ? nearTill : null);
 
       /* ---------- what your till customer says: a bubble over their head ---------- */
       let sayShown = 0, sayLine = null;
@@ -1260,7 +1279,7 @@
       D.scScreen.addEventListener('scroll', (e) => { e.target.scrollTop = 0; e.target.scrollLeft = 0; }); // never scrolled (older browsers without overflow: clip)
 
       /* ---------- a controller (game.js gives each player theirs: padIndex) ---------- */
-      // Left stick walks (right out to jog), right stick looks, A scans, RT (or RB) is Enter, B is Back, X squats, Y is
+      // Left stick walks (right out to jog), right stick looks, RT scans, A is Enter (detailedfoil), B is Back, X squats, Y is
       // Hint, the d-pad goes up and down the pick list (and the lines of a pick), Start opens the Function menu, View is
       // help, LT held jogs. At the till the d-pad (or stick) moves a highlight and tillui.js does the rest.
       P.padIndex = null;
@@ -1312,11 +1331,11 @@
         const curve = (v) => Math.sign(v) * Math.pow(Math.abs(v), 1.6);
         lookIn.x = curve(rx); lookIn.y = curve(ry);
         if (now[6] !== padRun) { padRun = now[6]; running = padRun; }
-        if (hit(0)) { initAudio(); const c = centreNdc(); scanAt(c[0], c[1]); }
+        if (hit(7)) { initAudio(); const c = centreNdc(); scanAt(c[0], c[1]); }
         if (hit(1)) back();
         if (hit(2)) toggleSquat();
         if (hit(3)) useHint();
-        if (hit(7) || hit(5)) { SFX.key(); enter(); }
+        if (hit(0)) { SFX.key(); enter(); }
         if (hit(9)) { SFX.key(); menu(true); }
         if (hit(8)) showHelp(true);
         const d = steer(false);
@@ -1342,9 +1361,10 @@
         if (!D.say.hidden && sayLine && now - sayShown > (sayLine.quote ? 24000 : 14000)) D.say.hidden = true;
         return changed;
       };
-      P.beforeRender = () => { if (active) updateAim(); };
+      P.beforeRender = () => { if (active) updateAim(); else S.aimBox.visible = false; applyHint(); };
       P.afterRender = (now) => { placeSay(); placeBubs(now); };
       P.start = () => { if (state === 'idle') state = day && day.over ? 'end' : 'list'; renderScanner(); };
+      P.show = () => { D.scanner.hidden = false; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; };
       // things the controls and the tests use
       Object.assign(P, { scanAt, enter, back, page, digit, useHint, toggleSquat, openTill, closeTill, countOne, confirmQty, handOver, hitAt, holdHit, scanHold, scanPut, tapRow,
         state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
@@ -1364,13 +1384,27 @@
         const p = players.find((x) => x.padIndex === null);
         if (!p) return;
         p.padIndex = gp.index; // the press that claims it counts too
-        p.toast('Controller on: A scans, RT is Enter, B is Back');
+        p.toast('Controller on: RT scans, A is Enter, B is Back');
       }
     }
+    const joinPrev = new Map(); // controller -> buttons down last time, on the join screen
     function pollPads(dt) {
       const list = padList();
       if (!list.some(Boolean)) return;
-      claimPads(list);
+      if (joining) {
+        for (const gp of list) {
+          if (!gp || !gp.connected) continue;
+          const now = gp.buttons.map((b) => !!(b && (b.pressed || b.value > 0.5))), prev = joinPrev.get(gp.index) || [];
+          joinPrev.set(gp.index, now);
+          const hit = (i) => now[i] && !prev[i];
+          const mine = joined.some((j) => j.kind === 'pad' && j.pad === gp.index);
+          if (mine && joined.length >= 2 && (hit(0) || hit(9))) { startSplit(); return; }
+          if (mine && hit(1)) { leaveJoin(); return; }
+          if (!mine && (hit(0) || hit(9))) join({ kind: 'pad', pad: gp.index });
+        }
+        return;
+      }
+      if (!split) claimPads(list);
       for (const p of players) {
         if (p.padIndex === null) continue;
         const gp = list[p.padIndex];
@@ -1379,18 +1413,34 @@
     }
 
     /* ---------- player 1: the page's own elements ---------- */
-    const ids = ['cross', 'toast', 'banner', 'bannerTitle', 'bannerText', 'say', 'sayText', 'doneCount', 'toteCount', 'toteChip', 'squatBtn', 'tillBtn', 'scanner', 'scScreen', 'scText', 'scList', 'scRows', 'scNote', 'scSelect',
-      'scQty', 'scCur', 'scPicked', 'scPad', 'scMenu', 'scFlash', 'scEnter', 'scScan', 'scFn', 'scBack', 'scLogoff', 'scHint', 'scKbd', 'scUp', 'scDown', 'scPrev', 'scNext', 'till'];
-    const D1 = { root: stage };
-    for (const id of ids) D1[id] = $(id);
-    const me1 = makePlayer(0, D1);
+    // a player's elements: everything in their container with a data-el name
+    function grab(root) { const D = { root }; root.querySelectorAll('[data-el]').forEach((n) => { D[n.dataset.el] = n; }); return D; }
+    let split = false;
+    const pvCopy = $('pv1').cloneNode(true); // a clean copy, for player 2
+    const me1 = makePlayer(0, grab($('pv1')));
+    const D1 = me1.D;
     players.push(me1);
     const me = me1.me;
     function layout() {
       const vw = Math.max(1, window.innerWidth), vh = Math.max(1, window.innerHeight);
       renderer.setSize(vw, vh, false);
-      me1.layout({ x: 0, y: 0, w: vw, h: vh });
+      if (split && players[1]) { const h = Math.floor(vh / 2); players[0].layout({ x: 0, y: 0, w: vw, h }); players[1].layout({ x: 0, y: h, w: vw, h: vh - h }); }
+      else me1.layout({ x: 0, y: 0, w: vw, h: vh });
     }
+    // player 2 (split screen): a copy of player 1's things, in the bottom half
+    function addPlayer2() {
+      const root = pvCopy.cloneNode(true);
+      root.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
+      root.removeAttribute('id'); root.classList.add('p2');
+      root.querySelector('[data-el="tag"]').textContent = 'Player 2';
+      $('pv1').after(root);
+      const p2 = makePlayer(1, grab(root));
+      players.push(p2);
+      p2.render();
+      return p2;
+    }
+    // who the keyboard and mouse belong to: player 1, or in split screen whoever joined with them
+    const kbPlayer = () => (split ? players.find((p) => p.kb) || null : me1);
     window.addEventListener('resize', layout);
     window.addEventListener('orientationchange', () => setTimeout(layout, 250));
     layout();
@@ -1400,6 +1450,7 @@
     let stickId = null, stickC = null;
     const stickHome = () => { stick.style.left = ''; stick.style.top = ''; stick.classList.remove('live'); knob.style.transform = ''; };
     me1.onTill = () => { stickId = null; stickHome(); looks.clear(); };
+    const canvasNdc = (p, e) => { const r = canvas.getBoundingClientRect(), v = p.view; return [((e.clientX - r.left - v.x) / v.w) * 2 - 1, -((e.clientY - r.top - v.y) / v.h) * 2 + 1]; };
     zone.addEventListener('pointerdown', (e) => {
       if (stickId !== null) return;
       e.preventDefault(); initAudio();
@@ -1424,12 +1475,15 @@
     const locked = () => document.pointerLockElement === canvas;
     function lockMouse() { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (x) { /* not allowed */ } }
     canvas.addEventListener('pointerdown', (e) => {
-      if (!me1.playing()) return;
+      const kp = kbPlayer();
+      if (joining) { join({ kind: 'kb' }); e.preventDefault(); return; }
+      if (!kp || !kp.playing()) return;
       initAudio();
       if (e.pointerType === 'mouse') {
         if (!locked() && !mouseDrag) { lockMouse(); e.preventDefault(); return; }
-        if (locked()) { if (e.button === 0) { const c = me1.centre(); me1.scanAt(c[0], c[1]); } e.preventDefault(); return; }
+        if (locked()) { if (e.button === 0) { const c = kp.centre(); kp.scanAt(c[0], c[1]); } e.preventDefault(); return; }
       }
+      if (split) return; // touch is for one player
       try { canvas.setPointerCapture(e.pointerId); } catch (x) { /* fine */ }
       looks.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now() });
     });
@@ -1438,34 +1492,39 @@
       if (!p) return;
       const dx = e.clientX - p.x, dy = e.clientY - p.y;
       p.x = e.clientX; p.y = e.clientY;
-      const k = (e.pointerType === 'mouse' ? 0.005 : 0.0065) * LOOKS[lookPick][1];
-      me.yaw -= dx * k; me.pitch -= dy * k; me1.applyCam(); dirty = true;
+      const k = (e.pointerType === 'mouse' ? 0.005 : 0.0065) * LOOKS[lookPick][1], kp = kbPlayer();
+      if (!kp) return;
+      kp.me.yaw -= dx * k; kp.me.pitch -= dy * k; kp.applyCam(); dirty = true;
     });
     const lookEnd = (e) => {
       const p = looks.get(e.pointerId);
       if (!p) return;
       looks.delete(e.pointerId);
       if (e.type === 'pointerup' && Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < 10 && performance.now() - p.t < 450) { // a tap: scan what's there
-        const r = canvas.getBoundingClientRect();
-        me1.scanAt(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+        const kp = kbPlayer();
+        if (kp) { const c = canvasNdc(kp, e); kp.scanAt(c[0], c[1]); }
       }
     };
     canvas.addEventListener('pointerup', lookEnd); canvas.addEventListener('pointercancel', lookEnd);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     let mouseDrag = false; // if the mouse can't be captured, dragging looks round instead
-    document.addEventListener('pointerlockerror', () => { mouseDrag = true; me1.toast('Drag with the mouse to look round'); });
-    document.addEventListener('pointerlockchange', () => { if (locked()) me1.toast('Esc lets go of the mouse'); dirty = true; });
+    document.addEventListener('pointerlockerror', () => { mouseDrag = true; const kp = kbPlayer(); if (kp) kp.toast('Drag with the mouse to look round'); });
+    document.addEventListener('pointerlockchange', () => { const kp = kbPlayer(); if (locked() && kp) kp.toast('Esc lets go of the mouse'); dirty = true; });
     document.addEventListener('mousemove', (e) => {
-      if (!locked() || Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return;
+      const kp = kbPlayer();
+      if (!kp || !locked() || Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return;
       const k = 0.0022 * LOOKS[lookPick][1];
-      me.yaw -= e.movementX * k; me.pitch -= e.movementY * k; me1.applyCam(); dirty = true;
+      kp.me.yaw -= e.movementX * k; kp.me.pitch -= e.movementY * k; kp.applyCam(); dirty = true;
     });
 
     /* ---------- controls: keyboard ---------- */
     const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', KeyD: 'r', ArrowLeft: 'tl', ArrowRight: 'tr', KeyQ: 'tl', KeyE: 'tr' };
     window.addEventListener('keydown', (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
-      const p = me1, D = D1;
+      if (joining) { if (e.key === 'Escape') { leaveJoin(); return; } if (joined.length >= 2 && e.key === 'Enter') { startSplit(); e.preventDefault(); return; } join({ kind: 'kb' }); e.preventDefault(); return; }
+      const p = kbPlayer();
+      if (!p) return;
+      const D = p.D;
       if (p.till.isOpen() && $('helpCover').hidden) { if (e.key === 'Escape') p.closeTill(); return; }
       if (!p.playing()) { if (e.key === 'Escape' && !$('helpCover').hidden) showHelp(false); return; }
       if (!D.scMenu.hidden) {
@@ -1491,7 +1550,7 @@
         default:
       }
     });
-    window.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) me1.input.keys.delete(KEYMAP[e.code]); if (e.key === 'Shift') me1.input.run(false); });
+    window.addEventListener('keyup', (e) => { const p = kbPlayer(); if (!p) return; if (KEYMAP[e.code]) p.input.keys.delete(KEYMAP[e.code]); if (e.key === 'Shift') p.input.run(false); });
     window.addEventListener('blur', () => { for (const p of players) p.keysClear(); stickId = null; stickHome(); });
 
     /* ---------- screens: start, help, end of shift, end of the day ---------- */
@@ -1519,15 +1578,22 @@
       for (const p of players) p.dayOver();
       later(1.2, () => {
         if (locked()) document.exitPointerLock();
-        const s = day.summary(me1.id), st = me1.stats;
-        statsHtml($('dayStats'), [[s.picks, 'of the ' + s.total + ' picks'], [st.tills - (st.tillsAtStart || 0), 'till orders served'], [s.fetched, 'bags from holding'], [st.lines - (st.linesAtStart || 0), 'lines picked'], [st.perfect - (st.perfectAtStart || 0), 'perfect picks'], [Math.max(1, Math.round(s.minutes)) + ' min', 'the day took']]);
+        const box = $('dayStats');
+        box.replaceChildren();
+        for (const p of players) {
+          const s = day.summary(p.id), st = p.stats, el = document.createElement('div');
+          if (split) { const h = document.createElement('h2'); h.textContent = p.idx ? 'Player 2 (bottom)' : 'Player 1 (top)'; el.appendChild(h); }
+          const rows = document.createElement('div'); el.appendChild(rows);
+          statsHtml(rows, [[s.picks, 'of the ' + s.total + ' picks'], [st.tills - (st.tillsAtStart || 0), 'till orders served'], [s.fetched, 'bags from holding'], [st.lines - (st.linesAtStart || 0), 'lines picked'], [st.perfect - (st.perfectAtStart || 0), 'perfect picks'], [Math.max(1, Math.round(s.minutes)) + ' min', 'the day took']]);
+          box.appendChild(el);
+        }
         $('dayTitle').textContent = 'All picks clear';
         $('dayCover').hidden = false;
       });
     }
     $('nextDayBtn').addEventListener('click', () => {
       $('dayCover').hidden = true;
-      const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect;
+      for (const p of players) { const st = p.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; }
       newDay();
       for (const p of players) p.start();
     });
@@ -1552,12 +1618,13 @@
 
     newDay(); // the holding area is stocked behind the start screen; the day's picks start with the shift
     statsHtml($('startStats'), [[me1.life.orders, 'orders done'], [me1.life.lines, 'lines picked'], [world.items.length.toLocaleString('en-GB'), 'products']]);
-    $('startBtn').addEventListener('click', () => {
+    function beginShift() {
       initAudio();
       if (touch && !standalone) fullScreen(true);
-      $('startCover').hidden = true;
-      ['topBar', 'scanner', 'cross', 'squatBtn'].forEach((id) => { $(id).hidden = false; });
-      $('stickZone').hidden = !touch;
+      $('startCover').hidden = true; $('joinCover').hidden = true;
+      $('topBar').hidden = false;
+      for (const p of players) p.show();
+      $('stickZone').hidden = !touch || split;
       active = true;
       stayAwake();
       layout();
@@ -1566,10 +1633,49 @@
       let helped = false;
       try { helped = localStorage.getItem('ws-helped') === '1'; localStorage.setItem('ws-helped', '1'); } catch (e) { /* fine */ }
       if (!helped) showHelp(true);
-      else if (!touch) me1.toast('Click the view to look round');
+      else if (!touch) for (const p of players) p.toast(p.kb ? 'Click the view to look round' : 'Your controller: RT scans, A is Enter');
       canvas.focus({ preventScroll: true });
       dirty = true;
-    });
+    }
+    $('startBtn').addEventListener('click', beginShift);
+
+    /* ---------- two players (computers only): split screen, one above the other ---------- */
+    // Each joins with a press: A on a controller, or any key or a click for the keyboard and mouse. The first to join
+    // plays in the top half. Both share the day's list, Alex and the tills; each has their own scanner and till screen.
+    let joining = false;
+    const joined = [];
+    const SPLIT_READY = false; // split screen is built but not tried yet: the button stays hidden until it has been
+    $('twoBtn').hidden = !SPLIT_READY || touch || window.innerWidth < 900;
+    function renderJoin() {
+      ['joinTop', 'joinBottom'].forEach((id, i) => {
+        const j = joined[i], el = $(id);
+        el.classList.toggle('on', !!j);
+        el.querySelector('span').textContent = !j ? 'Waiting for a player' : j.kind === 'kb' ? 'Keyboard and mouse' : 'Controller ' + (j.pad + 1);
+      });
+      $('joinGo').disabled = joined.length < 2;
+      $('joinGo').textContent = joined.length < 2 ? 'Start shift' : 'Start shift (A or Enter)';
+    }
+    function join(dev) {
+      if (joined.length >= 2 || joined.some((j) => j.kind === dev.kind && (dev.kind === 'kb' || j.pad === dev.pad))) return;
+      initAudio(); SFX.chime();
+      joined.push(dev);
+      renderJoin();
+    }
+    function leaveJoin() { joining = false; joined.length = 0; $('joinCover').hidden = true; $('startCover').hidden = false; }
+    $('twoBtn').addEventListener('click', (e) => { e.stopPropagation(); joining = true; joined.length = 0; joinPrev.clear(); for (const gp of padList()) if (gp) joinPrev.set(gp.index, gp.buttons.map((b) => !!(b && (b.pressed || b.value > 0.5)))); renderJoin(); $('startCover').hidden = true; $('joinCover').hidden = false; });
+    $('joinBack').addEventListener('click', (e) => { e.stopPropagation(); leaveJoin(); });
+    $('joinGo').addEventListener('click', (e) => { e.stopPropagation(); if (joined.length >= 2) startSplit(); });
+    $('joinCover').addEventListener('pointerdown', (e) => { if (!e.target.closest('button')) join({ kind: 'kb' }); });
+    function startSplit() {
+      if (split || joined.length < 2) return;
+      joining = false; split = true;
+      stage.classList.add('split');
+      addPlayer2();
+      players.forEach((p, i) => { const j = joined[i]; p.padIndex = j.kind === 'pad' ? j.pad : null; p.kb = j.kind === 'kb'; });
+      dpr = Math.min(dpr, 1.25); renderer.setPixelRatio(dpr);
+      layout();
+      beginShift();
+    }
 
     /* ---------- keep the screen awake while picking ---------- */
     let wake = null;
@@ -1602,8 +1708,21 @@
       return changed;
     }
 
+    function drawViews() {
+      if (!split || players.length < 2) { me1.beforeRender(); renderer.setScissorTest(false); renderer.render(scene, me1.cam); return; }
+      const vh = Math.max(1, window.innerHeight);
+      renderer.setScissorTest(true);
+      for (const p of players) {
+        const v = p.view, y = vh - v.y - v.h; // the graphics chip counts from the bottom
+        renderer.setViewport(v.x, y, v.w, v.h); renderer.setScissor(v.x, y, v.w, v.h);
+        p.beforeRender();
+        renderer.render(scene, p.cam);
+      }
+      renderer.setScissorTest(false);
+    }
+
     /* ---------- the frame loop ---------- */
-    let last = performance.now(), photoT = 0, photoDirty = true, slow = 0, quick = 0;
+    let last = performance.now(), photoT = 0, photoDirty = true, slow = 0, quick = 0, photoTurn = 0;
     function frame(now) {
       requestAnimationFrame(frame);
       const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
@@ -1615,16 +1734,15 @@
       if (worldStep(dt)) changed = true;
       if (S.photos.flush()) changed = true;
       photoT -= dt;
-      if (photoT <= 0 && (photoDirty || changed)) { S.photos.update(me1.cam); photoT = 0.2; photoDirty = false; changed = true; }
+      if (photoT <= 0 && (photoDirty || changed)) { photoTurn = (photoTurn + 1) % players.length; S.photos.update(players[photoTurn].cam); photoT = 0.2; photoDirty = false; changed = true; }
       if (!changed) return;
       dirty = false;
-      for (const p of players) p.beforeRender();
-      renderer.render(scene, me1.cam);
+      drawViews();
       for (const p of players) p.afterRender(now);
       // a phone that keeps struggling draws fewer pixels; one with room to spare gets them back
       if (dt > 0.03 && me.speed > 0.2) { slow++; quick = 0; } else if (dt < 0.018) { quick++; slow = Math.max(0, slow - 1); }
       if (slow > 45 && dpr > 0.8) { dpr = Math.max(0.8, dpr - 0.25); renderer.setPixelRatio(dpr); layout(); slow = 0; }
-      if (quick > 300 && dpr < MAX_DPR) { dpr = Math.min(MAX_DPR, dpr + 0.25); renderer.setPixelRatio(dpr); layout(); quick = 0; }
+      if (quick > 300 && dpr < (split ? 1.25 : MAX_DPR)) { dpr = Math.min(split ? 1.25 : MAX_DPR, dpr + 0.25); renderer.setPixelRatio(dpr); layout(); quick = 0; }
     }
 
     /* ---------- warm up behind the loading bar, then show the start screen ---------- */
@@ -1642,7 +1760,7 @@
       day: () => day, newDay, scanAt: me1.scanAt, state: me1.state, order: me1.order, full: me1.full, sel: me1.sel, applyCam: me1.applyCam, hitAt: me1.hitAt, holdHit: me1.holdHit,
       scanHold: me1.scanHold, scanPut: me1.scanPut, spotBox, countOne: me1.countOne, confirmQty: me1.confirmQty, enter: me1.enter, back: me1.back, page: me1.page, tapRow: me1.tapRow,
       handOver: me1.handOver, useHint: me1.useHint, toggleSquat: me1.toggleSquat, layout, till: me1.till, openTill: me1.openTill, closeTill: me1.closeTill, nearTill: me1.nearTill,
-      pickAll: () => { while (me1.state() === 'qty' && !me1.full()) me1.countOne(); }, pollPads,
+      pickAll: () => { while (me1.state() === 'qty' && !me1.full()) me1.countOne(); }, pollPads, join, startSplit, split: () => split,
       tick: (sec) => { for (let t = 0; t < sec; t += 0.05) worldStep(0.05); dirty = true; } };
   }
 })();
