@@ -1168,7 +1168,9 @@
         if (!till || !till.isOpen() || !nearTill || !day) return;
         const c0 = P.tillCust;
         if (c0) { if (c0.at !== nearTill && c0.fig) callTo(c0, nearTill, () => talkTo(c0)); return; }
-        const c = day.queue()[0];
+        let c = day.queue()[0];
+        // you're at the till with nobody to serve: whoever is waiting to be greeted gets their hello from here
+        if (!c) { const g = day.ungreeted()[0]; if (g && day.greet(g, P.id)) { toast('Hello!'); c = day.queue()[0]; } }
         if (!c) {
           const o = screenOf(nearTill);
           if (o && !till.session()) till.showDone(o.no, o.status === 'listed' ? 'Waiting to be picked: it\'s on the pick list.' : 'Being picked now.');

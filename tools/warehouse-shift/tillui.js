@@ -935,6 +935,7 @@
       // opts: kind ('till' or 'kiosk'), kiosk (Till.makeKiosk: today's kiosk orders), pay (Till.payment)
       serve(cust, lines, colour, opts) {
         opts = opts || {};
+        S.session = null; // so the old customer's basket isn't what gets drawn
         reset();
         const kind = opts.kind === 'kiosk' ? 'kiosk' : 'till';
         S.session = { cust, lines: kind === 'kiosk' ? [] : lines.map((l) => Object.assign({}, l, { done: false, shown: null, wrong: null, asked: 0, clued: false })), cur: 0, stage: 'arrived', selected: false, basket: [], slips: 0, ready: false, since: Date.now(), colour,
@@ -945,7 +946,7 @@
         if (S.open) begin();
       },
       // the customer's gone (handed over or skipped)
-      clear() { reset(); S.session = null; renderSay(); },
+      clear() { S.session = null; reset(); renderSay(); },
       // nobody to serve: the last order finished at this till, and where it's got to
       showDone(no, text) {
         if (S.session) return;
