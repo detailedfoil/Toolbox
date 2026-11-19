@@ -243,6 +243,37 @@ explain changes in plain English and say what they'll see.
     Installable: `warehouse-shift.webmanifest` (fullscreen, landscape) and `warehouse-shift-sw.js` (scope "warehouse-shift":
     page site-first with a 4 s fallback, its files and photos kept-first; a copy still registered at the old floor-plan scope
     removes itself). Stats (orders, lines, units) stay on the device (`ws-stats-v1`).
+    **Till orders** (19 Nov 2026, detailedfoil's brief): each customer is either a click and collect (the pick list is on
+    the scanner straight away, as before) or a till order (about half; never three of one kind in a row; the scanner's
+    Function menu has "Orders: mixed / C&C / till", `ws-orders`). A till customer walks up and the scanner says "Till
+    order"; walk behind the counter to one of the four trade counter tills and press Use till (or Scan, or tap the till).
+    The till is a browser with two tabs at the top, like the real trade counter PCs: **Fusion** (the till system, drawn
+    from his photos: Identify Customer, Search Results, Customer Order, the white Checkout page, Order Complete; the logo
+    is plain text, the username is Trainee01, no real addresses) and **CrashFix** (the Product Search page's own
+    search.js over products.json, web-names.json and desc-words.json, built with the same fields as product-search/app.js
+    via `till.js` `searchItems`; photos only from product-search/photos, descriptions on tap; when nothing has every
+    typed word it leaves out words no product has, then tries without each word, and says which it left out). The
+    customer gives their postcode, then their surname (made up: LU8 and LU9 don't exist, emails at example.com/net/org;
+    sometimes someone else at the same address, then they say their first name); you Search, pick them, Select. Then
+    they ask for one thing at a time: by code, by describing it ("a pack of 100 ... screws 5mm x 80mm", from its
+    screwfix.com name, half without the make) or by quoting a sentence of its description ("I need the one that says:
+    ...", plus a hint like "The 30m one." when several products say the same). Find it on CrashFix (tap the code to
+    copy; phones get a Paste key), switch to Fusion, type the part number and quantity, Enter: the customer says right
+    or wrong, any product that fits counts, a wrong quantity can be fixed in the line. Ask again repeats it; twice gives
+    a clue (the first 3 characters of the code), which counts against a perfect pick like wrong lines do. Pay & Go,
+    then Card or Cash (Trade Credit etc. aren't used yet). Order Complete gives a made-up A2... number and the pick list
+    (the products actually added, in location order) goes to the scanner; hand the tote over as usual. Prices and stock
+    (Avail) are made up from the code (`price`, `avail`), VAT is included at 20% like the real checkout. Speech shows in
+    a bubble over the customer and in a yellow bar on the till. Phones get an on-screen keyboard (inputs have
+    `inputmode="none"`, so the phone's own keyboard never squashes the game); taps that land after the page moved under
+    the finger are ignored. Files: `till.js` (customers, the search, sums, orders, judging; shared with the tests and the
+    generator), `tillui.js` (the screen), `till.css`, `data/requests.json` made by `.github/warehouse-shift/make-requests.mjs`
+    (about 4 minutes; describe = [code, phrase, ...other codes that fit], need = [code, quote, hint, ...]; every request is
+    checked to be findable with the real search, first 10 results, from a few of its rarest words). Rerun it after a new
+    catalogue, and when `.github/tests/warehouse-shift-till.test.mjs` says a quote is no longer in a description. The
+    offline worker keeps the till files too (Product Search's lists: kept copy at once, a fresh one for next time).
+    Untested so far: on a real phone, and how players get on with the description quotes (detailedfoil expects to test a
+    lot by hand).
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

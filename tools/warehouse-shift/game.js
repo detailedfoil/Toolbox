@@ -1,13 +1,15 @@
 /* Warehouse Shift (Dunstable, LB1 only): a picking game in a made-up Screwfix-style warehouse.
 
-   A customer orders at the trade counter. The scanner (drawn like the Symbol handsets in detailedfoil's photos)
-   shows one pick at a time, in location order, so you walk up the right side and back down the left. Walk to the
+   A customer orders at the trade counter: either a click and collect (the pick list is on the scanner already) or
+   at the till (tillui.js: Fusion and CrashFix tabs; walk up to a till to use it, find what they ask for, take the
+   payment, then the pick list goes to the scanner). The scanner (drawn like the Symbol handsets in detailedfoil's
+   photos) shows one pick at a time, in location order, so you walk up the right side and back down the left. Walk to the
    location, look at it and Scan (or tap it on a phone), type the quantity, Enter. When the tote's full, take it to
    the counter and hand it over; the next customer walks in. Hint makes the location glow. Squat for the bottom
    shelves. Played mainly with the phone sideways: left thumb walks, drag to look. On a computer: WASD, mouse look.
 
-   world.js makes the warehouse and the orders, scene.js draws it. This file is the rest: the camera, the controls,
-   the scanner, the sounds and the game itself. */
+   world.js makes the warehouse and the orders, scene.js draws it, till.js and tillui.js are the till. This file is
+   the rest: the camera, the controls, the scanner, the customers, the sounds and the game itself. */
 (function () {
   'use strict';
 
@@ -28,21 +30,24 @@
     if (!me) return; // the sign-in screen is up; its "toolbox:login" event brings us back here
     booted = true;
     if (me !== STORE) { fail('Warehouse Shift is only for Dunstable (LB1).'); return; }
-    if (!window.THREE || !window.ShiftWorld || !window.ShiftScene) { fail("The game didn't load. Check your signal and reload the page."); return; }
+    if (!window.THREE || !window.ShiftWorld || !window.ShiftScene || !window.ShiftTill || !window.ShiftTillUI) { fail("The game didn't load. Check your signal and reload the page."); return; }
     progress(0.1, 'Loading the products…');
+    // what till customers ask for: without it every customer is a click and collect
+    const asks = fetch('warehouse-shift/data/requests.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
     fetch('warehouse-shift/data/catalogue.json')
       .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(async (cat) => {
         progress(0.35, 'Stocking the shelves…'); await breathe();
-        try { await start(cat); } catch (e) { console.error(e); fail('Something went wrong building the warehouse. Reload the page to try again.'); }
+        const req = await asks;
+        try { await start(cat, req); } catch (e) { console.error(e); fail('Something went wrong building the warehouse. Reload the page to try again.'); }
       })
       .catch((e) => { console.error(e); fail("Couldn't load the products. Check your signal and reload the page."); });
   }
   window.addEventListener('toolbox:login', boot);
   boot();
 
-  async function start(cat) {
-    const T = THREE, World = window.ShiftWorld;
+  async function start(cat, requests) {
+    const T = THREE, World = window.ShiftWorld, Till = window.ShiftTill;
     const world = World.build(cat);
     progress(0.5, 'Building the racking…'); await breathe();
 
@@ -175,7 +180,11 @@
       slide: () => noise(0, 0.12, 0.25, 700),
       order: () => { tone(1800, 0, 0.07, 'square', 0.04); tone(1800, 0.12, 0.07, 'square', 0.04); },
       done: () => { [784, 988, 1175, 1568].forEach((f, i) => tone(f, i * 0.09, 0.22, 'triangle', 0.07)); noise(0.36, 0.25, 0.18, 4200); tone(2637, 0.38, 0.3, 'sine', 0.05); },
-      hint: () => { tone(660, 0, 0.12, 'sine', 0.06, 990); }
+      hint: () => { tone(660, 0, 0.12, 'sine', 0.06, 990); },
+      talk: () => { tone(540, 0, 0.045, 'triangle', 0.035); tone(690, 0.055, 0.05, 'triangle', 0.03); },
+      approved: () => { tone(1568, 0, 0.12, 'sine', 0.07); tone(2093, 0.13, 0.22, 'sine', 0.07); },
+      drawer: () => { noise(0, 0.18, 0.3, 500); tone(2400, 0.2, 0.25, 'sine', 0.035); },
+      chime: () => { [880, 1109, 1319].forEach((f, i) => tone(f, i * 0.08, 0.2, 'triangle', 0.06)); }
     };
 
     /* ---------- the scanner screen ---------- */
@@ -183,6 +192,7 @@
     const short = (s) => String(s).slice(0, 20).trim();
     const four = (n) => String(n).padStart(4, '0');
     let order = null, cur = 0, state = 'idle', typed = '', viewLine = -1, viewTimer = 0, msgUntil = 0, msg = null, orderNo = 0, atCounter = false;
+    let till = null; // the till screen, made further down
     const stats = { orders: 0, lines: 0, units: 0, wrong: 0, hints: 0, since: Date.now() };
     let life = { orders: 0, lines: 0, units: 0 };
     try { life = Object.assign(life, JSON.parse(localStorage.getItem('ws-stats-v1') || '{}')); } catch (e) { /* fine */ }
@@ -207,6 +217,12 @@
         L.push(atCounter ? ['Press Enter to', 'gap warn'] : ['Take tote to', 'gap'], atCounter ? ['hand over', 'warn'] : ['Trade Counter']);
       } else if (state === 'between') {
         L.push(['Today Picking'], ['Order handed over', 'ok'], ['Next customer', 'big'], ['coming in…', 'dim']);
+      } else if (state === 'till') {
+        const st = till ? till.stage() : 'none';
+        L.push(['Today Picking'], ['No picks yet', 'dim'], ['Till order', 'big']);
+        if (st === 'none') L.push(['Customer coming', 'gap'], ['to the counter', '']);
+        else if (st === 'done') L.push(['Paid', 'gap ok'], ['Pick list coming', 'ok']);
+        else L.push([nearTill ? 'Press Scan to' : 'Serve them at', 'gap warn'], [nearTill ? 'use the till' : 'the till', 'warn']);
       } else {
         L.push(['Today Picking'], ['Pick To Tote/Trolley'], ['Ready', 'big']);
       }
@@ -216,6 +232,7 @@
       scQty.textContent = state === 'qty' ? typed : '';
       scCur.className = 'sc-cur' + (state === 'qty' ? '' : ' line');
       scEnter.classList.toggle('pulse', state === 'deliver' && atCounter);
+      $('scScan').classList.toggle('pulse', state === 'till' && !!nearTill);
       scHint.classList.toggle('used', hint.until > performance.now());
     }
     function flash(bad) { scFlash.className = 'sc-flash' + (bad ? ' bad' : ''); void scFlash.offsetWidth; scFlash.className = 'sc-flash go' + (bad ? ' bad' : ''); }
@@ -265,6 +282,8 @@
     }
     function scanAt(nx, ny) {
       if (state === 'deliver') { if (atCounter) handOver(); else { say('Take the tote to the counter', 'warn'); SFX.miss(); } return; }
+      if (nearTill && (state === 'till' || state === 'between' || state === 'idle' || tillHit(nx, ny))) { openTill(); return; }
+      if (state === 'till') { say('Serve them at the till', 'warn'); toast('Walk up to a till behind the counter'); SFX.miss(); return; }
       if (state === 'between' || state === 'idle') return;
       if (state === 'qty') { say('Enter the quantity', 'warn'); SFX.miss(); return; }
       const h = hitAt(nx, ny);
@@ -327,6 +346,7 @@
       if (state === 'qty') confirmQty();
       else if (state === 'deliver') { if (atCounter) handOver(); else { say('Take the tote to the counter', 'warn'); SFX.miss(); } }
       else if (state === 'scan') { say('Scan the location first', 'warn'); SFX.miss(); }
+      else if (state === 'till') { if (nearTill) openTill(); else { say('Serve them at the till', 'warn'); SFX.miss(); } }
     }
     let padWanted = false;
     function setPad(up) { scPad.classList.toggle('up', !!up); $('scScreen').classList.toggle('padup', !!up); }
@@ -340,11 +360,19 @@
     }
 
     /* ---------- hint: the location glows ---------- */
-    const hint = { until: 0, loc: null, counter: false, t: 0 };
+    const hint = { until: 0, loc: null, counter: false, till: false, t: 0 };
     function useHint() {
+      if (state === 'till') {
+        SFX.hint(); stats.hints++;
+        hint.until = performance.now() + 12000; hint.t = 0; hint.loc = null; hint.counter = false; hint.till = true;
+        scHint.classList.add('flash'); setTimeout(() => scHint.classList.remove('flash'), 200);
+        toast('The till is glowing: walk up to it behind the counter', '');
+        renderScanner(); dirty = true;
+        return;
+      }
       if (!order || state === 'between' || state === 'idle') return;
       SFX.hint(); stats.hints++; order.slips = (order.slips || 0) + 1;
-      hint.until = performance.now() + 12000; hint.t = 0;
+      hint.until = performance.now() + 12000; hint.t = 0; hint.till = false;
       hint.loc = state === 'deliver' ? null : order.lines[cur].loc;
       hint.counter = state === 'deliver';
       scHint.classList.add('flash'); setTimeout(() => scHint.classList.remove('flash'), 200);
@@ -357,7 +385,11 @@
       hint.t += dt;
       const pulse = 0.5 + 0.5 * Math.sin(hint.t * 6.5);
       S.glowMat.opacity = 0.28 + 0.5 * pulse;
-      if (hint.counter) {
+      if (hint.till) {
+        const t = tillForCustomer();
+        S.setBox(S.glow, { x: (t.x0 + t.x1) / 2, y: (t.y0 + t.y1) / 2, z0: 0.98, z1: 1.36, w: t.x1 - t.x0 + 0.1, d: t.y1 - t.y0 + 0.1 }, 0);
+        S.glow.visible = true; S.signGlow.visible = false;
+      } else if (hint.counter) {
         const c = world.counter;
         S.setBox(S.glow, { x: (c.x0 + c.x1) / 2, y: (c.y0 + c.y1) / 2, z0: 0, z1: 1.08, w: c.x1 - c.x0 + 0.06, d: c.y1 - c.y0 + 0.08 }, 0);
         S.glow.visible = true; S.signGlow.visible = false;
@@ -456,7 +488,7 @@
       return n;
     }
     function walk(c, path, then) { c.path = path.map((p) => p.slice()); c.leg = 0; c.state = 'walking'; c.then = then; c.group.visible = true; c.group.position.set(path[0][0], 0, path[0][1]); }
-    function arrive(c) { dress(c); walk(c, PATH, () => { c.state = 'waiting'; c.group.rotation.y = Math.PI; }); }
+    function arrive(c) { dress(c); walk(c, PATH, () => { c.state = 'waiting'; c.group.rotation.y = Math.PI; served(c); }); }
     function leave(c) { walk(c, PATH.slice().reverse(), () => { c.state = 'away'; c.group.visible = false; c.carry = false; if (c.tote) { S.dropTote(c.tote); c.tote = null; } }); }
     function updateCustomers(dt) {
       let any = false;
@@ -485,6 +517,63 @@
       return any;
     }
     let waitingCustomer = null;
+
+    /* ---------- click and collect, or an order at the till ---------- */
+    const MODES = [['mixed', 'mixed', 'mixed'], ['cc', 'C&C', 'click & collect only'], ['till', 'till', 'till only']];
+    let mode = 0;
+    try { mode = Math.max(0, MODES.findIndex((m) => m[0] === localStorage.getItem('ws-orders'))); } catch (e) { /* fine */ }
+    const kinds = [];
+    function pickKind() {
+      if (!requests || !requests.need) return 'cc';
+      const m = MODES[mode][0];
+      if (m !== 'mixed') return m;
+      let k = Math.random() < 0.5 ? 'till' : 'cc';
+      if (kinds.length >= 2 && kinds[kinds.length - 1] === k && kinds[kinds.length - 2] === k) k = k === 'till' ? 'cc' : 'till'; // never three the same in a row
+      kinds.push(k); if (kinds.length > 4) kinds.shift();
+      return k;
+    }
+    const pickOne = (list) => list[Math.floor(Math.random() * list.length)];
+    function prepare(c) { // what this customer has come for
+      c.kind = pickKind(); c.cust = null; c.lines = null;
+      if (c.kind === 'till') { c.cust = Till.makeCustomer(Math.random); c.lines = Till.makeOrder(world, requests, rng); if (!c.lines.length) c.kind = 'cc'; }
+      c.name = c.cust ? c.cust.surname : pickOne(Till.SURNAMES);
+    }
+    function served(c) { // they've walked up to the counter
+      if (c !== waitingCustomer) return;
+      if (c.kind === 'till') { till.serve(c.cust, c.lines, '#' + c.parts.body.color.getHexString()); renderScanner(); }
+      else speak({ text: pickOne(['Click and collect for ' + c.name + ', please.', "Hiya, I've got a click and collect. Name's " + c.name + '.', 'Got an order to collect, under ' + c.name + '.']) });
+    }
+    function nextCustomer(prev) {
+      setTimeout(() => {
+        const next = freeCustomer(prev); prepare(next); arrive(next); waitingCustomer = next;
+        if (next.kind === 'till') { state = 'till'; hint.until = 0; renderScanner(); }
+      }, 1400);
+      setTimeout(() => { if (state === 'between' && waitingCustomer && waitingCustomer.kind === 'cc') newOrder(); }, 2600); // after the order complete banner has had its moment
+    }
+    function skipCustomer() { // the customer goes without their order; the next one comes in
+      if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; setPad(false);
+      const c = waitingCustomer;
+      if (c && c.state === 'waiting') { speak({ text: "Never mind, I'll come back later." }); leave(c); }
+      else if (c && c.state === 'walking') { // turn round where they are
+        const p = c.group.position, back = PATH.slice(0, c.leg + 1).reverse();
+        walk(c, [[p.x, p.z]].concat(back), () => { c.state = 'away'; c.group.visible = false; });
+      }
+      till.clear(); if (till.isOpen()) closeTill();
+      order = null; state = 'between'; hint.until = 0; atCounter = false;
+      renderScanner();
+      nextCustomer(c);
+    }
+    // the order paid for at the till: its pick list goes to the scanner
+    function tillOrder(info) {
+      orderNo++;
+      const lines = info.lines.map((l) => ({ item: l.item, loc: l.item.loc, qty: l.qty })).sort((a, b) => a.loc.order - b.loc.order);
+      order = { no: orderNo, lines, units: lines.reduce((t, l) => t + l.qty, 0), slips: info.slips || 0, till: info.orderNo, fresh: true };
+      cur = 0; state = 'scan'; typed = ''; viewLine = -1; hint.until = 0;
+      stats.tills = (stats.tills || 0) + 1;
+      SFX.order(); flash(false);
+      renderScanner();
+    }
+
     function handOver() {
       if (state !== 'deliver') return;
       state = 'between'; atCounter = false; hint.until = 0;
@@ -500,8 +589,8 @@
       tote.position.set(Math.max(counter.x0 + 0.4, Math.min(counter.x1 - 0.4, me.x)), 1.0, counter.y0 + 0.22);
       totes.push({ t: 0, tote, from: tote.position.clone(), to: new T.Vector3(c ? c.group.position.x : spot.x, 1.0, counter.y1 - 0.2), c });
       renderScanner();
-      setTimeout(() => { const next = freeCustomer(c); arrive(next); waitingCustomer = next; }, 1400);
-      setTimeout(() => newOrder(), 2600); // after the order complete banner has had its moment
+      till.clear();
+      nextCustomer(c);
     }
     const totes = [];
     function updateTotes(dt) {
@@ -547,8 +636,9 @@
         ['2', 'Hint', () => useHint()],
         ['3', 'Sound: ' + (audio.on ? 'on' : 'off'), () => { audio.on = !audio.on; try { localStorage.setItem('ws-sound', audio.on ? 'on' : 'off'); } catch (e) { /* fine */ } }],
         ['4', 'Look: ' + LOOKS[lookPick][0].toLowerCase(), () => { lookPick = (lookPick + 1) % LOOKS.length; try { localStorage.setItem('ws-look', LOOKS[lookPick][0]); } catch (e) { /* fine */ } toast('Look speed: ' + LOOKS[lookPick][0].toLowerCase()); }],
-        ['5', 'Skip order', () => { if (state === 'scan' || state === 'qty') { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; setPad(false); newOrder(); } }],
-        ['6', 'Help', () => showHelp(true)],
+        ['5', 'Skip order', () => { if (state === 'scan' || state === 'qty' || state === 'till') skipCustomer(); }],
+        ['6', 'Orders: ' + MODES[mode][1], () => { mode = (mode + 1) % MODES.length; try { localStorage.setItem('ws-orders', MODES[mode][0]); } catch (e) { /* fine */ } toast('Next customers: ' + MODES[mode][2]); }],
+        ['7', 'Help', () => showHelp(true)],
         ['0', 'Close', () => {}]
       ];
       scMenu.replaceChildren();
@@ -563,6 +653,86 @@
       scMenu.hidden = false;
     }
 
+    /* ---------- the till ---------- */
+    const tills = world.objects.filter((o) => o.kind === 'till' && o.x0 >= counter.x0 - 0.01 && o.x1 <= counter.x1 + 0.01);
+    const tillForCustomer = () => tills.reduce((b, t) => (Math.abs((t.x0 + t.x1) / 2 - spot.x) < Math.abs((b.x0 + b.x1) / 2 - spot.x) ? t : b), tills[0]);
+    let nearTill = null;
+    const tillBtn = $('tillBtn');
+    function checkTill() { // standing behind the counter, at one of its tills
+      let best = null;
+      if (me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75) {
+        let bd = 0.95;
+        for (const t of tills) { const d = Math.abs(me.x - (t.x0 + t.x1) / 2); if (d < bd) { bd = d; best = t; } }
+      }
+      if (best === nearTill) return;
+      nearTill = best;
+      tillBtn.hidden = !nearTill || !active;
+      renderScanner();
+    }
+    const tillBox = new T.Box3(), _hit = new T.Vector3();
+    function tillHit(nx, ny) { // the line from the screen point goes through a till
+      ray.setFromCamera(ndc.set(nx, ny), cam);
+      for (const t of tills) {
+        tillBox.min.set(t.x0 - 0.05, 0.97, t.y0 - 0.08); tillBox.max.set(t.x1 + 0.05, 1.38, t.y1 + 0.02);
+        if (ray.ray.intersectBox(tillBox, _hit) && _hit.distanceTo(ray.ray.origin) < 2.6) return true;
+      }
+      return false;
+    }
+    function openTill() {
+      if (!till || till.isOpen()) return;
+      if (locked()) document.exitPointerLock();
+      keys.clear(); running = false; stickIn.x = stickIn.y = 0; stickId = null; stickHome(); looks.clear();
+      me.vx = me.vy = 0;
+      SFX.key();
+      till.open();
+      sayEl.hidden = true;
+      dirty = true;
+    }
+    function closeTill() {
+      if (!till || !till.isOpen()) return;
+      till.close();
+      canvas.focus({ preventScroll: true });
+      if (order && order.fresh) { order.fresh = false; banner('New order ' + four(order.no), 'From the till: ' + order.lines.length + (order.lines.length > 1 ? ' lines to pick' : ' line to pick'), 2200); }
+      sayShown = performance.now() - 9000; dirty = true; // their last words stay up a few seconds
+      renderScanner();
+    }
+
+    /* ---------- what the customer says: a bubble over their head ---------- */
+    const sayEl = $('say'), sayText = $('sayText');
+    let sayShown = 0, sayLine = null;
+    function speak(line) {
+      sayLine = line; sayShown = performance.now();
+      sayText.replaceChildren();
+      const add = (tag, text) => { if (!text) return; const n = document.createElement(tag); n.textContent = text; sayText.appendChild(n); sayText.appendChild(document.createTextNode(' ')); };
+      add('span', line.text); add('q', line.quote); add('span', line.hint); add('b', line.qty);
+      if (!till || !till.isOpen()) SFX.talk();
+      renderScanner();
+    }
+    const _head = new T.Vector3();
+    function placeSay() {
+      const c = waitingCustomer;
+      const on = sayLine && c && c.state === 'waiting' && (!till || !till.isOpen()) && active && performance.now() - sayShown < (sayLine.quote ? 24000 : 14000);
+      if (!on) { if (!sayEl.hidden) sayEl.hidden = true; return; }
+      _head.set(c.group.position.x, 1.98 * c.group.scale.y, c.group.position.z).project(cam);
+      const far = Math.hypot(me.x - c.group.position.x, me.y - c.group.position.z);
+      if (_head.z > 1 || _head.z < -1 || far > 16) { if (!sayEl.hidden) sayEl.hidden = true; return; }
+      if (sayEl.hidden) sayEl.hidden = false;
+      const w = sayEl.offsetWidth, h = sayEl.offsetHeight;
+      let x = (_head.x + 1) / 2 * view.w - w / 2, y = (1 - _head.y) / 2 * view.h - h - 12;
+      x = Math.max(8, Math.min(view.w - w - 8, x)); y = Math.max(52, Math.min(view.h - h - 8, y));
+      sayEl.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)';
+    }
+
+    till = window.ShiftTillUI.create({
+      el: $('till'), world, Till, touch,
+      sfx: (n) => { const f = { key: SFX.key, beep: SFX.scan, good: SFX.pick, bad: SFX.bad, talk: SFX.talk, approved: SFX.approved, drawer: SFX.drawer, done: SFX.chime }[n]; if (f) f(); },
+      onClose: () => closeTill(),
+      onComplete: (info) => tillOrder(info),
+      onSpeech: (line) => speak(line),
+      onSlip: () => { stats.tillSlips = (stats.tillSlips || 0) + 1; },
+      idleText: () => (waitingCustomer && waitingCustomer.kind === 'cc' && waitingCustomer.state === 'waiting' ? 'This customer has a click and collect: the pick list is on your scanner.' : state === 'scan' || state === 'qty' || state === 'deliver' ? 'Nobody waiting to order. Finish the pick on your scanner.' : 'No customer is waiting to order at the till.')
+    });
+
     /* ---------- controls: scanner buttons ---------- */
     const press = (el, fn) => {
       el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); el.classList.add('down'); initAudio(); fn(e); });
@@ -576,6 +746,7 @@
     press($('scBack'), () => back());
     press($('scLogoff'), () => { SFX.key(); endShift(); });
     press($('scHint'), () => useHint());
+    press(tillBtn, () => openTill());
     press($('scKbd'), () => { SFX.key(); padWanted = !scPad.classList.contains('up'); setPad(padWanted); });
     press($('scUp'), () => page(-1)); press($('scDown'), () => page(1));
     press($('scPrev'), () => page(-1)); press($('scNext'), () => page(1));
@@ -662,6 +833,7 @@
     const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', KeyD: 'r', ArrowLeft: 'tl', ArrowRight: 'tr', KeyQ: 'tl', KeyE: 'tr' };
     window.addEventListener('keydown', (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (till && till.isOpen() && $('helpCover').hidden) { if (e.key === 'Escape') closeTill(); return; }
       if (!playing()) { if (e.key === 'Escape' && !$('helpCover').hidden) showHelp(false); return; }
       if (!scMenu.hidden) {
         const b = scMenu.querySelector('button[data-k="' + e.key + '"]');
@@ -689,7 +861,7 @@
 
     /* ---------- screens: start, help, end of shift ---------- */
     let active = false;
-    const playing = () => active && $('helpCover').hidden && $('endCover').hidden;
+    const playing = () => active && $('helpCover').hidden && $('endCover').hidden && !(till && till.isOpen());
     function showHelp(on) { $('helpCover').hidden = !on; if (on && locked()) document.exitPointerLock(); }
     $('helpBtn').addEventListener('click', () => showHelp(true));
     $('howBtn').addEventListener('click', () => showHelp(true));
@@ -737,12 +909,15 @@
       active = true;
       stayAwake();
       layout();
-      if (!order) {
-        waitingCustomer = customers[0]; dress(customers[0]);
-        customers[0].group.visible = true; customers[0].state = 'waiting';
-        customers[0].group.position.set(spot.x, 0, spot.y); customers[0].group.rotation.y = Math.PI;
-        newOrder();
+      if (!order && state === 'idle') {
+        const c = customers[0];
+        waitingCustomer = c; dress(c); prepare(c);
+        c.group.visible = true; c.state = 'waiting';
+        c.group.position.set(spot.x, 0, spot.y); c.group.rotation.y = Math.PI;
+        if (c.kind === 'till') { state = 'till'; renderScanner(); setTimeout(() => served(c), 900); }
+        else { newOrder(); setTimeout(() => served(c), 1200); }
       }
+      if (till) till.preload();
       let helped = false;
       try { helped = localStorage.getItem('ws-helped') === '1'; localStorage.setItem('ws-helped', '1'); } catch (e) { /* fine */ }
       if (!helped) showHelp(true);
@@ -781,6 +956,7 @@
       if (playing()) {
         if (stepMove(dt)) { changed = true; photoDirty = true; }
         checkCounter();
+        checkTill();
       }
       if (updateMoving(dt)) changed = true;
       if (updateFlyers(dt)) changed = true;
@@ -789,6 +965,7 @@
       if (updateHint(dt)) changed = true;
       if (viewTimer > 0) { viewTimer -= dt; if (viewTimer <= 0 && viewLine >= 0) { viewLine = -1; renderScanner(); } }
       if (msg && now > msgUntil) { msg = null; renderScanner(); }
+      if (!sayEl.hidden && sayLine && now - sayShown > (sayLine.quote ? 24000 : 14000)) sayEl.hidden = true;
       if (S.photos.flush()) changed = true;
       photoT -= dt;
       if (photoT <= 0 && (photoDirty || changed)) { S.photos.update(cam); photoT = 0.2; photoDirty = false; changed = true; }
@@ -796,6 +973,7 @@
       dirty = false;
       if (active) updateAim();
       renderer.render(scene, cam);
+      placeSay();
       // a phone that keeps struggling draws fewer pixels; one with room to spare gets them back
       if (dt > 0.03 && me.speed > 0.2) { slow++; quick = 0; } else if (dt < 0.018) { quick++; slow = Math.max(0, slow - 1); }
       if (slow > 45 && dpr > 0.8) { dpr = Math.max(0.8, dpr - 0.25); renderer.setPixelRatio(dpr); layout(); slow = 0; }
@@ -813,6 +991,7 @@
     $('startCover').hidden = false;
     renderScanner();
     requestAnimationFrame(frame);
-    window.__shift = { world, S, me, cam, renderer, scanAt, state: () => state, order: () => order, applyCam, hitAt, newOrder, typeQty: (q) => { String(q).split('').forEach(digit); }, enter, handOver, useHint, toggleSquat, layout };
+    window.__shift = { world, S, me, cam, renderer, scanAt, state: () => state, order: () => order, applyCam, hitAt, newOrder, typeQty: (q) => { String(q).split('').forEach(digit); }, enter, handOver, useHint, toggleSquat, layout,
+      till, openTill, closeTill, skipCustomer, customer: () => waitingCustomer, tills, nearTill: () => nearTill };
   }
 })();

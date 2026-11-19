@@ -12,7 +12,8 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=d36a7d8d02">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=818c96171a">
+<link rel="stylesheet" href="warehouse-shift/till.css?v=7dc029da86">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -23,6 +24,7 @@
   <div class="ws-cross" id="cross" hidden></div>
   <div class="ws-toast" id="toast" role="status"></div>
   <div class="ws-banner" id="banner" role="status"><b id="bannerTitle"></b><span id="bannerText"></span></div>
+  <div class="ws-say" id="say" hidden aria-live="polite"><p id="sayText"></p></div>
 
   <div class="ws-top" id="topBar" hidden>
     <a class="ws-btn" href="../index.html" aria-label="Back to the Toolbox" title="Back to the Toolbox">&larr;</a>
@@ -34,6 +36,7 @@
 
   <div class="ws-stickzone" id="stickZone" hidden><div class="ws-stick" id="stick"><div class="ws-knob" id="knob"></div></div></div>
   <button class="ws-squat" id="squatBtn" type="button" aria-pressed="false" hidden>Squat<small>C</small></button>
+  <button class="ws-tillbtn" id="tillBtn" type="button" hidden>Use till<small>F</small></button>
 
   <section class="sc" id="scanner" hidden aria-label="Scanner">
     <div class="sc-body">
@@ -79,6 +82,8 @@
     </div>
   </section>
 
+  <section class="tl" id="till" hidden aria-label="Till"></section>
+
   <div class="ws-cover" id="loading">
     <div class="ws-load"><b>Warehouse Shift</b><span id="loadText">Loading the warehouse&hellip;</span><div class="ws-meter"><div id="loadBar"></div></div></div>
   </div>
@@ -86,7 +91,7 @@
   <div class="ws-cover" id="startCover" hidden>
     <div class="ws-card">
       <h1>Warehouse Shift</h1>
-      <p>Customers order at the trade counter. Pick each line from its location, one at a time, then bring the tote back and hand it over. The scanner sends you up the right side and back down the left.</p>
+      <p>Customers come to the trade counter. Some have a click and collect; others order at the till, where you find what they ask for on CrashFix and add it in Fusion. Pick each line from its location, then bring the tote back and hand it over. The scanner sends you up the right side and back down the left.</p>
       <div id="startStats"></div>
       <div class="ws-row">
         <button class="ws-go" id="startBtn" type="button">Start shift</button>
@@ -109,6 +114,14 @@
             <li>Walk to the location, look at it and press <b>Scan</b> (or tap it). Type the quantity, press <b>Enter</b>.</li>
             <li>After the last pick, take the tote to the <b>trade counter</b> and press Enter to hand it over.</li>
             <li>Bottom shelves are low: <b>squat</b> to scan them. Stuck? <b>Hint</b> makes the location glow.</li>
+          </ul>
+          <h2>At the till</h2>
+          <ul>
+            <li>Some customers order at the till. Walk behind the counter to a till and press <b>Use till</b> (or Scan).</li>
+            <li>They give their <b>postcode</b>, then their <b>surname</b>: type them in Fusion's Identify Customer, Search, pick them, Select.</li>
+            <li>They ask for one thing at a time: a <b>code</b>, a <b>description</b>, or a quote from the website. Find it on the <b>CrashFix</b> tab (tap a result to read its description, tap its code to copy it).</li>
+            <li>Back on the <b>Fusion</b> tab, type the part number and quantity, Enter. The customer says if it's right; any product that fits counts. <b>Ask again</b> repeats it, twice gives a clue.</li>
+            <li>When they've got everything: <b>Pay &amp; Go</b>, Card or Cash. The pick list goes to your scanner.</li>
           </ul>
           <h2>Reading a location</h2>
           <ul>
@@ -151,6 +164,9 @@
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
 <script src="warehouse-shift/world.js?v=56b05f6c81"></script>
 <script src="warehouse-shift/scene.js?v=cd0f54860f"></script>
-<script src="warehouse-shift/game.js?v=8efc9a22d1"></script>
+<script src="product-search/search.js?v=4cb4264a3c"></script>
+<script src="warehouse-shift/till.js?v=8a04668c6c"></script>
+<script src="warehouse-shift/tillui.js?v=93d7f51f3c"></script>
+<script src="warehouse-shift/game.js?v=fcd35cc710"></script>
 </body>
 </html>

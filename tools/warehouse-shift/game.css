@@ -24,6 +24,16 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-banner b{display:block;font-size:22px;color:#ffd34d;letter-spacing:.02em}
 .ws-banner span{font-size:14px;color:#dbe4f0}
 
+/* what the customer says, over their head (game.js places it) */
+.ws-say{position:absolute;left:0;top:0;z-index:4;max-width:min(320px,46vw);padding:8px 12px;border-radius:14px;background:#fffef6;color:#1b1b1b;
+  font:600 14px/1.3 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 4px 14px #0007;pointer-events:none;will-change:transform}
+.ws-say::after{content:"";position:absolute;left:50%;bottom:-9px;margin-left:-9px;border:9px solid transparent;border-bottom:0;border-top-color:#fffef6}
+.ws-say p{margin:0}
+.ws-say q{display:block;margin:3px 0;font-style:italic;font-weight:700;color:#0a3a8f}
+.ws-say q::before{content:"\201C"}.ws-say q::after{content:"\201D"}
+.ws-say b{color:#8a3b00}
+@media (max-height:480px){.ws-say{font-size:12.5px;padding:6px 10px;max-width:min(280px,44vw)}}
+
 /* top left: back, full screen, help */
 .ws-top{position:absolute;top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));display:flex;gap:6px;z-index:5}
 .ws-btn{display:grid;place-items:center;min-width:38px;height:38px;padding:0 10px;border:1px solid #ffffff30;border-radius:12px;background:#0b1022c0;color:#fff;
@@ -48,6 +58,14 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-squat small{display:block;font-weight:600;font-size:10px;opacity:.75}
 @media (hover:hover) and (pointer:fine){.ws-stickzone{display:none}.ws-squat{width:64px;height:64px}}
 .portrait .ws-squat{right:max(10px,env(safe-area-inset-right));bottom:calc(var(--sch,380px) + 16px)}
+/* use the till: shows when you're behind the counter at a till */
+.ws-tillbtn{position:absolute;z-index:3;right:calc(var(--scw,0px) + 100px);bottom:max(14px,env(safe-area-inset-bottom));min-width:88px;height:72px;padding:0 14px;border-radius:18px;
+  border:2px solid #ffd34d;background:#1e3ff0e8;color:#fff;font:800 15px system-ui,sans-serif;cursor:pointer;touch-action:none;box-shadow:0 4px 14px #0008;animation:wsTill 1.6s ease-in-out infinite}
+.ws-tillbtn small{display:block;font-weight:600;font-size:10px;opacity:.75}
+@keyframes wsTill{50%{box-shadow:0 0 0 6px #ffd34d55,0 4px 14px #0008}}
+@media (pointer:coarse){.ws-tillbtn small{display:none}}
+@media (hover:hover) and (pointer:fine){.ws-tillbtn{right:calc(var(--scw,0px) + 92px);height:64px}}
+.portrait .ws-tillbtn{right:max(92px,calc(env(safe-area-inset-right) + 92px));bottom:calc(var(--sch,380px) + 16px)}
 
 /* overlays */
 .ws-cover{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:16px;touch-action:pan-y;background:radial-gradient(ellipse at 50% 35%,#1b2a44 0%,#0d1117 70%);overflow:auto}
@@ -131,6 +149,8 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .sc-scan{background:#d6dc22;color:#3a3d12}
 .sc-enter{background:#26d02b;color:#0f3d10}
 .sc-enter.pulse{animation:scPulse .9s ease-in-out infinite}
+.sc-scan.pulse{animation:scPulseY .9s ease-in-out infinite}
+@keyframes scPulseY{50%{background:#f4ff6a;box-shadow:0 0 1em #f4ff6a}}
 @keyframes scPulse{50%{background:#8dff74;box-shadow:0 0 1em #8dff74}}
 .sc-bot{position:absolute;left:2.5%;right:2.5%;top:83.2%;height:8.4%;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;align-items:stretch}
 .sc-tab{border:0;background:linear-gradient(#e2ebf6,#bccbdd);color:#3a4656;font:500 1.3em/1 system-ui,sans-serif;cursor:pointer;border-right:.25em solid #0a0f26}
@@ -159,4 +179,4 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .sc-menu button b{color:#ffd34d;width:1em}
 .sc-menu button:active{background:#2a3657}
 
-@media (prefers-reduced-motion:reduce){.sc-cur,.sc-enter.pulse,.ws-rotate svg{animation:none}}
+@media (prefers-reduced-motion:reduce){.sc-cur,.sc-enter.pulse,.sc-scan.pulse,.ws-rotate svg,.ws-tillbtn{animation:none}}
