@@ -390,9 +390,7 @@
         box(M.endPanel, endX + (endOut < 0 ? -0.025 : 0), ya - 0.03, 0.02, endX + (endOut < 0 ? 0 : 0.025), yb + 0.03, RH);
         // the end protector at the bottom: yellow and black, like the real ones
         box(M.hazard, endX + endOut * 0.06 - 0.03, ya + 0.02, 0, endX + endOut * 0.06 + 0.03, yb - 0.02, 0.4);
-        // the arrow points to the face's own aisle, as you see the sign from the centre aisle: facing a right-side row
-        // end you look east, so south is on your right; facing a left-side row end you look west, so north is
-        const toAisle = (row.side === 'R') === (f.facing === 'S') ? 1 : -1;
+        const toAisle = f.arrow; // world.js: points to the face's own aisle
         const sw = Math.min(0.5, (yb - ya) * 0.86), sh2 = sw * 1.25;
         const sign = flat(endSign(f.area, '01-' + String(f.bays.length).padStart(2, '0'), toAisle, f.kind), endX + endOut * 0.03, (ya + yb) / 2, 1.78, sw, sh2, row.side === 'R' ? -Math.PI / 2 : Math.PI / 2);
         endSigns.push({ face: f, mesh: sign });

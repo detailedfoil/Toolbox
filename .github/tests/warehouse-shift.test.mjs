@@ -84,6 +84,18 @@ test('every pick aisle has stock on both sides, and the first area is on your ri
   }
 });
 
+test('the arrow on each row-end sign points to that area\'s own aisle', () => {
+  for (const f of world.faces) {
+    const south = f.aisle.cy > f.front; // is the aisle to the south of the face?
+    // seen from the centre aisle: on the right side you look east (south = right), on the left side west (north = right)
+    const right = f.side === 'R' ? south : !south;
+    assert.equal(f.arrow, right ? 1 : -1, f.area);
+  }
+  assert.equal(world.faceOf.AAA.arrow, -1, 'AAA faces north into aisle 1: left as you look east');
+  assert.equal(world.faceOf.AAB.arrow, 1, 'AAB faces south into aisle 1: right as you look east');
+  assert.equal(world.faceOf.BBJ.arrow, 1, 'BBJ faces north into aisle 11: right as you look west');
+});
+
 test('in location order you walk up the right side (AA then BA) and back down the left (BB)', () => {
   const faces = [...world.faces].sort((p, q) => (p.area < q.area ? -1 : 1));
   const codes = faces.map((f) => f.area);

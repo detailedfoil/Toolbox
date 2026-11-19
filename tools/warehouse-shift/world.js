@@ -114,6 +114,9 @@
     var byCode = {};
     faces.forEach(function (f) { byCode[f.area] = f; });
     aisles.forEach(function (a) { a.faces = a.codes.map(function (c) { byCode[c].aisle = a; return byCode[c]; }); });
+    // the arrow on the sign at the centre-aisle end of each face's row: 1 = to the right as you look at the sign, -1 =
+    // left. Facing a right-side row end you look east (south on your right); facing a left-side one you look west.
+    faces.forEach(function (f) { f.arrow = (f.side === 'R') === (f.facing === 'S') ? 1 : -1; });
     return { rows: rows, faces: faces, aisles: aisles, byCode: byCode, RF: RF, LF: LF };
   }
   // south row first: the aisle runs between the north edge of `south` and the south edge of `north`.
