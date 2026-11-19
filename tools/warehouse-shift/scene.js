@@ -992,17 +992,21 @@
       const add = (x0, y0, z0, x1, y1, z1) => { const g = new T.Mesh(unitBox, m); g.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); g.scale.set(x1 - x0, y1 - y0, z1 - z0); tote.add(g); };
       add(-0.3, 0, -0.2, 0.3, t, 0.2); add(-0.3, 0, -0.2, -0.3 + t, 0.22, 0.2); add(0.3 - t, 0, -0.2, 0.3, 0.22, 0.2); add(-0.3, 0, -0.2, 0.3, 0.22, -0.2 + t); add(-0.3, 0, 0.2 - t, 0.3, 0.22, 0.2);
     })();
-    const toteStuff = new T.Group(); tote.add(toteStuff);
-    function fillTote(colours) {
-      for (const c of toteStuff.children) c.material.dispose();
-      toteStuff.clear();
+    // every hand over gets its own tote, with boxes in the colours of what was picked
+    function makeTote(colours) {
+      const t = tote.clone();
       colours.slice(0, 6).forEach((hex, i) => {
         const m = new T.Mesh(unitBox, lam(hex)), w = 0.14 + 0.06 * ((i * 37) % 5) / 5, h = 0.06 + 0.08 * ((i * 53) % 7) / 7;
         m.scale.set(w, h, 0.12 + 0.05 * (i % 3)); m.position.set(-0.19 + (i % 3) * 0.19, 0.013 + h / 2 + (i > 2 ? 0.05 : 0), i > 2 ? 0.08 : -0.08); m.rotation.y = (i % 2 ? 0.15 : -0.1);
-        toteStuff.add(m);
+        m.userData.own = true; t.add(m);
       });
+      scene.add(t);
+      return t;
     }
-    tote.visible = false; scene.add(tote);
+    function dropTote(t) {
+      if (t.parent) t.parent.remove(t);
+      for (const m of t.children) if (m.userData.own) m.material.dispose();
+    }
 
     /* ---------- light ---------- */
     const hemi = new T.HemisphereLight(0xffffff, 0x8d9096, 2.15);
@@ -1057,7 +1061,7 @@
 
     return {
       scene, groups, photos: { update: updatePhotos, flush: flushPhotos, fill: fillPhotos, setExtra: (list) => { extra = list; }, slots: SLOTS, big },
-      labelMesh, labelMat, trays, trayOf, placeTray, placeItem, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, tote, fillTote, lamps, M,
+      labelMesh, labelMat, trays, trayOf, placeTray, placeItem, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, lamps, M,
       clockTick, counts: { tags: tags.length, trays: trays.size, items: world.items.length }
     };
   }

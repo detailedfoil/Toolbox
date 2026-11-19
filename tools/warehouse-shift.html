@@ -12,7 +12,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=5fd9bdc4bd">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=152dfefacf">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -29,6 +29,7 @@
     <button class="ws-btn" id="fullBtn" type="button" aria-label="Full screen" title="Full screen">&#x26F6;</button>
     <button class="ws-btn" id="helpBtn" type="button" aria-label="How to play" title="How to play">?</button>
     <span class="ws-order" id="orderChip"><span>Orders done</span> <b id="doneCount">0</b></span>
+    <span class="ws-order" id="toteChip" title="Lines in the tote"><svg viewBox="0 0 24 16" width="20" height="14" aria-hidden="true"><path d="M1 3h22l-2 12H3z" fill="#2e66b5" stroke="#9cc0ff" stroke-width="1.2"/><path d="M5 6h14" stroke="#9cc0ff" stroke-width="1.2"/></svg><b id="toteCount">0</b></span>
   </div>
 
   <div class="ws-stickzone" id="stickZone" hidden><div class="ws-stick" id="stick"><div class="ws-knob" id="knob"></div></div></div>
@@ -36,7 +37,7 @@
 
   <section class="sc" id="scanner" hidden aria-label="Scanner">
     <div class="sc-body">
-      <span class="sc-speaker"></span><span class="sc-logo">symbol</span><span class="sc-power"></span>
+      <span class="sc-speaker"></span><span class="sc-led"></span><span class="sc-power"></span>
       <div class="sc-screen" id="scScreen">
         <div class="sc-status">
           <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="#dfe6f2" stroke-width="2.4"/><circle cx="12" cy="12" r="3.6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="#dfe6f2" stroke-width="2.2"/></svg><svg viewBox="0 0 16 24" aria-hidden="true"><rect x="2" y="4" width="12" height="18" rx="2" fill="none" stroke="#dfe6f2" stroke-width="2"/><rect x="5" y="1" width="6" height="3"/><path d="M5 10l6 6M11 10l-6 6" stroke="#dfe6f2" stroke-width="1.8"/></svg></span>
@@ -149,7 +150,7 @@
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
 <script src="warehouse-shift/world.js?v=f238df5f33"></script>
-<script src="warehouse-shift/scene.js?v=cb865f5fd0"></script>
-<script src="warehouse-shift/game.js?v=f0a69f4d0b"></script>
+<script src="warehouse-shift/scene.js?v=d560a97524"></script>
+<script src="warehouse-shift/game.js?v=e58a85c4c7"></script>
 </body>
 </html>

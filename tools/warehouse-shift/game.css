@@ -31,6 +31,10 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-btn:active{transform:scale(.95)}
 .ws-order{display:flex;align-items:center;gap:6px;height:38px;padding:0 12px;border-radius:12px;background:#0b1022c0;border:1px solid #ffffff30;font:700 13px system-ui,sans-serif;color:#dbe4f0}
 .ws-order b{color:#fff}
+.ws-order.bump{animation:wsBump .45s ease-out}
+@keyframes wsBump{30%{transform:scale(1.18);background:#1b6e33ee}}
+@media (pointer:coarse){.ws-squat small{display:none}}
+@media (max-width:640px){#orderChip span{display:none}}
 
 /* the walking stick (left thumb) and squat (near the scanner) */
 .ws-stickzone{position:absolute;left:0;bottom:0;width:38%;height:62%;z-index:2;touch-action:none}
@@ -85,8 +89,7 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
   border:.18em solid #111214;box-shadow:inset 0 .25em .5em #ffffff12,inset 0 -.4em .6em #0008}
 .sc-body::before{content:"";position:absolute;left:3.5%;right:3.5%;top:1.6%;height:8.4%;border-radius:1.2em 1.2em .4em .4em;background:linear-gradient(#26282c,#1d1e21)}
 .sc-speaker{position:absolute;top:2.6%;left:50%;width:30%;height:1.1%;transform:translateX(-50%);border-radius:1em;background:repeating-linear-gradient(90deg,#0b0c0e 0 .35em,#2b2d31 .35em .55em)}
-.sc-logo{position:absolute;top:5.3%;left:50%;transform:translateX(-50%);font:italic 900 2.15em/1 Georgia,"Times New Roman",serif;letter-spacing:-.04em;color:#e9e9e6;
-  text-decoration:underline;text-decoration-thickness:.09em;text-underline-offset:.08em;text-shadow:0 .05em .05em #000}
+.sc-led{position:absolute;top:5.7%;left:12%;width:.75em;height:.75em;border-radius:50%;background:radial-gradient(circle at 35% 35%,#9dff9d,#1f8a2c 60%,#0c3d12);box-shadow:0 0 .5em #3fe05a88}
 .sc-power{position:absolute;top:2.2%;right:9%;width:1.7em;height:1.4em;border-radius:.3em;background:#16171a;border:.1em solid #44474d}
 .sc-power::after{content:"";position:absolute;inset:.25em .45em;border:.13em solid #9aa0a8;border-top-color:transparent;border-radius:50%}
 .sc-screen{position:absolute;left:6.5%;right:6.5%;top:10.8%;bottom:3.6%;border-radius:.35em;overflow:hidden;overflow:clip;
@@ -148,9 +151,9 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .sc-pad .pe{background:#26d02b;color:#0f3d10}
 .sc-pad .pb{background:#5a6478}
 /* the function menu */
-.sc-menu{position:absolute;left:0;right:0;top:4.6%;bottom:30.5%;padding:4% 4%;background:#0b1022f7;z-index:3;display:flex;flex-direction:column;gap:2%;border-bottom:.12em solid #3a4560}
-.sc-menu h3{margin:0 0 3%;font-size:1.55em;font-weight:700;color:#ffd34d;text-align:center}
-.sc-menu button{display:flex;gap:.7em;align-items:center;width:100%;padding:.48em .6em;border:0;border-radius:.3em;background:#18213a;color:#f4f6fb;font:500 1.38em/1.1 inherit;text-align:left;cursor:pointer;font-family:inherit}
+.sc-menu{position:absolute;left:0;right:0;top:4.6%;bottom:30.5%;padding:3% 4%;background:#0b1022f7;z-index:3;display:flex;flex-direction:column;justify-content:space-evenly;gap:1.5%;border-bottom:.12em solid #3a4560;overflow:hidden}
+.sc-menu h3{margin:0;font-size:1.4em;font-weight:700;color:#ffd34d;text-align:center}
+.sc-menu button{display:flex;gap:.7em;align-items:center;width:100%;flex:1 1 0;max-height:2.6em;min-height:0;padding:0 .6em;border:0;border-radius:.3em;background:#18213a;color:#f4f6fb;font:500 1.3em/1 inherit;text-align:left;cursor:pointer;font-family:inherit}
 .sc-menu button b{color:#ffd34d;width:1em}
 .sc-menu button:active{background:#2a3657}
 

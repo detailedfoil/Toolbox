@@ -183,7 +183,13 @@
     function saveLife() { try { localStorage.setItem('ws-stats-v1', JSON.stringify(life)); } catch (e) { /* fine */ } }
     function lineHtml(text, cls) { const s = document.createElement('span'); s.className = 'sc-line' + (cls ? ' ' + cls : ''); s.textContent = text; return s; }
     function say(text, cls, ms) { msg = { text, cls }; msgUntil = performance.now() + (ms || 1700); renderScanner(); }
+    function renderTote() {
+      const el = $('toteCount');
+      if (!order || state === 'between') { el.textContent = '0'; return; }
+      el.textContent = (state === 'deliver' ? order.lines.length : cur) + '/' + order.lines.length;
+    }
     function renderScanner() {
+      renderTote();
       const L = [];
       const showMsg = msg && performance.now() < msgUntil;
       if (state === 'scan' || state === 'qty') {
@@ -246,6 +252,7 @@
     }
     // the tray that's out, or the box pulled forward, and where they're heading
     let openTray = null, openTimer = 0, pulled = null;
+    const pulling = new Set(); // boxes moving forward or back
     function slideTray(tr, out) {
       if (openTray && openTray !== tr) openTray.target = 0;
       if (tr) { tr.target = out ? 1 : 0; if (out) { openTray = tr; SFX.slide(); } }
@@ -263,14 +270,15 @@
       if (World.sameSpot(h.loc, ln.loc)) {
         SFX.scan(); flash(false);
         state = 'qty'; typed = ''; viewLine = -1;
-        if (tr) slideTray(tr, true); else if (ln.loc.item) { pulled = ln.loc.item; pulled.pullTarget = ln.loc.face.kind === 'BB' ? 0.12 : 0.07; }
+        openTimer = 0;
+        if (tr) slideTray(tr, true); else if (ln.loc.item) { pulled = ln.loc.item; pulled.pullTarget = ln.loc.face.kind === 'BB' ? 0.12 : 0.07; pulling.add(pulled); }
         if (hint.loc === ln.loc) hint.until = 0;
         toast(ln.loc.code + '  ✓', 'good');
         setPad(touch || padWanted);
         if (!touch && !padWanted) say('Type the qty, Enter', 'dim', 2600);
         renderScanner();
       } else {
-        stats.wrong++;
+        stats.wrong++; order.slips = (order.slips || 0) + 1;
         SFX.bad(); flash(true);
         if (tr) { slideTray(tr, true); openTimer = 1.1; }
         say('Wrong location', 'err', 2000);
@@ -281,10 +289,11 @@
       if (state !== 'qty') return;
       const ln = order.lines[cur];
       if (!typed) { say('Enter the quantity', 'warn'); SFX.miss(); return; }
-      if (Number(typed) !== ln.qty) { say('Qty does not match', 'err'); SFX.bad(); flash(true); typed = ''; renderScanner(); return; }
+      if (Number(typed) !== ln.qty) { order.slips = (order.slips || 0) + 1; say('Qty does not match', 'err'); SFX.bad(); flash(true); typed = ''; renderScanner(); return; }
       SFX.pick(); flash(false);
       stats.lines++; stats.units += ln.qty; life.lines++; life.units += ln.qty; saveLife();
       flyToTote(ln);
+      setTimeout(() => { const chip = $('toteChip'); chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump'); }, 480);
       if (openTray) openTray.target = 0;
       if (pulled) pulled.pullTarget = 0;
       setPad(false);
@@ -328,7 +337,7 @@
     const hint = { until: 0, loc: null, counter: false, t: 0 };
     function useHint() {
       if (!order || state === 'between' || state === 'idle') return;
-      SFX.hint(); stats.hints++;
+      SFX.hint(); stats.hints++; order.slips = (order.slips || 0) + 1;
       hint.until = performance.now() + 12000; hint.t = 0;
       hint.loc = state === 'deliver' ? null : order.lines[cur].loc;
       hint.counter = state === 'deliver';
@@ -404,10 +413,10 @@
         }
       }
       if (openTimer > 0) { openTimer -= dt; if (openTimer <= 0 && state !== 'qty' && openTray) openTray.target = 0; }
-      for (const it of [pulled].filter(Boolean)) {
-        const tgt = it.pullTarget || 0;
-        if (Math.abs((it.pull || 0) - tgt) > 0.0005) { it.pull = (it.pull || 0) + Math.sign(tgt - (it.pull || 0)) * Math.min(Math.abs(tgt - (it.pull || 0)), dt * 0.6); S.placeItem(it); any = true; }
-        else if (!tgt && it === pulled) { it.pull = 0; S.placeItem(it); pulled = null; }
+      for (const it of pulling) {
+        const tgt = it.pullTarget || 0, now = it.pull || 0;
+        if (Math.abs(now - tgt) > 0.0005) { it.pull = now + Math.sign(tgt - now) * Math.min(Math.abs(tgt - now), dt * 0.6); S.placeItem(it); any = true; }
+        else if (!tgt) { it.pull = 0; S.placeItem(it); pulling.delete(it); if (it === pulled) pulled = null; }
       }
       // the open tray's contents get their photos
       const ext = openTray && openTray.slide > 0.05 ? openTray.items : [];
@@ -434,9 +443,15 @@
       c.parts.skin.color.setHex(SKIN[Math.floor(Math.random() * SKIN.length)]); c.parts.hair.color.setHex(HAIR[Math.floor(Math.random() * HAIR.length)]);
       c.group.scale.setScalar(0.94 + Math.random() * 0.12);
     }
+    function freeCustomer(not) { // someone not busy, or a new face if everyone is
+      const c = customers.find((x) => x !== not && x.state === 'away');
+      if (c) return c;
+      const n = S.makeCustomer(); n.state = 'away'; n.group.visible = false; customers.push(n);
+      return n;
+    }
     function walk(c, path, then) { c.path = path.map((p) => p.slice()); c.leg = 0; c.state = 'walking'; c.then = then; c.group.visible = true; c.group.position.set(path[0][0], 0, path[0][1]); }
     function arrive(c) { dress(c); walk(c, PATH, () => { c.state = 'waiting'; c.group.rotation.y = Math.PI; }); }
-    function leave(c) { walk(c, PATH.slice().reverse(), () => { c.state = 'away'; c.group.visible = false; c.group.remove(S.tote); S.tote.visible = false; }); }
+    function leave(c) { walk(c, PATH.slice().reverse(), () => { c.state = 'away'; c.group.visible = false; c.carry = false; if (c.tote) { S.dropTote(c.tote); c.tote = null; } }); }
     function updateCustomers(dt) {
       let any = false;
       for (const c of customers) {
@@ -454,6 +469,7 @@
           const sw = Math.sin(c.phase) * 0.5;
           c.parts.legL.rotation.x = sw; c.parts.legR.rotation.x = -sw; c.parts.armL.rotation.x = -sw * 0.8; c.parts.armR.rotation.x = c.carry ? -1.1 : sw * 0.8;
         } else if (c.state === 'waiting') {
+          if (Math.hypot(me.x - c.group.position.x, me.y - c.group.position.z) > 9) continue; // too far to see: no need to draw
           c.phase = (c.phase || 0) + dt;
           c.parts.legL.rotation.x = c.parts.legR.rotation.x = 0; c.parts.armL.rotation.x = 0; c.parts.armR.rotation.x = 0;
           c.parts.torso.rotation.z = Math.sin(c.phase * 1.3) * 0.02; c.parts.head.rotation.y = Math.sin(c.phase * 0.7) * 0.35;
@@ -465,20 +481,20 @@
     let waitingCustomer = null;
     function handOver() {
       if (state !== 'deliver') return;
-      state = 'between'; atCounter = false;
+      state = 'between'; atCounter = false; hint.until = 0;
       SFX.done(); flash(false);
       stats.orders++; life.orders++; saveLife();
       $('doneCount').textContent = String(stats.orders);
-      banner('Order ' + four(order.no) + ' complete', order.lines.length + (order.lines.length > 1 ? ' lines, ' : ' line, ') + order.units + ' units', 2200);
+      const perfect = !order.slips;
+      banner('Order ' + four(order.no) + ' complete', (perfect ? 'Perfect pick! ' : '') + order.lines.length + (order.lines.length > 1 ? ' lines, ' : ' line, ') + order.units + ' units', 2400);
+      if (perfect) { stats.perfect = (stats.perfect || 0) + 1; life.perfect = (life.perfect || 0) + 1; saveLife(); }
       // the tote goes on the counter, slides over to the customer, and leaves with them
       const c = waitingCustomer;
-      S.tote.visible = true;
-      S.tote.position.set(Math.max(counter.x0 + 0.4, Math.min(counter.x1 - 0.4, me.x)), 1.0, counter.y0 + 0.22);
-      S.tote.rotation.set(0, 0, 0);
-      S.fillTote(order.lines.map((l) => l.item.colour));
-      totes.push({ t: 0, from: S.tote.position.clone(), to: new T.Vector3(c ? c.group.position.x : spot.x, 1.0, counter.y1 - 0.2), c });
+      const tote = S.makeTote(order.lines.map((l) => l.item.colour));
+      tote.position.set(Math.max(counter.x0 + 0.4, Math.min(counter.x1 - 0.4, me.x)), 1.0, counter.y0 + 0.22);
+      totes.push({ t: 0, tote, from: tote.position.clone(), to: new T.Vector3(c ? c.group.position.x : spot.x, 1.0, counter.y1 - 0.2), c });
       renderScanner();
-      setTimeout(() => { const next = customers.find((x) => x !== c && x.state === 'away') || customers.find((x) => x.state === 'away'); if (next) { arrive(next); waitingCustomer = next; } newOrder(); }, 1600);
+      setTimeout(() => { const next = freeCustomer(c); arrive(next); waitingCustomer = next; newOrder(); }, 1600);
     }
     const totes = [];
     function updateTotes(dt) {
@@ -487,14 +503,14 @@
         const t = totes[i];
         t.t += dt;
         const u = Math.min(1, t.t / 0.6), e = u * u * (3 - 2 * u);
-        S.tote.position.lerpVectors(t.from, t.to, e);
+        t.tote.position.lerpVectors(t.from, t.to, e);
         if (t.t > 0.9) {
           totes.splice(i, 1);
           if (t.c) { // the customer picks it up and goes
-            t.c.carry = true; t.c.group.add(S.tote); S.tote.position.set(0, 0.95, 0.32); S.tote.rotation.set(0, 0, 0); S.tote.scale.setScalar(1 / t.c.group.scale.x);
+            if (t.c.tote) S.dropTote(t.c.tote);
+            t.c.carry = true; t.c.tote = t.tote; t.c.group.add(t.tote); t.tote.position.set(0, 0.95, 0.32); t.tote.scale.setScalar(1 / t.c.group.scale.x);
             leave(t.c);
-            setTimeout(() => { t.c.carry = false; }, 6000);
-          } else S.tote.visible = false;
+          } else S.dropTote(t.tote);
         }
       }
       return true;
@@ -679,7 +695,7 @@
     function endShift() {
       if (locked()) document.exitPointerLock();
       const mins = Math.max(1, Math.round((Date.now() - stats.since) / 60000));
-      statsHtml($('endStats'), [[stats.orders, 'orders'], [stats.lines, 'lines picked'], [stats.units, 'units'], [stats.wrong, 'wrong scans'], [stats.hints, 'hints'], [mins + ' min', 'on shift']]);
+      statsHtml($('endStats'), [[stats.orders, 'orders'], [stats.lines, 'lines picked'], [stats.units, 'units'], [stats.perfect || 0, 'perfect picks'], [stats.wrong, 'wrong scans'], [mins + ' min', 'on shift']]);
       $('endCover').hidden = false;
     }
     $('keepBtn').addEventListener('click', () => { $('endCover').hidden = true; });
@@ -710,6 +726,7 @@
       ['topBar', 'scanner', 'cross', 'squatBtn'].forEach((id) => { $(id).hidden = false; });
       $('stickZone').hidden = !touch;
       active = true;
+      stayAwake();
       layout();
       if (!order) {
         waitingCustomer = customers[0]; dress(customers[0]);
@@ -724,6 +741,13 @@
       canvas.focus({ preventScroll: true });
       dirty = true;
     });
+
+    /* ---------- keep the screen awake while picking ---------- */
+    let wake = null;
+    async function stayAwake() {
+      try { if (navigator.wakeLock && !wake && !document.hidden && active) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } } catch (e) { wake = null; }
+    }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { stayAwake(); last = performance.now(); } else { keys.clear(); stickIn.x = stickIn.y = 0; } });
 
     /* ---------- install (a home screen app that works offline once loaded) ---------- */
     const installBtn = $('installBtn');
