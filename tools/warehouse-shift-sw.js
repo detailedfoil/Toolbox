@@ -1,38 +1,70 @@
-/* Only the Warehouse Shift page needs offline navigation. The viewer shares its path. */
-const CACHE = 'toolbox-warehouse-shift-v2';
-const GAME = new URL('floor-plan.html?shift=1', self.location.href).href;
-const ROOT = new URL('.', GAME);
-self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE);
-    const page = await fetch(GAME, { cache: 'reload' });
-    if (!page.ok) throw new Error('Game page unavailable');
-    const html = await page.clone().text();
-    const files = Array.from(html.matchAll(/(?:src|href)="([^"]+\.(?:js|css)\?v=[^"]+)"/g), (match) => match[1]);
-    files.push('warehouse-shift.webmanifest', 'floor-plan/shift-192.png', 'floor-plan/shift-512.png', 'floor-plan/data/shift-catalogue.json');
-    await cache.addAll(files.map((file) => new Request(new URL(file, ROOT), { cache: 'reload' })));
-    await cache.put(GAME, page);
-    await self.skipWaiting();
-  })());
-});
-self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-    for (const key of await caches.keys()) {
-      if (key.startsWith('toolbox-warehouse-shift-') && key !== CACHE) await caches.delete(key);
+/* Warehouse Shift: lets the installed game open with no signal once it's been played with signal.
+   Registered by warehouse-shift/game.js with scope "warehouse-shift", so it only looks after that page (never the
+   other tools). The page itself comes from the site first (a 4 s wait, then the kept copy); its scripts, styles,
+   product list and photos come from the kept copy first (their addresses change with every new version). The game
+   used to live at floor-plan.html?shift=1; a copy of this worker still registered there just removes itself. */
+const CACHE = 'warehouse-shift-v1';
+const PAGE = new URL('warehouse-shift.html', self.location.href).href;
+
+if (self.registration.scope.endsWith('floor-plan.html')) {
+  self.addEventListener('install', () => self.skipWaiting());
+  self.addEventListener('activate', (event) => {
+    event.waitUntil((async () => {
+      for (const key of await caches.keys()) if (key.startsWith('toolbox-warehouse-shift-')) await caches.delete(key);
+      await self.registration.unregister();
+    })());
+  });
+} else {
+  self.addEventListener('install', (event) => {
+    event.waitUntil((async () => {
+      try {
+        const cache = await caches.open(CACHE);
+        const page = await fetch(PAGE, { cache: 'reload' });
+        if (page.ok) {
+          const html = await page.clone().text();
+          const files = Array.from(html.matchAll(/(?:src|href)="([^"]+\.(?:js|css|png|webmanifest)(?:\?v=[^"]*)?)"/g), (m) => m[1]);
+          files.push('warehouse-shift/data/catalogue.json');
+          await Promise.all(files.map((f) => cache.add(new Request(new URL(f, PAGE), { cache: 'reload' })).catch(() => {})));
+          await cache.put(PAGE, page);
+        }
+      } catch (e) { /* offline while installing: kept as the game is played instead */ }
+      await self.skipWaiting();
+    })());
+  });
+  self.addEventListener('activate', (event) => {
+    event.waitUntil((async () => {
+      for (const key of await caches.keys()) if ((key.startsWith('warehouse-shift-') || key.startsWith('toolbox-warehouse-shift-')) && key !== CACHE) await caches.delete(key);
+      await self.clients.claim();
+    })());
+  });
+  self.addEventListener('fetch', (event) => {
+    const req = event.request, url = new URL(req.url);
+    if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+    if (req.mode === 'navigate') {
+      if (url.pathname !== new URL(PAGE).pathname) return;
+      event.respondWith((async () => {
+        const cache = await caches.open(CACHE);
+        const net = fetch(req).then((r) => { if (r.ok) cache.put(PAGE, r.clone()); return r; });
+        const timer = new Promise((r) => setTimeout(r, 4000));
+        try {
+          const first = await Promise.race([net, timer]);
+          if (first) return first;
+          return (await cache.match(PAGE)) || (await net);
+        } catch (e) { return (await cache.match(PAGE)) || Response.error(); }
+      })());
+      return;
     }
-    await self.clients.claim();
-  })());
-});
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== ROOT.origin) return;
-  const gameNavigation = event.request.mode === 'navigate' && url.pathname === new URL(GAME).pathname && url.searchParams.get('shift') === '1';
-  if (event.request.mode === 'navigate' && !gameNavigation) return;
-  event.respondWith((async () => {
-    const cache = await caches.open(CACHE);
-    if (gameNavigation) {
-      try { return await fetch(event.request); } catch (error) { return await cache.match(GAME) || Response.error(); }
-    }
-    return await cache.match(event.request) || fetch(event.request);
-  })());
-});
+    // only what the game uses: its own files, three.js, the sign-in scripts, the product photos
+    if (!/\/tools\/(warehouse-shift|floor-plan\/three|product-search\/photos)\/|\/(auth|auth-data|analytics)\.js$/.test(url.pathname)) return;
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      const kept = await cache.match(req);
+      if (kept) return kept;
+      try {
+        const r = await fetch(req);
+        if (r.ok) cache.put(req, r.clone());
+        return r;
+      } catch (e) { return Response.error(); }
+    })());
+  });
+}

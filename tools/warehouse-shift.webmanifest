@@ -1,14 +1,16 @@
 {
-  "id": "./floor-plan.html?shift=1",
+  "id": "./warehouse-shift.html",
   "name": "Warehouse Shift",
   "short_name": "Warehouse Shift",
-  "start_url": "./floor-plan.html?shift=1",
-  "scope": "./floor-plan.html",
-  "display": "standalone",
-  "background_color": "#151e2c",
-  "theme_color": "#151e2c",
+  "description": "Pick customer orders in a 3D warehouse and hand them over at the trade counter.",
+  "start_url": "./warehouse-shift.html",
+  "scope": "./warehouse-shift",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
   "icons": [
-    {"src":"floor-plan/shift-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
-    {"src":"floor-plan/shift-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+    {"src": "warehouse-shift/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "warehouse-shift/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
   ]
 }

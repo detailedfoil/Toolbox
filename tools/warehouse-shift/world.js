@@ -1,0 +1,404 @@
+/* Warehouse Shift: the made-up warehouse and where every product sits. Shared by the page (game.js) and the tests.
+
+   detailedfoil can't publish his store's real layout, so this one is invented, a bit bigger than the real Dunstable
+   store (21.9 x 24.25 m inside against 19.6 x 21.2 m), with wider aisles so the labels are easier to read. What is
+   copied from the 3D Floor Plan: the location numbering (AREA-BAY-SHELF-POSITION, AAC-01-12-06: bay 1 at the centre
+   aisle end, shelf 1 at the bottom, positions counted from the LEFT as you face the shelf; a double tray holds
+   positions front then back, a quad tray four from front to back), shelf heights (AA_ trays 15.3 cm apart up to
+   chin height, the top shelf 20 cm under the 3.6 m racking) and the shop floor (trade counter, tills, gondolas,
+   Trade+), moved into the front right corner (detailedfoil: "not completely in the middle").
+
+   Plan coordinates are metres: x across from the inside of the left wall, y from the inside of the back wall
+   towards the shop front, z up. One straight centre aisle runs from the back walkway to the front. The right side
+   holds the small parts and boxed stock, front to back: AAA (quad trays), AAB to AAE (double trays on the bottom ten
+   shelves), BAA to BAG. The left side holds the bulky stock, back to front: BBA to BBJ. Every pick aisle has stock on
+   both sides. Sorting a pick list by location code therefore walks you up the right side and back down the left
+   (detailedfoil's order). The first area of each aisle is on your right as you walk in from the centre aisle.
+
+   build(catalogue) -> the world: faces, aisles, locations, the products on them, the shop floor and what blocks
+   walking. Products come from data/catalogue.json (made by .github/warehouse-shift/make-catalogue.py): all 10,999
+   nailed products, sized T (tray), S (shelf) or B (bulky). The same seed gives the same warehouse on every phone, so
+   it can be learnt. */
+(function (root) {
+  'use strict';
+
+  var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
+
+  /* ---------- sizes, metres ---------- */
+  var BAY = 1.35;                     // one bay of racking
+  var NBAYS = 7;                      // bays in a row
+  var GAP = 0.25;                     // racking to the side walls
+  var AISLE = 2.5;                    // the centre aisle
+  var PICK = 1.35;                    // the aisles between rows (a real one is about 0.9)
+  var BACK = 1.7;                     // the walkway along the back wall
+  var RACK_H = 3.6, TOP = 3.4;        // racking height, top shelf
+  var POST = 0.06;                    // upright frames
+  var SPINE = 0.05;                   // the gap between the two faces of a back-to-back row
+  var DEEP = { AA: 0.5, BA: 0.5, BB: 0.65 };
+  var LX0 = GAP, LX1 = GAP + NBAYS * BAY;            // left block: 0.25 to 9.70
+  var RX0 = LX1 + AISLE, RX1 = RX0 + NBAYS * BAY;    // right block: 12.20 to 21.65
+  var W = RX1 + GAP;                                  // 21.90
+  var H = 6.0, WT = 0.25;                             // eaves, wall thickness
+  var DX = W - 17.64 + 14.87 - 14.87;                 // (kept for reading: see SHOP below)
+
+  /* ---------- what each area holds ---------- */
+  // AA_: 16 shelves, the bottom 10 are trays (AAA quad trays in half-width bays, the rest double trays), the 6 above
+  // are plain shelves of small boxes. BA_: 9 shelves of 9 small-item positions. BB_: 5 long-span levels of bulky
+  // stock, 3 big positions on the bottom level and 4 on the others.
+  var AREAS = {};
+  AREAS.AAA = { kind: 'AA', half: true, deep: 4, trays: 5, upper: 4 };
+  ['AAB', 'AAC', 'AAD', 'AAE'].forEach(function (a) { AREAS[a] = { kind: 'AA', deep: 2, trays: 6, upper: 9 }; });
+  ['BAA', 'BAB', 'BAC', 'BAD', 'BAE', 'BAF', 'BAG'].forEach(function (a) { AREAS[a] = { kind: 'BA', cells: 9 }; });
+  ['BBA', 'BBB', 'BBC', 'BBD', 'BBE', 'BBF', 'BBG', 'BBH', 'BBI', 'BBJ'].forEach(function (a) { AREAS[a] = { kind: 'BB', cells: [3, 4, 4, 4, 4] }; });
+  var SHELVES = { AA: 16, BA: 9, BB: 5 }, TRAY_SHELVES = 10, PITCH = 0.153, TRAY_H = 0.095;
+
+  // the rows: right side from the front, left side from the back. s = the face that looks south (you stand south
+  // of it), n = the face that looks north.
+  var RIGHT = [{ n: 'AAA' }, { s: 'AAB', n: 'AAC' }, { s: 'AAD', n: 'AAE' }, { s: 'BAA', n: 'BAB' }, { s: 'BAC', n: 'BAD' }, { s: 'BAE', n: 'BAF' }, { s: 'BAG' }];
+  var LEFT = [{ s: 'BBA' }, { n: 'BBB', s: 'BBC' }, { n: 'BBD', s: 'BBE' }, { n: 'BBF', s: 'BBG' }, { n: 'BBH', s: 'BBI' }, { n: 'BBJ' }];
+
+  function shelfZ(kind, s) {
+    if (kind === 'AA') {
+      var z10 = 0.12 + (TRAY_SHELVES - 1) * PITCH;
+      return s <= TRAY_SHELVES ? 0.12 + (s - 1) * PITCH : z10 + (s - TRAY_SHELVES) * (TOP - z10) / (SHELVES.AA - TRAY_SHELVES);
+    }
+    return 0.12 + (s - 1) * (TOP - 0.12) / (SHELVES[kind] - 1);
+  }
+  // the room above a shelf: up to the next one, or the top of the racking
+  function shelfTop(kind, s) { return s < SHELVES[kind] ? shelfZ(kind, s + 1) : RACK_H; }
+  function rowDepth(r, kind) { return (r.s && r.n ? 2 * DEEP[kind] + SPINE : DEEP[kind] + SPINE); }
+
+  /* ---------- a small, repeatable random number source ---------- */
+  function rng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+  /* ---------- the racking ---------- */
+  function racking() {
+    var rows = [], faces = [], aisles = [];
+    var kindOf = function (r) { return AREAS[r.s || r.n].kind; };
+    var depthR = 0;
+    RIGHT.forEach(function (r, i) { depthR += rowDepth(r, kindOf(r)) + (i < RIGHT.length - 1 ? PICK : 0); });
+    var RF = BACK + depthR; // the front of the right block
+    // right side: from the front edge going back
+    var y = RF;
+    RIGHT.forEach(function (r, i) {
+      var k = kindOf(r), d = rowDepth(r, k);
+      rows.push({ side: 'R', i: i, kind: k, x0: RX0, x1: RX1, y0: y - d, y1: y, s: r.s || null, n: r.n || null });
+      y -= d + PICK;
+    });
+    y = BACK;
+    LEFT.forEach(function (r, i) {
+      var k = kindOf(r), d = rowDepth(r, k);
+      rows.push({ side: 'L', i: i, kind: k, x0: LX0, x1: LX1, y0: y, y1: y + d, s: r.s || null, n: r.n || null });
+      y += d + PICK;
+    });
+    var LF = y - PICK; // the front of the left block
+    rows.forEach(function (row) {
+      var k = row.kind, dp = DEEP[k];
+      if (row.s) faces.push(face(row.s, row, 'S', row.y1 - dp, row.y1));
+      if (row.n) faces.push(face(row.n, row, 'N', row.y0, row.y0 + dp));
+    });
+    // the pick aisles, numbered in walking order (right side from the front, then left side from the back)
+    var R = rows.filter(function (r) { return r.side === 'R'; }), Lr = rows.filter(function (r) { return r.side === 'L'; });
+    for (var i = 0; i + 1 < R.length; i++) aisles.push(aisle('R', aisles.length + 1, R[i], R[i + 1], R[i].n, R[i + 1].s, RX0, RX1));
+    for (var j = 0; j + 1 < Lr.length; j++) aisles.push(aisle('L', aisles.length + 1, Lr[j + 1], Lr[j], Lr[j].s, Lr[j + 1].n, LX0, LX1));
+    var byCode = {};
+    faces.forEach(function (f) { byCode[f.area] = f; });
+    aisles.forEach(function (a) { a.faces = a.codes.map(function (c) { byCode[c].aisle = a; return byCode[c]; }); });
+    return { rows: rows, faces: faces, aisles: aisles, byCode: byCode, RF: RF, LF: LF };
+  }
+  // south row first: the aisle runs between the north edge of `south` and the south edge of `north`.
+  // `first` is the face on your right as you walk in from the centre aisle.
+  function aisle(side, no, south, north, first, second, x0, x1) {
+    return { side: side, no: no, x0: x0, x1: x1, y0: north.y1, y1: south.y0, codes: [first, second],
+      mouth: side === 'R' ? x0 : x1, cy: (north.y1 + south.y0) / 2 };
+  }
+  function face(code, row, facing, y0, y1) {
+    var cfg = AREAS[code], k = cfg.kind, n = cfg.half ? NBAYS * 2 : NBAYS, w = (row.x1 - row.x0) / n;
+    var f = { area: code, kind: k, cfg: cfg, side: row.side, row: row, facing: facing, y0: y0, y1: y1,
+      front: facing === 'S' ? y1 : y0, back: facing === 'S' ? y0 : y1, out: facing === 'S' ? 1 : -1,
+      x0: row.x0, x1: row.x1, psign: facing === 'S' ? 1 : -1, bays: [], shelves: [] };
+    // bay 1 is at the centre aisle end: the right block's west end, the left block's east end
+    for (var b = 0; b < n; b++) {
+      var bx0 = row.side === 'R' ? row.x0 + b * w : row.x1 - (b + 1) * w;
+      // the usable width between the upright frames: drawn bays have a frame at each end; a half-width bay only
+      // on its outer end (the two halves share one bay of racking)
+      var drawn = cfg.half ? Math.floor(b / 2) : b, dx0 = row.side === 'R' ? row.x0 + drawn * BAY : row.x1 - (drawn + 1) * BAY;
+      var ux0 = Math.max(bx0, dx0 + POST / 2 + 0.035), ux1 = Math.min(bx0 + w, dx0 + BAY - POST / 2 - 0.035);
+      f.bays.push({ no: b + 1, x0: bx0, x1: bx0 + w, ux0: ux0, ux1: ux1, drawn: drawn });
+    }
+    for (var s = 1; s <= SHELVES[k]; s++) {
+      var tray = k === 'AA' && s <= TRAY_SHELVES;
+      var cells = tray ? cfg.trays * cfg.deep : k === 'AA' ? cfg.upper : Array.isArray(cfg.cells) ? cfg.cells[s - 1] : cfg.cells;
+      f.shelves.push({ no: s, z: shelfZ(k, s), top: shelfTop(k, s), tray: tray, cells: cells, trays: tray ? cfg.trays : 0, deep: tray ? cfg.deep : 1 });
+    }
+    return f;
+  }
+
+  /* ---------- every location ---------- */
+  // A location: {code, face, bay, shelf, pos, tray: index of its tray from the left (trays only), slot: 0 = front,
+  // x0, x1 (its width along the row), d0, d1 (how far back from the front edge it reaches), z0 (the shelf),
+  // z1 (the shelf above), cls: T / S / B (what size of product it's for)}.
+  function locations(rk) {
+    var list = [], byCode = {};
+    rk.faces.forEach(function (f) {
+      var dp = DEEP[f.kind];
+      f.bays.forEach(function (b) {
+        var uw = b.ux1 - b.ux0;
+        f.shelves.forEach(function (sh) {
+          var n = sh.tray ? sh.trays : sh.cells, cw = uw / n;
+          for (var c = 0; c < n; c++) { // c counts from the left as you face the shelf
+            var x0 = f.psign > 0 ? b.ux0 + c * cw : b.ux1 - (c + 1) * cw;
+            for (var j = 0; j < sh.deep; j++) {
+              var pos = c * sh.deep + j + 1;
+              var code = f.area + '-' + pad2(b.no) + '-' + pad2(sh.no) + '-' + pad2(pos);
+              var loc = { code: code, face: f, bay: b, shelf: sh, pos: pos, cell: c, slot: j, tray: sh.tray ? c : -1,
+                x0: x0, x1: x0 + cw, d0: j * dp / sh.deep, d1: (j + 1) * dp / sh.deep, z0: sh.z, z1: sh.top,
+                cls: sh.tray ? 'T' : f.kind === 'BB' ? 'B' : 'S', item: null };
+              list.push(loc); byCode[code] = loc;
+            }
+          }
+        });
+      });
+    });
+    list.sort(function (a, b) { return a.code < b.code ? -1 : a.code > b.code ? 1 : 0; });
+    list.forEach(function (l, i) { l.order = i; });
+    return { list: list, byCode: byCode };
+  }
+
+  /* ---------- the products on them ---------- */
+  // Each size of product fills its own kind of location, in walking order, so like sits with like (the catalogue is
+  // sorted by group, then name). A spread of spaces is left empty, as in a real store. If one size ever has more
+  // products than places, the rest go to the next best kind (small parts onto shelves, bulky onto shelves).
+  function stock(locs, items, seed) {
+    var r = rng(seed), byCls = { T: [], S: [], B: [] }, want = { T: [], S: [], B: [] };
+    locs.list.forEach(function (l) { byCls[l.cls].push(l); });
+    items.forEach(function (it) { (want[it.size] || want.S).push(it); });
+    var spare = {}, extra = { T: [], S: [], B: [] }, next = { T: ['S', 'B'], S: ['B', 'T'], B: ['S', 'T'] };
+    ['T', 'S', 'B'].forEach(function (c) {
+      var cap = byCls[c].length;
+      if (want[c].length > cap) { extra[c] = want[c].slice(cap); want[c] = want[c].slice(0, cap); }
+      spare[c] = cap - want[c].length;
+    });
+    ['T', 'S', 'B'].forEach(function (c) {
+      extra[c].forEach(function (it) {
+        for (var k = 0; k < 2; k++) { var to = next[c][k]; if (spare[to] > 0) { want[to].push(it); spare[to]--; return; } }
+      });
+    });
+    var placed = [];
+    ['T', 'S', 'B'].forEach(function (c) {
+      var L = byCls[c], P = want[c], free = L.length - P.length, empty = {};
+      // pick which spaces stay empty: a shuffle of the indexes, the first `free` of them
+      var idx = L.map(function (_, i) { return i; });
+      for (var i = idx.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
+      for (var k = 0; k < free; k++) empty[idx[k]] = 1;
+      var p = 0;
+      for (var q = 0; q < L.length && p < P.length; q++) {
+        if (empty[q]) continue;
+        L[q].item = P[p]; P[p].loc = L[q]; placed.push(P[p]); p++;
+      }
+    });
+    placed.sort(function (a, b) { return a.loc.order - b.loc.order; });
+    return placed;
+  }
+
+  /* ---------- the shop floor and everything else ---------- */
+  // The trade counter, Trade+ and their shelving are the 3D Floor Plan's (tools/floor-plan/data/layout.json), moved
+  // so Trade+ sits in the front right corner: real x + SX, y + SY. The staff room and toilets keep their x.
+  var SY = 3.05, SX = W - 2.77 - 14.87;
+  function rect(x0, y0, x1, y1) { return { x0: x0, y0: y0, x1: x1, y1: y1 }; }
+  function shop(o) { var c = {}; for (var k in o) c[k] = o[k]; if ('x0' in c) { c.x0 += SX; c.x1 += SX; c.y0 += SY; c.y1 += SY; } if (c.edges) c.edges = c.edges.map(function (e) { return e + (c.along === 'y' ? SY : SX); }); return c; }
+  function staff(o) { var c = {}; for (var k in o) c[k] = o[k]; if ('y0' in c) { c.y0 += SY; c.y1 += SY; } return c; }
+
+  function building(rk) {
+    var D = 21.2 + SY;
+    var b = { w: W, d: D, h: H, t: WT };
+    var openings = [
+      { wall: 'back', from: 0.8, to: 1.66, type: 'exit', h: 2.1, name: 'Fire exit' },
+      { wall: 'front', from: 2.4, to: 3.2, type: 'exit', h: 2.1, name: 'Fire exit' },
+      { wall: 'front', from: 5.6, to: 9.2, type: 'shutter', h: 4.0, name: 'Goods in' },
+      { wall: 'front', from: 10.4 + SX, to: 11.65 + SX, type: 'glass', h: 2.85 },
+      { wall: 'front', from: 11.65 + SX, to: 12.55 + SX, type: 'entrance', h: 2.85, name: 'Entrance' },
+      { wall: 'front', from: 12.55 + SX, to: 13.2 + SX, type: 'glass', h: 2.85 },
+      { wall: 'right', from: 9.0, to: 9.86, type: 'exit', h: 2.1, name: 'Fire exit' }
+    ];
+    var walls = [
+      // staff room and toilets (front left)
+      [0, 13.9, 3.29, 14.08], [3.15, 14.08, 3.29, 14.35], [3.15, 15.15, 3.29, 17.99], [0, 17.81, 3.29, 17.99], [0, 18.95, 2.31, 19.13],
+      [2.15, 17.99, 2.31, 18.15], [2.15, 18.9, 2.31, 19.15], [2.15, 19.95, 2.31, 21.2]
+    ].map(function (w) { return [w[0], w[1] + SY, w[2], w[3] + SY]; });
+    // the shop: goods in on its left, Trade+ on its right, the office tucked between goods in and the shop
+    walls.push([9.49 + SX, 14.75 + SY, 9.65 + SX, D], [14.75 + SX, 14.9 + SY, 14.87 + SX, 19.65 + SY], [14.75 + SX, 20.45 + SY, 14.87 + SX, D]);
+    var OX0 = 9.49 + SX - 1.95, OY0 = D - 3.3;
+    walls.push([OX0 - 0.15, OY0 - 0.15, OX0, D], [OX0, OY0 - 0.15, OX0 + 0.45, OY0], [OX0 + 1.2, OY0 - 0.15, 9.49 + SX, OY0]);
+    var rooms = [
+      staff({ name: 'Staff room', x0: 0, y0: 14.08, x1: 3.15, y1: 17.81, floor: 'vinyl', ceiling: 2.85 }),
+      staff({ name: 'WC', x0: 0, y0: 17.99, x1: 2.15, y1: 18.95, floor: 'vinyl', ceiling: 2.85, small: true }),
+      staff({ name: 'Accessible WC', x0: 0, y0: 19.13, x1: 2.15, y1: 21.2, floor: 'vinyl', ceiling: 2.85, small: true }),
+      shop({ name: 'Trade counter', x0: 9.65, y0: 15.5, x1: 14.75, y1: 21.2, floor: 'tile', ceiling: 2.85 }),
+      shop({ name: 'Trade+', x0: 14.87, y0: 15.6, x1: 17.64, y1: 21.2, floor: 'tile', ceiling: 2.85 }),
+      { name: 'Office', x0: OX0, y0: OY0, x1: 9.49 + SX, y1: D, floor: 'vinyl', ceiling: 2.85, small: true }
+    ];
+    var objects = [
+      shop({ kind: 'heater', name: 'Heater', x0: 10.1, y0: 13.73, x1: 17.2, y1: 14.5, z0: 3.5, z1: 3.85 }),
+      shop({ kind: 'counter', name: 'Trade counter', x0: 9.65, y0: 14.95, x1: 13.95, y1: 15.5 }),
+      shop({ kind: 'counter', name: 'Trade+ counter', x0: 14.87, y0: 15.01, x1: 15.89, y1: 15.6 }),
+      shop({ kind: 'counter', name: 'Trade+ counter', x0: 16.68, y0: 15.06, x1: 17.64, y1: 15.65 }),
+      shop({ kind: 'till', x0: 10.34, y0: 15.05, x1: 10.66, y1: 15.3 }), shop({ kind: 'till', x0: 11.29, y0: 15.05, x1: 11.61, y1: 15.3 }),
+      shop({ kind: 'till', x0: 12.24, y0: 15.05, x1: 12.56, y1: 15.3 }), shop({ kind: 'till', x0: 13.19, y0: 15.05, x1: 13.51, y1: 15.3 }),
+      shop({ kind: 'till', x0: 14.99, y0: 15.1, x1: 15.31, y1: 15.35 }), shop({ kind: 'till', x0: 17.19, y0: 15.15, x1: 17.51, y1: 15.4 }),
+      shop({ kind: 'gondola', x0: 9.65, y0: 16.4, x1: 10.25, y1: 20.42, z1: 1.8, along: 'y', edges: [16.4, 16.91, 17.42, 18.41, 19.41, 20.42], open: 'E' }),
+      shop({ kind: 'gondola', x0: 11.69, y0: 17.1, x1: 12.83, y1: 19.15, z1: 1.5, along: 'y', edges: [17.1, 18.1, 19.15], open: 'EW' }),
+      shop({ kind: 'gondola', x0: 11.71, y0: 19.15, x1: 12.81, y1: 19.48, z1: 1.2, along: 'x', edges: [11.71, 12.81], open: 'S' }),
+      shop({ kind: 'gondola', x0: 14.22, y0: 16.42, x1: 14.72, y1: 19.48, z1: 1.8, along: 'y', edges: [16.42, 17.46, 18.46, 19.48], open: 'W' }),
+      shop({ kind: 'gondola', x0: 14.34, y0: 19.52, x1: 14.67, y1: 20.12, z1: 1.0, along: 'y', edges: [19.52, 20.12], open: 'W' }),
+      shop({ kind: 'gondola', x0: 14.9, y0: 16.54, x1: 15.46, y1: 19.62, z1: 1.8, along: 'y', edges: [16.54, 17.6, 18.6, 19.62], open: 'E' }),
+      shop({ kind: 'gondola', x0: 17.05, y0: 16.6, x1: 17.6, y1: 20.62, z1: 1.8, along: 'y', edges: [16.6, 17.6, 18.6, 19.6, 20.62], open: 'W' }),
+      // staff room and toilets
+      staff({ kind: 'table', x0: 0.3, y0: 15.2, x1: 1.0, y1: 16.4, z1: 0.75 }),
+      staff({ kind: 'chair', x0: 1.05, y0: 15.4, x1: 1.45, y1: 15.8, face: 'W' }), staff({ kind: 'chair', x0: 1.05, y0: 15.9, x1: 1.45, y1: 16.3, face: 'W' }),
+      staff({ kind: 'chair', x0: 0.45, y0: 14.75, x1: 0.85, y1: 15.15, face: 'S' }), staff({ kind: 'chair', x0: 0.45, y0: 16.45, x1: 0.85, y1: 16.85, face: 'N' }),
+      staff({ kind: 'worktop', x0: 0.15, y0: 17.2, x1: 3.1, y1: 17.81, z1: 0.9 }), staff({ kind: 'sink', x0: 0.35, y0: 17.3, x1: 1.0, y1: 17.7 }),
+      staff({ kind: 'wc', x0: 0.1, y0: 18.4, x1: 0.7, y1: 18.78, face: 'E' }), staff({ kind: 'basin', x0: 1.1, y0: 18.0, x1: 1.45, y1: 18.3 }),
+      staff({ kind: 'wc', x0: 0.6, y0: 20.6, x1: 0.98, y1: 21.18, face: 'N' }), staff({ kind: 'basin', x0: 0.02, y0: 19.6, x1: 0.37, y1: 20.0 }),
+      // the office
+      { kind: 'desk', x0: OX0 + 0.1, y0: D - 0.75, x1: 9.49 + SX - 0.1, y1: D - 0.05, z1: 0.75 },
+      { kind: 'chair', x0: OX0 + 0.75, y0: D - 1.25, x1: OX0 + 1.15, y1: D - 0.85, face: 'S' },
+      { kind: 'cupboard', name: 'Cupboard', x0: OX0 + 0.05, y0: OY0 + 0.05, x1: OX0 + 0.55, y1: OY0 + 0.6, z1: 1.2 },
+      // goods in and the warehouse
+      { kind: 'cupboard', name: 'Electrics', x0: 3.5, y0: D - 0.3, x1: 4.75, y1: D, z1: 2.0 },
+      { kind: 'cage', name: 'Cage', x0: OX0 - 0.75, y0: OY0 - 0.15 - 0.62, x1: OX0 - 0.15, y1: OY0 - 0.15, z1: 1.8 },
+      { kind: 'panel', x0: 2.0, y0: 0, x1: 2.07, y1: 0.52, z1: 3.0 }, { kind: 'panel', x0: W - 2.07, y0: 0, x1: W - 2.0, y1: 0.57, z1: 3.0 }
+    ];
+    // roll cages waiting at goods in, and a pallet or two of deliveries
+    var cages = [], pallets = [];
+    for (var i = 0; i < 4; i++) cages.push({ kind: 'rollcage', x0: 4.0 + i * 0.85, y0: D - 2.6, x1: 4.72 + i * 0.85, y1: D - 1.8, z1: 1.75 });
+    pallets.push({ kind: 'pallet', x0: 6.2, y0: D - 4.3, x1: 7.4, y1: D - 3.3, z1: 1.3 }, { kind: 'pallet', x0: 7.8, y0: D - 4.3, x1: 9.0, y1: D - 3.3, z1: 0.9 });
+    objects = objects.concat(cages, pallets);
+    // the everyday bits: kick stools at the end of a few aisles, a pallet truck, a stack of totes by the counter,
+    // fire extinguishers on the walls, a mop bucket, a notice board and a clock
+    rk.aisles.filter(function (a) { return a.no === 2 || a.no === 5 || a.no === 8 || a.no === 10; }).forEach(function (a) {
+      var x = a.side === 'R' ? a.x1 - 0.27 : a.x0 + 0.27, y = (a.y0 + a.y1) / 2 + (a.no % 2 ? 0.25 : -0.25);
+      objects.push({ kind: 'stool', x0: x - 0.21, y0: y - 0.21, x1: x + 0.21, y1: y + 0.21, z1: 0.42 });
+    });
+    objects.push({ kind: 'stool', x0: 3.9, y0: 0.35, x1: 4.32, y1: 0.77, z1: 0.42 }, { kind: 'stool', x0: 14.3, y0: 0.4, x1: 14.72, y1: 0.82, z1: 0.42 });
+    objects.push({ kind: 'pallettruck', x0: 10.35, y0: D - 3.6, x1: 10.9, y1: D - 2.0, z1: 1.2 });
+    objects.push({ kind: 'totes', x0: RX0 + 0.35, y0: rk.RF + 0.12, x1: RX0 + 0.95, y1: rk.RF + 0.52, z1: 1.45 });
+    objects.push({ kind: 'bucket', x0: 0.35, y0: 0.3, x1: 0.75, y1: 0.7, z1: 0.75 });
+    [{ x: 2.35, y: 0.06, f: 'S' }, { x: W - 0.06, y: 10.6, f: 'W' }, { x: 9.75, y: D - 0.06, f: 'N' }, { x: W - 0.06, y: rk.RF - 1.0, f: 'W' }].forEach(function (e) {
+      var ax = e.f === 'S' || e.f === 'N';
+      objects.push({ kind: 'extinguisher', face: e.f, x0: ax ? e.x - 0.12 : e.x - 0.18, y0: ax ? e.y - 0.18 : e.y - 0.12, x1: ax ? e.x + 0.12 : e.x + 0.06, y1: ax ? e.y + 0.06 : e.y + 0.12, z1: 1.1, wall: true });
+    });
+    var shopWall = 9.49 + SX;
+    objects.push({ kind: 'board', face: 'W', x0: shopWall - 0.03, y0: 18.6, x1: shopWall, y1: 19.9, z0: 1.05, z1: 1.95, wall: true });
+    objects.push({ kind: 'clock', face: 'W', x0: shopWall - 0.05, y0: 19.05, x1: shopWall, y1: 19.45, z0: 2.15, z1: 2.55, wall: true });
+    var zones = [{ name: 'Goods in', x0: 3.6, y0: D - 4.6, x1: 9.9, y1: D - 0.6 }];
+    var columns = [[5.0, 0, 5.4, 0.45], [(LX1 + RX0) / 2 - 0.2, 0, (LX1 + RX0) / 2 + 0.2, 0.45], [16.9, 0, 17.3, 0.45]];
+    var counter = objects[1];
+    return { b: b, openings: openings, walls: walls, rooms: rooms, objects: objects, zones: zones, columns: columns, counter: counter, D: D };
+  }
+
+  /* ---------- walking ---------- */
+  var BLOCKS = { counter: 1, cupboard: 1, cage: 1, panel: 1, gondola: 1, table: 1, worktop: 1, desk: 1, wc: 1, rollcage: 1, pallet: 1, stool: 1, pallettruck: 1, totes: 1, bucket: 1 };
+  function obstacles(rk, bl) {
+    var out = [];
+    rk.rows.forEach(function (r) { out.push(rect(r.x0, r.y0, r.x1, r.y1)); });
+    bl.walls.forEach(function (w) { out.push(rect(w[0], w[1], w[2], w[3])); });
+    bl.columns.forEach(function (c) { out.push(rect(c[0], c[1], c[2], c[3])); });
+    bl.objects.forEach(function (o) { if (BLOCKS[o.kind]) out.push(rect(o.x0, o.y0, o.x1, o.y1)); });
+    return out;
+  }
+
+  /* ---------- a scan: which location is at this spot on a shelf face ---------- */
+  // x along the row, z height, both where the line from the scanner meets the face's front edge. A location's label
+  // sits just under its shelf, so the strip from just under one shelf to just under the next belongs to it. Trays
+  // answer with their front position (the whole tray scans as one).
+  function locationAt(world, f, x, z) {
+    if (x < f.x0 || x > f.x1 || z < 0 || z > RACK_H) return null;
+    var bay = null;
+    for (var i = 0; i < f.bays.length; i++) if (x >= f.bays[i].x0 && x <= f.bays[i].x1) { bay = f.bays[i]; break; }
+    if (!bay) return null;
+    var sh = null;
+    for (var s = f.shelves.length - 1; s >= 0; s--) {
+      var below = f.shelves[s].tray ? 0.025 : 0.085;
+      if (z >= f.shelves[s].z - below) { sh = f.shelves[s]; break; }
+    }
+    if (!sh) sh = f.shelves[0];
+    var n = sh.tray ? sh.trays : sh.cells, uw = bay.ux1 - bay.ux0;
+    var c = Math.floor((f.psign > 0 ? x - bay.ux0 : bay.ux1 - x) / uw * n);
+    c = Math.max(0, Math.min(n - 1, c));
+    return world.locs.byCode[f.area + '-' + pad2(bay.no) + '-' + pad2(sh.no) + '-' + pad2(c * sh.deep + 1)] || null;
+  }
+  // two locations count as the same scan if they're the same place, or in the same tray
+  function sameSpot(a, b) {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    return a.tray >= 0 && a.face === b.face && a.bay === b.bay && a.shelf === b.shelf && a.tray === b.tray;
+  }
+
+  /* ---------- orders ---------- */
+  // A customer's order: 1 to 5 different products (mostly 1 to 3), sorted by location so the scanner walks you up the
+  // right side and back down the left. Quantities look like real ones: a few small parts, back boxes by the ten, one
+  // of anything big.
+  function quantity(it, r) {
+    var u = r();
+    if (it.group === 'backbox') return [10, 20, 25, 50][Math.floor(u * 4)];
+    if (it.size === 'T') return u < 0.45 ? 1 : u < 0.7 ? 2 : u < 0.82 ? 3 : u < 0.9 ? 4 : u < 0.96 ? 5 : 10;
+    if (it.size === 'S') return u < 0.72 ? 1 : u < 0.92 ? 2 : 3;
+    return u < 0.88 ? 1 : 2;
+  }
+  function order(world, r, n) {
+    var items = world.items, lines = [], seen = {};
+    if (!n) { var u = r(); n = u < 0.28 ? 1 : u < 0.6 ? 2 : u < 0.82 ? 3 : u < 0.94 ? 4 : 5; }
+    var guard = 0;
+    while (lines.length < n && guard++ < 1000) {
+      var it = items[Math.floor(r() * items.length)];
+      if (seen[it.code]) continue;
+      seen[it.code] = 1;
+      lines.push({ item: it, loc: it.loc, qty: quantity(it, r) });
+    }
+    lines.sort(function (a, b) { return a.loc.order - b.loc.order; });
+    return lines;
+  }
+
+  /* ---------- the whole world ---------- */
+  function build(catalogue, seed) {
+    var rk = racking(), bl = building(rk), locs = locations(rk);
+    var items = (catalogue.items || []).map(function (a) {
+      return { code: a[0], name: a[1], group: a[2], size: a[3], colour: a[4] ? parseInt(a[4], 16) : 0xc8b08a, photo: !!a[5], loc: null };
+    });
+    var placed = stock(locs, items, seed || 20261119);
+    var D = bl.D;
+    var counter = bl.counter;
+    var world = {
+      W: W, D: D, H: H, WT: WT, RACK_H: RACK_H, TOP: TOP, POST: POST, DEEP: DEEP, BAY: BAY, AISLE: AISLE, PICK: PICK, BACK: BACK,
+      LX0: LX0, LX1: LX1, RX0: RX0, RX1: RX1, RF: rk.RF, LF: rk.LF, TRAY_H: TRAY_H, TRAY_SHELVES: TRAY_SHELVES,
+      rows: rk.rows, faces: rk.faces, aisles: rk.aisles, faceOf: rk.byCode,
+      locs: locs, items: placed, unplaced: items.length - placed.length,
+      building: bl.b, openings: bl.openings, walls: bl.walls, rooms: bl.rooms, objects: bl.objects, zones: bl.zones, columns: bl.columns,
+      counter: counter,
+      // stand behind the counter (the warehouse side) to hand an order over; the customer waits on the shop side
+      handover: rect(counter.x0 - 0.3, counter.y0 - 1.4, counter.x1 + 0.3, counter.y0),
+      customer: { x: (counter.x0 + counter.x1) / 2 + 0.25, y: counter.y1 + 0.42 },
+      start: { x: (LX1 + RX0) / 2 + 0.25, y: counter.y0 - 0.75, yaw: 0.04 },
+      centre: { x0: LX1, x1: RX0 },
+      pad2: pad2
+    };
+    world.obstacles = obstacles(rk, bl);
+    return world;
+  }
+
+  var api = { build: build, order: order, quantity: quantity, locationAt: locationAt, sameSpot: sameSpot, shelfZ: shelfZ, rng: rng, hash: hash, pad2: pad2,
+    AREAS: AREAS, SHELVES: SHELVES };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.ShiftWorld = api;
+})(typeof window !== 'undefined' ? window : this);

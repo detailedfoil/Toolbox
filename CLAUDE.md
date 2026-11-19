@@ -205,6 +205,44 @@ explain changes in plain English and say what they'll see.
     the search and Esc closes, the card sits top right (bottom right in Walk) on a wide screen and across the top on a phone in Walk (the
     thing you're looking at is put lower down so the card doesn't hide it). Then (30 Oct 09:00): boxes fill their slots (pulled in 3.5 cm at each bay slice end so they never poke into the uprights), and location labels like the real ones: red (odd bay) / blue (even) on the shelf edge for ordinary shelves, white two-line labels on the drawer fronts with the back position on top; no barcodes (they made it laggy); drawn by the graphics chip from a font texture (see below). Colours: free spots green, every other box blue to pink by area (never green or red); "Sharps and liquids in red" is a switch in the Stock panel, off to start with (`fp-red-v1`; flag 8 in product-search/data/products.json, fetched only once it's on).
     Faster (30 Oct, detailedfoil: "make it more optimised", then "it's actually more laggy now ... a loading bar and it pre loads stuff"): a loading bar (`progress`, `breathe`) covers the start while the stock is placed, every location label is made and the shaders are compiled with one frame drawn (`warmUp`), so nothing is made while you walk. The labels (about 15,000 with the full list: every shelf-edge position and a line per drawer position) are ONE InstancedMesh built once (`buildLabels`, again when the list changes): each instance carries its 12-character location packed 4 to a float (6 bits each) and a style, and a ShaderMaterial draws the letters from a 512 x 256 font texture (`GLYPHS`, `glyphTex`), dropping labels over 6 m away in the vertex shader. Making labels as you walked (an atlas filled on the fly) was the lag: turning round redrew hundreds. Photos go straight into one 2048 px texture (256 slots, no mipmaps, one copy each) drawn as one InstancedMesh (`atlasMesh`). Walk is about 50 draws a frame (it was about 315). The page draws only when something changes and stops the frame loop when nothing does (`redraw()` / `wake()`, never set `dirty` by hand); a phone that keeps taking over 34 ms a frame while moving drops to fewer pixels. Cards start small (the main line and button, More / Less for the rest; `more` on a line or button) and no longer say "Bay X in my drawing" (detailedfoil: useless). `ignore` in locations.json now takes bays too: HAC, LAC-05 and LAA-05 are left off like HAD and HAE (detailedfoil, 30 Oct), and `notFree` lists shelves kept empty on purpose (BAA 1-4 shelves 6 and 7: "they are still there"), which never count as free spots. Next: whatever detailedfoil asks for (heights and shelf counts are still guesses).
+  - `warehouse-shift`: Warehouse Shift, a picking game, Dunstable (LB1) only (tile `only: ["LB1"]`, and game.js shows "only for
+    Dunstable" to any other sign-in). Built 19 Nov 2026 from detailedfoil's brief, replacing a first try (by another AI on 18 Nov)
+    that was a `?shift=1` mode of the floor plan: that mode is gone from floor-plan/app.js, and `floor-plan.html?shift=1` now just
+    redirects to `warehouse-shift.html` (old bookmarks and installs). A made-up warehouse (detailedfoil can't publish the real
+    layout), "a bit bigger" than the real store: 21.9 x 24.25 m inside, 1.35 m pick aisles (real ~0.9), a 2.5 m centre aisle
+    straight down the middle, racking 3.6 m. Right side, front to back: AAA (quad trays in half-width bays), AAB to AAE (double
+    trays on the bottom 10 of 16 shelves, plain shelves above), then BAA to BAG (9 shelves of 9 small positions). Left side, back
+    to front: BBA to BBJ (bulky: 5 long-span levels, 3 big positions on the bottom one, 4 above). Every pick aisle has stock on
+    both sides (back-to-back rows; one-sided rows at the ends have a steel back). Location order = walking order: up the right,
+    back down the left (detailedfoil's rule); the first area of each aisle is on your right as you walk in from the centre aisle.
+    Numbering copied from the floor plan: AREA-BAY-SHELF-POSITION, bay 1 at the centre aisle end, shelf 1 the bottom, positions
+    from the left as you face the shelf, trays front then back (4 deep in AAA). The shop floor (trade counter, tills, gondolas,
+    Trade+) is the floor plan's, moved so Trade+ sits in the front right corner ("not completely in the middle"); staff room and
+    toilets keep their place; the office moved beside goods in. detailedfoil: NOTHING FLOATS. Every label is fixed to something:
+    location labels on shelf edges (red odd bay / blue even, location over a barcode drawn in the shader) and tray fronts (white,
+    a line per position, back on top); the area names on signs on the END of each row facing the centre aisle (with BAYS 01-07 and
+    an arrow to its aisle); fire exit / goods in / trade counter signs flat on walls. No sprites (a test checks).
+    Files: `world.js` (the layout, every location, putting products on them, orders, `locationAt` for scans; shared with
+    `.github/tests/warehouse-shift.test.mjs`), `scene.js` (three.js drawing: racking, trays, product boxes in their photo's
+    colour, the label shader, photo atlas, shop floor, props, customers, tote), `game.js` (camera, controls, scanner, sounds, the
+    game), `game.css`, `data/catalogue.json` (made by `.github/warehouse-shift/make-catalogue.py` from product-search's
+    products.json: every product without flag 32 = the 10,999 nailed ones, each with a group, a size T tray / S shelf / B bulky
+    from name keywords, its photo's colour and whether it has a photo; rerun it after a new products.json). The same seed puts
+    every product in the same place on every phone (learnable); ~17% of places are left empty. Photos: the Toolbox's own
+    product-search/photos (never Screwfix), loaded 12 at a time for boxes within 14 m that you can see, into a 4096 px texture
+    (1,000 at once; 2048 / 250 if the phone can't); detailedfoil asked for more loaded than the floor plan. Labels drawn to 18 m.
+    Play: the scanner is drawn like the Symbol handsets in his photos (Today Picking / Pick To Tote/Trolley, location, SKU, name
+    cut at 20 characters, Qty, Function / Scan / Enter, Log Off / Back, arrows); the blue `<F4> Stock Problem` bar is now
+    `<F4> Hint` (detailedfoil: no stock problem button): the location and its row-end sign glow for 12 s. One pick at a time:
+    look at the label or tray and Scan (or tap it on a phone; within 2.05 m), a tray slides out showing what's in it, type the
+    qty (number pad on phones), Enter; the item flies into the tote. Below 0.45 m you must squat (button, or C). Then take the
+    tote to the counter (Enter inside `world.handover`): it slides to the customer, who walks out with it, and the next one walks
+    in with a new order. No score or timer (his say); the Function menu has squat, hint, sound, help, skip order. Landscape first
+    (detailedfoil), a rotate prompt on phones held upright with "Play upright anyway". Phone: left-thumb stick (pushed right out =
+    jog), drag to look, tap to scan. PC: WASD, mouse look (pointer lock), F/click scan, C squat, H hint, digits + Enter, Tab menu.
+    Installable: `warehouse-shift.webmanifest` (fullscreen, landscape) and `warehouse-shift-sw.js` (scope "warehouse-shift":
+    page site-first with a 4 s fallback, its files and photos kept-first; a copy still registered at the old floor-plan scope
+    removes itself). Stats (orders, lines, units) stay on the device (`ws-stats-v1`).
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.
