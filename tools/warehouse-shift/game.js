@@ -1599,10 +1599,10 @@
       if (e.repeat) return;
       if (/^[0-9]$/.test(e.key)) { p.digit(e.key); e.preventDefault(); return; }
       switch (e.code) {
-        case 'KeyF': case 'Space': { const c = p.centre(); p.scanAt(c[0], c[1]); e.preventDefault(); break; }
+        case 'KeyF': { const c = p.centre(); p.scanAt(c[0], c[1]); e.preventDefault(); break; }
         case 'KeyC': p.toggleSquat(); break;
         case 'KeyH': case 'F4': p.useHint(); e.preventDefault(); break;
-        case 'Enter': case 'NumpadEnter': SFX.key(); p.enter(); e.preventDefault(); break;
+        case 'Enter': case 'NumpadEnter': case 'Space': SFX.key(); p.enter(); e.preventDefault(); break;
         case 'Backspace': p.back(); e.preventDefault(); break;
         case 'Tab': case 'KeyM': SFX.key(); p.menu(D.scMenu.hidden); e.preventDefault(); break;
         case 'PageUp': case 'BracketLeft': p.page(-1); break;
