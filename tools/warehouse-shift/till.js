@@ -54,7 +54,8 @@
 
   // LU8 and LU9 don't exist (the LU area stops at LU7), so these can never be a real address
   function postcode(r) { return 'LU' + (r() < 0.5 ? 8 : 9) + ' ' + (1 + Math.floor(r() * 9)) + UNIT[Math.floor(r() * UNIT.length)] + UNIT[Math.floor(r() * UNIT.length)]; }
-  function customerNo(r) { var s = String(1 + Math.floor(r() * 9)); for (var i = 0; i < 7; i++) s += Math.floor(r() * 10); return s; }
+  // customer numbers start 00, which a real one never does (detailedfoil)
+  function customerNo(r) { var s = '00'; for (var i = 0; i < 6; i++) s += Math.floor(r() * 10); return s; }
   function person(r, surname, female) {
     var woman = female === undefined ? r() < 0.3 : female, first = pick(r, woman ? WOMEN : MEN);
     var title = woman ? pick(r, ['Mrs', 'Mrs', 'Ms', 'Miss']) : (r() < 0.04 ? 'Dr' : 'Mr');
@@ -135,7 +136,8 @@
     for (var i = 0; i < notes.length; i++) if (notes[i] >= inc) return notes[i];
     return Math.ceil(inc / 5000) * 5000;
   }
-  function orderNumber(r) { var s = 'A2'; for (var i = 0; i < 10; i++) s += Math.floor(r() * 10); return s; }
+  // A9 and nine digits: one digit short of a real order number, so it can never match one (detailedfoil)
+  function orderNumber(r) { var s = 'A9'; for (var i = 0; i < 9; i++) s += Math.floor(r() * 10); return s; }
 
   /* ---------- what they ask for ---------- */
   // requests = data/requests.json: describe [code, what they call it, ...other codes that fit], need [code, a
@@ -197,9 +199,76 @@
     return Number(qty) === line.qty ? 'right' : 'qty';
   }
 
+  /* ---------- kiosk orders ---------- */
+  // About half the till customers have already put their order through on the kiosk (detailedfoil). After the usual
+  // postcode and surname search they say so and give the name they typed on it, usually their first name; the
+  // Kiosk Orders screen lists today's kiosk orders, every name different, and picking theirs fills the basket.
+  var KIOSK_SAY = ["I've sent an order over on the kiosk.", 'I put an order through on the screen over there.', "I've done it on the iPad already.",
+    'I sent it from the kiosk by the door.', 'My order is on the screen thing, I did it while I was waiting.', "I've already ordered on the kiosk, mate."];
+  var KIOSK_NAME = ["It's under {n}.", 'I put it under {n}.', 'Name on it is {n}.', 'Should say {n}.'];
+  var DEVICES = ['Kiosk 1', 'Kiosk 2', 'iPad'];
+  function kioskLines(world, r, n) {
+    var lines = [], used = {}, guard = 0;
+    while (lines.length < n && guard++ < 200) {
+      var it = world.items[Math.floor(r() * world.items.length)];
+      if (!it || !it.loc || used[it.code]) continue;
+      used[it.code] = 1;
+      lines.push({ item: it, qty: Math.max(1, Math.min(avail(it), quantity(it, r))) });
+    }
+    return lines;
+  }
+  function makeKiosk(world, r, cust) {
+    var bySurname = r() < 0.2;
+    var name = bySurname ? cust.surname : cust.first, taken = {}, list = [];
+    taken[name.toLowerCase()] = 1;
+    var u = r(), mine = kioskLines(world, r, u < 0.35 ? 1 : u < 0.7 ? 2 : u < 0.9 ? 3 : 4);
+    var others = 3 + Math.floor(r() * 4), guard = 0;
+    while (list.length < others && guard++ < 200) {
+      var nm = r() < 0.2 ? pick(r, SURNAMES) : pick(r, r() < 0.3 ? WOMEN : MEN);
+      if (taken[nm.toLowerCase()]) continue;
+      taken[nm.toLowerCase()] = 1;
+      var v = r();
+      list.push({ name: nm, lines: kioskLines(world, r, v < 0.4 ? 1 : v < 0.75 ? 2 : 3) });
+    }
+    var at = Math.floor(r() * (list.length + 1));
+    list.splice(at, 0, { name: name, lines: mine, mine: true });
+    // the time each went through: the most recent at the bottom, a few minutes apart
+    var t = 8 * 60 + Math.floor(r() * 8 * 60);
+    for (var i = list.length - 1; i >= 0; i--) {
+      list[i].time = Math.floor(t / 60) + ':' + pad(t % 60);
+      list[i].device = pick(r, DEVICES);
+      list[i].total = list[i].lines.reduce(function (s, l) { return s + price(l.item) * l.qty; }, 0);
+      t -= 2 + Math.floor(r() * 9);
+    }
+    return { name: name, list: list, mine: at,
+      say: pick(r, KIOSK_SAY), sayName: pick(r, KIOSK_NAME).replace('{n}', name) };
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  // how they'll pay: they say which when you get to the checkout (detailedfoil), and put you right if you pick the other
+  var PAY_SAY = { card: ["I'll pay by card.", 'Card, please.', 'On card, mate.', "I'll tap my card."], cash: ["I'll pay cash.", 'Cash, please.', "I've got cash.", 'Paying cash today.'] };
+  function payment(r) { var how = r() < 0.6 ? 'card' : 'cash'; return { how: how, say: pick(r, PAY_SAY[how]) }; }
+
+  /* ---------- the holding area: multi-item click and collects, bagged and waiting ---------- */
+  // OC-001 (on the floor) and OC-002 (the shelf above) hold big loose items; OC-003 to OC-014 are blue totes, six a
+  // shelf on the bottom two shelves, each with an order in a yellow bag. The customer gives the OC location and their
+  // surname; every surname in the holding area is different (detailedfoil: no repeated names for now).
+  var HOLD_CODES = [];
+  for (var hc = 1; hc <= 14; hc++) HOLD_CODES.push('OC-0' + pad(hc));
+  var HOLD_SAY = ["Click and collect, please. It's in {oc}, surname {s}.", "Hiya, I've got a click and collect. The email says {oc}. Name's {s}.",
+    'Collecting an order for {s}, please. It said {oc}.', "I've come to pick up my order. {s}, location {oc}.", 'Click and collect for {s}. It\'s {oc} on my email.'];
+  function holdParcel(r, used) {
+    var s, guard = 0;
+    do { s = pick(r, SURNAMES); } while (used[s] && guard++ < 400);
+    var d = ''; for (var i = 0; i < 4; i++) d += Math.floor(r() * 10);
+    return { surname: s, num: d, collection: String(100 + Math.floor(r() * 900)), despatch: orderNumber(r) };
+  }
+  function holdSay(r, code, surname) { return pick(r, HOLD_SAY).replace('{oc}', code).replace('{s}', surname); }
+
   var api = { hash: hash, searchItems: searchItems, makeCustomer: makeCustomer, lookup: lookup, matches: matches, postcode: postcode,
     price: price, avail: avail, vat: vat, money: money, tender: tender, orderNumber: orderNumber, makeOrder: makeOrder, judge: judge,
-    quantity: quantity, SURNAMES: SURNAMES, MEN: MEN, WOMEN: WOMEN };
+    quantity: quantity, makeKiosk: makeKiosk, payment: payment, HOLD_CODES: HOLD_CODES, holdParcel: holdParcel, holdSay: holdSay, customerNo: customerNo,
+    SURNAMES: SURNAMES, MEN: MEN, WOMEN: WOMEN };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftTill = api;
 })(typeof window !== 'undefined' ? window : this);

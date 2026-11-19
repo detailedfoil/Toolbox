@@ -114,7 +114,7 @@ test('made-up customers: LU8 and LU9 postcodes (they don\'t exist), example.com 
     for (const p of c.db) {
       assert.match(p.postcode, /^LU[89] [1-9][ABDEFGHJLNPQRSTUWXYZ]{2}$/);
       assert.match(p.email, /^[a-z.]+\d*@example\.(com|net|org)$/);
-      assert.match(p.no, /^[1-9]\d{7}$/);
+      assert.match(p.no, /^00\d{6}$/, 'customer numbers start 00, which a real one never does');
       assert.match(p.title, /^(Mr|Mrs|Ms|Miss|Dr)$/);
     }
     const found = Till.lookup(c, { postcode: c.postcode.toLowerCase().replace(' ', ''), surname: ' ' + c.surname.toUpperCase() });
@@ -176,4 +176,51 @@ test('the till page: Fusion and CrashFix tabs, the real search, no real username
   assert.deepEqual(Object.keys(items[0]).sort(), ['desc', 'dw', 'flags', 'name', 'photo', 'sku', 'web']);
   const sw = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift-sw.js'), 'utf8');
   assert.match(sw, /requests\.json/); assert.match(sw, /product-search\\\/data/);
+});
+
+test('order numbers are A9 and nine digits: one digit short of a real one, so they can never match', () => {
+  for (let i = 0; i < 200; i++) assert.match(Till.orderNumber(rnd), /^A9\d{9}$/);
+});
+
+test('kiosk orders: the customer\'s is on the list once, every name different, said the way they\'ll say it', () => {
+  for (let i = 0; i < 300; i++) {
+    const c = Till.makeCustomer(rnd), k = Till.makeKiosk(world, rnd, c);
+    assert.ok(k.list.length >= 4 && k.list.length <= 7);
+    const names = k.list.map((x) => x.name.toLowerCase());
+    assert.equal(new Set(names).size, names.length, 'names unique: ' + names);
+    assert.equal(k.list.filter((x) => x.mine).length, 1);
+    assert.ok(k.list[k.mine].mine && (k.name === c.first || k.name === c.surname), 'usually their first name');
+    assert.ok(k.sayName.includes(k.name) && k.say);
+    for (const o of k.list) {
+      assert.ok(o.lines.length >= 1 && o.lines.every((l) => l.item.loc && l.qty >= 1));
+      assert.equal(o.total, o.lines.reduce((t, l) => t + Till.price(l.item) * l.qty, 0));
+      assert.match(o.time, /^\d{1,2}:\d\d$/);
+    }
+  }
+  const p = Till.payment(rnd);
+  assert.ok((p.how === 'card' || p.how === 'cash') && p.say);
+});
+
+test('the holding area: OC-001 and OC-002 for big loose items, OC-003 to OC-014 totes six a shelf on the bottom two, every surname different', () => {
+  const h = world.holding;
+  assert.deepEqual([...h.spots.map((s) => s.code)], [...Till.HOLD_CODES]);
+  assert.deepEqual([...Till.HOLD_CODES.slice(0, 3)], ['OC-001', 'OC-002', 'OC-003']);
+  assert.equal(Till.HOLD_CODES[13], 'OC-014');
+  const [a, b] = h.spots;
+  assert.equal(a.kind, 'floor'); assert.equal(a.z0, 0);
+  assert.equal(b.kind, 'shelf'); assert.ok(b.z0 > a.z0 && b.label);
+  const totes = h.spots.slice(2);
+  assert.ok(totes.every((s) => s.kind === 'tote'));
+  const rows = [...new Set(totes.map((s) => s.z0))].sort((x, y) => x - y);
+  assert.equal(rows.length, 2, 'two shelves of totes');
+  assert.ok(rows[1] < 1.0, 'low down');
+  for (const z of rows) assert.equal(totes.filter((s) => s.z0 === z).length, 6);
+  // from the left as you face it (you face the left wall, so the left is the shop front end: bigger y)
+  assert.ok(totes[0].y0 > totes[1].y0 && totes[0].z0 < totes[6].z0);
+  // the big items bay is on the left of the totes
+  assert.ok(a.y0 > totes[0].y1);
+  // it stands clear of everything else, and can be reached (the walk test covers the rest of the floor)
+  const used = {};
+  for (let i = 0; i < 14; i++) { const p = Till.holdParcel(rnd, used); assert.ok(!used[p.surname], 'unique'); used[p.surname] = 1; assert.match(p.despatch, /^A9\d{9}$/); }
+  assert.match(Till.holdSay(rnd, 'OC-007', 'Tomlin'), /OC-007[\s\S]*Tomlin|Tomlin[\s\S]*OC-007/);
 });

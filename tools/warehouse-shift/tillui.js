@@ -9,7 +9,12 @@
 
    game.js makes one with create({...}) and tells it when a till customer arrives (serve) and leaves; this file runs
    the conversation and calls back when the order is paid for (onComplete), so the pick list can go to the scanner.
-   Phones get an on-screen keyboard, so the phone's own keyboard never squashes the game. */
+   Kiosk orders (detailedfoil, 19 Nov 2026): some till customers have already sent their order from the kiosk. After
+   the postcode and surname search they say so and give the name they used (usually their first name); open Kiosk
+   Orders, pick theirs and the basket fills itself. The customer says card or cash at the checkout and puts you right
+   if you press the other one.
+
+   Phones use their own keyboard; the keyboard button at the top swaps to an on-screen one (remembered, ws-osk). */
 (function () {
   'use strict';
 
@@ -42,6 +47,7 @@
       <button class="tl-tab" type="button" role="tab" data-tab="crashfix" aria-selected="false"><i class="tl-fav cf-fav">C</i><span>CrashFix | Product Search</span><b aria-hidden="true">&times;</b></button>
       <span class="tl-plus" aria-hidden="true">+</span>
     </div>
+    <button class="tl-kbt" type="button" data-act="osk" hidden></button>
     <button class="tl-leave" type="button" data-act="leave" title="Step away from the till (Esc)">Leave till <b>&times;</b></button>
   </div>
   <div class="tl-addr"><span class="tl-warn">&#9888; Not secure</span><span class="tl-url" data-v="url">tradecounter/app/home.jsp</span></div>
@@ -94,6 +100,14 @@
               <div class="fu-tot"><b>Total Item: (<span data-v="count">0</span>)</b><b class="red">Total: <span data-v="total">&pound;0.00</span></b></div>
             </div>
           </section>
+          <section class="fu-scr" data-scr="kiosk" hidden>
+            <div class="fu-tt">Kiosk Orders</div>
+            <div class="fu-box">
+              <div class="fu-bar"><span>Orders sent from the kiosks today. Pick the customer's and press Select:</span></div>
+              <div class="fu-tw"><table class="fu-tab fu-kiosk"><thead><tr><th>Time</th><th>Name</th><th>Sent from</th><th>Items</th><th>Total</th></tr></thead><tbody data-v="krows"></tbody></table></div>
+              <div class="fu-btns"><button class="fu-blue big" type="button" data-act="kback">Back</button><button class="fu-red big" type="button" data-act="kselect">Select</button></div>
+            </div>
+          </section>
           <div class="fu-msg" data-v="msg" role="status" hidden></div>
         </main>
       </div>
@@ -144,11 +158,28 @@
     const V = {};
     qa('[data-v]').forEach((n) => { V[n.dataset.v] = n; });
     const F = {};
-    qa('[data-f]').forEach((n) => { F[n.dataset.f] = n; if (touch) n.setAttribute('inputmode', 'none'); });
+    qa('[data-f]').forEach((n) => { F[n.dataset.f] = n; });
     const scr = {};
     qa('[data-scr]').forEach((n) => { scr[n.dataset.scr] = n; });
 
-    const S = { open: false, tab: 'fusion', screen: 'who', results: [], sel: -1, clip: '', focus: null, session: null, timers: [] };
+    const S = { open: false, tab: 'fusion', screen: 'who', results: [], sel: -1, ksel: -1, clip: '', focus: null, session: null, timers: [], osk: false };
+    try { S.osk = localStorage.getItem('ws-osk') === '1'; } catch (e) { /* fine */ }
+    const osk = () => touch && S.osk;
+    // what each box asks the phone's own keyboard for, or nothing at all when the on-screen keyboard is on
+    function kbMode(n) {
+      if (osk()) { n.setAttribute('inputmode', 'none'); return; }
+      const f = n.dataset.f;
+      n.setAttribute('inputmode', f === 'qty' || f === 'no' || n.classList.contains('fu-q') ? 'numeric' : f === 'email' ? 'email' : f === 'q' ? 'search' : 'text');
+      if (f === 'part' || f === 'postcode') n.setAttribute('autocapitalize', 'characters');
+      if (f === 'part' || f === 'qty' || f === 'q') n.setAttribute('enterkeyhint', f === 'q' ? 'search' : f === 'part' ? 'next' : 'done');
+    }
+    function kbModes() {
+      qa('input').forEach(kbMode);
+      const b = q('[data-act="osk"]');
+      b.hidden = !touch;
+      b.innerHTML = '&#9000; ' + (S.osk ? 'On-screen keys' : 'Phone keyboard');
+      b.title = S.osk ? 'Using the on-screen keyboard: tap to use the phone\'s own' : 'Using the phone\'s keyboard: tap for the on-screen one';
+    }
     const later = (ms, fn) => { const t = setTimeout(() => { S.timers = S.timers.filter((x) => x !== t); fn(); }, ms); S.timers.push(t); return t; };
     const stopTimers = () => { S.timers.forEach(clearTimeout); S.timers = []; };
 
@@ -203,13 +234,15 @@
       const mine = log.filter((l) => l.at >= s.since);
       const now = mine[mine.length - 1], before = mine[mine.length - 2];
       V.lines.innerHTML = (before ? '<p class="tl-old">' + lineHtml(before) + '</p>' : '') + (now ? '<p class="tl-now">' + lineHtml(now) + '</p>' : '');
-      el.querySelector('[data-act="ask"]').hidden = !(s.stage === 'details' || s.stage === 'ordering');
+      el.querySelector('[data-act="ask"]').hidden = !(s.stage === 'details' || s.stage === 'ordering' || s.stage === 'kiosk' || s.stage === 'paying');
     }
     function askAgain() {
       const s = S.session;
       if (!s) return;
       sfx('key');
       if (s.stage === 'details') { say({ text: "Postcode's " + s.cust.postcode + ", surname " + s.cust.surname + '.' + (s.cust.twin ? ' First name ' + s.cust.first + '.' : '') }); return; }
+      if (s.stage === 'kiosk') { say(s.kiosk.say + ' ' + s.kiosk.sayName); return; }
+      if (s.stage === 'paying') { say(s.pay.say); return; }
       if (s.stage !== 'ordering') return;
       const ln = s.lines[s.cur];
       if (!ln) return;
@@ -240,7 +273,7 @@
     /* ---------- Fusion: screens ---------- */
     function show(name) {
       S.screen = name;
-      ['who', 'res', 'order'].forEach((k) => { scr[k].hidden = k !== name; });
+      ['who', 'res', 'order', 'kiosk'].forEach((k) => { scr[k].hidden = k !== name; });
       V.app.hidden = name === 'pay' || name === 'done';
       scr.pay.hidden = name !== 'pay'; scr.done.hidden = name !== 'done';
       qa('.fu-nb').forEach((b) => b.classList.toggle('on', b.dataset.go === (name === 'res' ? 'who' : name)));
@@ -297,7 +330,43 @@
       if (c !== s.cust) { s.slips++; if (o.onSlip) o.onSlip(); say("That's not me, mate. I'm " + s.cust.first + ' ' + s.cust.surname + '.'); sfx('bad'); return; }
       s.selected = true;
       show('order');
-      if (s.stage === 'details') { s.stage = 'ordering'; later(650, () => sayRequest(false)); }
+      if (s.stage !== 'details') return;
+      if (s.kind === 'kiosk') { s.stage = 'kiosk'; later(650, () => say(s.kiosk.say)); later(2000, () => say(s.kiosk.sayName)); return; }
+      s.stage = 'ordering'; later(650, () => sayRequest(false));
+    }
+
+    // Kiosk Orders: today's orders from the kiosks; picking the customer's fills the basket
+    function renderKiosk() {
+      const s = S.session, list = s && s.kiosk ? s.kiosk.list : [];
+      if (!list.length) { V.krows.innerHTML = '<tr class="none"><td colspan="5">No kiosk orders waiting.</td></tr>'; return; }
+      V.krows.innerHTML = list.map((k, i) => {
+        const units = k.lines.reduce((t, l) => t + l.qty, 0);
+        return '<tr data-k="' + i + '"' + (i === S.ksel ? ' class="sel"' : '') + '><td>' + esc(k.time) + '</td><td><b>' + esc(k.name) + '</b></td><td>' + esc(k.device) + '</td><td>' +
+          k.lines.length + (k.lines.length > 1 ? ' lines, ' : ' line, ') + units + (units > 1 ? ' items' : ' item') + '</td><td>' + Till.money(k.total) + '</td></tr>';
+      }).join('');
+    }
+    function openKiosk() {
+      const s = S.session;
+      if (!s || !s.selected) { fuMsg('Identify the customer first.'); return; }
+      if (s.stage === 'paying' || s.stage === 'done') return;
+      S.ksel = -1; renderKiosk(); show('kiosk');
+    }
+    function kioskSelect() {
+      const s = S.session, k = s && s.kiosk && s.kiosk.list[S.ksel];
+      sfx('key');
+      if (!k) { fuMsg('Pick an order from the list first.'); return; }
+      if (s.stage !== 'kiosk') {
+        if (s.kind === 'kiosk' && s.lines.length) { fuMsg('Their kiosk order is already in the basket.'); show('order'); return; }
+        s.slips++; if (o.onSlip) o.onSlip(); sfx('bad'); say("That's not mine, mate. I haven't used the kiosk."); return;
+      }
+      if (!k.mine) { s.slips++; if (o.onSlip) o.onSlip(); sfx('bad'); say("That's not mine. " + s.kiosk.sayName); return; }
+      s.lines = k.lines.map((l) => ({ kind: 'code', item: l.item, qty: l.qty, accept: [l.item.code], done: true, clue: "It's " + l.item.code.split('').join(' ') + '.',
+        say: 'I had ' + l.item.code + ' on my kiosk order.', qtySay: l.qty > 1 ? l.qty + ' of them.' : '', next: '' }));
+      s.basket = k.lines.map((l, i) => { const p = product(l.item.code); return { code: l.item.code, name: p ? p.name : l.item.name, qty: l.qty, price: p ? p.price : Till.price(l.item), avail: Till.avail(l.item), item: l.item, status: 'ok', line: i }; });
+      s.cur = s.lines.length; s.ready = true; s.stage = 'ordering';
+      renderBasket(); show('order'); sfx('good');
+      say(pick(["That's the one, yeah.", "Yep, that's mine.", "That's it, cheers."]));
+      later(1300, () => say(pick(["That's everything. How much is that?", "That's the lot.", "That's all of it, I think."])));
     }
 
     // Customer Order: the basket
@@ -310,7 +379,7 @@
         const tr = document.createElement('tr');
         tr.className = 'fu-line ' + r.status;
         tr.dataset.i = i;
-        tr.innerHTML = '<td>' + esc(r.code) + '</td><td><input class="fu-q" data-row="' + i + '" value="' + r.qty + '" maxlength="3" autocomplete="off"' + (touch ? ' inputmode="none"' : '') + '></td><td class="' + (r.avail ? '' : 'out') + '">' + r.avail +
+        tr.innerHTML = '<td>' + esc(r.code) + '</td><td><input class="fu-q" data-row="' + i + '" value="' + r.qty + '" maxlength="3" autocomplete="off" inputmode="' + (osk() ? 'none' : 'numeric') + '"></td><td class="' + (r.avail ? '' : 'out') + '">' + r.avail +
           '</td><td class="d">' + esc(r.name) + '</td><td>Collect</td><td>1</td><td>' + (r.price / 100).toFixed(2) + '</td><td>' + (r.price * r.qty / 100).toFixed(2) + '</td><td><button type="button" class="fu-del" data-del="' + i + '" aria-label="Remove line">&times;</button></td>';
         body.appendChild(tr);
       });
@@ -338,6 +407,9 @@
     function judgeRow(row) {
       const s = S.session;
       if (!s || s.basket.indexOf(row) < 0) return;
+      if (s.stage === 'kiosk') {
+        row.status = 'wrong'; renderBasket(); say("I've already done it on the kiosk, mate. " + s.kiosk.sayName); sfx('bad'); later(1300, () => removeRow(row)); return;
+      }
       if (s.stage !== 'ordering') {
         row.status = 'wrong'; renderBasket(); say("I don't need that, mate."); later(1300, () => removeRow(row)); return;
       }
@@ -366,7 +438,7 @@
       renderBasket(); sfx('good');
       say(pick(["Yes, that's the one!", "Spot on, that's it.", "That's it, cheers.", 'Perfect, that one.', 'Yep, that\'s the one.']));
       const next = s.lines.findIndex((l) => !l.done);
-      if (next < 0) { s.cur = s.lines.length; s.ready = true; later(1100, () => say(pick(["That's everything. I'll pay now.", "That's the lot, cheers. Card's ready.", "That's all I need. How much is that?"]))); }
+      if (next < 0) { s.cur = s.lines.length; s.ready = true; later(1100, () => say(pick(["That's everything. I'll pay now.", "That's the lot, cheers.", "That's all I need. How much is that?"]))); }
       else { s.cur = next; later(1300, () => sayRequest(false)); }
     }
     function removeRow(row) {
@@ -400,6 +472,7 @@
       const s = S.session;
       sfx('key');
       if (!s || !s.selected) { fuMsg('Identify the customer first.'); return; }
+      if (s.stage === 'kiosk') { say("I've got an order on the kiosk. " + s.kiosk.sayName); return; }
       if (!s.basket.length) { fuMsg('There is nothing in the basket.'); return; }
       if (s.basket.some((r) => r.status === 'pending')) return;
       if (!s.ready) { say(pick(["Hang on, I've not finished yet.", "Wait, there's more."])); return; }
@@ -411,10 +484,18 @@
       s.stage = 'paying';
       show('pay');
       renderSay();
+      if (!s.paySaid) { s.paySaid = true; later(600, () => say(s.pay.say)); }
+    }
+    // they said card or cash: the other button gets put right, and counts against a perfect pick
+    function wrongMethod() {
+      const s = S.session;
+      s.slips++; if (o.onSlip) o.onSlip(); sfx('bad');
+      say(s.pay.how === 'card' ? pick(['No, I said card.', "I'm paying by card, mate.", 'Card, not cash.']) : pick(['No, I said cash.', "I'm paying cash, mate.", "Cash, I've got it here."]));
     }
     function pdq(html) { V.pdq.innerHTML = html; V.modal.hidden = false; }
     function payCard() {
       const s = S.session; if (!s || s.stage !== 'paying' || !V.modal.hidden) return;
+      if (s.pay.how !== 'card') { wrongMethod(); return; }
       sfx('key');
       const amt = Till.money(basketTotal());
       pdq('<h2>Card machine</h2><div class="fx-screen"><b>' + esc(amt) + '</b><span>Insert, tap or swipe card</span></div><p class="fx-wait">Waiting for the customer<i>.</i><i>.</i><i>.</i></p>');
@@ -424,6 +505,7 @@
     }
     function payCash() {
       const s = S.session; if (!s || s.stage !== 'paying' || !V.modal.hidden) return;
+      if (s.pay.how !== 'cash') { wrongMethod(); return; }
       sfx('key');
       const inc = basketTotal(), given = Till.tender(inc);
       say(pick(['Here you go.', 'Cash OK?', "There's " + Till.money(given) + '.']));
@@ -549,7 +631,7 @@
 
     /* ---------- the on-screen keyboard (phones) ---------- */
     function showKb(input) {
-      if (!touch) return;
+      if (!osk()) return;
       S.focus = input;
       V.kb.hidden = false; el.classList.add('kbup');
       updatePaste();
@@ -558,7 +640,11 @@
       setTimeout(() => { try { input.scrollIntoView({ block: 'nearest' }); } catch (e) { /* fine */ } }, 30);
     }
     function hideKb() { V.kb.hidden = true; el.classList.remove('kbup'); if (S.focus && document.activeElement === S.focus) S.focus.blur(); S.focus = null; }
-    function updatePaste() { const b = q('[data-k="paste"]'); b.hidden = !S.clip; b.textContent = S.clip ? 'Paste ' + S.clip : ''; }
+    function updatePaste() {
+      const b = q('[data-k="paste"]'); b.hidden = !S.clip; b.textContent = S.clip ? 'Paste ' + S.clip : '';
+      // with the phone's own keyboard, a Paste button sits by the part number box instead
+      V.tip.innerHTML = S.clip && touch && !S.osk ? '<button type="button" class="fu-paste" data-act="paste">Paste ' + esc(S.clip) + '</button> then the quantity' : 'Type the part number, then the quantity, then Enter';
+    }
     function type(k) {
       const f = S.focus;
       if (!f) return;
@@ -579,7 +665,7 @@
     function enterOn(f) {
       const k = f.dataset.f;
       if (WHO.includes(k)) { if (whoFilled()) search(); else hideKb(); return; }
-      if (k === 'part') { if (F.part.value.trim()) { if (touch) showKb(F.qty); F.qty.focus({ preventScroll: true }); } return; }
+      if (k === 'part') { if (F.part.value.trim()) { showKb(F.qty); F.qty.focus({ preventScroll: true }); } return; }
       if (k === 'qty') { addLine(); hideKb(); return; }    // the keyboard goes so the basket shows; tap Part No. for the next one
       if (k === 'q') { hideKb(); doSearch(); return; }
       if (f.classList.contains('fu-q')) { rowQty(+f.dataset.row, f.value); hideKb(); }
@@ -598,16 +684,26 @@
       const go = t.closest('[data-go]'); if (go) { nav(go.dataset.go); return; }
       const act = t.closest('[data-act]'); if (act) { action(act.dataset.act); return; }
       const row = t.closest('.fu-tab tbody tr[data-i]'); if (row) { S.sel = +row.dataset.i; sfx('key'); renderResults(); return; }
+      const krow = t.closest('.fu-tab tbody tr[data-k]'); if (krow) { S.ksel = +krow.dataset.k; sfx('key'); renderKiosk(); return; }
       const del = t.closest('[data-del]'); if (del) { const s = S.session; if (s && s.basket[+del.dataset.del]) { sfx('key'); removeRow(s.basket[+del.dataset.del]); } return; }
       const cp = t.closest('[data-copy]'); if (cp) { copyCode(cp.dataset.copy); return; }
       const db = t.closest('[data-desc]'); if (db) { toggleDesc(db); return; }
       const cardEl = t.closest('.cf-card'); if (cardEl && !t.closest('.cf-desc')) { const b = cardEl.querySelector('[data-desc]'); if (b) toggleDesc(b); return; }
       if (!t.closest('input') && !t.closest('.tl-kb')) hideKb();
     });
-    el.addEventListener('dblclick', (e) => { const row = e.target.closest('.fu-tab tbody tr[data-i]'); if (row) { S.sel = +row.dataset.i; select(); } });
+    el.addEventListener('dblclick', (e) => {
+      const row = e.target.closest('.fu-tab tbody tr[data-i]'); if (row) { S.sel = +row.dataset.i; select(); return; }
+      const krow = e.target.closest('.fu-tab tbody tr[data-k]'); if (krow) { S.ksel = +krow.dataset.k; kioskSelect(); }
+    });
     qa('.tl-kb [data-k]').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.classList.add('down'); type(b.dataset.k); }));
     qa('.tl-kb [data-k]').forEach((b) => { const up = () => b.classList.remove('down'); b.addEventListener('pointerup', up); b.addEventListener('pointerleave', up); b.addEventListener('pointercancel', up); });
-    el.addEventListener('focusin', (e) => { const f = e.target; if (f.tagName === 'INPUT') { S.focus = f; if (touch) showKb(f); } });
+    el.addEventListener('focusin', (e) => {
+      const f = e.target;
+      if (f.tagName !== 'INPUT') return;
+      S.focus = f;
+      if (osk()) showKb(f);
+      else if (touch) setTimeout(() => { try { f.scrollIntoView({ block: 'center' }); } catch (x) { /* fine */ } }, 350); // after the phone's keyboard is up
+    });
     el.addEventListener('input', (e) => {
       const f = e.target;
       if (WHO.includes(f.dataset.f)) updateSearchBtn();
@@ -632,6 +728,7 @@
       if (go === 'who') { show('who'); return; }
       if (go === 'order') { if (s && s.selected) show('order'); else fuMsg('Identify the customer first.'); return; }
       if (go === 'pay') { goPay(); return; }
+      if (go === 'kiosk') { openKiosk(); return; }
       fuMsg('Not used in the game.');
     }
     function action(a) {
@@ -649,29 +746,38 @@
           sfx('key');
           if (S.screen === 'pay' || S.screen === 'done') return;
           if (s && (s.selected || s.basket.length)) {
-            s.selected = false; s.basket = []; s.cur = 0; s.ready = false; s.stage = 'details'; s.lines.forEach((l) => { l.done = false; });
+            s.selected = false; s.basket = []; s.cur = 0; s.ready = false; s.stage = 'details'; if (s.kind === 'kiosk') s.lines = []; s.lines.forEach((l) => { l.done = false; });
             renderBasket(); clearWho(); S.results = []; show('who');
             say("Eh? I still need my stuff! Postcode's " + s.cust.postcode + '.');
           } else { clearWho(); show('who'); }
           break;
         case 'back':
           sfx('key');
-          if (S.screen === 'res') show('who'); else if (S.screen === 'order') { if (S.results.length) show('res'); else show('who'); }
+          if (S.screen === 'res') show('who'); else if (S.screen === 'kiosk') show('order'); else if (S.screen === 'order') { if (S.results.length) show('res'); else show('who'); }
           break;
         case 'payback': if (s && s.stage === 'paying' && V.modal.hidden) { sfx('key'); s.stage = 'ordering'; show('order'); renderSay(); } break;
         case 'card': payCard(); break;
         case 'cash': payCash(); break;
         case 'change': sfx('key'); complete('cash'); break;
-        case 'trade': case 'nocredit': sfx('bad'); if (s) say('Card or cash, mate.'); break;
+        case 'trade': case 'nocredit': if (s && s.stage === 'paying' && V.modal.hidden) wrongMethod(); else sfx('bad'); break;
+        case 'kback': sfx('key'); show(s && s.selected ? 'order' : 'who'); break;
+        case 'kselect': kioskSelect(); break;
+        case 'paste': sfx('key'); if (S.clip) { F.part.value = S.clip; F.qty.focus(); } break;
+        case 'osk':
+          sfx('key'); S.osk = !S.osk; try { localStorage.setItem('ws-osk', S.osk ? '1' : '0'); } catch (e) { /* fine */ }
+          hideKb(); kbModes(); updatePaste(); toast(S.osk ? 'On-screen keyboard' : "Phone's own keyboard");
+          break;
         case 'more': addPage(); break;
         default:
       }
     }
 
+    kbModes(); updatePaste();
+
     /* ---------- what game.js uses ---------- */
     function reset() {
       stopTimers();
-      clearWho(); S.results = []; S.sel = -1;
+      clearWho(); S.results = []; S.sel = -1; S.ksel = -1;
       F.part.value = ''; F.qty.value = '';
       V.modal.hidden = true;
       show('who');
@@ -698,11 +804,16 @@
       },
       close() { if (!S.open) return; S.open = false; hideKb(); el.hidden = true; },
       // a till customer has walked up: cust from Till.makeCustomer, lines from Till.makeOrder
-      serve(cust, lines, colour) {
+      // opts: kind ('till' or 'kiosk'), kiosk (Till.makeKiosk: today's kiosk orders), pay (Till.payment)
+      serve(cust, lines, colour, opts) {
+        opts = opts || {};
         reset();
-        S.session = { cust, lines, cur: 0, stage: 'arrived', selected: false, basket: [], slips: 0, ready: false, since: Date.now(), colour };
+        const kind = opts.kind === 'kiosk' ? 'kiosk' : 'till';
+        S.session = { cust, lines: kind === 'kiosk' ? [] : lines, cur: 0, stage: 'arrived', selected: false, basket: [], slips: 0, ready: false, since: Date.now(), colour,
+          kind, kiosk: opts.kiosk || null, pay: opts.pay || { how: 'card', say: 'Card, please.' } };
         renderSay();
-        say(pick(['Morning! Can I order a few bits?', "Hiya, I'd like to order some stuff.", 'Alright? Need to order a couple of things.', "Hello, I'd like to place an order.", 'Can I order some bits, please?']));
+        say(kind === 'kiosk' ? pick(['Morning! Can you sort my order out?', 'Hiya, I need to pay for an order.', 'Alright? Got an order to pay for.', 'Hello, can you put my order through?'])
+          : pick(['Morning! Can I order a few bits?', "Hiya, I'd like to order some stuff.", 'Alright? Need to order a couple of things.', "Hello, I'd like to place an order.", 'Can I order some bits, please?']));
         if (S.open) begin();
       },
       // the customer's gone (handed over or skipped)
@@ -713,7 +824,7 @@
       refresh: renderSay,
       say,
       // tests and playthroughs
-      debug: { S, F, P, search, select, addLine, goPay, payCard, payCash, setTab, doSearch, type, action }
+      debug: { S, F, P, search, select, addLine, goPay, payCard, payCash, setTab, doSearch, type, action, openKiosk, kioskSelect }
     };
   }
 

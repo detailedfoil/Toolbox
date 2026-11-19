@@ -28,6 +28,7 @@
 .tl-plus{padding:0 8px 6px;color:#555;font-size:20px}
 .tl-leave{flex:none;align-self:center;height:28px;padding:0 12px;border:0;border-radius:7px;background:#c62828;color:#fff;font-weight:700;font-size:13px;white-space:nowrap}
 .tl-leave b{font-size:15px;margin-left:2px}
+.tl-kbt{flex:none;align-self:center;height:28px;padding:0 10px;border:1px solid #aab2bd;border-radius:7px;background:#fff;color:#223;font-weight:700;font-size:12px;white-space:nowrap}
 .tl-addr{display:flex;align-items:center;gap:12px;height:28px;padding:0 14px;background:#f7f7f8;border-bottom:1px solid #cfd3d8;font:13px "Segoe UI",system-ui,Arial,sans-serif;color:#222}
 .tl-warn{color:#444;font-weight:600}
 .tl-say{display:flex;align-items:center;gap:9px;min-height:40px;max-height:84px;padding:5px 10px;background:#fff6cc;border-bottom:2px solid #e5cf6a;color:#1d1d1d;
@@ -121,6 +122,8 @@
 .fu-entry input[data-f="part"]{width:90px;text-transform:uppercase}
 .fu-entry input[data-f="qty"]{width:56px}
 .fu-tip{color:#808080;font-style:italic;font-size:13px}
+.fu-paste{margin-right:6px;padding:4px 10px;border:0;border-radius:6px;background:#1f5fbf;color:#fff;font:700 13px Arial,sans-serif;font-style:normal}
+.fu-kiosk td b{font-size:1.1em}
 .fu-x{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#d32f2f;color:#fff;font:700 15px/1 Arial,sans-serif;font-style:normal;border:2px solid #fff;box-shadow:0 0 0 1px #9f1c1c}
 .fu-line td{background:#fff}
 .fu-line.ok td{background:#e3f5e5}
@@ -241,6 +244,7 @@
   .tl-tab{height:27px;flex-basis:200px;font-size:12px;gap:5px;padding:0 8px}
   .tl-tab b{display:none}
   .tl-leave{height:25px;font-size:12px;padding:0 10px}
+  .tl-kbt{height:25px;font-size:11px;padding:0 8px}
   .tl-addr,.tl-plus{display:none}
   .tl-say{min-height:32px;max-height:62px;padding:3px 8px;font-size:13px;gap:7px}
   .tl-face{width:18px;height:18px}

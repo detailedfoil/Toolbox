@@ -234,18 +234,31 @@ explain changes in plain English and say what they'll see.
     Play: the scanner is drawn like the Symbol handsets in his photos (Today Picking / Pick To Tote/Trolley, location, SKU, name
     cut at 20 characters, Qty, Function / Scan / Enter, Log Off / Back, arrows); the blue `<F4> Stock Problem` bar is now
     `<F4> Hint` (detailedfoil: no stock problem button): the location and its row-end sign glow for 12 s. One pick at a time:
-    look at the label or tray and Scan (or tap it on a phone; within 2.05 m), a tray slides out showing what's in it, type the
-    qty (number pad on phones), Enter; the item flies into the tote. Below 0.45 m you must squat (button, or C). Then take the
+    look at the label or tray and Scan (or tap it on a phone; within 2.05 m), a tray slides out showing what's in it, and
+    each scan of that location is one item (detailedfoil, 19 Nov: no typing, tap it as many times as the gun's Qty; the
+    "Picked" count fills, Back puts one back); the line finishes when the count matches and the item flies into the tote. Below 0.45 m you must squat (button, or C). Then take the
     tote to the counter (Enter inside `world.handover`): it slides to the customer, who walks out with it, and the next one walks
     in with a new order. No score or timer (his say); the Function menu has squat, hint, sound, look speed, skip order and help; "Perfect pick!" when an order needs no hint and has no wrong scan or quantity. Landscape first
     (detailedfoil), a rotate prompt on phones held upright with "Play upright anyway". Phone: left-thumb stick (pushed right out =
-    jog), drag to look, tap to scan. PC: WASD, mouse look (pointer lock), F/click scan, C squat, H hint, digits + Enter, Tab menu.
+    jog), drag to look, tap to scan. PC: WASD, mouse look (pointer lock), F/click scan, C squat, H hint, Tab menu.
     Installable: `warehouse-shift.webmanifest` (fullscreen, landscape) and `warehouse-shift-sw.js` (scope "warehouse-shift":
     page site-first with a 4 s fallback, its files and photos kept-first; a copy still registered at the old floor-plan scope
     removes itself). Stats (orders, lines, units) stay on the device (`ws-stats-v1`).
-    **Till orders** (19 Nov 2026, detailedfoil's brief): each customer is either a click and collect (the pick list is on
-    the scanner straight away, as before) or a till order (about half; never three of one kind in a row; the scanner's
-    Function menu has "Orders: mixed / C&C / till", `ws-orders`). A till customer walks up and the scanner says "Till
+    **Customers** (detailedfoil, 19 Nov 2026): a quarter each (never three of one kind in a row; the scanner's Function
+    menu has "Orders: mixed / C&C pick / holding / till / kiosk", `ws-orders`): a single item click and collect (one pick on
+    the scanner), a **holding area** click and collect, a till search order and a **kiosk** order (both below).
+    **Holding area** (`world.holding`, drawn by scene.js `holdingArea`): long-span shelving (blue uprights, orange beams,
+    like the real one in his floor plan) against the staff room wall beside goods in, facing goods in, a "HOLDING AREA"
+    sign over it. On your left as you face it the big items bay: OC-001 on the floor, OC-002 on the shelf above (loose
+    cartons, the OC labels on the shelf edge); on your right blue totes, six a shelf on the bottom two shelves, OC-003 to
+    OC-008 at the bottom and OC-009 to OC-014 above, from the left, each with a big green OC label on its front and an
+    order in a yellow bag. The shelves above stay empty. Each order has a despatch note drawn on a canvas (CrashFix, a
+    4-digit number and the surname big, Collection No., Despatch Note A9...; no highlighting or Challenge 25 line, the
+    top strip left blank: his say). Every surname there is different (for now). The customer says the OC location and
+    their surname (`Till.holdSay`); the scanner shows both; scan that tote (Scan or tap, `holdHit`), the bag comes out,
+    take it to the counter and Enter: the customer leaves carrying it and a new order fills the spot 4 s later. A wrong
+    tote counts against a perfect pick. Hint glows the tote.
+    **Till orders**: A till customer walks up and the scanner says "Till
     order"; walk behind the counter to one of the four trade counter tills and press Use till (or Scan, or tap the till).
     The till is a browser with two tabs at the top, like the real trade counter PCs: **Fusion** (the till system, drawn
     from his photos: Identify Customer, Search Results, Customer Order, the white Checkout page, Order Complete; the logo
@@ -261,12 +274,21 @@ explain changes in plain English and say what they'll see.
     copy; phones get a Paste key), switch to Fusion, type the part number and quantity, Enter: the customer says right
     or wrong, any product that fits counts, a wrong quantity can be fixed in the line. Ask again repeats it; twice gives
     a clue (the first 3 characters of the code), which counts against a perfect pick like wrong lines do. Pay & Go,
-    then Card or Cash (Trade Credit etc. aren't used yet). Order Complete gives a made-up A2... number and the pick list
+    then Card or Cash, whichever the customer says when you reach the checkout (`Till.payment`; the other button, or
+    Trade Credit etc., gets "No, I said card." and counts against a perfect pick). Order Complete gives a made-up
+    A9 + 9 digit number (one digit short of a real one, so it can never match; customer numbers start 00 for the same
+    reason) and the pick list
     (the products actually added, in location order) goes to the scanner; hand the tote over as usual. Prices and stock
     (Avail) are made up from the code (`price`, `avail`), VAT is included at 20% like the real checkout. Speech shows in
-    a bubble over the customer and in a yellow bar on the till. Phones get an on-screen keyboard (inputs have
-    `inputmode="none"`, so the phone's own keyboard never squashes the game); taps that land after the page moved under
-    the finger are ignored. Files: `till.js` (customers, the search, sums, orders, judging; shared with the tests and the
+    a bubble over the customer and in a yellow bar on the till. **Kiosk orders**: the same postcode, surname, Select;
+    then the customer says they sent it from the kiosk / screen / iPad and the name they used (usually their first name,
+    sometimes their surname). Fusion's Kiosk Orders button lists today's kiosk orders (`Till.makeKiosk`: 4 to 7, every
+    name different, times, device, lines, total); pick theirs and Select: the basket fills itself, then pay as usual. A
+    wrong one gets "That's not mine." (a slip); typing products in gets "I've already done it on the kiosk". Till search
+    customers can open the list too (it's everyone else's). Phones use their own keyboard (the inputs ask for text or
+    numbers, `kbMode`); the keyboard button in the till's tab bar swaps to the on-screen one (`ws-osk`, inputs then have
+    `inputmode="none"`), and with the phone's keyboard a Paste button sits by Part No. once a code is copied. Taps that
+    land after the page moved under the finger are ignored. Files: `till.js` (customers, the search, sums, orders, judging; shared with the tests and the
     generator), `tillui.js` (the screen), `till.css`, `data/requests.json` made by `.github/warehouse-shift/make-requests.mjs`
     (about 4 minutes; describe = [code, phrase, ...other codes that fit], need = [code, quote, hint, ...]; every request is
     checked to be findable with the real search, first 10 results, from a few of its rarest words). Rerun it after a new

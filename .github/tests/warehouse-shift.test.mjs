@@ -157,6 +157,7 @@ test('the walk starts on clear floor, and the counter and every aisle can be rea
   const h = world.handover;
   assert.ok(reach((h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2), 'the counter');
   for (const a of world.aisles) for (const f of [0.15, 0.5, 0.85]) assert.ok(reach(a.x0 + (a.x1 - a.x0) * f, (a.y0 + a.y1) / 2), 'aisle ' + a.no);
+  for (const sp of world.holding.spots) assert.ok(reach(world.holding.front + 0.5, (sp.y0 + sp.y1) / 2), 'in front of ' + sp.code);
 });
 
 test('a scan finds the location aimed at: the shelf edge label or the tray front', () => {

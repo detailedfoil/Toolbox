@@ -64,7 +64,7 @@
       };
       world.rows.forEach((r) => soft(r, 0.55, 0.55));
       world.walls.forEach((w2) => soft({ x0: w2[0], y0: w2[1], x1: w2[2], y1: w2[3] }, 0.25, 0.3));
-      world.objects.forEach((o) => { if (/counter|gondola|cupboard|pallet|rollcage|worktop/.test(o.kind)) soft(o, 0.3, 0.35); });
+      world.objects.forEach((o) => { if (/counter|gondola|cupboard|pallet|rollcage|worktop|holding/.test(o.kind)) soft(o, 0.3, 0.35); });
       // the edges of the building
       g.fillStyle = 'rgba(0,0,0,.18)';
       g.fillRect(0, 0, c.width, 6); g.fillRect(0, 0, 6, c.height); g.fillRect(c.width - 6, 0, 6, c.height); g.fillRect(0, c.height - 6, c.width, 6);
@@ -947,6 +947,7 @@
           break;
         }
         case 'panel': box(M.grey, o.x0, o.y0, 0, o.x1, o.y1, z1, 'shop'); break;
+        case 'holding': break; // drawn below
         case 'gondola': gondola(o); break;
         case 'table': case 'desk': box(M.wood, o.x0, o.y0, z1 - 0.04, o.x1, o.y1, z1, 'shop'); legs(M.frame, o, z1 - 0.04, 0.05); break;
         case 'chair': chair(o); break;
@@ -972,7 +973,115 @@
     const staffRoom = world.rooms.find((r) => r.name === 'Staff room'), office = world.rooms.find((r) => r.name === 'Office');
     if (staffRoom) plate('STAFF ROOM', staffRoom.x1 + 0.155, staffRoom.y0 + 0.75, 1.75, Math.PI / 2);
     if (office) plate('OFFICE', office.x0 + 1.6, office.y0 - 0.16, 2.05, Math.PI);
+    const hold = holdingArea();
     flush();
+
+    /* ---------- the holding area: bagged click and collects (world.js holding) ---------- */
+    // Long-span shelving like the real one in detailedfoil's floor plan: blue uprights, orange beams, chipboard decks.
+    // Blue totes with a big green OC label on the front hold the yellow bags; the big items bay holds loose boxes.
+    // Each order has a despatch note (made up: CrashFix, the surname, a collection number, an A9 number one digit
+    // short of a real one) with no highlighting or Challenge 25 line: its top strip is left blank (detailedfoil).
+    function ocLabel(code) {
+      return signTex(320, 120, (g, w, h) => {
+        g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+        g.fillStyle = '#12893a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        fit(g, code, 900, 96, w - 20); g.fillText(code, w / 2, h / 2 + 4);
+      });
+    }
+    function noteTex(p) {
+      return signTex(512, 352, (g, w, h) => {
+        g.fillStyle = '#fbfbf9'; g.fillRect(0, 0, w, h);
+        // the top strip stays blank; then a barcode, the name and number, the collection box
+        g.fillStyle = '#1a1a1a';
+        let x = 26; for (let i = 0; i < 40; i++) { const bw = 1 + ((i * 7 + p.num.charCodeAt(i % 4)) % 3); g.fillRect(x, 62, bw, 40); x += bw + 1 + (i % 4 === 0 ? 1 : 0); }
+        g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+        g.font = '900 28px ' + FONT; g.fillText('CRASHFIX', 26, 138);
+        g.strokeStyle = '#1a1a1a'; g.lineWidth = 3; g.strokeRect(220, 62, 270, 40);
+        g.font = '400 26px ' + FONT; g.fillText('Collection No. ' + p.collection, 232, 92);
+        // the number and the surname, big, as on the real ones
+        g.font = '400 50px ' + FONT; g.fillText(p.num, 220, 162);
+        const nx = 220 + g.measureText(p.num).width + 18;
+        fit(g, p.surname, 400, 60, w - nx - 16); g.fillText(p.surname, nx, 164);
+        g.font = '400 22px ' + FONT; g.fillText('Despatch Note ' + p.despatch, 220, 200);
+        g.fillStyle = '#9a9a9a';
+        for (let i = 0; i < 6; i++) g.fillRect(300, 216 + i * 14, 120 + (i * 37) % 70, 5);
+        for (let i = 0; i < 4; i++) g.fillRect(26, 250 + i * 14, 90 + (i * 23) % 40, 5);
+        g.strokeStyle = '#b5b5b5'; g.lineWidth = 2; g.strokeRect(20, 304, w - 40, 34);
+      });
+    }
+    function holdingArea() {
+      const hd = world.holding;
+      if (!hd) return null;
+      const beam = lam(0xd5661c), P = hd.post, fx = hd.front, bx = hd.x0;
+      const ends = [hd.y0, hd.split, hd.y1];
+      for (const y of ends) for (const x of [bx, fx - P]) box(M.upright, x, y - P / 2, 0, x + P, y + P / 2, hd.top, 'shop');
+      const bays = [[hd.y0 + P / 2, hd.split - P / 2, true], [hd.split + P / 2, hd.y1 - P / 2, false]];
+      for (const [a, b, totes] of bays) {
+        const levels = (totes ? [hd.low] : []).concat(hd.decks, [hd.top]);
+        for (const z of levels) {
+          box(beam, fx - 0.05, a, z - 0.08, fx, b, z, 'shop'); box(beam, bx, a, z - 0.08, bx + 0.05, b, z, 'shop');
+          box(M.deck, bx + 0.02, a, z - 0.018, fx - 0.02, b, z, 'shop');
+        }
+        if (!totes) box(beam, fx - 0.05, a, 0.04, fx, b, 0.12, 'shop'); // a low rail for OC-001's label
+      }
+      const spots = [];
+      for (const sp of hd.spots) {
+        const cy = (sp.y0 + sp.y1) / 2, w = sp.y1 - sp.y0;
+        if (sp.kind === 'tote') { // an open blue tote, its label on the front
+          const t = 0.014, x0 = sp.x0 + 0.02, x1 = sp.x1, z0 = sp.z0, z1 = sp.z1;
+          box(M.tote, x0, sp.y0, z0, x1, sp.y1, z0 + t, 'shop');
+          box(M.tote, x0, sp.y0, z0, x1, sp.y0 + t, z1, 'shop'); box(M.tote, x0, sp.y1 - t, z0, x1, sp.y1, z1, 'shop');
+          box(M.tote, x0, sp.y0, z0, x0 + t, sp.y1, z1, 'shop'); box(M.tote, x1 - t, sp.y0, z0, x1, sp.y1, z1 - 0.06, 'shop');
+          const r = 0.02, rz = z1 - 0.014; // the rim: four strips round an open top
+          box(M.toteRim, x0 - 0.006, sp.y0 - 0.006, rz, x1 + 0.006, sp.y0 + r, z1, 'shop'); box(M.toteRim, x0 - 0.006, sp.y1 - r, rz, x1 + 0.006, sp.y1 + 0.006, z1, 'shop');
+          box(M.toteRim, x0 - 0.006, sp.y0, rz, x0 + r, sp.y1, z1, 'shop'); box(M.toteRim, x1 - r, sp.y0, z1 - 0.074, x1 + 0.006, sp.y1, z1 - 0.06, 'shop');
+          flat(ocLabel(sp.code), x1 + 0.002, cy, z0 + 0.15, Math.min(0.32, w - 0.06), 0.12, TURN.E, 'shop');
+        } else flat(ocLabel(sp.code), fx + 0.003, cy, sp.label.z - 0.04 + (sp.kind === 'floor' ? 0.04 : 0), 0.32, 0.12, TURN.E, 'shop');
+        spots.push({ sp, group: null, parcel: null });
+      }
+      const sign = wallSign('HOLDING AREA', '#12893a', '#ffffff', 768, 150);
+      flat(sign, bx + 0.004, (hd.y0 + hd.split) / 2, 2.63, 1.5, 0.29, TURN.E, 'shop');
+      return { hd, spots };
+    }
+    // a bagged order (a yellow sack, note on top, tipped towards you) or a big loose box with the note on its front
+    const _rx = new T.Vector3(), _ux = new T.Vector3(), _nx = new T.Vector3(), _mb = new T.Matrix4();
+    function parcelMesh(p, kind, w) {
+      const g = new T.Group(), note = new T.MeshBasicMaterial({ map: noteTex(p) });
+      note.userData = {}; g.userData.note = note;
+      const add = (geo, mat, x, y, z, own) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); if (own) m.userData.own = true; g.add(m); return m; };
+      if (kind === 'tote') {
+        const bw = w - 0.07, bag = lam(0xf2d21b); bag.userData = {};
+        const b = add(unitBox, bag, 0, 0.12, 0, true); b.scale.set(0.5, 0.2, bw); b.rotation.z = 0.12;
+        const n = add(new T.PlaneGeometry(0.27, 0.18), note, 0.06, 0.255, 0, true);
+        _nx.set(0.42, 0.91, 0).normalize(); _rx.set(0, 0, -1); _ux.crossVectors(_nx, _rx);
+        n.quaternion.setFromRotationMatrix(_mb.makeBasis(_rx, _ux, _nx));
+      } else {
+        const h = kind === 'floor' ? 0.5 : 0.44, bw = Math.min(1.05, w - 0.15), c = lam(0xc49a64); c.userData = {};
+        const b = add(unitBox, c, 0, h / 2, 0, true); b.scale.set(0.5, h, bw);
+        add(unitBox, lam(0xa98455), 0, h - 0.004, 0, true).scale.set(0.06, 0.01, bw + 0.002); // the tape
+        const n = add(new T.PlaneGeometry(0.27, 0.18), note, 0.252, h * 0.55, 0, true); n.rotation.y = Math.PI / 2;
+      }
+      return g;
+    }
+    function setParcel(code, p) {
+      const s = hold && hold.spots.find((x) => x.sp.code === code);
+      if (!s) return;
+      if (s.group) { dropTote(s.group); s.group = null; }
+      s.parcel = p || null;
+      if (!p) return;
+      const sp = s.sp, g = parcelMesh(p, sp.kind, sp.y1 - sp.y0);
+      g.position.set((sp.x0 + sp.x1) / 2, sp.z0 + (sp.kind === 'tote' ? 0.016 : 0), (sp.y0 + sp.y1) / 2);
+      scene.add(g); s.group = g;
+    }
+    // what the customer carries out: a copy of the parcel
+    function carryParcel(code) {
+      const s = hold && hold.spots.find((x) => x.sp.code === code);
+      if (!s || !s.parcel) return null;
+      const g = parcelMesh(s.parcel, s.sp.kind === 'tote' ? 'tote' : 'shelf', s.sp.kind === 'tote' ? 0.45 : 0.9);
+      g.rotation.y = Math.PI / 2;
+      scene.add(g);
+      return g;
+    }
 
     /* ---------- customers at the counter ---------- */
     // A simple figure: legs that swing from the hip, a body, arms, a head with hair. Each has its own colours.
@@ -1025,7 +1134,7 @@
     }
     function dropTote(t) {
       if (t.parent) t.parent.remove(t);
-      for (const m of t.children) if (m.userData.own) m.material.dispose();
+      for (const m of t.children) if (m.userData.own) { if (m.material.map) m.material.map.dispose(); m.material.dispose(); }
     }
 
     /* ---------- light ---------- */
@@ -1082,6 +1191,7 @@
     return {
       scene, groups, photos: { update: updatePhotos, flush: flushPhotos, fill: fillPhotos, setExtra: (list) => { extra = list; }, slots: SLOTS, big },
       labelMesh, labelMat, trays, trayOf, placeTray, placeItem, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, lamps, M,
+      hold: hold ? { spots: hold.spots, set: setParcel, carry: carryParcel } : null,
       clockTick, counts: { tags: tags.length, trays: trays.size, items: world.items.length }
     };
   }

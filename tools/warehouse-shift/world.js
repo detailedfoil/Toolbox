@@ -284,7 +284,7 @@
     ];
     // roll cages waiting at goods in, and a pallet or two of deliveries
     var cages = [], pallets = [];
-    for (var i = 0; i < 4; i++) cages.push({ kind: 'rollcage', x0: 4.0 + i * 0.85, y0: D - 2.6, x1: 4.72 + i * 0.85, y1: D - 1.8, z1: 1.75 });
+    for (var i = 0; i < 4; i++) cages.push({ kind: 'rollcage', x0: 5.0 + i * 0.85, y0: D - 2.6, x1: 4.72 + i * 0.85, y1: D - 1.8, z1: 1.75 });
     pallets.push({ kind: 'pallet', x0: 6.2, y0: D - 4.3, x1: 7.4, y1: D - 3.3, z1: 1.3 }, { kind: 'pallet', x0: 7.8, y0: D - 4.3, x1: 9.0, y1: D - 3.3, z1: 0.9 });
     objects = objects.concat(cages, pallets);
     // the everyday bits: kick stools at the end of a few aisles, a pallet truck, a stack of totes by the counter,
@@ -304,14 +304,45 @@
     var shopWall = 9.49 + SX;
     objects.push({ kind: 'board', face: 'W', x0: shopWall - 0.03, y0: 18.6, x1: shopWall, y1: 19.9, z0: 1.05, z1: 1.95, wall: true });
     objects.push({ kind: 'clock', face: 'W', x0: shopWall - 0.05, y0: 19.05, x1: shopWall, y1: 19.45, z0: 2.15, z1: 2.55, wall: true });
-    var zones = [{ name: 'Goods in', x0: 3.6, y0: D - 4.6, x1: 9.9, y1: D - 0.6 }];
+    var zones = [{ name: 'Goods in', x0: 4.7, y0: D - 4.6, x1: 9.9, y1: D - 0.6 }];
+    // the holding area, beside goods in against the staff room wall (detailedfoil, 19 Nov 2026): long-span shelving
+    // you face from goods in. On your left the bay for big loose items (OC-001 on the floor, OC-002 on the shelf
+    // above, labels on the shelf edge), on your right the bay of blue totes, six a shelf on the bottom two shelves
+    // (OC-003 to OC-008 at the bottom, OC-009 to OC-014 above, from the left), each with an order in a yellow bag.
+    // The shelves higher up stay empty.
+    var hold = holding(3.3, D - 5.95);
+    objects.push(hold.obj);
     var columns = [[5.0, 0, 5.4, 0.45], [(LX1 + RX0) / 2 - 0.2, 0, (LX1 + RX0) / 2 + 0.2, 0.45], [16.9, 0, 17.3, 0.45]];
     var counter = objects[1];
-    return { b: b, openings: openings, walls: walls, rooms: rooms, objects: objects, zones: zones, columns: columns, counter: counter, D: D };
+    return { b: b, openings: openings, walls: walls, rooms: rooms, objects: objects, zones: zones, columns: columns, counter: counter, D: D, holding: hold };
+  }
+  // x0 = the back of the shelving (against the wall), y0 = its end nearest the back of the building. It faces +x:
+  // standing in front of it you look towards the left wall, so your left is towards the shop front (bigger y).
+  function holding(x0, y0) {
+    var DEPTH = 0.62, P = 0.06, TOTE_BAY = 2.6, BIG_BAY = 1.6;
+    var front = x0 + DEPTH;
+    var yT0 = y0, yT1 = y0 + P + TOTE_BAY + P / 2, yB1 = yT1 + BIG_BAY + P / 2;
+    var decks = [0.75, 1.4, 2.05], low = 0.1, top = 2.45;
+    var spots = [];
+    // the big items bay (your left): OC-001 on the floor, OC-002 on the first shelf
+    var bigA = yT1 + P / 2, bigB = yB1 - P;
+    spots.push({ code: 'OC-001', kind: 'floor', y0: bigA + 0.08, y1: bigB - 0.08, z0: 0, z1: decks[0] - 0.12, label: { z: 0.1 } });
+    spots.push({ code: 'OC-002', kind: 'shelf', y0: bigA + 0.08, y1: bigB - 0.08, z0: decks[0], z1: decks[1] - 0.12, label: { z: decks[0] - 0.035 } });
+    // the tote bay: positions from the left as you face it, so from the bigger y end
+    var tA = y0 + P, tB = yT1 - P / 2, tw = (tB - tA) / 6;
+    [low, decks[0]].forEach(function (z, row) {
+      for (var i = 0; i < 6; i++) {
+        var yr = tB - i * tw;
+        spots.push({ code: 'OC-0' + pad2(3 + row * 6 + i), kind: 'tote', y0: yr - tw + 0.012, y1: yr - 0.012, z0: z, z1: z + 0.32 });
+      }
+    });
+    spots.forEach(function (sp) { sp.x0 = x0 + 0.04; sp.x1 = front - 0.02; });
+    return { x0: x0, x1: front, y0: y0, y1: yB1, front: front, decks: decks, low: low, top: top, post: P, split: yT1, spots: spots,
+      obj: { kind: 'holding', name: 'Holding area', x0: x0, y0: y0, x1: front, y1: yB1, z1: top } };
   }
 
   /* ---------- walking ---------- */
-  var BLOCKS = { counter: 1, cupboard: 1, cage: 1, panel: 1, gondola: 1, table: 1, worktop: 1, desk: 1, wc: 1, rollcage: 1, pallet: 1, stool: 1, pallettruck: 1, totes: 1, bucket: 1 };
+  var BLOCKS = { holding: 1, counter: 1, cupboard: 1, cage: 1, panel: 1, gondola: 1, table: 1, worktop: 1, desk: 1, wc: 1, rollcage: 1, pallet: 1, stool: 1, pallettruck: 1, totes: 1, bucket: 1 };
   function obstacles(rk, bl) {
     var out = [];
     rk.rows.forEach(function (r) { out.push(rect(r.x0, r.y0, r.x1, r.y1)); });
@@ -388,7 +419,7 @@
       rows: rk.rows, faces: rk.faces, aisles: rk.aisles, faceOf: rk.byCode,
       locs: locs, items: placed, unplaced: items.length - placed.length,
       building: bl.b, openings: bl.openings, walls: bl.walls, rooms: bl.rooms, objects: bl.objects, zones: bl.zones, columns: bl.columns,
-      counter: counter,
+      counter: counter, holding: bl.holding,
       // stand behind the counter (the warehouse side) to hand an order over; the customer waits on the shop side
       handover: rect(counter.x0 - 0.3, counter.y0 - 1.4, counter.x1 + 0.3, counter.y0),
       customer: { x: (counter.x0 + counter.x1) / 2 + 0.25, y: counter.y1 + 0.42 },
