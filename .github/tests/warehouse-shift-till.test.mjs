@@ -158,7 +158,7 @@ test('till orders: 1 to 3 different products on the shelves, asked for by code, 
       assert.equal(Till.judge(ln, 'ZZZZZ', ln.qty), 'wrong');
     }
   }
-  assert.ok(kinds.code > 100 && kinds.describe > 100 && kinds.need > 100, JSON.stringify(kinds));
+  assert.ok(kinds.code > 100 && kinds.describe === 0 && kinds.need > 100, JSON.stringify(kinds));
 });
 
 test('the till page: Fusion and CrashFix tabs, the real search, no real usernames, addresses or Screwfix servers', () => {

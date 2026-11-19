@@ -157,7 +157,8 @@
     var lines = [], used = {}, guard = 0;
     var desc = (requests && requests.describe) || [], need = (requests && requests.need) || [];
     while (lines.length < n && guard++ < 400) {
-      var k = r(), kind = k < 0.3 || (!desc.length && !need.length) ? 'code' : k < 0.65 && desc.length ? 'describe' : need.length ? 'need' : 'describe';
+      // customers no longer describe a product by its name (detailedfoil, 19 Nov 2026: it didn't work): a code, or a sentence from its description
+      var k = r(), kind = k < 0.3 || !need.length ? 'code' : 'need';
       var it, accept, words = [], quote = '', hint = '', clue = '';
       if (kind === 'code') {
         it = world.items[Math.floor(r() * world.items.length)];

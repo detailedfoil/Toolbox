@@ -304,7 +304,7 @@ explain changes in plain English and say what they'll see.
     typed word it leaves out words no product has, then tries without each word, and says which it left out). The
     customer gives their postcode, then their surname (made up: LU8 and LU9 don't exist, emails at example.com/net/org;
     sometimes someone else at the same address, then they say their first name); you Search, pick them, Select. Then
-    they ask for one thing at a time: by code, by describing it ("a pack of 100 ... screws 5mm x 80mm", from its
+    they ask for one thing at a time: by code, by describing it (REMOVED 19 Nov 2026, it did not work; `till.js` no longer picks it, the data is still in requests.json) ("a pack of 100 ... screws 5mm x 80mm", from its
     screwfix.com name, half without the make) or by quoting a sentence of its description ("I need the one that says:
     ...", plus a hint like "The 30m one." when several products say the same). Find it on CrashFix and tap its code to
     copy it: that shows it to the customer, who says right or wrong straight away (detailedfoil; a wrong one counts against
