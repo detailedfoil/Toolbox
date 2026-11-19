@@ -73,6 +73,8 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-load{text-align:center;color:#c3cede}
 .ws-load b{display:block;margin-bottom:6px;font-size:1.3rem;color:#fff}
 #helpCover,#endCover{background:#0d1117c4;backdrop-filter:blur(3px)}
+#startCover{background:linear-gradient(180deg,#0d1117aa 0%,#0d111766 45%,#0d1117cc 100%);backdrop-filter:blur(2px)}
+#startCover .ws-card{background:#151b26ee}
 .ws-rotate{position:absolute;inset:0;z-index:30;display:none;place-items:center;text-align:center;padding:24px;background:#0d1117f2}
 .ws-rotate svg{width:84px;height:84px;margin-bottom:10px;animation:wsTurn 2.4s ease-in-out infinite}
 @keyframes wsTurn{0%,30%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}

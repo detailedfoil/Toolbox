@@ -54,7 +54,8 @@
     let dpr = Math.min(MAX_DPR, touch ? 1.5 : 2);
     renderer.setPixelRatio(dpr);
     let dirty = true;
-    const S = window.ShiftScene.build(T, world, renderer, { onChange: () => { dirty = true; } });
+    const lowMemory = !!(navigator.deviceMemory && navigator.deviceMemory < 4); // a 4096 px photo texture is 64 MB
+    const S = window.ShiftScene.build(T, world, renderer, { onChange: () => { dirty = true; }, smallAtlas: lowMemory });
     const scene = S.scene;
     progress(0.8, 'Switching the lights on…'); await breathe();
 
@@ -94,6 +95,7 @@
       me.pitch = Math.max(-1.45, Math.min(1.35, me.pitch));
       cam.position.set(me.x, me.eye + Math.sin(me.bob * 2) * 0.012 * Math.min(1, me.speed / 1.7), me.y);
       cam.rotation.set(me.pitch, me.yaw, 0);
+      dirty = true;
     }
     applyCam();
 

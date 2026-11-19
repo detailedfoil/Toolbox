@@ -436,6 +436,25 @@
         g.fillText('HI-VIS AND', w / 2, 470); g.fillText('SAFETY BOOTS', w / 2, 524); g.font = '700 30px ' + FONT; g.fillText('must be worn', w / 2, 580);
       });
       flat(ppe, x0 + 2.4, y, 1.55, 0.4, 0.5, 0);
+      // and on the back of the bulk run by the staff room: lifting and keep clear
+      const bb = backs.find((k) => k.row.side === 'L' && k.out > 0);
+      if (!bb) return;
+      const lift = signTex(512, 640, (g, w, h) => {
+        g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.fillStyle = '#1f8a43'; g.fillRect(0, 0, w, 110);
+        g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 54px ' + FONT; g.fillText('LIFT SAFELY', w / 2, 58);
+        g.strokeStyle = '#1d232c'; g.lineWidth = 16; g.lineCap = 'round'; g.lineJoin = 'round';
+        g.beginPath(); g.arc(w / 2 - 10, 190, 34, 0, Math.PI * 2); g.stroke(); // head
+        g.beginPath(); g.moveTo(w / 2 - 10, 226); g.lineTo(w / 2 - 20, 340); g.lineTo(w / 2 - 80, 400); g.lineTo(w / 2 - 40, 470); // back straight, knees bent
+        g.moveTo(w / 2 - 20, 340); g.lineTo(w / 2 + 50, 390); g.lineTo(w / 2 + 40, 470); g.moveTo(w / 2 - 14, 270); g.lineTo(w / 2 + 60, 330); g.stroke();
+        g.fillStyle = '#c49a64'; g.fillRect(w / 2 + 40, 300, 110, 90); g.strokeStyle = '#8a6a40'; g.lineWidth = 6; g.strokeRect(w / 2 + 40, 300, 110, 90);
+        g.fillStyle = '#1d232c'; g.font = '800 34px ' + FONT; g.fillText('Bend your knees,', w / 2, 540); g.fillText('not your back', w / 2, 586);
+      });
+      flat(lift, bb.row.x0 + 1.4, bb.y + 0.004, 1.55, 0.5, 0.625, 0);
+      const clear = signTex(512, 256, (g, w, h) => {
+        g.fillStyle = '#f2c400'; g.fillRect(0, 0, w, h); g.fillStyle = '#1d232c'; g.fillRect(14, 14, w - 28, h - 28); g.fillStyle = '#f2c400'; g.fillRect(24, 24, w - 48, h - 48);
+        g.fillStyle = '#1d232c'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 64px ' + FONT; g.fillText('KEEP AISLES', w / 2, 100); g.fillText('CLEAR', w / 2, 170);
+      });
+      flat(clear, bb.row.x0 + 2.4, bb.y + 0.004, 1.65, 0.6, 0.3, 0);
     })();
 
     /* ---------- the trays (drawers) of the AA areas ---------- */
