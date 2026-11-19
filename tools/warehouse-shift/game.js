@@ -496,7 +496,8 @@
       tote.position.set(Math.max(counter.x0 + 0.4, Math.min(counter.x1 - 0.4, me.x)), 1.0, counter.y0 + 0.22);
       totes.push({ t: 0, tote, from: tote.position.clone(), to: new T.Vector3(c ? c.group.position.x : spot.x, 1.0, counter.y1 - 0.2), c });
       renderScanner();
-      setTimeout(() => { const next = freeCustomer(c); arrive(next); waitingCustomer = next; newOrder(); }, 1600);
+      setTimeout(() => { const next = freeCustomer(c); arrive(next); waitingCustomer = next; }, 1400);
+      setTimeout(() => newOrder(), 2600); // after the order complete banner has had its moment
     }
     const totes = [];
     function updateTotes(dt) {
