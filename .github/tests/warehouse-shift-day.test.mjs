@@ -223,7 +223,7 @@ test('whoever starts an order has it: off the list, nobody else can take it, and
   assert.match(game, /say\('Finish task', 'err'/, 'Back on the scanner says Finish task');
 });
 
-test('Sam: never serves a till customer, and only takes a pick that has sat on the list 15 s (customer picks before c picks)', () => {
+test('Sam: never serves a till customer, and only takes a pick that has sat on the list 5 s (customer picks before c picks)', () => {
   let n = 0;
   for (const d of days.concat([alone])) {
     assert.ok(!d.bot.jobs.includes('serve'), 'Sam never serves a till customer');
@@ -236,14 +236,14 @@ test('Sam: never serves a till customer, and only takes a pick that has sat on t
   assert.ok(n > 15, n + ' choices');
   const jobs = alone.bot.jobs;
   assert.ok(jobs.includes('c') && jobs.includes('ck'), 'Sam picks what is left: ' + jobs.join(' '));
-  // a pick is never taken by Sam in its first 15 s
+  // a pick is never taken by Sam in its first 5 s
   for (const d of days.concat([alone])) for (const l of d.day.log) if (l.by === 'Sam') assert.ok(l.took >= 0, 'took a while');
   const late = Day.create({ world, World: W, Till, requests, rand: W.rng(12), env: {} });
   late.phase = 'open';
   const o = late.makeOrder('c', W.order(world, W.rng(3), 2), null, true);
   assert.equal(late.listLate().length, 0, 'new on the list: Sam leaves it');
-  late.tick(15.5);
-  assert.ok(late.listLate().some((x) => x.id === o.id), 'after 15 s Sam can take it');
+  late.tick(5.5);
+  assert.ok(late.listLate().some((x) => x.id === o.id), 'after 5 s Sam can take it');
   // as long as a person takes
   const took = alone.bot.log.filter((l) => l.done === 'c' || l.done === 'ck' || l.done === 'till');
   assert.ok(took.every((l) => l.took > 15 && l.took < 300), took.map((l) => l.done + ' ' + l.took.toFixed(0)).join(', '));

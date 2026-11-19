@@ -139,7 +139,7 @@
   Day.prototype.queue = function () { return this.customers.filter(function (c) { return c.state === 'counter' && !c.by; }); };
   // picks nobody has started for a while: Sam only takes a pick after it has sat on the list for 15 s, and never serves
   // a till customer, so what you serve and pick is yours (detailedfoil, 19 Nov 2026)
-  var LATE_PICK = 15;
+  var LATE_PICK = 5;
   Day.prototype.listLate = function () { var t = this.t; return this.list().filter(function (o) { return t - o.t > LATE_PICK; }); };
   // customers at the counter nobody has said hello to yet, the one waiting longest first
   Day.prototype.ungreeted = function () { return this.customers.filter(function (c) { return c.state === 'greet'; }); };
