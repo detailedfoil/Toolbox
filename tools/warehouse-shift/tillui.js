@@ -113,7 +113,7 @@
             <div class="fu-tt">Kiosk Orders</div>
             <div class="fu-box">
               <div class="fu-bar"><span>Orders sent from the kiosks today. Pick the customer's and press Select:</span></div>
-              <div class="fu-tw"><table class="fu-tab fu-kiosk"><thead><tr><th>Time</th><th>Name</th><th>Sent from</th><th>Items</th><th>Total</th></tr></thead><tbody data-v="krows"></tbody></table></div>
+              <div class="fu-tw"><table class="fu-tab fu-kiosk"><thead><tr><th>Time</th><th>Name</th><th>Items</th><th>Total</th></tr></thead><tbody data-v="krows"></tbody></table></div>
               <div class="fu-btns"><button class="fu-blue big" type="button" data-act="kback">Back</button><button class="fu-red big" type="button" data-act="kselect">Select</button></div>
             </div>
           </section>
@@ -351,7 +351,7 @@
       if (!list.length) { V.krows.innerHTML = '<tr class="none"><td colspan="5">No kiosk orders waiting.</td></tr>'; return; }
       V.krows.innerHTML = list.map((k, i) => {
         const units = k.lines.reduce((t, l) => t + l.qty, 0);
-        return '<tr data-k="' + i + '"' + (i === S.ksel ? ' class="sel"' : '') + '><td>' + esc(k.time) + '</td><td><b>' + esc(k.name) + '</b></td><td>' + esc(k.device) + '</td><td>' +
+        return '<tr data-k="' + i + '"' + (i === S.ksel ? ' class="sel"' : '') + '><td>' + esc(k.time) + '</td><td><b>' + esc(k.name) + '</b></td><td>' +
           k.lines.length + (k.lines.length > 1 ? ' lines, ' : ' line, ') + units + (units > 1 ? ' items' : ' item') + '</td><td>' + Till.money(k.total) + '</td></tr>';
       }).join('');
     }
