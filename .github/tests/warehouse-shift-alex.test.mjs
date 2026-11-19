@@ -39,7 +39,7 @@ function shift(seed, opts = {}) {
   day = Day.create({ world, World: W, Till, requests, rand: rng, env: dayEnv });
   if (day.phase === 'unlock') dayEnv.opening();
   const env = {
-    board: () => ({ orders: day.list(), queue: day.queue(), greet: day.ungreeted().filter((c) => T - (arrived.get(c) || 0) > 4.5) }),
+    board: () => ({ orders: day.list(), queue: day.queueLate(), greet: day.ungreeted().filter((c) => T - (arrived.get(c) || 0) > 10) }),
     greet: (b, c) => day.greet(c, 'Sam'),
     take: (b, o) => day.take(o, 'Sam'),
     serve: (b, c) => { if (!day.serve(c, 'Sam')) return false; later(3, () => { c.ready = true; }); return true; },

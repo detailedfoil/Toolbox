@@ -45,7 +45,7 @@ function runDay(seed, opts = {}) {
   if (day.phase === 'unlock') env.opening();
   const choices = [];
   const crewEnv = {
-    board: () => ({ orders: day.list(), queue: day.queue(), greet: day.ungreeted().filter((c) => T - ev.arrivedAt(c) > 4.5) }),
+    board: () => ({ orders: day.list(), queue: day.queueLate(), greet: day.ungreeted().filter((c) => T - ev.arrivedAt(c) > 10) }),
     greet: (b, c) => day.greet(c, 'Sam'),
     take: (b, o) => day.take(o, 'Sam'),
     serve: (b, c) => { if (!day.serve(c, 'Sam')) return false; later(3, () => { c.ready = true; }); return true; },
@@ -59,7 +59,7 @@ function runDay(seed, opts = {}) {
   const choose = bot.choose.bind(bot);
   bot.choose = function () {
     const j = choose();
-    if (j && !j.greet) choices.push({ job: j.serve ? 'serve' : j.pick.kind === 'c' ? 'c' : 'cust', custOn: day.list().some((o) => o.kind !== 'c'), queue: day.queue().length > 0 });
+    if (j && !j.greet) choices.push({ job: j.serve ? 'serve' : j.pick.kind === 'c' ? 'c' : 'cust', custOn: day.list().some((o) => o.kind !== 'c'), queue: day.queueLate().length > 0 });
     return j;
   };
   const you = { busy: null, until: 0, serving: null };

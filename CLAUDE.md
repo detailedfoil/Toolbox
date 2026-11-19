@@ -375,7 +375,7 @@ explain changes in plain English and say what they'll see.
     collections (several products, from the holding area, no warehouse walk, bags may be there from before opening; they count as
     picks and the label shows the bag's real locs:items). Customers are greeted before they say anything: they arrive in state
     `greet`, you press Greet (the Use till button changes, or Scan / RT) while behind the counter near them, or Sam does it after
-    about 4.5 s (`day.greet(c, who)`, `ungreeted()`). The owner/late-customer idea was removed. At the till LT and RT switch tabs
+    about 10 s (`day.greet(c, who)`, `ungreeted()`); Sam only takes a till customer who has waited 40 s (`queueLate()`), so most till customers are yours. The owner/late-customer idea was removed. At the till LT and RT switch tabs
     (LT Fusion, RT CrashFix), LB is Enter. The left side is now BBA at the FRONT to BBJ at the back; pick lists walk AAA to BAG, then
     BBJ down to BBA (`WALK` in world.js; `loc.order` follows it, don't sort by code). The two halves of a shared AAA bay have a
     12 cm gap (`HALFGAP`). The trolley has no handle.
