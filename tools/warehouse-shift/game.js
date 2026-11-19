@@ -270,7 +270,7 @@
       const h = hitAt(nx, ny);
       if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
       if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
-      if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast('Too low: squat (C)'); SFX.bad(); flash(true); return; }
+      if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
       const ln = order.lines[cur], tr = S.trayOf(h.loc);
       S.setBox(S.aimBox, S.locBox(h.loc), 0.012); S.aimBox.visible = true;
       if (World.sameSpot(h.loc, ln.loc)) {
