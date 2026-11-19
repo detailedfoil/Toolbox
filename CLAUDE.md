@@ -237,7 +237,7 @@ explain changes in plain English and say what they'll see.
     look at the label or tray and Scan (or tap it on a phone; within 2.05 m), a tray slides out showing what's in it, type the
     qty (number pad on phones), Enter; the item flies into the tote. Below 0.45 m you must squat (button, or C). Then take the
     tote to the counter (Enter inside `world.handover`): it slides to the customer, who walks out with it, and the next one walks
-    in with a new order. No score or timer (his say); the Function menu has squat, hint, sound, help, skip order. Landscape first
+    in with a new order. No score or timer (his say); the Function menu has squat, hint, sound, look speed, skip order and help; "Perfect pick!" when an order needs no hint and has no wrong scan or quantity. Landscape first
     (detailedfoil), a rotate prompt on phones held upright with "Play upright anyway". Phone: left-thumb stick (pushed right out =
     jog), drag to look, tap to scan. PC: WASD, mouse look (pointer lock), F/click scan, C squat, H hint, digits + Enter, Tab menu.
     Installable: `warehouse-shift.webmanifest` (fullscreen, landscape) and `warehouse-shift-sw.js` (scope "warehouse-shift":

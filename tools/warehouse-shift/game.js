@@ -62,6 +62,10 @@
     /* ---------- camera and layout ---------- */
     const cam = new T.PerspectiveCamera(60, 1, 0.03, 120);
     cam.rotation.order = 'YXZ';
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches; // no head bob
+    const LOOKS = [['Normal', 1], ['Fast', 1.45], ['Slow', 0.7]];
+    let lookPick = 0;
+    try { lookPick = Math.max(0, LOOKS.findIndex((l) => l[0] === localStorage.getItem('ws-look'))); } catch (e) { /* fine */ }
     const me = { x: world.start.x, y: world.start.y, yaw: world.start.yaw, pitch: -0.05, vx: 0, vy: 0, eye: 1.62, squat: false, bob: 0, speed: 0 };
     const view = { w: 1, h: 1, cx: 0.5, cy: 0.5, landscape: true };
     const scanner = $('scanner');
@@ -93,7 +97,7 @@
     layout();
     function applyCam() {
       me.pitch = Math.max(-1.45, Math.min(1.35, me.pitch));
-      cam.position.set(me.x, me.eye + Math.sin(me.bob * 2) * 0.012 * Math.min(1, me.speed / 1.7), me.y);
+      cam.position.set(me.x, me.eye + (still ? 0 : Math.sin(me.bob * 2) * 0.012 * Math.min(1, me.speed / 1.7)), me.y);
       cam.rotation.set(me.pitch, me.yaw, 0);
       dirty = true;
     }
@@ -542,8 +546,9 @@
         ['1', me.squat ? 'Stand up' : 'Squat', () => toggleSquat()],
         ['2', 'Hint', () => useHint()],
         ['3', 'Sound: ' + (audio.on ? 'on' : 'off'), () => { audio.on = !audio.on; try { localStorage.setItem('ws-sound', audio.on ? 'on' : 'off'); } catch (e) { /* fine */ } }],
-        ['4', 'How to play', () => showHelp(true)],
-        ['5', 'Skip this order', () => { if (state === 'scan' || state === 'qty') { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; setPad(false); newOrder(); } }],
+        ['4', 'Look: ' + LOOKS[lookPick][0].toLowerCase(), () => { lookPick = (lookPick + 1) % LOOKS.length; try { localStorage.setItem('ws-look', LOOKS[lookPick][0]); } catch (e) { /* fine */ } toast('Look speed: ' + LOOKS[lookPick][0].toLowerCase()); }],
+        ['5', 'Skip order', () => { if (state === 'scan' || state === 'qty') { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; setPad(false); newOrder(); } }],
+        ['6', 'Help', () => showHelp(true)],
         ['0', 'Close', () => {}]
       ];
       scMenu.replaceChildren();
@@ -630,7 +635,7 @@
       if (!p) return;
       const dx = e.clientX - p.x, dy = e.clientY - p.y;
       p.x = e.clientX; p.y = e.clientY;
-      const k = e.pointerType === 'mouse' ? 0.005 : 0.0065;
+      const k = (e.pointerType === 'mouse' ? 0.005 : 0.0065) * LOOKS[lookPick][1];
       me.yaw -= dx * k; me.pitch -= dy * k; applyCam(); dirty = true;
     });
     const lookEnd = (e) => {
@@ -649,7 +654,8 @@
     document.addEventListener('pointerlockchange', () => { if (locked()) toast('Esc lets go of the mouse'); dirty = true; });
     document.addEventListener('mousemove', (e) => {
       if (!locked() || Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return;
-      me.yaw -= e.movementX * 0.0022; me.pitch -= e.movementY * 0.0022; applyCam(); dirty = true;
+      const k = 0.0022 * LOOKS[lookPick][1];
+      me.yaw -= e.movementX * k; me.pitch -= e.movementY * k; applyCam(); dirty = true;
     });
 
     /* ---------- controls: keyboard ---------- */
