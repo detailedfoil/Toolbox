@@ -1136,6 +1136,119 @@
       if (t.parent) t.parent.remove(t);
       for (const m of t.children) if (m.userData.own) { if (m.material.map) m.material.map.dispose(); m.material.dispose(); }
     }
+    // one more picked line into a tote that's being carried round (box i, in the product's colour)
+    function toteBox(t, hex, i) {
+      const m = new T.Mesh(unitBox, lam(hex)), w = 0.14 + 0.06 * ((i * 37) % 5) / 5, h = 0.06 + 0.08 * ((i * 53) % 7) / 7, k = i % 6;
+      m.scale.set(w, h, 0.12 + 0.05 * (k % 3)); m.position.set(-0.19 + (k % 3) * 0.19, 0.013 + h / 2 + (k > 2 ? 0.05 : 0), k > 2 ? 0.08 : -0.08); m.rotation.y = (k % 2 ? 0.15 : -0.1);
+      m.userData.own = true; t.add(m);
+    }
+
+    /* ---------- coworkers (bot.js): Alex, in uniform ---------- */
+    // A figure with knees and elbows, so they can kneel at the bottom shelves, carry a tote and type at the till.
+    // Screwfix staff wear navy with a yellow logo: the patch carries the Toolbox's own made-up brand (CrashFix, as on
+    // the despatch notes) and a white badge has their name. Nothing floats: the name is on the badge, not over their head.
+    const geoW = {
+      thigh: new T.CapsuleGeometry(0.07, 0.3, 4, 10).translate(0, -0.22, 0), shin: new T.CapsuleGeometry(0.06, 0.3, 4, 10).translate(0, -0.21, 0),
+      boot: new T.BoxGeometry(0.13, 0.085, 0.27), upper: new T.CapsuleGeometry(0.052, 0.2, 4, 8).translate(0, -0.15, 0),
+      fore: new T.CapsuleGeometry(0.046, 0.19, 4, 8).translate(0, -0.14, 0), collar: new T.CylinderGeometry(0.078, 0.095, 0.05, 14),
+      scanner: new T.BoxGeometry(0.062, 0.17, 0.036), plate: new T.PlaneGeometry(1, 1)
+    };
+    const M_UNI = lam(0x1d2c4f), M_TROUSER = lam(0x2a2e35), M_SCAN = lam(0x2b2e33);
+    const beamMat = new T.MeshBasicMaterial({ color: 0xff2a1a, transparent: true, opacity: 0.85, depthWrite: false });
+    function makeWorker(o) {
+      o = o || {};
+      const group = new T.Group(), P = {};
+      const skin = lam(o.skin || 0xe0b394), hair = lam(o.hair || 0x3a2a20);
+      const add = (geo, mat, x, y, z, parent) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
+      const joint = (x, y, z, parent) => { const g = new T.Group(); g.position.set(x, y, z); parent.add(g); return g; };
+      P.hips = joint(0, 0.95, 0, group);
+      add(geoC.hips, M_TROUSER, 0, 0, 0, P.hips);
+      for (const side of [1, -1]) { // +x is their left
+        const leg = joint(0.085 * side, 0, 0, P.hips), knee = joint(0, -0.44, 0, leg);
+        add(geoW.thigh, M_TROUSER, 0, 0, 0, leg); add(geoW.shin, M_TROUSER, 0, 0, 0, knee); add(geoW.boot, M.boot, 0, -0.46, 0.05, knee);
+        P[side > 0 ? 'legL' : 'legR'] = leg; P[side > 0 ? 'kneeL' : 'kneeR'] = knee;
+      }
+      P.torso = joint(0, 0.05, 0, P.hips);
+      const body = add(geoC.torso, M_UNI, 0, 0.24, 0, P.torso); body.scale.set(1.12, 1, 0.66);
+      add(geoW.collar, M_UNI, 0, 0.52, 0, P.torso);
+      add(geoC.neck, skin, 0, 0.55, 0, P.torso);
+      const plate = (map, x, y, w, h) => { const m = new T.Mesh(geoW.plate, new T.MeshBasicMaterial({ map })); m.position.set(x, y, 0.117); m.scale.set(w, h, 1); P.torso.add(m); return m; };
+      plate(signTex(256, 128, (g, w, h) => { // the name badge
+        g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.fillStyle = '#15396b'; g.fillRect(0, 0, w, 26);
+        g.fillStyle = '#15396b'; g.textAlign = 'center'; g.textBaseline = 'middle'; fit(g, o.name || 'Alex', 900, 74, w - 24); g.fillText((o.name || 'Alex').toUpperCase(), w / 2, 80);
+      }), 0.075, 0.36, 0.085, 0.043);
+      plate(signTex(256, 128, (g, w, h) => { // the logo patch
+        g.fillStyle = '#f2c400'; g.fillRect(0, 0, w, h); g.fillStyle = '#15396b'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        fit(g, 'CrashFix', 900, 70, w - 20); g.fillText('CrashFix', w / 2, h / 2 + 3);
+      }), -0.075, 0.37, 0.085, 0.043);
+      P.head = joint(0, 0.67, 0, P.torso);
+      const head = add(geoC.head, skin, 0, 0, 0, P.head); head.scale.set(0.92, 1.05, 1);
+      add(geoC.hair, hair, 0, 0.012, -0.008, P.head); add(geoC.nose, skin, 0, -0.005, 0.1, P.head);
+      add(geoC.eye, M.black, -0.036, 0.02, 0.093, P.head); add(geoC.eye, M.black, 0.036, 0.02, 0.093, P.head);
+      for (const side of [1, -1]) {
+        const sh = joint(0.235 * side, 0.46, 0, P.torso), el = joint(0, -0.3, 0, sh);
+        add(geoW.upper, M_UNI, 0, 0, 0, sh); add(geoW.fore, M_UNI, 0, 0, 0, el); add(geoC.hand, skin, 0, -0.31, 0, el);
+        P[side > 0 ? 'shL' : 'shR'] = sh; P[side > 0 ? 'elL' : 'elR'] = el;
+      }
+      P.scanner = add(geoW.scanner, M_SCAN, 0, -0.33, 0.035, P.elR); // the handset, along the arm
+      const screen = new T.Mesh(geoW.plate, new T.MeshBasicMaterial({ color: 0x6f9fd6 })); screen.scale.set(0.04, 0.05, 1); screen.position.set(0, 0.03, 0.019); P.scanner.add(screen);
+      const carry = joint(0, 0.95, 0.42, group); // what they're carrying hangs off this
+      const beam = new T.Mesh(unitBox, beamMat); beam.visible = false; beam.renderOrder = 4; scene.add(beam);
+      scene.add(group);
+      return { group, parts: P, carry, beam, phase: 0, t: 0, held: null };
+    }
+    // Alex's pose from what the worker (bot.js) is doing: walking, kneeling, carrying, typing, scanning, handing over
+    const _wq = new T.Quaternion(), _we = new T.Euler(), _wv = new T.Vector3(), _wv2 = new T.Vector3(), DOWN = new T.Vector3(0, -1, 0);
+    function poseWorker(w, b, dt) {
+      const P = w.parts, k = Math.min(1, dt * 10), kb = Math.min(1, dt * 6.5);
+      w.t += dt;
+      w.group.position.set(b.x, 0, b.y); w.group.rotation.y = b.yaw;
+      const steps = b.kneeling ? 0 : Math.min(1, Math.max(b.speed / 1.1, b.turning > 0.6 ? 0.35 : 0));
+      w.phase += dt * (b.speed * 5.4 + (b.turning > 0.6 && b.speed < 0.2 ? 5 : 0));
+      const sw = Math.sin(w.phase);
+      let hipY = 0.95, lean = 0, headX = 0, headY = 0;
+      let thL = sw * 0.42 * steps, thR = -sw * 0.42 * steps;
+      let knL = Math.max(0, -Math.sin(w.phase - 0.9)) * 0.8 * steps, knR = Math.max(0, Math.sin(w.phase - 0.9)) * 0.8 * steps;
+      let sL = -sw * 0.3 * steps, sR = sw * 0.3 * steps, zL = 0.07, zR = -0.07, eL = -0.15 - 0.2 * steps, eR = -0.15 - 0.2 * steps;
+      const holding = b.carry && !b.toteDown;
+      if (holding) { sL = sR = -0.45; zL = 0.14; zR = -0.14; eL = eR = -1.05; }
+      if (b.atTill && !b.giving && !holding) { sL = sR = -0.42; zL = 0.1; zR = -0.1; eL = eR = -1.1; headX = 0.22; lean = 0.05; }
+      if (b.typing) { eL += Math.sin(w.t * 23) * 0.07; eR += Math.sin(w.t * 19 + 1) * 0.07; headX = 0.3; }
+      if (b.reading) { sR = -0.55; zR = -0.05; eR = -1.6; headX = 0.4; }
+      if (b.kneeling) { hipY = 0.5; lean = 0.32; thL = -1.5; knL = 1.5; thR = 0.12; knR = 1.62; headX = 0.25; if (!holding) { sL = -0.5; eL = -0.7; } }
+      if (b.bending) { lean = 0.6; hipY = 0.87; thL = thR = -0.36; knL = knR = 0.58; sL = sR = -0.95; zL = 0.12; zR = -0.12; eL = eR = -0.25; headX = 0.2; }
+      if (b.giving) { sL = sR = -1.15; zL = 0.12; zR = -0.12; eL = eR = -0.3; lean = 0.12; headX = 0.1; }
+      if (b.lookT > 0) headY = Math.sin(w.t * 2.6) * 0.8;
+      P.hips.position.y += (hipY - P.hips.position.y) * kb;
+      P.torso.rotation.x += (lean - P.torso.rotation.x) * kb;
+      P.legL.rotation.x += (thL - P.legL.rotation.x) * kb; P.legR.rotation.x += (thR - P.legR.rotation.x) * kb;
+      P.kneeL.rotation.x += (knL - P.kneeL.rotation.x) * kb; P.kneeR.rotation.x += (knR - P.kneeR.rotation.x) * kb;
+      P.elL.rotation.x += (eL - P.elL.rotation.x) * k;
+      P.head.rotation.x += (headX - P.head.rotation.x) * k; P.head.rotation.y += (headY - P.head.rotation.y) * Math.min(1, dt * 4);
+      P.shL.quaternion.slerp(_wq.setFromEuler(_we.set(sL, 0, zL)), k);
+      // the scanner arm points at what they're scanning
+      if (b.aim) {
+        w.group.updateMatrixWorld(true);
+        _wv.set(b.aim.x, b.aim.z, b.aim.y); P.torso.worldToLocal(_wv); _wv.sub(P.shR.position).normalize();
+        _wq.setFromUnitVectors(DOWN, _wv); P.shR.quaternion.slerp(_wq, Math.min(1, dt * 9));
+        P.elR.rotation.x += (-0.05 - P.elR.rotation.x) * k;
+      } else {
+        P.shR.quaternion.slerp(_wq.setFromEuler(_we.set(sR, 0, zR)), k);
+        P.elR.rotation.x += (eR - P.elR.rotation.x) * k;
+      }
+      // the tote in their hands, or down on the floor beside them while they pick; a bag or a box in front
+      const c = w.carry, down = b.toteDown && b.carry === 'tote';
+      const tx = down ? -0.55 : 0, ty = down ? 0 : b.carry === 'box' ? 1.0 : b.carry === 'bag' ? 0.96 : 0.95, tz = down ? 0.08 : b.carry === 'tote' ? 0.42 : 0.36;
+      c.position.x += (tx - c.position.x) * kb; c.position.y += (ty - c.position.y) * kb; c.position.z += (tz - c.position.z) * kb;
+      c.rotation.y += ((down ? Math.PI / 2 : 0) - c.rotation.y) * kb;
+      // the scanner's red line, for a moment after each scan
+      if (b.beam > 0 && b.beamTo) {
+        w.group.updateMatrixWorld(true);
+        P.scanner.localToWorld(_wv.set(0, -0.085, 0)); _wv2.set(b.beamTo.x, b.beamTo.z, b.beamTo.y);
+        const L = _wv.distanceTo(_wv2);
+        w.beam.position.copy(_wv).lerp(_wv2, 0.5); w.beam.lookAt(_wv2); w.beam.scale.set(0.007, 0.007, L); w.beam.visible = true;
+      } else if (w.beam.visible) w.beam.visible = false;
+    }
 
     /* ---------- light ---------- */
     const hemi = new T.HemisphereLight(0xffffff, 0x8d9096, 2.15);
@@ -1190,7 +1303,7 @@
 
     return {
       scene, groups, photos: { update: updatePhotos, flush: flushPhotos, fill: fillPhotos, setExtra: (list) => { extra = list; }, slots: SLOTS, big },
-      labelMesh, labelMat, trays, trayOf, placeTray, placeItem, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, lamps, M,
+      labelMesh, labelMat, trays, trayOf, placeTray, placeItem, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, toteBox, makeWorker, poseWorker, lamps, M,
       hold: hold ? { spots: hold.spots, set: setParcel, carry: carryParcel } : null,
       clockTick, counts: { tags: tags.length, trays: trays.size, items: world.items.length }
     };

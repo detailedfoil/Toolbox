@@ -10,8 +10,11 @@
    the counter and hand it over; the next customer walks in. Hint makes the location glow. Squat for the bottom
    shelves. Played mainly with the phone sideways: left thumb walks, drag to look. On a computer: WASD, mouse look.
 
-   world.js makes the warehouse and the orders, scene.js draws it, till.js and tillui.js are the till. This file is
-   the rest: the camera, the controls, the scanner, the customers, the sounds and the game itself. */
+   Alex (bot.js) works the shift with you: their own customers at the right-hand till, the same four jobs, at a
+   person's pace. One person to a pick aisle: whoever's in first has it, so you can't walk into an aisle Alex is in.
+
+   world.js makes the warehouse and the orders, scene.js draws it, till.js and tillui.js are the till, bot.js is
+   Alex. This file is the rest: the camera, the controls, the scanner, the customers, the sounds and the game itself. */
 (function () {
   'use strict';
 
@@ -32,7 +35,7 @@
     if (!me) return; // the sign-in screen is up; its "toolbox:login" event brings us back here
     booted = true;
     if (me !== STORE) { fail('Warehouse Shift is only for Dunstable (LB1).'); return; }
-    if (!window.THREE || !window.ShiftWorld || !window.ShiftScene || !window.ShiftTill || !window.ShiftTillUI) { fail("The game didn't load. Check your signal and reload the page."); return; }
+    if (!window.THREE || !window.ShiftWorld || !window.ShiftScene || !window.ShiftTill || !window.ShiftTillUI || !window.ShiftBot) { fail("The game didn't load. Check your signal and reload the page."); return; }
     progress(0.1, 'Loading the products…');
     // what till customers ask for: without it every customer is a click and collect
     const asks = fetch('warehouse-shift/data/requests.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -137,8 +140,8 @@
       let moved = !!turn;
       if (me.speed > 0.01) {
         const nx = me.x + me.vx * dt, ny = me.y + me.vy * dt;
-        if (!blocked(nx, me.y)) me.x = nx; else me.vx = 0;
-        if (!blocked(me.x, ny)) me.y = ny; else me.vy = 0;
+        if (!blocked(nx, me.y) && !crewStop(nx, me.y)) me.x = nx; else me.vx = 0;
+        if (!blocked(me.x, ny) && !crewStop(me.x, ny)) me.y = ny; else me.vy = 0;
         me.bob += me.speed * dt * 2.3;
         moved = true;
       } else { me.vx = me.vy = 0; me.speed = 0; }
@@ -388,6 +391,7 @@
     // customer gives the OC location and their surname; scan that tote (or the big item's spot) to take the order.
     const HOLD = world.holding, holdBox = new T.Box3();
     const parcels = {}; // code -> {surname, num, collection, despatch}
+    const reserved = new Set(); // OC locations a customer (yours or Alex's) has come for: nobody else gets sent there
     function holdUsed() { const u = {}; for (const k in parcels) if (parcels[k]) u[parcels[k].surname] = 1; return u; }
     function holdFill(code) { const p = Till.holdParcel(Math.random, holdUsed()); parcels[code] = p; S.hold.set(code, p); }
     if (HOLD && S.hold) HOLD.spots.forEach((sp, i) => { if (i < 2 ? Math.random() < 0.7 : Math.random() < 0.85) holdFill(sp.code); else parcels[sp.code] = null; });
@@ -547,10 +551,16 @@
     const shopRoom = world.rooms.find((r) => r.name === 'Trade counter');
     const ent = world.openings.find((o) => o.type === 'entrance');
     const gond = world.objects.filter((o) => o.kind === 'gondola' && o.x0 >= shopRoom.x0 - 0.01 && o.x1 <= shopRoom.x1 + 0.01).sort((a, b) => a.x0 - b.x0);
-    const lane = gond.length > 1 ? (gond[0].x1 + gond[1].x0) / 2 : shopRoom.x0 + 1.2;
+    const lanes = (() => { // the gaps between the shop's shelving, left to right
+      const r = gond.map((g) => [g.x0, g.x1]).sort((a, b) => a[0] - b[0]), out = [];
+      let end = r.length ? r[0][1] : shopRoom.x0;
+      for (let i = 1; i < r.length; i++) { if (r[i][0] > end + 0.6) out.push((end + r[i][0]) / 2); end = Math.max(end, r[i][1]); }
+      return out.length ? out : [shopRoom.x0 + 1.2];
+    })();
+    const lane = lanes[0];
     const spot = world.customer;
     const PATH = [[(ent.from + ent.to) / 2, world.D + 0.6], [(ent.from + ent.to) / 2, world.D - 0.5], [lane, world.D - 1.2], [lane, counter.y1 + 1.0], [spot.x, spot.y]];
-    const OUTFITS = [[0xf07a1a, 0x2f3540, 0xdfe3e8], [0xd9e021, 0x23272e, 0xdfe3e8], [0x23395b, 0x3a3f47], [0x5a5f66, 0x22262c], [0x1d1f22, 0x4a3f33], [0xb3261e, 0x2f3540], [0x2e7d32, 0x3b3328], [0x0f5fa8, 0x23272e], [0xe8590c, 0x1f2328, 0xdfe3e8]];
+    const OUTFITS = [[0xf07a1a, 0x2f3540, 0xdfe3e8], [0xd9e021, 0x23272e, 0xdfe3e8], [0x7b2d3a, 0x3a3f47], [0x5a5f66, 0x22262c], [0x1d1f22, 0x4a3f33], [0xb3261e, 0x2f3540], [0x2e7d32, 0x3b3328], [0x0f5fa8, 0x23272e], [0xe8590c, 0x1f2328, 0xdfe3e8]];
     const SKIN = [0xf1c9a5, 0xe0b394, 0xc68b62, 0x8d5a3b, 0x5c3a25], HAIR = [0x2b1d14, 0x5a3a22, 0x9a6a3a, 0x1a1a1a, 0x7c7c7c, 0xc9a35a];
     const customers = [S.customer, S.makeCustomer()];
     customers.forEach((c) => { c.state = 'away'; c.group.visible = false; });
@@ -567,8 +577,8 @@
       return n;
     }
     function walk(c, path, then) { c.path = path.map((p) => p.slice()); c.leg = 0; c.state = 'walking'; c.then = then; c.group.visible = true; c.group.position.set(path[0][0], 0, path[0][1]); }
-    function arrive(c) { dress(c); walk(c, PATH, () => { c.state = 'waiting'; c.group.rotation.y = Math.PI; served(c); }); }
-    function leave(c) { walk(c, PATH.slice().reverse(), () => { c.state = 'away'; c.group.visible = false; c.carry = false; if (c.tote) { S.dropTote(c.tote); c.tote = null; } }); }
+    function arrive(c) { dress(c); c.route = PATH; walk(c, PATH, () => { c.state = 'waiting'; c.group.rotation.y = Math.PI; served(c); }); }
+    function leave(c) { walk(c, (c.route || PATH).slice().reverse(), () => { c.state = 'away'; c.group.visible = false; c.carry = false; c.route = null; c.crew = null; if (c.tote) { S.dropTote(c.tote); c.tote = null; } }); }
     function updateCustomers(dt) {
       let any = false;
       for (const c of customers) {
@@ -611,7 +621,7 @@
       let k = m !== 'mixed' ? m : KINDS[Math.floor(Math.random() * 4)];
       if (m === 'mixed' && kinds.length >= 2 && kinds[kinds.length - 1] === k && kinds[kinds.length - 2] === k) k = KINDS[(KINDS.indexOf(k) + 1 + Math.floor(Math.random() * 3)) % 4]; // never three the same in a row
       if (k === 'till' && (!requests || !requests.need)) k = 'kiosk'; // no request list: nothing to search for
-      if (k === 'hold' && (!HOLD || !Object.keys(parcels).some((c) => parcels[c]))) k = 'pick';
+      if (k === 'hold' && (!HOLD || !Object.keys(parcels).some((c) => parcels[c] && !reserved.has(c)))) k = 'pick';
       kinds.push(k); if (kinds.length > 4) kinds.shift();
       return k;
     }
@@ -629,9 +639,9 @@
         if (c.kind === 'kiosk' && c.kiosk.mine < 0) c.kiosk = Till.makeKiosk(world, Math.random, c.cust);
       }
       if (c.kind === 'hold') {
-        const full = HOLD.spots.filter((sp) => parcels[sp.code]);
+        const full = HOLD.spots.filter((sp) => parcels[sp.code] && !reserved.has(sp.code));
         const sp = full[Math.floor(Math.random() * full.length)];
-        c.hold = { code: sp.code, parcel: parcels[sp.code] };
+        c.hold = { code: sp.code, parcel: parcels[sp.code] }; reserved.add(sp.code);
       }
       c.name = c.cust ? c.cust.surname : c.hold ? c.hold.parcel.surname : pickOne(Till.SURNAMES);
     }
@@ -665,6 +675,7 @@
       if (order && order.hold && order.carry) { // the bag goes back in its tote
         S.dropTote(order.carry); parcels[order.hold.code] = order.hold.parcel; S.hold.set(order.hold.code, order.hold.parcel);
       }
+      if (c && c.hold) reserved.delete(c.hold.code);
       order = null; state = 'between'; hint.until = 0; atCounter = false;
       renderScanner();
       nextCustomer(c);
@@ -696,7 +707,7 @@
       if (order.hold && order.carry) { // the bag (or the big box) goes over; a new order fills its place
         tote = order.carry; tote.visible = true;
         const code = order.hold.code;
-        setTimeout(() => { if (!parcels[code]) holdFill(code); dirty = true; }, 4000);
+        setTimeout(() => { if (!parcels[code]) holdFill(code); reserved.delete(code); dirty = true; }, 4000);
       } else tote = S.makeTote(order.lines.map((l) => l.item.colour));
       tote.position.set(Math.max(counter.x0 + 0.4, Math.min(counter.x1 - 0.4, me.x)), 1.0, counter.y0 + 0.22);
       totes.push({ t: 0, tote, from: tote.position.clone(), to: new T.Vector3(c ? c.group.position.x : spot.x, 1.0, counter.y1 - 0.2), c });
@@ -774,7 +785,7 @@
       let best = null;
       if (me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75) {
         let bd = 0.95;
-        for (const t of tills) { const d = Math.abs(me.x - (t.x0 + t.x1) / 2); if (d < bd) { bd = d; best = t; } }
+        for (const t of tills) { if (crew.some((b) => b.atTill === t)) continue; const d = Math.abs(me.x - (t.x0 + t.x1) / 2); if (d < bd) { bd = d; best = t; } }
       }
       if (best === nearTill) return;
       nearTill = best;
@@ -844,6 +855,189 @@
       onSlip: () => { stats.tillSlips = (stats.tillSlips || 0) + 1; },
       idleText: () => (waitingCustomer && !tillKind(waitingCustomer.kind) && waitingCustomer.state === 'waiting' ? 'This customer has a click and collect: it\'s on your scanner.' : state === 'scan' || state === 'qty' || state === 'deliver' ? 'Nobody waiting to order. Finish the pick on your scanner.' : 'No customer is waiting to order at the till.')
     });
+
+    /* ---------- Alex, a coworker (bot.js) ---------- */
+    // detailedfoil, 19 Nov 2026: a coworker doing the same job as you, at a person's pace. Alex serves their own
+    // customers at the right-hand till (they come in down the right-hand side of the shop), picks from the same
+    // shelves and the same holding area, and walks round you. One person to a pick aisle: whoever's in first has it, so
+    // you can't walk into an aisle Alex is in, and Alex waits by the end of one you're in.
+    const Crew = window.ShiftBot;
+    const crew = [];
+    const timers = []; // things that happen after a while, on the game's clock
+    const later = (sec, fn) => { timers.push({ t: sec, fn }); };
+    function runTimers(dt) { for (let i = timers.length - 1; i >= 0; i--) if ((timers[i].t -= dt) <= 0) { const f = timers[i].fn; timers.splice(i, 1); f(); } }
+    // Alex's sounds: quieter the further away they are, and none from across the warehouse
+    function crewSound(b, name) {
+      const d = Math.hypot(me.x - b.x, me.y - b.y), v = Math.max(0, 1 - d / 14) * (till && till.isOpen() ? 0.35 : 0.6);
+      if (v < 0.03) return;
+      if (name === 'scan') tone(2730, 0, 0.085, 'square', 0.05 * v);
+      else if (name === 'bad') { tone(196, 0, 0.13, 'sawtooth', 0.06 * v); tone(156, 0.16, 0.2, 'sawtooth', 0.06 * v); }
+      else if (name === 'approved') { tone(1568, 0, 0.12, 'sine', 0.06 * v); tone(2093, 0.13, 0.22, 'sine', 0.06 * v); }
+      else if (name === 'drawer') { noise(0, 0.18, 0.25 * v, 500); tone(2400, 0.2, 0.25, 'sine', 0.03 * v); }
+      else if (name === 'slide') noise(0, 0.12, 0.25 * v, 700);
+    }
+    // speech bubbles for Alex and Alex's customer: only when they're near and nothing tall is in the way
+    function makeBub(cls) {
+      const el = document.createElement('div'); el.className = 'ws-bub ' + cls; el.hidden = true;
+      const p = document.createElement('p'); el.appendChild(p);
+      stage.insertBefore(el, sayEl);
+      return { el, p, until: 0, at: null };
+    }
+    function bubSay(bub, line, at, name) {
+      bub.p.replaceChildren();
+      const add = (tag, text) => { if (!text) return; const n = document.createElement(tag); n.textContent = text; bub.p.appendChild(n); bub.p.appendChild(document.createTextNode(' ')); };
+      if (name) add('b', name);
+      const q = line.quote && line.quote.length > 110 ? line.quote.slice(0, 107).trim() + '…' : line.quote;
+      add('span', line.text); add('q', q); add('span', line.hint); add('i', line.qty);
+      bub.until = performance.now() + Math.min(9000, 2600 + ((line.text || '').length + (q || '').length) * 50);
+      bub.at = at;
+    }
+    function crosses(ax, ay, bx, by, r) { // does the line from a to b cross the rectangle?
+      let t0 = 0, t1 = 1;
+      const dx = bx - ax, dy = by - ay;
+      const clip = (p, q) => { if (Math.abs(p) < 1e-9) return q >= 0; const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } return true; };
+      return clip(-dx, ax - r.x0) && clip(dx, r.x1 - ax) && clip(-dy, ay - r.y0) && clip(dy, r.y1 - ay) && t0 <= t1;
+    }
+    function inSight(x, y) { // no racking or wall between you and there
+      for (const r of world.rows) if (crosses(me.x, me.y, x, y, r)) return false;
+      for (const w of world.walls) if (crosses(me.x, me.y, x, y, { x0: w[0], y0: w[1], x1: w[2], y1: w[3] })) return false;
+      return true;
+    }
+    const _bp = new T.Vector3(), _bq = new T.Vector3();
+    function placeBubs(now) {
+      const open = till && till.isOpen(), taken = [];
+      if (!sayEl.hidden) { const r = sayEl.getBoundingClientRect(), o = stage.getBoundingClientRect(); taken.push({ x: r.left - o.left, y: r.top - o.top, w: r.width, h: r.height }); }
+      for (const b of crew) for (const bub of [b.bub, b.cbub]) {
+        const at = bub.at && now < bub.until && !open && active ? bub.at() : null;
+        let show = !!at;
+        if (show) {
+          _bp.copy(at);
+          if (Math.hypot(me.x - _bp.x, me.y - _bp.z) > 11 || !inSight(_bp.x, _bp.z)) show = false;
+          else { _bq.copy(_bp).project(cam); if (_bq.z > 1 || _bq.z < -1) show = false; }
+        }
+        if (!show) { if (!bub.el.hidden) bub.el.hidden = true; continue; }
+        if (bub.el.hidden) bub.el.hidden = false;
+        const w = bub.el.offsetWidth, h = bub.el.offsetHeight;
+        let x = (_bq.x + 1) / 2 * view.w - w / 2, y = (1 - _bq.y) / 2 * view.h - h - 10;
+        x = Math.max(8, Math.min(view.w - w - 8, x)); y = Math.max(52, Math.min(view.h - h - 8, y));
+        for (const t of taken) if (x < t.x + t.w + 4 && x + w + 4 > t.x && y < t.y + t.h + 4 && y + h + 4 > t.y) y = t.y + t.h + 8;
+        taken.push({ x, y, w, h });
+        bub.el.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)';
+      }
+    }
+    // what Alex's job does to the shared world (bot.js calls these)
+    const _crewHead = new T.Vector3();
+    const crewEnv = {
+      // a customer for Alex walks in down the right-hand side of the shop
+      customer(b, c, delay, done) {
+        later(delay, () => {
+          const f = freeCustomer(waitingCustomer);
+          f.route = b.route; f.crew = b; c.fig = f;
+          dress(f);
+          walk(f, b.route, () => { f.state = 'waiting'; f.group.rotation.y = Math.PI; done(); });
+        });
+      },
+      // the holding area is shared: a bag Alex's customer has come for is kept for them
+      holdReserve() {
+        const full = HOLD ? HOLD.spots.filter((sp) => parcels[sp.code] && !reserved.has(sp.code)) : [];
+        if (!full.length) return null;
+        const sp = full[Math.floor(Math.random() * full.length)];
+        reserved.add(sp.code);
+        return { code: sp.code, parcel: parcels[sp.code] };
+      },
+      holdTake(b, code) {
+        const g = S.hold.carry(code);
+        S.hold.set(code, null); parcels[code] = null;
+        if (g) { b.fig.carry.add(g); g.position.set(0, 0, 0); g.rotation.set(0, Math.PI / 2, 0); b.fig.held = g; }
+        dirty = true;
+        return g || true;
+      },
+      tote(b) { const t = S.makeTote([]); b.fig.carry.add(t); t.position.set(0, 0, 0); t.rotation.set(0, 0, 0); b.fig.held = t; },
+      toteAdd(b, ln) { if (b.fig.held) S.toteBox(b.fig.held, ln.item.colour, b.items.length - 1); },
+      open(b, loc) {
+        const tr = S.trayOf(loc);
+        if (tr) { tr.target = 1; crewSound(b, 'slide'); }
+        else if (loc.item) { loc.item.pullTarget = loc.face.kind === 'BB' ? 0.12 : 0.07; pulling.add(loc.item); }
+        dirty = true;
+      },
+      close(b, loc) { const tr = S.trayOf(loc); if (tr) tr.target = 0; else if (loc.item) loc.item.pullTarget = 0; dirty = true; },
+      // the tote (or bag) goes on the counter, slides over, and the customer leaves with it
+      handOver(b, c) {
+        const held = b.fig.held, f = c.fig;
+        b.fig.held = null;
+        if (held) {
+          scene.attach(held);
+          held.rotation.set(0, c.hold ? Math.PI / 2 : 0, 0);
+          held.position.set((b.till.x0 + b.till.x1) / 2, 1.0, counter.y0 + 0.22);
+          totes.push({ t: 0, tote: held, from: held.position.clone(), to: new T.Vector3(f ? f.group.position.x : b.custSpot.x, 1.0, counter.y1 - 0.2), c: f || null });
+          crewSound(b, 'slide');
+        } else if (f) leave(f);
+        if (c.hold) { const code = c.hold.code; later(4, () => { if (!parcels[code]) holdFill(code); reserved.delete(code); dirty = true; }); }
+        dirty = true;
+      },
+      sfx(b, name) { crewSound(b, name); },
+      say(b, who, line) {
+        if (who === 'me') bubSay(b.bub, line, () => b.fig.parts.head.getWorldPosition(_crewHead).setY(_crewHead.y + 0.25), b.name);
+        else {
+          const f = b.cust && b.cust.fig;
+          if (f) bubSay(b.cbub, line, () => _crewHead.set(f.group.position.x, 1.98 * f.group.scale.y, f.group.position.z));
+        }
+      }
+    };
+    const entX = (ent.from + ent.to) / 2, staffRoom = world.rooms.find((r) => r.name === 'Staff room');
+    function hire(o) {
+      const b = Crew.create({ world, World, Till, requests, nav: hire.nav || (hire.nav = new Crew.Nav(world)), env: crewEnv, id: crew.length + 1, name: o.name, till: o.till, start: o.start, rand: Math.random });
+      b.fig = S.makeWorker({ name: o.name, skin: o.skin, hair: o.hair });
+      b.route = [[entX, world.D + 0.6], [entX, world.D - 0.5], [o.lane, world.D - 1.2], [o.lane, counter.y1 + 1.0], [b.custSpot.x, b.custSpot.y]];
+      b.bub = makeBub('crew'); b.cbub = makeBub('crewcust');
+      S.poseWorker(b.fig, b, 0.02);
+      crew.push(b);
+      return b;
+    }
+    // Alex starts the shift coming out of the staff room, and works the till at the right-hand end of the counter
+    hire({ name: 'Alex', till: tills[tills.length - 1], lane: lanes[lanes.length - 1], skin: 0xd6a57c, hair: 0x2b1d14,
+      start: staffRoom ? { x: staffRoom.x1 + 0.6, y: staffRoom.y0 + 0.65, yaw: Math.PI / 2 } : null });
+    // you: Alex is in the way like anyone, and you can't walk into a pick aisle Alex is in
+    let aisleToldT = 0;
+    function crewStop(x, y) {
+      for (const b of crew) {
+        const dn = Math.hypot(x - b.x, y - b.y);
+        if (dn < BODY + b.r && dn < Math.hypot(me.x - b.x, me.y - b.y) - 1e-4) return true;
+      }
+      const into = Crew.aisleAt(world, x, y);
+      if (!into || into === Crew.aisleAt(world, me.x, me.y)) return false;
+      const b = crew.find((w) => Crew.aisleAt(world, w.x, w.y) === into);
+      if (!b) return false;
+      const now = performance.now();
+      if (now - aisleToldT > 2500) { aisleToldT = now; toast(b.name + ' is down this aisle: wait for them to come out'); b.sayBusy(); }
+      return true;
+    }
+    const _frus = new T.Frustum(), _fm = new T.Matrix4(), _sph = new T.Sphere(new T.Vector3(), 1.3);
+    let crewIdle = 0;
+    function updateCrew(dt) { // true when Alex needs drawing again
+      runTimers(dt);
+      if (!crew.length) return false;
+      cam.updateMatrixWorld();
+      _frus.setFromProjectionMatrix(_fm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+      const you = { id: 0, x: me.x, y: me.y, r: BODY, moving: me.speed > 0.15 };
+      let seen = false, busy = false;
+      for (const b of crew) {
+        const others = [you];
+        for (const o of crew) if (o !== b) others.push({ id: o.id, x: o.x, y: o.y, r: o.r, moving: o.moving });
+        b.update(dt, others);
+        S.poseWorker(b.fig, b, dt);
+        _sph.center.set(b.x, 1.0, b.y);
+        if (Math.hypot(me.x - b.x, me.y - b.y) < 32 && _frus.intersectsSphere(_sph)) {
+          seen = true;
+          if (b.moving || b.turning > 0.1 || b.beam > 0 || b.bending || b.giving || b.aim) busy = true;
+        }
+      }
+      if (!seen) return false;
+      if (busy) { crewIdle = 0; return true; }
+      crewIdle += dt; // standing still: the small movements are redrawn less often
+      if (crewIdle > 0.066) { crewIdle = 0; return true; }
+      return false;
+    }
 
     /* ---------- controls: scanner buttons ---------- */
     const press = (el, fn) => {
@@ -1073,10 +1267,12 @@
       if (updateFlyers(dt)) changed = true;
       if (updateCustomers(dt)) changed = true;
       if (updateTotes(dt)) changed = true;
+      if (active && updateCrew(dt)) changed = true;
       if (updateHint(dt)) changed = true;
       if (viewTimer > 0) { viewTimer -= dt; if (viewTimer <= 0 && viewLine >= 0) { viewLine = -1; renderScanner(); } }
       if (msg && now > msgUntil) { msg = null; renderScanner(); }
       if (!sayEl.hidden && sayLine && now - sayShown > (sayLine.quote ? 24000 : 14000)) sayEl.hidden = true;
+      for (const b of crew) for (const bub of [b.bub, b.cbub]) if (!bub.el.hidden && now > bub.until) bub.el.hidden = true;
       if (S.photos.flush()) changed = true;
       photoT -= dt;
       if (photoT <= 0 && (photoDirty || changed)) { S.photos.update(cam); photoT = 0.2; photoDirty = false; changed = true; }
@@ -1085,6 +1281,7 @@
       if (active) updateAim();
       renderer.render(scene, cam);
       placeSay();
+      placeBubs(now);
       // a phone that keeps struggling draws fewer pixels; one with room to spare gets them back
       if (dt > 0.03 && me.speed > 0.2) { slow++; quick = 0; } else if (dt < 0.018) { quick++; slow = Math.max(0, slow - 1); }
       if (slow > 45 && dpr > 0.8) { dpr = Math.max(0.8, dpr - 0.25); renderer.setPixelRatio(dpr); layout(); slow = 0; }
@@ -1103,6 +1300,8 @@
     renderScanner();
     requestAnimationFrame(frame);
     window.__shift = { world, S, me, cam, renderer, scanAt, state: () => state, order: () => order, applyCam, hitAt, newOrder, pickAll: () => { while (state === 'qty' && order && order.lines[cur]) countOne(); }, countOne, enter, handOver, useHint, toggleSquat, layout,
-      till, openTill, closeTill, skipCustomer, customer: () => waitingCustomer, tills, nearTill: () => nearTill, parcels, holdHit, scanHold, spotBox };
+      till, openTill, closeTill, skipCustomer, customer: () => waitingCustomer, tills, nearTill: () => nearTill, parcels, holdHit, scanHold, spotBox,
+      crew, reserved, customers,
+      tick: (sec) => { for (let t = 0; t < sec; t += 0.05) { updateMoving(0.05); updateCustomers(0.05); updateTotes(0.05); if (active) updateCrew(0.05); } dirty = true; } };
   }
 })();

@@ -296,6 +296,28 @@ explain changes in plain English and say what they'll see.
     offline worker keeps the till files too (Product Search's lists: kept copy at once, a fresh one for next time).
     Untested so far: on a real phone, and how players get on with the description quotes (detailedfoil expects to test a
     lot by hand).
+    **Alex, a coworker** (detailedfoil, 19 Nov 2026: "an AI that does all this as well ... like a coworker ... they take
+    as long to do everything as a human would"): a scripted worker, not an AI model; always on, one for now, nothing on
+    screen counts their orders (his say). `bot.js` is the brain, shared with `.github/tests/warehouse-shift-alex.test.mjs`
+    (whole shifts simulated with a pretend page): `Nav` (the floor on a 10 cm grid with each cell's distance to the
+    nearest obstacle; A* that keeps to the middle of aisles, pulled straight) and `create()` (`update(dt, others)` each
+    frame; the job is a generator whose steps wait seconds or for a condition). Alex comes out of the staff room at the
+    start and serves their own customers at the right-hand till (who come down the right-hand side of the shop, `lanes`
+    in game.js, and are never dressed in navy, the staff colour): the same four kinds, a quarter each, with the till's
+    own customer lines. They pick from the same shelves (trays slide out, boxes pull forward) into a tote from the stack
+    by the counter, kneel on one knee for the bottom shelves (below 0.45 m, the tote on the floor beside them) and hand
+    over at the counter like you. Timings are `PACE` in bot.js (walk 1.32 m/s, find a product by code 3.5-7 s, by
+    description 8-18 s, by a quote 12-28 s, each item 0.6-1.2 s ...), each varying, times a personal pace; about one
+    thing in 15 goes wrong just to slow it down (`SLIP`: a wrong scan, the wrong aisle, a typo, the wrong product shown,
+    one too many picked). **One person to a pick aisle** (detailedfoil: "whoever was in the aisle first gets priority";
+    the aisles off the centre aisle, not the centre aisle): `aisleAt` in bot.js. You can't walk into an aisle Alex is in
+    (game.js `crewStop`: a toast, and Alex says "Won't be a sec!"), and Alex waits to one side of the end of yours
+    (`startQueue`), where you can see them from inside. In the open Alex goes round you, slides past at close quarters,
+    takes another spot if you're on theirs (`alts`) and says excuse me after a moment. The holding area is shared:
+    `reserved` in game.js keeps an OC location for whichever customer (yours or Alex's) has come for it. The till Alex
+    is standing at isn't offered to you. Drawn by scene.js `makeWorker` / `poseWorker` (navy uniform with a CrashFix
+    patch and an ALEX badge, knees and elbows, the scanner's red line), speech in small grey bubbles only when near and
+    in sight (`placeBubs`), sounds quieter with distance. `__shift.tick(sec)` fast-forwards the game for playtests.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

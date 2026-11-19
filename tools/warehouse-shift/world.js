@@ -284,7 +284,7 @@
     ];
     // roll cages waiting at goods in, and a pallet or two of deliveries
     var cages = [], pallets = [];
-    for (var i = 0; i < 4; i++) cages.push({ kind: 'rollcage', x0: 5.0 + i * 0.85, y0: D - 2.6, x1: 4.72 + i * 0.85, y1: D - 1.8, z1: 1.75 });
+    for (var i = 0; i < 4; i++) cages.push({ kind: 'rollcage', x0: 5.0 + i * 0.85, y0: D - 2.6, x1: 5.72 + i * 0.85, y1: D - 1.8, z1: 1.75 });
     pallets.push({ kind: 'pallet', x0: 6.2, y0: D - 4.3, x1: 7.4, y1: D - 3.3, z1: 1.3 }, { kind: 'pallet', x0: 7.8, y0: D - 4.3, x1: 9.0, y1: D - 3.3, z1: 0.9 });
     objects = objects.concat(cages, pallets);
     // the everyday bits: kick stools at the end of a few aisles, a pallet truck, a stack of totes by the counter,
