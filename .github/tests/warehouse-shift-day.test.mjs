@@ -218,3 +218,17 @@ test('the page: day.js loads first, the till customer answers when you copy a co
   const game = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/game.js'), 'utf8');
   assert.match(game, /all scanned, Enter moves on to the next location/, 'Enter after the last item at a location');
 });
+
+test('controllers: a controller belongs to one player, does everything on the scanner, and works the till', () => {
+  const game = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/game.js'), 'utf8');
+  assert.match(game, /function claimPads/);
+  assert.match(game, /players\.some\(\(p\) => p\.padIndex === gp\.index\)/, 'a controller already someone\'s is left alone');
+  assert.match(game, /const prev = padPrev, hit = \(i\) => now\[i\] && !prev\[i\];/, 'a press is a button that wasn\'t down last time');
+  for (const [what, re] of [['A scans', /if \(hit\(0\)\) \{ initAudio\(\); const c = centreNdc\(\); scanAt/], ['RT is Enter', /if \(hit\(7\) \|\| hit\(5\)\) \{ SFX\.key\(\); enter\(\); \}/],
+    ['B is Back', /if \(hit\(1\)\) back\(\);/], ['X squats', /if \(hit\(2\)\) toggleSquat\(\);/], ['Y is Hint', /if \(hit\(3\)\) useHint\(\);/], ['Start: the menu', /if \(hit\(9\)\) \{ SFX\.key\(\); menu\(true\); \}/]]) assert.match(game, re, what);
+  const ui = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/tillui.js'), 'utf8');
+  assert.match(ui, /function pad\(act\)/);
+  assert.match(ui, /const osk = \(\) => \(touch && S\.osk\) \|\| S\.pad;/, 'with a controller the on-screen keyboard comes up');
+  const css = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/till.css'), 'utf8');
+  assert.match(css, /\.tl \.pad-on\{/, 'the highlight shows');
+});

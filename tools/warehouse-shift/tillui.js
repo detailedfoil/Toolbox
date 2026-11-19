@@ -17,7 +17,10 @@
    Orders, pick theirs and the basket fills itself. The customer says card or cash at the checkout and puts you right
    if you press the other one.
 
-   Phones use their own keyboard; the keyboard button at the top swaps to an on-screen one (remembered, ws-osk). */
+   Phones use their own keyboard; the keyboard button at the top swaps to an on-screen one (remembered, ws-osk).
+   A controller (game.js passes its buttons to pad()) moves a yellow highlight between the buttons, boxes and rows;
+   A presses, a box brings the on-screen keyboard up (the highlight moves round its keys), B deletes or leaves the till,
+   RT is Enter, LB and RB switch tabs, Y is Ask again. */
 (function () {
   'use strict';
 
@@ -168,9 +171,10 @@
     const scr = {};
     qa('[data-scr]').forEach((n) => { scr[n.dataset.scr] = n; });
 
-    const S = { open: false, tab: 'fusion', screen: 'who', results: [], sel: -1, ksel: -1, clip: '', focus: null, session: null, timers: [], osk: false };
+    const S = { open: false, tab: 'fusion', screen: 'who', results: [], sel: -1, ksel: -1, clip: '', focus: null, session: null, timers: [], osk: false, pad: false };
     try { S.osk = localStorage.getItem('ws-osk') === '1'; } catch (e) { /* fine */ }
-    const osk = () => touch && S.osk;
+    // the on-screen keyboard: a phone that asked for it, or anyone with a controller
+    const osk = () => (touch && S.osk) || S.pad;
     // what each box asks the phone's own keyboard for, or nothing at all when the on-screen keyboard is on
     function kbMode(n) {
       if (osk()) { n.setAttribute('inputmode', 'none'); return; }
@@ -686,7 +690,7 @@
       V.kbfield.textContent = name.replace(/:$/, '');
       setTimeout(() => { try { input.scrollIntoView({ block: 'nearest' }); } catch (e) { /* fine */ } }, 30);
     }
-    function hideKb() { V.kb.hidden = true; el.classList.remove('kbup'); if (S.focus && document.activeElement === S.focus) S.focus.blur(); S.focus = null; }
+    function hideKb() { V.kb.hidden = true; el.classList.remove('kbup'); if (S.focus && document.activeElement === S.focus) S.focus.blur(); if (S.focus) S.last = S.focus; S.focus = null; }
     function updatePaste() {
       const b = q('[data-k="paste"]'); b.hidden = !S.clip; b.textContent = S.clip ? 'Paste ' + S.clip : '';
       // with the phone's own keyboard, a Paste button sits by the part number box instead
@@ -822,6 +826,79 @@
 
     kbModes(); updatePaste();
 
+    /* ---------- a controller: a highlight that moves between what can be pressed ---------- */
+    let padEl = null;
+    function padItems() {
+      const kb = !V.kb.hidden;
+      const list = kb ? qa('.tl-kb [data-k]') : qa('button, input, .fu-tab tbody tr[data-i], .fu-tab tbody tr[data-k]').filter((n) => !n.closest('.tl-kb'));
+      return list.filter((n) => !n.disabled && !n.hidden && n.offsetParent !== null && !n.closest('[hidden]'));
+    }
+    function padMark(n) {
+      if (padEl) padEl.classList.remove('pad-on');
+      padEl = n || null;
+      if (padEl) { padEl.classList.add('pad-on'); try { padEl.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { /* fine */ } }
+    }
+    // the nearest thing in the direction pressed (straight on counts more than off to the side)
+    function padMove(dx, dy) {
+      const items = padItems();
+      if (!items.length) return;
+      if (!padEl || items.indexOf(padEl) < 0) { padMark(padStart(items)); return; }
+      const r0 = padEl.getBoundingClientRect(), cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+      let best = null, bs = Infinity;
+      for (const n of items) {
+        if (n === padEl) continue;
+        const r = n.getBoundingClientRect(), ex = Math.max(r.left - cx, 0, cx - r.right) * Math.sign(r.left + r.width / 2 - cx), ey = Math.max(r.top - cy, 0, cy - r.bottom) * Math.sign(r.top + r.height / 2 - cy);
+        const along = (dx ? ex * dx : ey * dy), side = Math.abs(dx ? r.top + r.height / 2 - cy : r.left + r.width / 2 - cx);
+        if (along <= 2) continue;
+        const score = along + side * 2;
+        if (score < bs) { bs = score; best = n; }
+      }
+      if (best) { padMark(best); sfx('key'); }
+    }
+    // where the highlight starts: the box you'd type in next, or the first key
+    function padStart(items) {
+      if (!V.kb.hidden) return el.querySelector('.tl-kb [data-k="' + (S.focus && (S.focus.dataset.f === 'qty' || S.focus.classList.contains('fu-q')) ? '1' : 'Q') + '"]') || items[0];
+      if (S.last && items.indexOf(S.last) >= 0) return S.last;
+      let want = null;
+      if (S.tab === 'crashfix') want = F.q.value.trim() ? el.querySelector('.cf-card [data-copy]') : F.q;
+      else if (S.screen === 'who') want = F.postcode.value ? F.surname : F.postcode;
+      else if (S.screen === 'res') want = el.querySelector('.fu-tab tbody tr[data-i].sel') || el.querySelector('.fu-tab tbody tr[data-i]') || el.querySelector('[data-act="refine"]');
+      else if (S.screen === 'kiosk') want = el.querySelector('.fu-kiosk tbody tr[data-k].sel') || el.querySelector('.fu-kiosk tbody tr[data-k]');
+      else if (S.screen === 'order') want = el.querySelector('.fu-line.qty .fu-q') || F.part;
+      else if (S.screen === 'pay') want = el.querySelector('.fx-modal:not([hidden]) .fx-go') || el.querySelector('[data-act="card"]');
+      else if (S.screen === 'done') want = el.querySelector('[data-scr="done"] .fx-go');
+      return want && items.indexOf(want) >= 0 ? want : items[0];
+    }
+    function padPress() {
+      const n = padEl;
+      if (!n) { padMark(padStart(padItems())); return; }
+      if (n.tagName === 'INPUT') { S.last = n; n.focus({ preventScroll: true }); showKb(n); padMark(padStart(padItems())); return; }
+      if (n.closest('.tl-kb')) { const k = n.dataset.k; type(k); if (k === 'hide' || k === 'enter') padMark(padStart(padItems())); return; }
+      downAt = null; // a press, not a finger that slid
+      n.click();
+      later(30, () => { if (!padEl || padItems().indexOf(padEl) < 0) padMark(padStart(padItems())); });
+    }
+    function pad(act) {
+      if (!S.open) return;
+      if (!S.pad) { S.pad = true; kbModes(); }
+      const kb = !V.kb.hidden;
+      if (act === 'up') padMove(0, -1); else if (act === 'down') padMove(0, 1); else if (act === 'left') padMove(-1, 0); else if (act === 'right') padMove(1, 0);
+      else if (act === 'a') padPress();
+      else if (act === 'b') { if (kb) type('back'); else action('leave'); }
+      else if (act === 'x') { if (kb) type(' '); }
+      else if (act === 'y') { if (kb) { hideKb(); padMark(padStart(padItems())); } else askAgain(); }
+      else if (act === 'rt') {
+        if (kb && S.focus) {
+          const f = S.focus;
+          enterOn(f);
+          if (f.dataset.f === 'qty' || (WHO.includes(f.dataset.f) && S.screen !== 'who')) S.last = null; // on to the next part number, or the results
+          later(30, () => padMark(padStart(padItems())));
+        } else if (padEl) padPress();
+      }
+      else if (act === 'lb' || act === 'rb') { setTab(act === 'lb' ? 'fusion' : 'crashfix'); padMark(padStart(padItems())); }
+      if (padEl && padItems().indexOf(padEl) < 0) padMark(padStart(padItems()));
+    }
+
     /* ---------- what game.js uses ---------- */
     function reset() {
       stopTimers();
@@ -850,7 +927,10 @@
         renderSay();
         if (S.tab === 'fusion') focusDefault(); else if (!touch) F.q.focus({ preventScroll: true });
       },
-      close() { if (!S.open) return; S.open = false; hideKb(); el.hidden = true; },
+      close() { if (!S.open) return; S.open = false; hideKb(); padMark(null); el.hidden = true; },
+      // a controller's button (up, down, left, right, a, b, x, y, rt, lb, rb); usePad(false) when it's put down
+      pad,
+      usePad(on) { if (S.pad === !!on) return; S.pad = !!on; if (!on) { padMark(null); hideKb(); } kbModes(); },
       // a till customer has walked up: cust from Till.makeCustomer, lines from Till.makeOrder
       // opts: kind ('till' or 'kiosk'), kiosk (Till.makeKiosk: today's kiosk orders), pay (Till.payment)
       serve(cust, lines, colour, opts) {

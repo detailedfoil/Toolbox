@@ -1046,8 +1046,20 @@
           D.scMenu.appendChild(b);
         }
         D.scMenu.hidden = false;
+        menuSel = 0;
+        if (P.padIndex !== null) P.menuMove(0);
       }
       P.menu = menu;
+      // a controller in the Function menu: up and down move the highlight, A picks
+      let menuSel = 0;
+      P.menuMove = function (d) {
+        const bs = Array.from(D.scMenu.querySelectorAll('button'));
+        if (!bs.length) return;
+        menuSel = (menuSel + d + bs.length) % bs.length;
+        bs.forEach((b, i) => b.classList.toggle('pad-on', i === menuSel));
+        if (d) SFX.key();
+      };
+      P.menuPick = function () { const b = D.scMenu.querySelectorAll('button')[menuSel]; if (b) b.click(); };
 
       /* ---------- the till ---------- */
       let nearTill = null;
@@ -1247,6 +1259,70 @@
       D.scanner.addEventListener('pointerdown', (e) => e.stopPropagation());
       D.scScreen.addEventListener('scroll', (e) => { e.target.scrollTop = 0; e.target.scrollLeft = 0; }); // never scrolled (older browsers without overflow: clip)
 
+      /* ---------- a controller (game.js gives each player theirs: padIndex) ---------- */
+      // Left stick walks (right out to jog), right stick looks, A scans, RT (or RB) is Enter, B is Back, X squats, Y is
+      // Hint, the d-pad goes up and down the pick list (and the lines of a pick), Start opens the Function menu, View is
+      // help, LT held jogs. At the till the d-pad (or stick) moves a highlight and tillui.js does the rest.
+      P.padIndex = null;
+      let padPrev = [], padWalk = false, padRun = false;
+      const rep = { dir: null, t: 0 };
+      P.dropPad = () => { if (padWalk) { stickIn.x = stickIn.y = 0; } lookIn.x = lookIn.y = 0; if (padRun) running = false; padWalk = padRun = false; till.usePad(false); };
+      P.readPad = function (gp, dt) {
+        const now = gp.buttons.map((b) => !!(b && (b.pressed || b.value > 0.5)));
+        const prev = padPrev, hit = (i) => now[i] && !prev[i];
+        padPrev = now;
+        const lx = padAxis(gp, 0), ly = padAxis(gp, 1), rx = padAxis(gp, 2), ry = padAxis(gp, 3);
+        // a direction: the d-pad, or the left stick pushed well over where it doesn't walk; held, it repeats
+        const stickDir = Math.max(Math.abs(lx), Math.abs(ly)) > 0.6 ? (Math.abs(lx) > Math.abs(ly) ? (lx > 0 ? 'right' : 'left') : (ly > 0 ? 'down' : 'up')) : null;
+        const dpad = now[12] ? 'up' : now[13] ? 'down' : now[14] ? 'left' : now[15] ? 'right' : null;
+        const steer = (stick) => {
+          const d = dpad || (stick ? stickDir : null);
+          if (!d) { rep.dir = null; return null; }
+          if (d !== rep.dir) { rep.dir = d; rep.t = 0.38; return d; }
+          rep.t -= dt;
+          if (rep.t <= 0) { rep.t = 0.11; return d; }
+          return null;
+        };
+        const still = () => { if (padWalk) { stickIn.x = stickIn.y = 0; padWalk = false; } lookIn.x = lookIn.y = 0; };
+        // a cover (start, help, end of shift, end of the day): A goes on, B closes help
+        const cover = ['startCover', 'helpCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
+        if (cover) {
+          still();
+          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false);
+          return;
+        }
+        if (till.isOpen()) {
+          still();
+          const d = steer(true);
+          if (d) till.pad(d);
+          if (hit(0)) till.pad('a'); if (hit(1)) till.pad('b'); if (hit(2)) till.pad('x'); if (hit(3)) till.pad('y');
+          if (hit(7)) till.pad('rt'); if (hit(4)) till.pad('lb'); if (hit(5)) till.pad('rb');
+          if (hit(9)) closeTill();
+          return;
+        }
+        if (!D.scMenu.hidden) {
+          still();
+          const d = steer(true);
+          if (d === 'up' || d === 'down') P.menuMove(d === 'up' ? -1 : 1);
+          if (hit(0)) P.menuPick(); else if (hit(1) || hit(9)) { SFX.key(); menu(false); }
+          return;
+        }
+        if (!active) return;
+        if (lx || ly || padWalk) { stickIn.x = lx; stickIn.y = ly; padWalk = !!(lx || ly); }
+        const curve = (v) => Math.sign(v) * Math.pow(Math.abs(v), 1.6);
+        lookIn.x = curve(rx); lookIn.y = curve(ry);
+        if (now[6] !== padRun) { padRun = now[6]; running = padRun; }
+        if (hit(0)) { initAudio(); const c = centreNdc(); scanAt(c[0], c[1]); }
+        if (hit(1)) back();
+        if (hit(2)) toggleSquat();
+        if (hit(3)) useHint();
+        if (hit(7) || hit(5)) { SFX.key(); enter(); }
+        if (hit(9)) { SFX.key(); menu(true); }
+        if (hit(8)) showHelp(true);
+        const d = steer(false);
+        if (d === 'up' || d === 'left') page(-1); else if (d === 'down' || d === 'right') page(1);
+      };
+
       /* ---------- each frame ---------- */
       P.playing = () => active && $('helpCover').hidden && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen());
       P.update = function (dt, now) {
@@ -1274,6 +1350,32 @@
         state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
       renderScanner();
       return P;
+    }
+
+    /* ---------- controllers (the Gamepad API's standard layout) ---------- */
+    const DZ = 0.2; // the middle of a stick that does nothing
+    function padAxis(gp, i) { const v = gp.axes[i] || 0, a = Math.abs(v); return a < DZ ? 0 : Math.sign(v) * Math.min(1, (a - DZ) / (1 - DZ)); }
+    function padList() { try { return navigator.getGamepads ? Array.from(navigator.getGamepads()) : []; } catch (e) { return []; } }
+    const padUsed = (gp) => gp.buttons.some((b, i) => i !== 16 && b && (b.pressed || b.value > 0.5)) || gp.axes.some((v) => Math.abs(v) > 0.5);
+    // a controller nobody has yet: the first player without one gets it the moment it's used
+    function claimPads(list) {
+      for (const gp of list) {
+        if (!gp || !gp.connected || players.some((p) => p.padIndex === gp.index) || !padUsed(gp)) continue;
+        const p = players.find((x) => x.padIndex === null);
+        if (!p) return;
+        p.padIndex = gp.index; // the press that claims it counts too
+        p.toast('Controller on: A scans, RT is Enter, B is Back');
+      }
+    }
+    function pollPads(dt) {
+      const list = padList();
+      if (!list.some(Boolean)) return;
+      claimPads(list);
+      for (const p of players) {
+        if (p.padIndex === null) continue;
+        const gp = list[p.padIndex];
+        if (gp && gp.connected) p.readPad(gp, dt); else { p.padIndex = null; p.dropPad(); p.toast('Controller disconnected'); }
+      }
     }
 
     /* ---------- player 1: the page's own elements ---------- */
@@ -1508,6 +1610,7 @@
       last = now;
       if (document.hidden) return;
       let changed = dirty;
+      pollPads(dt);
       for (const p of players) if (p.update(dt, now)) { changed = true; photoDirty = true; }
       if (worldStep(dt)) changed = true;
       if (S.photos.flush()) changed = true;
@@ -1539,7 +1642,7 @@
       day: () => day, newDay, scanAt: me1.scanAt, state: me1.state, order: me1.order, full: me1.full, sel: me1.sel, applyCam: me1.applyCam, hitAt: me1.hitAt, holdHit: me1.holdHit,
       scanHold: me1.scanHold, scanPut: me1.scanPut, spotBox, countOne: me1.countOne, confirmQty: me1.confirmQty, enter: me1.enter, back: me1.back, page: me1.page, tapRow: me1.tapRow,
       handOver: me1.handOver, useHint: me1.useHint, toggleSquat: me1.toggleSquat, layout, till: me1.till, openTill: me1.openTill, closeTill: me1.closeTill, nearTill: me1.nearTill,
-      pickAll: () => { while (me1.state() === 'qty' && !me1.full()) me1.countOne(); },
+      pickAll: () => { while (me1.state() === 'qty' && !me1.full()) me1.countOne(); }, pollPads,
       tick: (sec) => { for (let t = 0; t < sec; t += 0.05) worldStep(0.05); dirty = true; } };
   }
 })();

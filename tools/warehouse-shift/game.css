@@ -205,3 +205,5 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .sc-menu button:active{background:#2a3657}
 
 @media (prefers-reduced-motion:reduce){.sc-cur,.sc-enter.pulse,.sc-scan.pulse,.ws-rotate svg,.ws-tillbtn{animation:none}}
+/* a controller's highlight in the scanner's Function menu */
+.sc-menu button.pad-on{background:#2a3657;outline:.14em solid #ffd34d;outline-offset:-.14em}
