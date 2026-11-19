@@ -407,7 +407,7 @@
     (function () {
       const b = backs.find((k) => k.row.side === 'R' && k.out > 0);
       if (!b) return;
-      const y = b.y + 0.004, x0 = b.row.x0;
+      const y = b.y - 0.009, x0 = b.row.x0; // on the steel back (its face is 12 mm inside the row)
       const path = signTex(512, 640, (g, w, h) => {
         g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
         g.fillStyle = '#15396b'; g.fillRect(0, 0, w, 110);
@@ -448,12 +448,12 @@
         g.fillStyle = '#c49a64'; g.fillRect(w / 2 + 40, 300, 110, 90); g.strokeStyle = '#8a6a40'; g.lineWidth = 6; g.strokeRect(w / 2 + 40, 300, 110, 90);
         g.fillStyle = '#1d232c'; g.font = '800 34px ' + FONT; g.fillText('Bend your knees,', w / 2, 540); g.fillText('not your back', w / 2, 586);
       });
-      flat(lift, bb.row.x0 + 1.4, bb.y + 0.004, 1.55, 0.5, 0.625, 0);
+      flat(lift, bb.row.x0 + 1.4, bb.y - 0.009, 1.55, 0.5, 0.625, 0);
       const clear = signTex(512, 256, (g, w, h) => {
         g.fillStyle = '#f2c400'; g.fillRect(0, 0, w, h); g.fillStyle = '#1d232c'; g.fillRect(14, 14, w - 28, h - 28); g.fillStyle = '#f2c400'; g.fillRect(24, 24, w - 48, h - 48);
         g.fillStyle = '#1d232c'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 64px ' + FONT; g.fillText('KEEP AISLES', w / 2, 100); g.fillText('CLEAR', w / 2, 170);
       });
-      flat(clear, bb.row.x0 + 2.4, bb.y + 0.004, 1.65, 0.6, 0.3, 0);
+      flat(clear, bb.row.x0 + 2.4, bb.y - 0.009, 1.65, 0.6, 0.3, 0);
     })();
 
     /* ---------- the trays (drawers) of the AA areas ---------- */
@@ -559,7 +559,8 @@
           for (let c = 0; c < n; c++) {
             const x0 = f.psign > 0 ? b.ux0 + c * cw : b.ux1 - (c + 1) * cw;
             const zc = sh.z - (f.kind === 'BB' ? 0.05 : 0.034);
-            tags.push({ x: x0 + cw / 2, y: f.front + f.out * (f.kind === 'BB' ? 0.054 : 0.024), z: zc, turn: TURN[f.facing], w: lw, h: Math.min(lh, f.kind === 'BB' ? 0.088 : 0.06),
+            // stuck on the front of the beam
+            tags.push({ x: x0 + cw / 2, y: f.front + f.out * 0.003, z: zc, turn: TURN[f.facing], w: lw, h: Math.min(lh, f.kind === 'BB' ? 0.088 : 0.06),
               text: f.area + '-' + world.pad2(b.no) + '-' + world.pad2(sh.no) + '-' + world.pad2(c + 1), style: b.no % 2 ? 4 : 5 });
           }
         }
@@ -572,7 +573,8 @@
       for (let k = 0; k < deep; k++) {
         const pos = first + deep - 1 - k; // the back position on top
         tr.labels.push(tags.length);
-        tags.push({ x: tr.x, y: f.front + f.out * 0.0035, z: tr.z + tr.h * 0.5 + lh * deep / 2 - lh * (k + 0.5), turn: TURN[f.facing], w: lw, h: lh,
+        // stuck on the tray front (the tray sits 5 mm back from the shelf edge)
+        tags.push({ x: tr.x, y: f.front - f.out * 0.0028, z: tr.z + tr.h * 0.5 + lh * deep / 2 - lh * (k + 0.5), turn: TURN[f.facing], w: lw, h: lh,
           text: f.area + '-' + world.pad2(tr.bay.no) + '-' + world.pad2(tr.shelf.no) + '-' + world.pad2(pos), style: deep === 1 ? 3 : k === 0 ? 1 : k === deep - 1 ? 2 : 0, tray: tr });
       }
     }
