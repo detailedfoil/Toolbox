@@ -1146,7 +1146,7 @@
             for (const t of tills) {
               if (t === ALEX_TILL || players.some((q) => q !== P && q.tillAt() === t)) continue;
               const a = aimAt(tillX(t), (t.y0 + t.y1) / 2, 1.15);
-              if (a.d < 2.6) take(a, 0.5, () => { best = t; }, { x: tillX(t), y: (t.y0 + t.y1) / 2, z0: 0.98, z1: 1.36, w: t.x1 - t.x0 + 0.1, d: t.y1 - t.y0 + 0.1 });
+              if (a.d < 2.4) take(a, 0.16, () => { best = t; }, { x: tillX(t), y: (t.y0 + t.y1) / 2, z0: 1.0, z1: 1.34, w: t.x1 - t.x0, d: t.y1 - t.y0 });
             }
           }
           if (day && behind && me.x > counter.x0 - 0.4 && me.x < counter.x1 + 0.4) {
@@ -1162,7 +1162,8 @@
           }
           if (day && day.phase === 'open') {
             const a = aimAt(world.bell.x, world.bell.y, world.bell.z);
-            if (a.d < 2.8) take(a, 0.22, () => { br = true; }, { x: world.bell.x, y: world.bell.y - 0.02, z0: 0.46, z1: 0.8, w: 0.5, d: 0.1 });
+            a.ang *= 0.4; // looking at the bell wins over a till behind it
+            if (a.d < 2.8) take(a, 0.14, () => { br = true; }, { x: world.bell.x, y: world.bell.y - 0.02, z0: 0.46, z1: 0.8, w: 0.5, d: 0.1 });
           }
         }
         aimedBox = box;

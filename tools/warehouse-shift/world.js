@@ -268,7 +268,7 @@
       shop({ kind: 'counter', name: 'Trade counter', x0: 9.65, y0: 14.95, x1: 13.95, y1: 15.5 }),
       shop({ kind: 'counter', name: 'Trade+ counter', x0: 14.87, y0: 15.01, x1: 15.89, y1: 15.6 }),
       shop({ kind: 'counter', name: 'Trade+ counter', x0: 16.68, y0: 15.06, x1: 17.64, y1: 15.65 }),
-      shop({ kind: 'till', x0: 10.34, y0: 15.05, x1: 10.66, y1: 15.3 }), shop({ kind: 'till', x0: 11.29, y0: 15.05, x1: 11.61, y1: 15.3 }),
+      shop({ kind: 'till', x0: 11.29, y0: 15.05, x1: 11.61, y1: 15.3 }),
       shop({ kind: 'till', x0: 12.24, y0: 15.05, x1: 12.56, y1: 15.3 }), shop({ kind: 'till', x0: 13.19, y0: 15.05, x1: 13.51, y1: 15.3 }),
       shop({ kind: 'till', x0: 14.99, y0: 15.1, x1: 15.31, y1: 15.35 }), shop({ kind: 'till', x0: 17.19, y0: 15.15, x1: 17.51, y1: 15.4 }),
       shop({ kind: 'gondola', x0: 9.65, y0: 16.4, x1: 10.25, y1: 20.42, z1: 1.8, along: 'y', edges: [16.4, 16.91, 17.42, 18.41, 19.41, 20.42], open: 'E' }),
