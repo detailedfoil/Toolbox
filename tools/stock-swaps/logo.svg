@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Stock Stealer logo">
+  <rect width="96" height="96" rx="22" fill="#181b22"/>
+  <path d="M16 38 48 24l32 14v34L48 86 16 72Z" fill="#c98a2e"/>
+  <path d="M48 24v62L16 72V38Z" fill="#a8701f"/>
+  <path d="M16 38 48 52l32-14" fill="none" stroke="#e8b85a" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M40 30.5 48 34l8-3.5V48l-8 3-8-3Z" fill="#ead9a8" opacity=".85"/>
+  <path d="M20 52h56v13H20Z" fill="#0f1115"/>
+  <ellipse cx="35" cy="58.5" rx="7" ry="4.2" fill="#fff"/>
+  <ellipse cx="61" cy="58.5" rx="7" ry="4.2" fill="#fff"/>
+  <circle cx="37.5" cy="58.5" r="2.2" fill="#0f1115"/>
+  <circle cx="63.5" cy="58.5" r="2.2" fill="#0f1115"/>
+  <path d="M60 14h18m0 0-6-6m6 6-6 6" fill="none" stroke="#2e9e5e" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

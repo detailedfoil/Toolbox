@@ -136,7 +136,7 @@ explain changes in plain English and say what they'll see.
     colour or two that look alike (`ALIKE`, checked for colour blindness). `geo.js` is the search and the sums (tested
     in `.github/tests/area-map.test.mjs`). A town or postcode that isn't a store is looked up on postcodes.io (UK only).
     "My store" and the street map setting stay on the phone.
-  - `stock-swaps`: Stock Swaps, Area 20 only (built 20 Nov 2026 for detailedfoil; NO sign-in, his say: anyone with the
+  - `stock-swaps`: Stock Stealer (was Stock Swaps, renamed 20 Nov 2026 with a logo, `stock-swaps/logo.svg`, detailedfoil's say; the folder and file names stay), Area 20 only (built 20 Nov 2026 for detailedfoil; NO sign-in, his say: anyone with the
     link can open it, and he chose to publish the stock figures knowing the repo is public). Which stores should swap
     stock and what goes on each van, ranked Most effective / Worth doing / Marginal / Not worth your time. A slider sets
     the longest round trip drive (30 to 180 min in 5s, driving only), Swaps only keeps runs with at least 3 units each

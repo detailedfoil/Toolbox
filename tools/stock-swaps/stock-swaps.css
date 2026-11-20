@@ -8,6 +8,8 @@
 .ss-page .wrap{max-width:1200px}
 .ss .back{margin-bottom:10px}
 .ss h1{font-size:1.75rem}
+.ss-title{display:flex;align-items:center;gap:12px;margin:0}
+.ss-title img{border-radius:11px;flex:none}
 .ss > .desc{margin:4px 0 0;font-size:.9rem}
 
 /* your store */
