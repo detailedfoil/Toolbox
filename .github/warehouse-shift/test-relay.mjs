@@ -11,7 +11,7 @@ function connect(room, mode, token, build = 'abc') {
   const ws = new WebSocket(url, token ? [token] : [], { origin });
   const messages = [], waiting = new Set();
   function add(m) {
-    for (const waiter of waiting) if (waiter.predicate(m)) { waiting.delete(waiter); waiter.resolve(m); return; }
+    for (const waiter of waiting) if (waiter.predicate(m)) { waiting.delete(waiter); messages.length = 0; waiter.resolve(m); return; }
     messages.push(m);
   }
   ws.on('message', raw => add(JSON.parse(raw)));
@@ -22,9 +22,9 @@ function connect(room, mode, token, build = 'abc') {
     next(predicate) {
       if (typeof predicate === 'string') { const type = predicate; predicate = m => m.type === type; }
       const index = messages.findIndex(predicate);
-      if (index >= 0) return Promise.resolve(messages.splice(index, 1)[0]);
+      if (index >= 0) return Promise.resolve(messages.splice(0, index + 1).at(-1));
       return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(Error('Relay timed out: ' + mode + ' ' + predicate + ' ' + JSON.stringify(messages.map(m => m.type)))), 4000);
+        const timer = setTimeout(() => reject(Error('Relay timed out: ' + mode + ' ' + predicate + ' ' + JSON.stringify(messages.map(m => [m.type, m.reason || m.slots])))), 4000);
         waiting.add({ predicate, resolve: value => { clearTimeout(timer); resolve(value); } });
       });
     }
