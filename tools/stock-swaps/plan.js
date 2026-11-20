@@ -85,7 +85,19 @@
     return t;
   }
 
-  var api = { TIERS: TIERS, setup: setup, stepIndex: stepIndex, plan: plan, forStore: forStore, totals: totals, score: score, tierOf: tierOf };
+  /* "STOCK LAST UPDATED 12:00AM TODAY" / "YESTERDAY" / "3 DAYS AGO" / the date. stockDate is "d.m.yyyy"; the stock
+     export is the start of that day (12:00AM). now is the viewer's clock. */
+  function stockAge(stockDate, now) {
+    var m = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(stockDate || '').trim());
+    if (!m) return { text: 'STOCK LAST UPDATED ' + stockDate, days: null };
+    var then = Date.UTC(+m[3], +m[2] - 1, +m[1]);
+    var d = now || new Date();
+    var days = Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - then) / 86400000);
+    var when = days <= 0 ? 'TODAY' : days === 1 ? 'YESTERDAY' : days <= 6 ? days + ' DAYS AGO' : 'ON ' + stockDate;
+    return { text: 'STOCK LAST UPDATED 12:00AM ' + when, days: Math.max(0, days) };
+  }
+
+  var api = { stockAge: stockAge, TIERS: TIERS, setup: setup, stepIndex: stepIndex, plan: plan, forStore: forStore, totals: totals, score: score, tierOf: tierOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.SwapPlan = api;
 })(this);

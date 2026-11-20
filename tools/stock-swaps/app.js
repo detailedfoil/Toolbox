@@ -210,7 +210,15 @@
     $('list').innerHTML = html;
   }
 
+  function showStamp() {
+    var a = P.stockAge(doc.stockDate), el = $('stamp');
+    el.textContent = a.text;
+    el.className = 'ss-stamp ' + (a.days === 0 ? 'fresh' : a.days === 1 ? 'old1' : 'old2');
+    el.hidden = false;
+  }
+
   function setupNotes() {
+    showStamp();
     var rl = doc.rules;
     $('about').textContent = 'Which Area 20 stores should swap stock, best first. Stock at ' + doc.stockDate + ', sales ' + doc.sales + '.';
     $('short').innerHTML = doc.short.map(function (x) {

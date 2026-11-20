@@ -92,3 +92,12 @@ test('anyone with the link can open the page (no sign-in), and it has a tile', (
   assert.doesNotMatch(page(), /auth(-data)?\.js/, 'detailedfoil asked for no password on this page');
   assert.match(fs.readFileSync(path.join(REPO, 'tools.js'), 'utf8'), /url: "tools\/stock-swaps\.html"/);
 });
+
+test('the stock notice says today, yesterday, days ago or the date', () => {
+  const at = (y, m, d, h = 13) => new Date(y, m - 1, d, h, 30);
+  assert.equal(P.stockAge('19.11.2026', at(2026, 11, 19)).text, 'STOCK LAST UPDATED 12:00AM TODAY');
+  assert.equal(P.stockAge('19.11.2026', at(2026, 11, 20, 0)).text, 'STOCK LAST UPDATED 12:00AM YESTERDAY');
+  assert.equal(P.stockAge('19.11.2026', at(2026, 11, 22)).text, 'STOCK LAST UPDATED 12:00AM 3 DAYS AGO');
+  assert.equal(P.stockAge('19.11.2026', at(2026, 12, 25)).text, 'STOCK LAST UPDATED 12:00AM ON 19.11.2026');
+  assert.equal(P.stockAge('30.12.2026', at(2027, 1, 1)).text, 'STOCK LAST UPDATED 12:00AM 2 DAYS AGO');
+});

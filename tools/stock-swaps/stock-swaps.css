@@ -165,3 +165,9 @@
 @media (prefers-reduced-motion:reduce){.ss-card.flash{animation:none}.ss-run,.ss-track,.ss-track::after{transition:none}}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .ss-skip[hidden]{display:none}
+
+.ss-stamp{margin:12px 0 0;padding:10px 14px;border-radius:12px;font-weight:800;font-size:.95rem;letter-spacing:.04em;text-align:center;border:2px solid}
+.ss-stamp.fresh{color:#2e9e5e;border-color:#2e9e5e;background:rgba(46,158,94,.12)}
+.ss-stamp.old1{color:#e0a82e;border-color:#e0a82e;background:rgba(224,168,46,.12)}
+.ss-stamp.old2{color:#e8707f;border-color:#d9536f;background:rgba(217,83,111,.12)}
+@media (prefers-color-scheme:light){.ss-stamp.fresh{color:#1f8a4c;border-color:#1f8a4c;background:rgba(31,138,76,.1)}.ss-stamp.old1{color:#8a5a00;border-color:#c98a00;background:rgba(201,138,0,.14)}.ss-stamp.old2{color:#b5483f;border-color:#b5483f;background:rgba(181,72,63,.12)}}
