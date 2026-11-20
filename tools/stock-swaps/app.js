@@ -225,22 +225,10 @@
 
   function setupNotes() {
     showStamp();
-    var rl = doc.rules;
     $('about').textContent = 'Which Area 20 stores should swap stock, best first. Stock at ' + doc.stockDate + ', sales ' + doc.sales + '.';
     $('short').innerHTML = doc.short.map(function (x) {
       return '<div><b>' + esc(doc.items[x.item]) + '</b>about ' + fmt(x.short) + ' short<br><span>' + fmt(x.stock) + ' in stock, ' + fmt(x.sold) + ' sold in ' + doc.days + ' days</span></div>';
     }).join('');
-    $('how').innerHTML = [
-      'Stock at <b>' + esc(doc.stockDate) + '</b>, sales <b>' + esc(doc.sales) + '</b>, worked out ' + esc(day(doc.made)) + '.',
-      'Each store needs <b>' + rl.horizon + ' days</b> of each item: half from its own sales, half from its share of the area\'s transactions.',
-      'A store only gives what it has over <b>' + Math.round(rl.keep * 100) + '%</b> of its own ' + rl.horizon + ' days, so it keeps what it needs.',
-      '<b>All stores</b> shows one plan for the whole area at once, so two runs never count on the same stock. It only works out as shown if every store does its part, and it can change as you move the slider.',
-      'Pick <b>your store</b> and you get its own best runs, based on no other store giving stock away first.',
-      'Stores with under <b>' + rl.lowDays + ' days</b> of an item get it first. A <b>swap</b> is at least ' + rl.swapMin + ' units each way, and swapped units count 1.5 times.',
-      'Runs are ranked by units moved per van hour (the drive plus ' + rl.handling + ' minutes to load, unload and book it): <b>Most effective</b> ' + rl.tiers[0] + ' or more an hour, <b>Worth doing</b> ' + rl.tiers[1] + ' to ' + rl.tiers[0] +
-        ', <b>Marginal</b> ' + rl.tiers[2] + ' to ' + rl.tiers[1] + '. Under ' + rl.minUnits + ' units, or under ' + rl.minScore + ' an hour, is <b>not worth your time</b>.',
-      'Drive times are estimates from the distance between stores, not live routes or traffic.'
-    ].map(function (t) { return '<li>' + t + '</li>'; }).join('');
     $('notes').hidden = false;
   }
 

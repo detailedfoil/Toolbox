@@ -150,11 +150,6 @@
 .ss-short div{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:9px 11px;font-size:.86rem}
 .ss-short b{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums}
 .ss-short span{color:var(--muted);font-size:.76rem}
-.ss-how{margin:18px 0 8px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:4px 14px}
-.ss-how summary{min-height:44px;display:flex;align-items:center;font-weight:650;cursor:pointer}
-.ss-how ul{margin:0 0 12px;padding-left:18px;color:var(--muted);font-size:.86rem}
-.ss-how li{margin:6px 0}
-.ss-how b{color:var(--text)}
 
 /* wide screens: the map stays beside the list */
 @media (min-width:960px){
