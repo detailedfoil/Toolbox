@@ -8,7 +8,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var KEY = 'ss-v1', SHOW_SKIP = 6, DOT = 6;
   var doc, full, view, map, lineR;
-  var state = { mins: 90, swaps: false, store: -1 };
+  var state = { mins: 60, swaps: false, store: -1 };
   var drawn = {};           // run key -> {line, hit, run}
   var icons = [];           // store index -> Leaflet marker
   var picked = null;        // key of the run picked on the map or in the list
@@ -36,10 +36,10 @@
     var saved = {};
     try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
     var h = new URLSearchParams(location.hash.replace(/^#/, ''));
-    var mins = +(h.get('mins') || saved.mins || 90), store = h.has('store') ? h.get('store') : saved.store;
+    var mins = +(h.get('mins') || saved.mins || 60), store = h.has('store') ? h.get('store') : saved.store;
     var swaps = h.has('swaps') ? h.get('swaps') === '1' : !!saved.swaps;
-    var lo = doc.steps[0], hi = doc.steps[doc.steps.length - 1];
-    state.mins = doc.steps[P.stepIndex(doc, isFinite(mins) ? Math.min(hi, Math.max(lo, mins)) : 90)];
+    var lo = doc.steps[0], hi = 120;
+    state.mins = doc.steps[P.stepIndex(doc, isFinite(mins) ? Math.min(hi, Math.max(lo, mins)) : 60)];
     state.swaps = swaps;
     state.store = store && doc.byName[store] != null ? doc.byName[store] : -1;
   }
@@ -64,7 +64,7 @@
 
     var range = $('mins'), queued = false;
     range.min = doc.steps[0];
-    range.max = doc.steps[doc.steps.length - 1];
+    range.max = 120;
     range.step = doc.steps.length > 1 ? doc.steps[1] - doc.steps[0] : 5;
     range.value = state.mins;
     range.addEventListener('input', function () {

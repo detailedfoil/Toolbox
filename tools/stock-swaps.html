@@ -15,7 +15,6 @@
 </head>
 <body class="ss-page">
 <div class="wrap ss">
-  <a class="back" href="../index.html">&larr; Toolbox</a>
   <h1>Stock Swaps</h1>
   <p class="desc" id="about">Which Area 20 stores should swap stock, best first.</p>
 
@@ -26,15 +25,15 @@
 
   <div class="ss-bar" id="bar">
     <div class="ss-bar-row">
-      <label class="ss-bar-lab" for="mins"><output id="minsOut" for="mins">90</output> min <span>longest round trip drive</span></label>
+      <label class="ss-bar-lab" for="mins"><output id="minsOut" for="mins">60</output> min <span>longest round trip drive</span></label>
       <label class="ss-switch" for="swaps">
         <input type="checkbox" id="swaps" role="switch">
         <span class="ss-track" aria-hidden="true"></span>
         <span>Swaps only</span>
       </label>
     </div>
-    <input class="ss-range" type="range" id="mins" min="30" max="180" step="5" value="90" aria-label="Longest round trip drive, in minutes">
-    <div class="ss-ticks" aria-hidden="true"><span>30</span><span>60</span><span>90</span><span>120</span><span>150</span><span>180</span></div>
+    <input class="ss-range" type="range" id="mins" min="30" max="120" step="5" value="60" aria-label="Longest round trip drive, in minutes">
+    <div class="ss-ticks" aria-hidden="true"><span>30</span><span>60</span><span>90</span><span>120</span></div>
   </div>
 
   <div class="ss-main">
@@ -70,6 +69,6 @@
 </div>
 <script src="area-map/leaflet/leaflet.js?v=dc71f8a688"></script>
 <script src="stock-swaps/plan.js?v=af5e4dd3b5"></script>
-<script src="stock-swaps/app.js?v=7d6f688ac4"></script>
+<script src="stock-swaps/app.js?v=1bf3e19ba3"></script>
 </body>
 </html>
