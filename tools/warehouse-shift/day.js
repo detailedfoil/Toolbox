@@ -31,7 +31,7 @@
   var TOTAL = 20;          // picks in a day, about (15 to 25 when not told)
   var MAX_LIST = 5;        // on the pick list at once
   var MAX_IN = 3;          // customers in at once
-  var MID_C = [2, 4];      // c picks that come in during the day, on top of the ones before opening
+  var MID_C = [6, 9];      // c picks that come in during the day (there are none before opening: detailedfoil, 20 Nov 2026)
   var TILLS = [0.55, 0.65];  // of the customers after that, the share who order at the till or the kiosk
   // which kinds of pick come after the opening c picks (the scanner's Function menu can narrow it, for practice)
   var MODES = { mixed: ['ck', 'collect', 'till', 'kiosk'], pick: ['ck'], hold: ['collect'], till: ['till'], kiosk: ['kiosk'] };
@@ -61,7 +61,7 @@
     else spots.forEach(function (sp) { if (self.r() < 0.45) { var q = self.parcel(self.surname(), null); q.locs = 2 + Math.floor(self.r() * 3); q.units = q.locs + Math.floor(self.r() * 4); self.hold[sp.code] = q; } });
     // the plan: what each of the day's picks will be (3 to 6 c picks first, as many as the holding area has room for)
     var free = 0; for (var hk in this.hold) if (!this.hold[hk]) free++;
-    this.first = Math.min(3 + Math.floor(this.r() * 4), free);
+    this.first = 0;                        // no morning c picks: the shop just opens (detailedfoil, 20 Nov 2026)
     this.plan = [];
     for (var i = 0; i < this.total; i++) this.plan.push(i < this.first ? 'c' : null);
     this.fillPlan(true);

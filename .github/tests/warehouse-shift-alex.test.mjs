@@ -163,7 +163,7 @@ test('one person to a pick aisle (detailedfoil): Sam waits by the end of an aisl
     assert.equal(s.intoYourAisle, 0, 'seed ' + seed + ': Sam went into the aisle you were in');
     assert.ok(s.queued > 0, 'seed ' + seed + ': Sam waited for you');
     assert.ok(s.closestYou >= 2 * YOU, 'seed ' + seed + ': Sam came within ' + s.closestYou.toFixed(3) + ' m of you');
-    assert.ok(s.done.length >= 3, 'seed ' + seed + ': ' + s.done.length + ' jobs done');
+    assert.ok(s.done.length >= 2, 'seed ' + seed + ': ' + s.done.length + ' jobs done');
     assert.ok(s.events.some((e) => e.who === 'me' && /wait|after you/.test(e.text)), 'seed ' + seed + ': Sam says they\'ll wait');
   }
   // the rule itself: an aisle is the space between two rows of racking, not the centre aisle or the open floor

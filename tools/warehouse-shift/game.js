@@ -2019,6 +2019,29 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden) { stayAwake(); last = performance.now(); } else for (const p of players) p.keysClear(); });
 
     /* ---------- install (a home screen app that works offline once loaded) ---------- */
+    // Check for updates (detailedfoil, 20 Nov 2026): looks at the site's copy of the page; if any script or style has a newer
+    // version stamp than the ones this page loaded, the kept offline copy is cleared and the page reloads fresh
+    const updBtn = $('updBtn'), updMsg = $('updMsg');
+    const say = (t) => { updMsg.textContent = t; updMsg.hidden = false; };
+    updBtn.addEventListener('click', async () => {
+      if (updBtn.disabled) return;
+      updBtn.disabled = true; say('Checking...');
+      try {
+        const r = await fetch('warehouse-shift.html?t=' + Date.now(), { cache: 'no-store', credentials: 'omit' });
+        if (!r.ok) throw new Error('bad');
+        const h = await r.text();
+        const stamp = (a) => a.slice(a.indexOf('"') + 1, -1);
+        const site = (h.match(/(?:src|href)="[^"]*\?v=[^"]*"/g) || []).map(stamp);
+        const mine = Array.from(document.querySelectorAll('[src*="?v="],[href*="?v="]')).map((el) => el.getAttribute('src') || el.getAttribute('href'));
+        const newer = site.filter((x) => mine.indexOf(x) < 0);
+        if (!site.length) throw new Error('empty');
+        if (!newer.length) { say('You have the latest version.'); updBtn.disabled = false; return; }
+        say('New version found, updating...');
+        try { if (window.caches) for (const k of await caches.keys()) if (k.startsWith('warehouse-shift-') || k.startsWith('toolbox-warehouse-shift-')) await caches.delete(k); } catch (e) { /* fine */ }
+        try { if (navigator.serviceWorker) for (const g of await navigator.serviceWorker.getRegistrations()) if (g.scope.indexOf('warehouse-shift') >= 0) await g.unregister(); } catch (e) { /* fine */ }
+        location.reload();
+      } catch (e) { say('Could not check (no signal?). Try again.'); updBtn.disabled = false; }
+    });
     const installBtn = $('installBtn');
     let promptEvent = null;
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); promptEvent = e; installBtn.hidden = standalone; });

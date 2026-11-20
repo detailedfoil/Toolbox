@@ -102,22 +102,21 @@ function runDay(seed, opts = {}) {
 const days = [11, 23, 37].map((s) => runDay(s));
 const alone = runDay(5, { you: false, mode: 'pick' }); // Sam never serves a till customer, so on their own the day has click and collects only
 
-test('a day is 15 to 25 picks, the first 3 to 6 of them c picks before opening; it opens by itself and you lock the door to finish', () => {
+test('a day is 15 to 25 picks, the shop is open from the start (no morning c picks) and you lock the door to finish', () => {
   for (const d of days.concat([alone])) {
     const day = d.day;
     assert.ok(day.over, 'the day ended (after ' + (d.T / 60).toFixed(1) + ' min)');
     assert.ok(day.total >= 15 && day.total <= 25, day.total + ' picks');
     assert.equal(day.done, day.total);
     assert.equal(day.orders.filter((o) => o.counts).length, day.total, 'every pick counts');
-    assert.ok(day.first >= 3 && day.first <= 6, day.first + ' c picks');
-    const first = d.ev.listed.slice(0, day.first);
-    assert.ok(first.every((e) => e.kind === 'c' && e.t < 12), 'the first ' + day.first + ' are c picks, there from the start: ' + first.map((e) => e.label + '@' + e.t.toFixed(1)).join(' '));
+    assert.equal(day.first, 0, 'no c picks before opening');
+    if (d !== alone) assert.ok(day.orders.filter((o) => o.kind === 'c').length >= 5, 'c picks come in during the day');
     assert.ok(day.orders.every((o) => o.status === 'done'), 'every order finished');
     assert.equal(day.present().length, 0, 'nobody left waiting');
     assert.ok(d.T > 6 * 60 && d.T < 55 * 60, 'about a shift: ' + (d.T / 60).toFixed(1) + ' min');
     // the door: nobody comes in before it's unlocked, and the day only ends after it's locked
     const { ev } = d;
-    assert.ok(ev.unlocked > 0 || day.first === 0, 'the shop opens by itself once the c picks are away');
+    assert.ok(!ev.unlocked, 'open from the start: no opening step');
     assert.ok(ev.firstCust >= (ev.unlocked || 0), 'no customer before it opens');
     assert.ok(ev.closing > (ev.unlocked || 0) && ev.over > ev.closing, 'all done, then you lock up, then the end of day');
     assert.equal(day.phase, 'done');
@@ -161,14 +160,9 @@ test('a customer waits to be greeted: nothing is said until someone says hello, 
   assert.ok(day.queue().length === 1 && day.queue()[0] === t);
 });
 
-test('the door: the shop opens by itself when the c picks are away, and only locking up at the end ends the day', () => {
+test('the door: the shop is open from the start, and only locking up at the end ends the day', () => {
   const day = Day.create({ world, World: W, Till, requests, rand: W.rng(9), env: {} });
-  assert.equal(day.phase, 'closed'); assert.equal(typeof day.unlock, 'undefined', 'no unlocking');
-  for (let i = 0; i < 4000 && day.phase === 'closed'; i++) {
-    day.tick(0.1);
-    for (const o of day.list()) { day.take(o, 'p1'); day.picked(o); day.putAway(o, day.freeSpots()[0], 'p1'); }
-  }
-  assert.equal(day.phase, 'open');
+  assert.equal(day.phase, 'open'); assert.equal(typeof day.unlock, 'undefined', 'no unlocking');
   assert.equal(day.lock(), false, 'not locking while the day is on');
   // Sam taken off the shift: what Sam had goes back on the list
   const o = day.makeOrder('ck', W.order(world, W.rng(3), 1), null, true);
@@ -238,7 +232,8 @@ test('Sam (queue unticked): never serves a till customer, and only takes a pick 
   }
   assert.ok(n > 15, n + ' choices');
   const jobs = alone.bot.jobs;
-  assert.ok(jobs.includes('c') && jobs.includes('ck'), 'Sam picks what is left: ' + jobs.join(' '));
+  assert.ok(jobs.includes('ck'), 'Sam picks what is left: ' + jobs.join(' '));
+  assert.ok(days.some((d) => d.bot.jobs.includes('c')), 'and puts c picks away on a mixed day');
   // a pick is never taken by Sam in its first 5 s
   for (const d of days.concat([alone])) for (const l of d.day.log) if (l.by === 'Sam') assert.ok(l.took >= 0, 'took a while');
   const late = Day.create({ world, World: W, Till, requests, rand: W.rng(12), env: {} });
@@ -315,19 +310,6 @@ test('controllers: a controller belongs to one player, does everything on the sc
   assert.match(ui, /const osk = \(\) => \(touch && S\.osk\) \|\| S\.pad;/, 'with a controller the on-screen keyboard comes up');
   const css = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/till.css'), 'utf8');
   assert.match(css, /\.tl \.pad-on\{/, 'the highlight shows');
-});
-
-test('before opening, the last c pick being done by Sam lets the shop open; one a person is doing does not', () => {
-  const mk = () => { const d = Day.create({ world, World: W, Till, requests, rand: W.rng(21), env: {} }); return d; };
-  for (const who of ['Sam', 'You']) {
-    const d = mk();
-    for (let k = 0; k < 60 && d.released < d.first; k++) d.tick(1);
-    const open = d.orders.filter((o) => o.status !== 'done');
-    assert.ok(open.length >= 1, 'there are morning picks');
-    for (let i = 0; i < open.length; i++) d.take(open[i], i === open.length - 1 ? who : 'Zed');
-    for (const o of open.slice(0, -1)) { d.picked(o); d.putAway(o, d.freeSpots()[0], 'Zed'); }
-    assert.equal(d.phase, who === 'Sam' ? 'open' : 'closed', 'last pick by ' + who);
-  }
 });
 
 // one person on their own (Sam with every job ticked, serving the queue straight away), whole days: about as long on
