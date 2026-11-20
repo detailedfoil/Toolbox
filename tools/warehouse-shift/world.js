@@ -432,8 +432,8 @@
       locs: locs, items: placed, unplaced: items.length - placed.length,
       building: bl.b, openings: bl.openings, walls: bl.walls, rooms: bl.rooms, objects: bl.objects, zones: bl.zones, columns: bl.columns,
       counter: counter, holding: bl.holding,
-      // the service bell: a big red button on the shop side of the counter's front (detailedfoil, 19 Nov 2026)
-      bell: { x: counter.x0 + 0.9, y: counter.y1 - 0.03, z: 0.62 },
+      // the service bell: a big red button on the staff side of the counter (your side, not the customers') (detailedfoil, 19 Nov 2026)
+      bell: { x: counter.x0 + 0.9, y: counter.y0, z: 0.62 },
       // stand behind the counter (the warehouse side) to hand an order over; the customer waits on the shop side
       handover: rect(counter.x0 - 0.3, counter.y0 - 1.4, counter.x1 + 0.3, counter.y0),
       customer: { x: (counter.x0 + counter.x1) / 2 + 0.25, y: counter.y1 + 0.42 },

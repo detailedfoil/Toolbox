@@ -968,13 +968,13 @@
     const tcRoom = world.rooms.find((r) => r.name === 'Trade counter');
     box(M.inner, tcRoom.x0, tcRoom.y0 - 0.06, 2.85, tcRoom.x1, tcRoom.y0, 3.35, 'shop');
     flat(wallSign('TRADE COUNTER', '#15396b', '#ffffff', 1024, 160), (counter.x0 + counter.x1) / 2, tcRoom.y0 - 0.065, 3.1, 2.6, 0.4, Math.PI, 'shop');
-    // the service bell: a big red button and its sign, fixed to the front of the counter on the shop side
+    // the service bell: a big red button and its sign, fixed to the counter on the staff side
     {
       const bl = world.bell;
-      box(M.counterTop, bl.x - 0.25, bl.y, 0.46, bl.x + 0.25, bl.y + 0.025, 0.8, 'shop');
+      box(M.counterTop, bl.x - 0.25, bl.y - 0.025, 0.46, bl.x + 0.25, bl.y, 0.8, 'shop');
       const btn = new T.Mesh(new T.CylinderGeometry(0.1, 0.12, 0.07, 28), M.red); btn.rotation.x = Math.PI / 2;
-      btn.position.copy(V(bl.x, bl.y + 0.06, bl.z + 0.08)); groups.shop.add(btn);
-      flat(wallSign('SERVICE BELL', '#c8191f', '#ffffff', 512, 96), bl.x, bl.y + 0.028, 0.5, 0.46, 0.086, 0, 'shop');
+      btn.position.copy(V(bl.x, bl.y - 0.06, bl.z + 0.08)); groups.shop.add(btn);
+      flat(wallSign('SERVICE BELL', '#c8191f', '#ffffff', 512, 96), bl.x, bl.y - 0.028, 0.5, 0.46, 0.086, Math.PI, 'shop');
     }
     // door plates on the walls
     const plate = (text, x, y, z, turn) => flat(wallSign(text, '#ffffff', '#1d232c', 512, 128), x, y, z, 0.42, 0.105, turn, 'shop');

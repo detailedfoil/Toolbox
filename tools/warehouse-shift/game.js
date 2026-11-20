@@ -1162,7 +1162,7 @@
           }
           if (day && day.phase === 'open') {
             const a = aimAt(world.bell.x, world.bell.y, world.bell.z);
-            if (a.d < 2.8) take(a, 0.22, () => { br = true; }, { x: world.bell.x, y: world.bell.y + 0.02, z0: 0.46, z1: 0.8, w: 0.5, d: 0.1 });
+            if (a.d < 2.8) take(a, 0.22, () => { br = true; }, { x: world.bell.x, y: world.bell.y - 0.02, z0: 0.46, z1: 0.8, w: 0.5, d: 0.1 });
           }
         }
         aimedBox = box;
