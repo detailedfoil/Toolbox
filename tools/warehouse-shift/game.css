@@ -227,11 +227,14 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-join b{display:block;font-size:1.05rem;color:#fff}
 .ws-join span{font-size:.85rem;color:#c3cede}
 /* the manager's PC: Sam's jobs (detailedfoil, 20 Nov 2026) */
-.ws-pc{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(6,12,24,.55);padding:12px}
+.ws-pc{position:absolute;inset:0;z-index:40;pointer-events:auto;touch-action:manipulation;display:flex;align-items:center;justify-content:center;background:rgba(6,12,24,.55);padding:12px}
 .ws-pc[hidden]{display:none}
 .ws-pc-box{width:min(520px,100%);max-height:100%;overflow:auto;background:#eef1f5;color:#1d232c;border-radius:10px;border:6px solid #23272e;box-shadow:0 10px 40px rgba(0,0,0,.5);font:15px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
 .ws-pc-top{display:flex;justify-content:space-between;align-items:center;background:#0f2f63;color:#fff;padding:10px 14px;font-size:18px}
-.ws-pc-top span{font-size:12px;opacity:.75}
+.ws-pc-top{position:sticky;top:0;z-index:2;gap:10px}
+.ws-pc-top span{font-size:12px;opacity:.75;margin-left:auto}
+.ws-pc-x{border:0;border-radius:6px;background:#c8191f;color:#fff;font-weight:800;font-size:15px;padding:8px 14px;cursor:pointer;flex:none}
+@media (max-height:520px){.ws-pc{padding:4px}.ws-pc-box p{display:none}.ws-pc-list li{padding:4px 8px;margin:4px 0}.ws-pc-list .t small{display:none}.ws-pc-top{padding:6px 10px;font-size:16px}.ws-pc-close{display:none}.ws-pc-keys{display:none}}
 .ws-pc-box p{margin:10px 14px;color:#3a4350;font-size:13px}
 .ws-pc-list{list-style:none;margin:0 10px;padding:0}
 .ws-pc-list li{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #d3d8de;border-radius:8px;padding:8px 10px;margin:6px 0}

@@ -1360,7 +1360,7 @@
       function pcBuild() {
         const el = document.createElement('div');
         el.className = 'ws-pc'; el.hidden = true;
-        el.innerHTML = '<div class="ws-pc-box"><div class="ws-pc-top"><b>Sam\'s jobs</b><span>Manager PC</span></div>' +
+        el.innerHTML = '<div class="ws-pc-box"><div class="ws-pc-top"><b>Sam\'s jobs</b><span>Manager PC</span><button type="button" class="ws-pc-x" aria-label="Close">Close &#10005;</button></div>' +
           '<p>Sam does the ticked jobs, the top one first. Untick a job and Sam leaves it to you. Sam always says hello to customers waiting, and the service bell always works.</p>' +
           '<ol class="ws-pc-list"></ol><div class="ws-pc-keys"></div><button type="button" class="ws-pc-close">Close</button></div>';
         D.root.appendChild(el);
@@ -1371,6 +1371,7 @@
           if (a === 'tick') { pc.sel = i; pcToggle(); } else if (a === 'up') { pc.sel = i; pcShift(-1); } else if (a === 'down') { pc.sel = i; pcShift(1); }
         });
         el.querySelector('.ws-pc-close').addEventListener('click', () => closePc());
+        el.querySelector('.ws-pc-x').addEventListener('click', () => closePc());
         pc.el = el;
       }
       function pcRender() {
