@@ -1,0 +1,38 @@
+name: Warehouse online co-op
+
+on:
+  pull_request:
+    paths:
+      - 'tools/warehouse-shift*'
+      - 'tools/warehouse-shift/**'
+      - 'workers/warehouse-relay/**'
+      - '.github/warehouse-shift/test-*.mjs'
+      - '.github/workflows/warehouse-online.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-relay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci --prefix .github --no-audit --no-fund
+      - name: Play a shared shift against a local Durable Object
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          npx --yes wrangler@4.166.0 dev --local --ip 127.0.0.1 --port 8787 --config workers/warehouse-relay/wrangler.toml > "$RUNNER_TEMP/warehouse-relay.log" 2>&1 &
+          relay_pid=$!
+          trap 'kill "$relay_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..90}; do
+            if curl --silent http://127.0.0.1:8787/ >/dev/null; then break; fi
+            if ! kill -0 "$relay_pid"; then cat "$RUNNER_TEMP/warehouse-relay.log"; exit 1; fi
+            sleep 1
+          done
+          node --test .github/warehouse-shift/test-relay.mjs .github/warehouse-shift/test-online-game.mjs

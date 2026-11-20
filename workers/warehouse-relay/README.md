@@ -47,4 +47,3 @@ The tests connect to loopback port 8787 (override with `RELAY_PORT`). Keep the c
 Before exposing the online menu by default, play a shift on a real PC and phone against the deployed relay. Check walking and squatting, picking the same job, the holding area, till payment, briefly disconnecting each device, and ending the shift from the host.
 
 [Cloudflare Durable Objects setup](https://developers.cloudflare.com/durable-objects/get-started/) · [WebSocket hibernation](https://developers.cloudflare.com/durable-objects/best-practices/websockets/)
-

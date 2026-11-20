@@ -67,6 +67,9 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const host = await game(t), guests = [];
   host.$('onlineBtn').click(); host.$('hostRoom').click();
   await until(() => !host.$('roomBtn').hidden, 'host admission');
+  // Schedule just the jobs this test exercises while Sam continues to run in the host.
+  const day = host.s.day(); day.plan.length = 0;
+  for (const job of host.s.prio()) job.on = false;
   const room = host.$('roomBtn').textContent.slice(0, 6);
   for (let i = 0; i < 3; i++) {
     const guest = await game(t, { phone: i === 0 });
@@ -78,7 +81,6 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const [phone] = guests;
   assert.equal(phone.$('stickZone').hidden, false);
   assert.equal(host.$('roomBtn').textContent, room + ' · 4/4');
-  const day = host.s.day(); day.wait = 1000;
   const items = ['AAA', 'BBC'].map(area => host.s.world.items.find(it => it.loc.face.area === area && it.loc.z0 < 1.3 && it.loc.z0 > 0.2));
   const order = day.makeOrder('c', items.map(item => ({ item, qty: 2 })), null, true, { surname: 'Test' });
   await until(() => guests.every(g => g.s.day().list().some(o => o.id === order.id)), 'shared scanner list');
@@ -132,7 +134,15 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   assert.equal(cashier.till.session().orderNo, customer.order.no);
   assert.equal(day.orders.filter(o => o.cust === customer).length, 1);
   cashier.closeTill();
-  const previous = s.day(); host.s.newDay();
+  const previous = s.day();
+  day.phase = 'lock'; assert.equal(day.lock(), true);
+  await until(() => !host.$('dayCover').hidden && guests.every(g => !g.$('dayCover').hidden), 'end of day screens');
+  assert.equal(host.$('nextDayBtn').hidden, false);
+  assert.ok(guests.every(g => g.$('nextDayBtn').hidden));
+  picker.$('nextDayBtn').click();
+  assert.equal(picker.$('dayCover').hidden, false);
+  assert.equal(s.day(), previous);
+  host.$('nextDayBtn').click();
   await until(() => s.day() !== previous && s.day().total === host.s.day().total, 'new day');
   host.sockets.at(-1).terminate();
   await until(() => host.sockets.length === 2 && guests.every(g => g.$('onlineCover').hidden), 'original host to reconnect');

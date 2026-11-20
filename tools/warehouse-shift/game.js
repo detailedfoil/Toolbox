@@ -402,6 +402,7 @@
       over: () => dayOver()
     };
     function newDay() {
+      if (guest()) return;
       const old = day;
       day = Day.create({ world, World, Till, requests, mode: MODES[mode][0], env: dayEnv, hold: old ? old.hold : null });
       dayNo++;
@@ -1688,7 +1689,7 @@
         const cover = ['startCover', 'helpCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
         if (cover) {
           still();
-          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false);
+          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false);
           return;
         }
         if (pc.open) {
@@ -1989,6 +1990,7 @@
       });
     }
     $('nextDayBtn').addEventListener('click', () => {
+      if (guest()) return;
       $('dayCover').hidden = true;
       for (const p of players) { const st = p.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; }
       newDay();
