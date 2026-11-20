@@ -384,7 +384,8 @@
     const MODES = [['mixed', 'mixed', 'every kind of pick'], ['pick', 'C&C', 'click and collect customers only'], ['hold', 'holding', 'picks for the holding area only'],
       ['till', 'till', 'till orders only'], ['kiosk', 'kiosk', 'kiosk orders only']];
     let mode = 0;
-    try { mode = Math.max(0, MODES.findIndex((m) => m[0] === localStorage.getItem('ws-orders'))); } catch (e) { /* fine */ }
+    // always starts on mixed: the practice setting used to be remembered, and one stray tap left every customer a click and collect (detailedfoil, 20 Nov 2026)
+    try { localStorage.removeItem('ws-orders'); } catch (e) { /* fine */ }
     let day = null, dayNo = 0;
     const dayEnv = {
       listed: (o) => { for (const p of players) p.listed(o); },
@@ -1259,7 +1260,7 @@
           ['2', 'Hint', () => useHint()],
           ['3', 'Sound: ' + (audio.on ? 'on' : 'off'), () => { audio.on = !audio.on; try { localStorage.setItem('ws-sound', audio.on ? 'on' : 'off'); } catch (e) { /* fine */ } }],
           ['4', 'Look: ' + LOOKS[lookPick][0].toLowerCase(), () => { lookPick = (lookPick + 1) % LOOKS.length; try { localStorage.setItem('ws-look', LOOKS[lookPick][0]); } catch (e) { /* fine */ } toast('Look speed: ' + LOOKS[lookPick][0].toLowerCase()); }],
-          ['5', 'Picks: ' + MODES[mode][1], () => { mode = (mode + 1) % MODES.length; try { localStorage.setItem('ws-orders', MODES[mode][0]); } catch (e) { /* fine */ } if (day) day.setMode(MODES[mode][0]); toast('Picks still to come: ' + MODES[mode][2]); }],
+          ['5', 'Picks: ' + MODES[mode][1], () => { mode = (mode + 1) % MODES.length; if (day) day.setMode(MODES[mode][0]); toast('Picks still to come: ' + MODES[mode][2]); }],
           ['6', 'Help', () => showHelp(true)],
           ['7', crew.length ? 'Remove Sam' : 'Bring Sam back', () => { if (crew.length) { removeSam(); toast('Sam has gone home'); } else { bringSam(); toast('Sam is back'); } }],
           ['0', 'Close', () => {}]
