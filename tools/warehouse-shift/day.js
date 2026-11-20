@@ -162,6 +162,7 @@
     if (!o || o.status !== 'listed') return false;
     o.status = 'taken'; o.by = who; o.takenAt = this.t;
     this.emit('changed', o);
+    if (this.phase === 'closed') this.check(); // Sam on the last morning pick: customers can start coming in
     return true;
   };
   Day.prototype.picked = function (o) { if (o.status === 'taken') o.status = 'picked'; this.emit('changed', o); };
@@ -376,13 +377,15 @@
   // c picks all away: time to open. Everything done and nobody waiting: time to lock up.
   Day.prototype.check = function () {
     if (this.over) return;
+    // before opening, a pick Sam has already started doesn't hold the doors shut (detailedfoil, 20 Nov 2026)
+    var left = function (o) { return o.status !== 'done' && !(o.status === 'taken' && o.by === 'Sam'); };
     if (this.released < this.plan.length) {
-      if (this.phase === 'closed' && this.released >= this.first && !this.orders.some(function (o) { return o.status !== 'done'; })) {
+      if (this.phase === 'closed' && this.released >= this.first && !this.orders.some(left)) {
         this.open();
       }
       return;
     }
-    if (this.phase === 'closed') { if (this.orders.some(function (o) { return o.status !== 'done'; })) return; this.open(); return; }
+    if (this.phase === 'closed') { if (this.orders.some(left)) return; this.open(); return; }
     if (this.phase !== 'open') return;
     if (this.orders.some(function (o) { return o.status !== 'done'; })) return;
     if (this.present().length) return;

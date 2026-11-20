@@ -968,6 +968,14 @@
     const tcRoom = world.rooms.find((r) => r.name === 'Trade counter');
     box(M.inner, tcRoom.x0, tcRoom.y0 - 0.06, 2.85, tcRoom.x1, tcRoom.y0, 3.35, 'shop');
     flat(wallSign('TRADE COUNTER', '#15396b', '#ffffff', 1024, 160), (counter.x0 + counter.x1) / 2, tcRoom.y0 - 0.065, 3.1, 2.6, 0.4, Math.PI, 'shop');
+    // the service bell: a big red button and its sign, fixed to the front of the counter on the shop side
+    {
+      const bl = world.bell;
+      box(M.counterTop, bl.x - 0.25, bl.y, 0.46, bl.x + 0.25, bl.y + 0.025, 0.8, 'shop');
+      const btn = new T.Mesh(new T.CylinderGeometry(0.1, 0.12, 0.07, 28), M.red); btn.rotation.x = Math.PI / 2;
+      btn.position.copy(V(bl.x, bl.y + 0.06, bl.z + 0.08)); groups.shop.add(btn);
+      flat(wallSign('SERVICE BELL', '#c8191f', '#ffffff', 512, 96), bl.x, bl.y + 0.028, 0.5, 0.46, 0.086, 0, 'shop');
+    }
     // door plates on the walls
     const plate = (text, x, y, z, turn) => flat(wallSign(text, '#ffffff', '#1d232c', 512, 128), x, y, z, 0.42, 0.105, turn, 'shop');
     const staffRoom = world.rooms.find((r) => r.name === 'Staff room'), office = world.rooms.find((r) => r.name === 'Office');
@@ -1127,6 +1135,8 @@
       parts.armL = add(geoC.arm, parts.body, -0.235, 1.46, 0); parts.armR = add(geoC.arm, parts.body, 0.235, 1.46, 0);
       add(geoC.hand, parts.skin, 0, -0.62, 0, parts.armL); add(geoC.hand, parts.skin, 0, -0.62, 0, parts.armR);
       parts.armL.rotation.z = 0.08; parts.armR.rotation.z = -0.08;
+      // the receipt they hold while they wait for their order (shown by game.js)
+      parts.receipt = new T.Mesh(unitBox, lam(0xfafafa)); parts.receipt.scale.set(0.085, 0.15, 0.006); parts.receipt.position.set(0.0, -0.64, 0.055); parts.receipt.rotation.x = 0.35; parts.receipt.visible = false; parts.armR.add(parts.receipt);
       parts.head = add(geoC.head, parts.skin, 0, 1.67, 0); parts.head.scale.set(0.92, 1.05, 1);
       add(geoC.hair, parts.hair, 0, 0.012, -0.008, parts.head);
       add(geoC.nose, parts.skin, 0, -0.005, 0.1, parts.head);

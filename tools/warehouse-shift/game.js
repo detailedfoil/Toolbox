@@ -155,6 +155,19 @@
     const tills = world.objects.filter((o) => o.kind === 'till' && o.x0 >= counter.x0 - 0.01 && o.x1 <= counter.x1 + 0.01).sort((a, b) => a.x0 - b.x0);
     const ALEX_TILL = tills[tills.length - 1]; // the left-hand one from behind the counter, by the gap
     const tillX = (t) => (t.x0 + t.x1) / 2;
+    // the service bell (detailedfoil, 19 Nov 2026): rung once, Sam serves that one waiting till customer; he never serves any other
+    let bellCust = null;
+    function bellQueue() { if (bellCust && !(day && day.queue().indexOf(bellCust) >= 0)) bellCust = null; return bellCust ? [bellCust] : []; }
+    function ringBell(P) {
+      if (!day || day.phase !== 'open') return;
+      if (!crew.some((x) => x.name === 'Sam')) { P.toast('Sam isn\'t here to answer it'); return; }
+      if (bellCust) { P.toast('Sam is on the way'); return; }
+      let c = day.queue().find((x) => x !== P.tillCust);
+      if (!c) { const g = day.ungreeted()[0]; if (g && day.greet(g, P.id)) c = day.queue().find((x) => x === g); }
+      SFX.order();
+      if (!c) { P.toast('Nobody is waiting at the till'); return; }
+      bellCust = c; P.toast('Ding! Sam will serve them');
+    }
     const CY = counter.y1 + 0.42, MID = counter.y1 + 0.95;
     // places at the counter: the left end, then across from each till (the last is Sam's)
     const SPOTS = [{ x: counter.x0 + 0.34, y: CY }].concat(tills.map((t) => ({ x: tillX(t), y: CY, till: t })));
@@ -228,11 +241,13 @@
         return;
       }
       if (c.state === 'waiting' && !f.giving) {
+        f.holdR = true; if (f.parts.receipt) f.parts.receipt.visible = true; // their receipt, while they wait for the pick
         const till = c.order && c.order.kind === 'till';
         if (!till) speakFig(c, { text: c.say }); // what they've come for
         later(till ? 1.6 : 2.8, () => { if (c.state === 'waiting' && c.fig && !c.fig.giving) stepAside(c); });
         return;
       }
+      if (c.state === 'leaving') { f.holdR = false; if (f.parts.receipt) f.parts.receipt.visible = false; }
       if (c.state === 'leaving' && !f.giving) goOut(c);
     }
     function stepAside(c) {
@@ -289,7 +304,7 @@
           if (d > 1e-4) { let dr = Math.atan2(dx, dz) - f.group.rotation.y; while (dr > Math.PI) dr -= 2 * Math.PI; while (dr < -Math.PI) dr += 2 * Math.PI; f.group.rotation.y += dr * Math.min(1, dt * 8); }
           f.phase = (f.phase || 0) + dt * 7.5;
           const sw = Math.sin(f.phase) * 0.5;
-          f.parts.legL.rotation.x = sw; f.parts.legR.rotation.x = -sw; f.parts.armL.rotation.x = -sw * 0.8; f.parts.armR.rotation.x = f.carry ? -1.1 : sw * 0.8;
+          f.parts.legL.rotation.x = sw; f.parts.legR.rotation.x = -sw; f.parts.armL.rotation.x = -sw * 0.8; f.parts.armR.rotation.x = f.carry ? -1.1 : f.holdR ? -0.8 : sw * 0.8;
         } else if (f.mode === 'standing') {
           if (nearestPlayer(f.group.position.x, f.group.position.z) > 9) continue; // too far to see: no need to draw
           if (f.face !== undefined && f.face !== null) {
@@ -297,7 +312,7 @@
             if (Math.abs(dr) > 0.01) f.group.rotation.y += dr * Math.min(1, dt * 6); else f.face = null;
           }
           f.phase = (f.phase || 0) + dt;
-          f.parts.legL.rotation.x = f.parts.legR.rotation.x = 0; f.parts.armL.rotation.x = 0; f.parts.armR.rotation.x = f.carry ? -1.1 : 0;
+          f.parts.legL.rotation.x = f.parts.legR.rotation.x = 0; f.parts.armL.rotation.x = 0; f.parts.armR.rotation.x = f.carry ? -1.1 : f.holdR ? -0.8 : 0;
           f.parts.torso.rotation.z = Math.sin(f.phase * 1.3) * 0.02; f.parts.head.rotation.y = Math.sin(f.phase * 0.7) * 0.35;
           any = true;
         }
@@ -392,7 +407,7 @@
     }
     const pulling = new Set(); // boxes moving forward or back
     const crewEnv = {
-      board: () => (day && active ? { orders: day.listLate(), queue: [], greet: day.ungreeted().filter((c) => day.t - c.here > 10) } : { orders: [], queue: [], greet: [] }),
+      board: () => (day && active ? { orders: day.listLate(), queue: bellQueue(), greet: day.ungreeted().filter((c) => day.t - c.here > 10) } : { orders: [], queue: [], greet: [] }),
       greet: (b, c) => { if (day) day.greet(c, b.name); },
       take: (b, o) => !!day && day.take(o, b.name),
       serve(b, c) { if (!day || !day.serve(c, b.name)) return false; showScreen(b.till, null); callTo(c, b.till); return true; },
@@ -585,6 +600,7 @@
         cam.position.set(me.x, me.eye + (still ? 0 : Math.sin(me.bob * 2) * 0.012 * Math.min(1, me.speed / 1.7)), me.y);
         cam.rotation.set(me.pitch, me.yaw, 0);
         dirty = true;
+        if (typeof checkTill === 'function' && P.playing && P.playing()) checkTill();
       }
       P.applyCam = applyCam;
       applyCam();
@@ -797,7 +813,7 @@
       function shut() { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; }
       function scanAt(nx, ny) {
         if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } return; }
-        if ((doorOn || greetC) && (state === 'list' || state === 'end') && useAction()) return;
+        if ((doorOn || greetC || bellOn) && (state === 'list' || state === 'end') && useAction()) return;
         if (nearTill && (state === 'list' || state === 'end' || tillHit(nx, ny))) { openTill(); return; }
         if (state === 'list' || state === 'end') { const n = day ? day.list().length : 0; say(n ? 'Press Enter to start a pick' : 'No picks yet', 'dim'); SFX.miss(); return; }
         if (state === 'hold') { scanHold(nx, ny); return; }
@@ -1112,27 +1128,51 @@
       /* ---------- the till ---------- */
       let nearTill = null;
       P.tillCust = null;
-      let greetC = null, doorOn = null;
-      function checkTill() { // standing behind the counter at one of your tills (the one by the gap is Sam's), or by the door, or by a customer to greet
-        let best = null, g = null, dr = null;
+      let greetC = null, doorOn = null, bellOn = false, aimedBox = null;
+      // what's in the middle of your view that you could use: a till, a customer to greet, the door, the service bell
+      // (detailedfoil, 20 Nov 2026: "easy to accidentally do stuff around tills": only what you're looking at, with an outline)
+      function aimAt(x, y, z) {
+        const dx = x - me.x, dy = z - me.eye, dz = y - me.y, d = Math.hypot(dx, dy, dz) || 1e-6;
+        const cp = Math.cos(me.pitch), fx = -Math.sin(me.yaw) * cp, fy = Math.sin(me.pitch), fz = -Math.cos(me.yaw) * cp;
+        return { ang: Math.acos(Math.max(-1, Math.min(1, (dx * fx + dy * fy + dz * fz) / d))), d };
+      }
+      function checkTill() { // the thing you're looking at: a till behind the counter (the one by the gap is Sam's), the door, a customer to greet, the bell
+        if (till && till.isOpen()) return; // at a till: keep it
+        let best = null, g = null, dr = null, br = false, box = null, bestAng = 9;
         const behind = me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75;
-        if (behind) {
-          let bd = 0.95;
-          for (const t of tills) { if (t === ALEX_TILL || players.some((q) => q !== P && q.tillAt() === t)) continue; const d = Math.abs(me.x - tillX(t)); if (d < bd) { bd = d; best = t; } }
-        }
-        if (day && active && !(till && till.isOpen())) {
-          if (behind && me.x > counter.x0 - 0.4 && me.x < counter.x1 + 0.4) {
-            let gd = 2.4;
-            for (const c of day.ungreeted()) { if (!c.fig) continue; const d = Math.abs(me.x - c.fig.group.position.x); if (d < gd) { gd = d; g = c; } }
+        const take = (a, lim, fn, b) => { if (a.ang < lim && a.ang < bestAng) { bestAng = a.ang; best = null; g = null; dr = null; br = false; fn(); box = b; } };
+        if (active) {
+          if (behind) {
+            for (const t of tills) {
+              if (t === ALEX_TILL || players.some((q) => q !== P && q.tillAt() === t)) continue;
+              const a = aimAt(tillX(t), (t.y0 + t.y1) / 2, 1.15);
+              if (a.d < 2.6) take(a, 0.5, () => { best = t; }, { x: tillX(t), y: (t.y0 + t.y1) / 2, z0: 0.98, z1: 1.36, w: t.x1 - t.x0 + 0.1, d: t.y1 - t.y0 + 0.1 });
+            }
           }
-          if (day.phase === 'lock' && Math.hypot(me.x - entX, me.y - (world.D - 0.4)) < 2.0) dr = day.phase;
+          if (day && behind && me.x > counter.x0 - 0.4 && me.x < counter.x1 + 0.4) {
+            for (const c of day.ungreeted()) {
+              if (!c.fig) continue;
+              const px = c.fig.group.position.x, py = c.fig.group.position.z, a = aimAt(px, py, 1.2);
+              if (a.d < 3.2) take(a, 0.3, () => { g = c; }, { x: px, y: py, z0: 0, z1: 1.95, w: 0.75, d: 0.55 });
+            }
+          }
+          if (day && day.phase === 'lock') {
+            const a = aimAt(entX, world.D - 0.4, 1.2);
+            if (a.d < 2.6) take(a, 0.4, () => { dr = day.phase; }, { x: entX, y: world.D - 0.3, z0: 0, z1: 2.1, w: Math.max(1.2, ent.to - ent.from), d: 0.3 });
+          }
+          if (day && day.phase === 'open') {
+            const a = aimAt(world.bell.x, world.bell.y, world.bell.z);
+            if (a.d < 2.8) take(a, 0.22, () => { br = true; }, { x: world.bell.x, y: world.bell.y + 0.02, z0: 0.46, z1: 0.8, w: 0.5, d: 0.1 });
+          }
         }
-        const key = (best ? 't' : '') + (g ? 'g' + g.id : '') + (dr || '');
-        const old = (nearTill ? 't' : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '');
-        nearTill = best; greetC = g; doorOn = dr;
+        aimedBox = box;
+        const key = (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '');
+        const old = (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '');
+        nearTill = best; greetC = g; doorOn = dr; bellOn = br;
         if (key === old) return;
-        D.tillBtn.hidden = !(nearTill || greetC || doorOn) || !active;
-        D.tillBtn.firstChild.nodeValue = doorOn ? 'Lock door' : greetC ? 'Greet' : 'Use till';
+        dirty = true;
+        D.tillBtn.hidden = !(nearTill || greetC || doorOn || bellOn) || !active;
+        D.tillBtn.firstChild.nodeValue = doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : 'Ring bell';
         renderScanner();
       }
       // the button, or Scan: lock the door, say hello to the customer, or open the till
@@ -1148,6 +1188,7 @@
           greetC = null; checkTill();
           return true;
         }
+        if (bellOn) { ringBell(P); return true; }
         return false;
       }
       P.useAction = useAction;
@@ -1421,7 +1462,13 @@
         if (!D.say.hidden && sayLine && now - sayShown > (sayLine.quote ? 24000 : 14000)) D.say.hidden = true;
         return changed;
       };
-      P.beforeRender = () => { if (active) updateAim(); else S.aimBox.visible = false; applyHint(); };
+      P.beforeRender = () => {
+        if (active) updateAim(); else S.aimBox.visible = false;
+        // the outline of what you could use right now (yellow; the white one is for shelves)
+        if (active && aimedBox && !S.aimBox.visible) { S.setBox(S.aimBox, aimedBox, 0.03); S.aimBox.visible = true; S.aimBox.material.color.set(0xffd400); }
+        else S.aimBox.material.color.set(0xffffff);
+        applyHint();
+      };
       P.afterRender = (now) => { placeSay(); placeBubs(now); };
       P.start = () => { if (state === 'idle') state = day && day.over ? 'end' : 'list'; renderScanner(); };
       P.show = () => { D.scanner.hidden = false; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; };
@@ -1815,7 +1862,7 @@
     $('startCover').hidden = false;
     me1.render();
     requestAnimationFrame(frame);
-    window.__shift = { world, S, me, cam: me1.cam, renderer, players, crew, figs, tills, ALEX_TILL, WAIT, SPOTS,
+    window.__shift = { bell: () => bellCust, world, S, me, cam: me1.cam, renderer, players, crew, figs, tills, ALEX_TILL, WAIT, SPOTS,
       day: () => day, newDay, scanAt: me1.scanAt, state: me1.state, order: me1.order, full: me1.full, sel: me1.sel, applyCam: me1.applyCam, hitAt: me1.hitAt, holdHit: me1.holdHit,
       scanHold: me1.scanHold, scanPut: me1.scanPut, spotBox, countOne: me1.countOne, confirmQty: me1.confirmQty, enter: me1.enter, back: me1.back, page: me1.page, tapRow: me1.tapRow,
       handOver: me1.handOver, useHint: me1.useHint, toggleSquat: me1.toggleSquat, layout, till: me1.till, openTill: me1.openTill, closeTill: me1.closeTill, nearTill: me1.nearTill,

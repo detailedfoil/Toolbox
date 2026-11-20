@@ -313,3 +313,16 @@ test('controllers: a controller belongs to one player, does everything on the sc
   const css = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/till.css'), 'utf8');
   assert.match(css, /\.tl \.pad-on\{/, 'the highlight shows');
 });
+
+test('before opening, the last c pick being done by Sam lets the shop open; one a person is doing does not', () => {
+  const mk = () => { const d = Day.create({ world, World: W, Till, requests, rand: W.rng(21), env: {} }); return d; };
+  for (const who of ['Sam', 'You']) {
+    const d = mk();
+    for (let k = 0; k < 60 && d.released < d.first; k++) d.tick(1);
+    const open = d.orders.filter((o) => o.status !== 'done');
+    assert.ok(open.length >= 1, 'there are morning picks');
+    for (let i = 0; i < open.length; i++) d.take(open[i], i === open.length - 1 ? who : 'Zed');
+    for (const o of open.slice(0, -1)) { d.picked(o); d.putAway(o, d.freeSpots()[0], 'Zed'); }
+    assert.equal(d.phase, who === 'Sam' ? 'open' : 'closed', 'last pick by ' + who);
+  }
+});
