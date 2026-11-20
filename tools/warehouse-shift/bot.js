@@ -201,6 +201,7 @@
     label: [0.4, 1.0],     // finding the right label on the shelf
     aim: [0.35, 0.75],     // raising the scanner to it
     item: [0.6, 1.2],      // each item off the shelf into the tote
+    stock: [0.7, 1.3],     // each item out of a delivery carton onto the shelf
     high: [0.3, 0.8],      // more for each item up on the high shelves
     kneel: [0.55, 0.9],    // getting down for the bottom shelves, or back up
     tote: [0.5, 0.85],     // putting the tote down or picking it up
@@ -278,7 +279,7 @@
     this.waitT = 0; this.replanT = 0; this.excused = 0; this.noPath = 0; this.altI = -1; this.queue = null; this.others = [];
     // the job in hand: the order they're picking, the till customer they're serving
     this.t = 0; this.sleep = 0; this.until = null; this.order = null; this.cust = null; this.log = []; this.slips = 0; this.jobs = [];
-    this.stats = { orders: 0, lines: 0, units: 0, slips: 0, tills: 0 };
+    this.stats = { orders: 0, lines: 0, units: 0, slips: 0, tills: 0, putaway: 0 }; this.busyT = {};
     this.job = this.life();
     void self;
   }
@@ -578,23 +579,36 @@
         yield this.T(0.3, 0.7);
         continue;
       }
-      this.jobs.push(job.serve ? 'serve' : job.pick.kind);
+      this.jobs.push(job.serve ? 'serve' : job.putaway ? 'putaway' : job.pick.kind);
+      var t0 = this.t;
       if (job.serve) yield* this.serveTill(job.serve);
+      else if (job.putaway) yield* this.putawayRun();
       else yield* this.doOrder(job.pick);
       yield this.T(0.5, 1.1);
+      if (job.cat) this.busyT[job.cat] = (this.busyT[job.cat] || 0) + this.t - t0; // time spent on each kind of job
+      continue;
     }
   };
   Bot.prototype.atPost = function () {
     var p = this.post;
     return Math.hypot(this.x - p.x, this.y - p.y) < 0.6 && !this.walking;
   };
-  // detailedfoil's order: a pick a customer is waiting for, then the next customer at the till, then a c pick
+  // what Sam does first is set on the manager's PC (detailedfoil, 20 Nov 2026): board().prio lists the ticked jobs, top
+  // first: cust (a pick a customer is waiting for: CK, till orders, bag collections), queue (the next customer at the
+  // till), hold (a c pick for the holding area), delivery (putting a carton of the delivery away). A customer waiting
+  // for a hello, and one the service bell was rung for, always come first.
+  var PRIO = ['cust', 'queue', 'hold', 'delivery'];
   Bot.prototype.choose = function () {
-    var b = this.emit('board') || {}, orders = b.orders || [], queue = b.queue || [], i;
+    var b = this.emit('board') || {}, orders = b.orders || [], queue = b.queue || [], prio = b.prio || PRIO, i, k;
     if (b.greet && b.greet.length) return { greet: b.greet[0] }; // a customer's been waiting at the counter for a hello
-    for (i = 0; i < orders.length; i++) if (orders[i].kind !== 'c') return { pick: orders[i] };
-    if (queue.length) return { serve: queue[0] };
-    for (i = 0; i < orders.length; i++) if (orders[i].kind === 'c') return { pick: orders[i] };
+    if (b.bell && b.bell.length) return { serve: b.bell[0], cat: 'queue' };
+    for (k = 0; k < prio.length; k++) {
+      var p = prio[k];
+      if (p === 'cust') { for (i = 0; i < orders.length; i++) if (orders[i].kind !== 'c') return { pick: orders[i], cat: 'cust' }; }
+      else if (p === 'queue') { if (queue.length) return { serve: queue[0], cat: 'queue' }; }
+      else if (p === 'hold') { for (i = 0; i < orders.length; i++) if (orders[i].kind === 'c') return { pick: orders[i], cat: 'hold' }; }
+      else if (p === 'delivery') { if (b.delivery > 0) return { putaway: true, cat: 'delivery' }; }
+    }
     return null;
   };
 
@@ -840,6 +854,41 @@
     this.stats.orders++;
     yield this.T(0.6, 1.2);
     if (o.cust) this.cSay(this.pick(SAY.thanks), o.cust);
+  };
+
+  /* ---------- the delivery: a carton off a roll cage or pallet at goods in, onto its shelf ---------- */
+  Bot.prototype.putawayRun = function* () {
+    var self = this, w = this.world, srcs = this.emit('paSources') || [];
+    if (!srcs.length) return;
+    // the nearest cage or pallet with cartons on it
+    srcs.sort(function (a, b) { var ga = w.goodsin[a], gb = w.goodsin[b]; return Math.hypot(ga.stand.x - self.x, ga.stand.y - self.y) - Math.hypot(gb.stand.x - self.x, gb.stand.y - self.y); });
+    var g = w.goodsin[srcs[0]];
+    yield* this.walkTo(g.stand);
+    yield this.T(PACE.label);
+    var d = this.emit('paTake', g.i);
+    if (!d) return; // someone took the last one
+    var sl = g.slots[d.slot], low = sl.z0 < 0.4;
+    if (low) yield* this.kneelDown(true);
+    yield* this.scan({ x: (sl.x0 + sl.x1) / 2, y: sl.y0, z: (sl.z0 + sl.z1) / 2 }, true);
+    yield this.T(0.8, 1.4); // lifting it off
+    this.aim = null; this.carry = 'box';
+    if (low) yield* this.kneelDown(false);
+    yield* this.readScanner();
+    var loc = d.loc, lowS = loc.z0 < 0.45, high = loc.z0 > 1.9;
+    yield* this.walkTo(this.standFor(loc));
+    if (lowS) yield* this.kneelDown(true);
+    yield this.T(PACE.label);
+    if (this.slip()) { var n = nextTo(w, loc, this.rand); if (n) yield* this.scan(labelAt(n), false); }
+    yield* this.scan(labelAt(loc), true);
+    this.emit('open', loc);
+    for (var k = 0; k < d.qty; k++) yield this.T(PACE.stock) + (high ? this.T(PACE.high) : 0);
+    this.carry = null;
+    this.emit('paPut', d);
+    this.stats.putaway++;
+    yield this.T(0.4, 0.8); // flattening the empty carton
+    this.emit('close', loc);
+    this.aim = null;
+    if (lowS) yield* this.kneelDown(false);
   };
 
   function create(o) { return new Bot(o); }

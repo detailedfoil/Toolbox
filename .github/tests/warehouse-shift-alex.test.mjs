@@ -37,7 +37,9 @@ function shift(seed, opts = {}) {
   dayEnv.customer = (c) => { arrived.set(c, T + 9); later(9, () => day.arrived(c)); };
   day = Day.create({ world, World: W, Till, requests, rand: rng, env: dayEnv, mode: opts.mode });
   const env = {
-    board: () => ({ orders: day.listLate(), queue: [], greet: day.ungreeted().filter((c) => T - (arrived.get(c) || 0) > 10) }),
+    board: () => ({ orders: day.listLate(), queue: [], prio: ['cust', 'hold', 'delivery'], delivery: day.deliveryLeft().length, greet: day.ungreeted().filter((c) => T - (arrived.get(c) || 0) > 10) }),
+    paSources: () => world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i),
+    paTake: (b, src) => day.paTake(src, 'Sam'), paPut: (b, d) => day.paPut(d, 'Sam'),
     greet: (b, c) => day.greet(c, 'Sam'),
     take: (b, o) => day.take(o, 'Sam'),
     serve: (b, c) => { if (!day.serve(c, 'Sam')) return false; later(3, () => { c.ready = true; }); return true; },

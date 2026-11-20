@@ -43,7 +43,9 @@ function runDay(seed, opts = {}) {
   day = Day.create({ world, World: W, Till, requests, rand: rng, env, mode: opts.mode, total: opts.total });
   const choices = [];
   const crewEnv = {
-    board: () => ({ orders: day.listLate(), queue: [], greet: day.ungreeted().filter((c) => T - ev.arrivedAt(c) > 10) }),
+    board: () => ({ orders: day.listLate(), queue: [], prio: ['cust', 'hold', 'delivery'], delivery: day.deliveryLeft().length, greet: day.ungreeted().filter((c) => T - ev.arrivedAt(c) > 10) }),
+    paSources: () => world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i),
+    paTake: (b, src) => day.paTake(src, 'Sam'), paPut: (b, d) => day.paPut(d, 'Sam'),
     greet: (b, c) => day.greet(c, 'Sam'),
     take: (b, o) => day.take(o, 'Sam'),
     serve: (b, c) => { if (!day.serve(c, 'Sam')) return false; later(3, () => { c.ready = true; }); return true; },
@@ -57,7 +59,7 @@ function runDay(seed, opts = {}) {
   const choose = bot.choose.bind(bot);
   bot.choose = function () {
     const j = choose();
-    if (j && !j.greet) choices.push({ job: j.serve ? 'serve' : j.pick.kind === 'c' ? 'c' : 'cust', custOn: day.listLate().some((o) => o.kind !== 'c'), queue: false });
+    if (j && !j.greet) choices.push({ job: j.serve ? 'serve' : j.putaway ? 'putaway' : j.pick.kind === 'c' ? 'c' : 'cust', custOn: day.listLate().some((o) => o.kind !== 'c'), cOn: day.listLate().some((o) => o.kind === 'c'), queue: false });
     return j;
   };
   const you = { busy: null, until: 0, serving: null };
@@ -223,13 +225,14 @@ test('whoever starts an order has it: off the list, nobody else can take it, and
   assert.match(game, /say\('Finish task', 'err'/, 'Back on the scanner says Finish task');
 });
 
-test('Sam: never serves a till customer, and only takes a pick that has sat on the list 5 s (customer picks before c picks)', () => {
+test('Sam (queue unticked): never serves a till customer, and only takes a pick that has sat on the list 5 s (customer picks, then c picks, then the delivery)', () => {
   let n = 0;
   for (const d of days.concat([alone])) {
     assert.ok(!d.bot.jobs.includes('serve'), 'Sam never serves a till customer');
     for (const c of d.choices) {
       if (c.custOn) assert.equal(c.job, 'cust', 'a customer pick was on the list');
-      else assert.equal(c.job, 'c');
+      else if (c.cOn) assert.equal(c.job, 'c', 'a c pick comes before the delivery');
+      else assert.equal(c.job, 'putaway', 'nothing on the list: the delivery');
       n++;
     }
   }
@@ -255,7 +258,7 @@ test('the holding area: c picks go into empty OC spots only, and customers colle
   const put = all.flatMap((d) => d.day.orders.filter((o) => o.kind === 'c' && o.code));
   assert.ok(put.length >= 12, put.length + ' put away');
   const fetched = all.flatMap((d) => d.day.orders.filter((o) => o.kind === 'hold'));
-  assert.ok(fetched.length >= 8, fetched.length + ' bags collected');
+  assert.ok(fetched.length >= 5, fetched.length + ' bags collected');
   for (const o of fetched) assert.equal(o.counts, true, 'collecting a bag is one of the day\'s picks');
   const day = Day.create({ world, World: W, Till, requests, rand: W.rng(4), env: {} });
   day.phase = 'open';
@@ -325,4 +328,77 @@ test('before opening, the last c pick being done by Sam lets the shop open; one 
     for (const o of open.slice(0, -1)) { d.picked(o); d.putAway(o, d.freeSpots()[0], 'Zed'); }
     assert.equal(d.phase, who === 'Sam' ? 'open' : 'closed', 'last pick by ' + who);
   }
+});
+
+// one person on their own (Sam with every job ticked, serving the queue straight away), whole days: about as long on
+// each kind of job (detailedfoil, 20 Nov 2026: "a typical player would do an even amount of everything")
+function soloDay(seed, prio = ['cust', 'queue', 'hold', 'delivery']) {
+  const rng = W.rng(seed); let T = 0, day; const timers = [], later = (s, f) => timers.push({ t: T + s, f });
+  const env = { customer: (c) => later(9, () => day.arrived(c)), step: (c) => { if (c.state === 'leaving') later(6, () => day.gone(c)); }, closing: () => later(5, () => day.lock()) };
+  day = Day.create({ world, World: W, Till, requests, rand: rng, env });
+  const benv = {
+    board: () => ({ orders: day.list(), queue: day.queue(), prio, delivery: day.deliveryLeft().length, greet: day.ungreeted() }),
+    greet: (b, c) => day.greet(c, 'Sam'), take: (b, o) => day.take(o, 'Sam'),
+    serve: (b, c) => { if (!day.serve(c, 'Sam')) return false; later(3, () => { c.ready = true; }); return true; },
+    picked: (b, o) => day.picked(o), holdFree: () => day.freeSpots(), reserve: (b, k) => day.reserve(k, 'Sam'), unreserve: (b, k) => day.unreserve(k, 'Sam'),
+    putAway: (b, o, k) => day.putAway(o, k, 'Sam'), holdTake: (b, o) => { day.fetch(o); return true; },
+    tillDone: (b, c, lines) => day.tillDone(c, lines), handOver: (b, o) => day.handOver(o, 'Sam'),
+    paSources: () => world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i), paTake: (b, s) => day.paTake(s, 'Sam'), paPut: (b, d) => day.paPut(d, 'Sam')
+  };
+  const bot = B.create({ world, World: W, Till, requests, nav, env: benv, rand: rng, till: tills[tills.length - 1], start: { x: 3.75, y: 17.78, yaw: Math.PI / 2 } });
+  const first = [];
+  const choose = bot.choose.bind(bot);
+  bot.choose = function () { const j = choose(); if (j && j.cat && first.length < 400) first.push({ cat: j.cat, b: benv.board() }); return j; };
+  const dt = 0.05;
+  while (T < 90 * 60 && !day.over) { T += dt; for (let i = timers.length - 1; i >= 0; i--) if (timers[i].t <= T) { const f = timers[i].f; timers.splice(i, 1); f(); } day.tick(dt); bot.update(dt, [{ id: -1, x: 1, y: 0.9, r: 0.22 }]); }
+  const tot = Object.values(bot.busyT).reduce((a, b) => a + b, 0), share = {};
+  for (const k of ['cust', 'queue', 'hold', 'delivery']) share[k] = (bot.busyT[k] || 0) / tot;
+  return { day, bot, share, T, first };
+}
+
+test('balance: on your own, the queue, customer picks, holding area picks and the delivery each take about a quarter of the day', () => {
+  const runs = [11, 23, 37, 41, 53, 61].map((s) => soloDay(s));
+  const avg = {};
+  for (const r of runs) {
+    assert.ok(r.day.over, 'the day ends (' + (r.T / 60).toFixed(0) + ' min)');
+    assert.ok(r.T < 60 * 60, 'in under an hour');
+    for (const k in r.share) { assert.ok(r.share[k] > 0.1 && r.share[k] < 0.42, k + ' ' + Math.round(100 * r.share[k]) + '%'); avg[k] = (avg[k] || 0) + r.share[k] / runs.length; }
+    assert.ok(r.day.delivery.length >= 11 && r.day.delivery.every((d) => d.done && d.doneBy === 'Sam'), 'the whole delivery put away');
+    assert.ok(r.day.orders.filter((o) => o.kind === 'c').length > r.day.first, 'c picks come in during the day too');
+  }
+  for (const k in avg) assert.ok(avg[k] > 0.18 && avg[k] < 0.32, 'average ' + k + ' ' + Math.round(100 * avg[k]) + '%');
+});
+
+test("Sam's jobs follow the manager's PC: ticked ones, top first; an unticked job is never done", () => {
+  const r = soloDay(23, ['delivery', 'cust', 'hold']); // queue unticked, delivery first
+  assert.ok(!r.bot.jobs.includes('serve'), 'the queue was unticked');
+  for (const c of r.first) {
+    if (c.b.delivery > 0) assert.equal(c.cat, 'delivery', 'delivery is top while there is any');
+  }
+  const r2 = soloDay(23, ['queue', 'cust', 'hold', 'delivery']);
+  for (const c of r2.first) if (c.b.queue.length) assert.equal(c.cat, 'queue', 'a till customer waiting comes first when the queue is top');
+  assert.ok(r2.bot.jobs.includes('serve') && r2.bot.jobs.includes('putaway'));
+});
+
+test('the delivery: cartons on the cages and pallets, taken from the top, put away at their own location; the day only ends when it is all away', () => {
+  const d = Day.create({ world, World: W, Till, requests, rand: W.rng(5), env: {} });
+  assert.ok(d.delivery.length >= Day.DELIVERY[0] && d.delivery.length <= Day.DELIVERY[1]);
+  const slots = new Set(d.delivery.map((x) => x.src + ':' + x.slot));
+  assert.equal(slots.size, d.delivery.length, 'one carton a slot');
+  for (const x of d.delivery) assert.ok(x.loc && x.loc === x.item.loc && x.qty >= 2, 'goes back where the product lives');
+  const src = d.delivery[0].src, top = d.paTake(src, 'p1');
+  const z = (x) => world.goodsin[x.src].slots[x.slot].z0;
+  assert.ok(d.deliveryLeft(src).every((x) => z(x) <= z(top)), 'the top one first');
+  assert.equal(d.paPut(top, 'Sam'), false, 'only the one who took it');
+  assert.equal(d.paPut(top, 'p1'), true);
+  const t2 = d.paTake(null, 'Sam');
+  d.release('Sam');
+  assert.equal(t2.by, null, 'Sam going home puts it back');
+  // everything else done, the delivery not: no locking up yet
+  d.phase = 'open'; d.released = d.plan.length; d.orders.forEach((o) => { o.status = 'done'; });
+  d.check();
+  assert.equal(d.phase, 'open');
+  for (const x of d.delivery) if (!x.done) { d.paTake(x.src, 'p1'); }
+  for (const x of d.delivery) if (!x.done) d.paPut(x, 'p1');
+  assert.equal(d.phase, 'lock', 'all away: lock the door');
 });

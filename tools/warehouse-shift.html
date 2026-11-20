@@ -12,7 +12,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=569405ab70">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=9b5d1f3af8">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=16b209e198">
 <script src="../auth-data.js?v=26c132d57a"></script>
 <script src="../auth.js?v=51f9bae97e"></script>
@@ -50,7 +50,7 @@
           <span><svg viewBox="0 0 24 20" aria-hidden="true"><path d="M12 19L1 6a16 16 0 0 1 22 0z"/></svg><svg viewBox="0 0 12 24" aria-hidden="true"><rect x="3" y="0" width="6" height="3"/><rect x="0" y="3" width="12" height="21" rx="1.5"/></svg><b id="scTime" data-el="scTime">7:24</b></span>
         </div>
         <div class="sc-text" id="scText" data-el="scText"></div>
-        <div class="sc-list" id="scList" data-el="scList" hidden><div class="sc-lt">Today Picking</div><div class="sc-lh">ORDER</div><ol class="sc-rows" id="scRows" data-el="scRows"></ol></div>
+        <div class="sc-list" id="scList" data-el="scList" hidden><div class="sc-lt" data-el="scLt">Today Picking</div><div class="sc-lh" data-el="scLh">ORDER</div><ol class="sc-rows" id="scRows" data-el="scRows"></ol></div>
         <div class="sc-note" id="scNote" data-el="scNote" hidden></div>
         <div class="sc-select" id="scSelect" data-el="scSelect" hidden>Select<span class="sc-cur line"></span></div>
         <div class="sc-side">
@@ -129,9 +129,10 @@
         <div>
           <h2>The pick list</h2>
           <ul>
+            <li>The scanner opens on its <b>Main Menu</b>: <b>Putaway</b> or <b>Today Picking</b>. Back goes back to it.</li>
             <li>The scanner lists today's picks: <b>A4821 2:3 CK</b> is order A4821, 2 locations, 3 items. <b>CK</b>: a click and collect customer is at the counter. <b>c</b>: nobody's here yet, it goes in the holding area. Nothing after it: bought at the till, the customer's waiting.</li>
             <li>Up and down choose an order, <b>Enter</b> (or <b>Space</b>) starts it. Once started it's yours: Back says <b>Finish task</b>.</li>
-            <li>A day is <b>20 picks</b>. It ends when they're all done and nobody's waiting.</li>
+            <li>A day is about <b>20 picks</b>, plus the <b>delivery</b>. It ends when they're all done, the delivery's away and nobody's waiting: then lock the front door.</li>
           </ul>
           <h2>Picking</h2>
           <ul>
@@ -142,9 +143,15 @@
             <li>Some click and collects are already bagged in the holding area: the line on the scanner gives the <b>OC location</b> (big green label) and surname. Scan that tote, then take the bag to the counter.</li>
             <li>Bottom shelves are low: <b>squat</b> to scan them. Stuck? <b>Hint</b> makes the location glow.</li>
           </ul>
+          <h2>Putaway</h2>
+          <ul>
+            <li>The delivery waits at <b>goods in</b> on the roll cages and pallets. With no picks to do, choose <b>Putaway</b>.</li>
+            <li>Look at a cage or pallet and <b>Scan</b>: you take a carton and the scanner says where it goes. Scan that location, then <b>Enter</b> to put it on the shelf.</li>
+          </ul>
           <h2>Sam</h2>
           <ul>
-            <li><b>Sam</b> works from the same list, at the same pace as a person: picks with a customer waiting first, then the next customer at the till, then c picks.</li>
+            <li><b>Sam</b> works from the same list, at the same pace as a person. What Sam does first is set on the <b>PC on the manager's desk</b> in the office: tick or untick each job (customer picks, the queue, holding area picks, the delivery) and move them up or down. Unticked jobs are yours.</li>
+            <li>The red <b>service bell</b> behind the counter sends Sam to serve one till customer, whatever's ticked.</li>
             <li>Sam pushes a <b>trolley</b>. While they pick it blocks the aisle, so you can't get past. Sam won't go down an aisle you're in.</li>
             <li>Sam walks round you, and says excuse me if you're in the way.</li>
           </ul>
@@ -153,7 +160,7 @@
             <li>Some customers order at the till. Walk behind the counter to a till and press <b>Use till</b> (or Scan): the next one comes over. The till by the gap is Sam's.</li>
             <li>They give their <b>postcode</b>, then their <b>surname</b>: type them in Fusion's Identify Customer, Search, pick them, Select.</li>
             <li>Sent it from the <b>kiosk</b>? They tell you the name they used: open <b>Kiosk Orders</b>, pick theirs, Select, and the basket fills itself.</li>
-            <li>They ask for one thing at a time: a <b>code</b>, a <b>description</b>, or a quote from the website. Find it on the <b>CrashFix</b> tab (tap a result to read its description) and tap its code to copy it: the customer says straight away if it's the one. Any product that fits counts.</li>
+            <li>They ask for one thing at a time: a <b>code</b>, or a quote from the website. Find it on the <b>CrashFix</b> tab (tap a result to read its description) and tap its code to copy it: the customer says straight away if it's the one. Any product that fits counts.</li>
             <li>Back on the <b>Fusion</b> tab, type the part number and quantity, Enter. Wrong quantity? Type the right one in that line's Qty box. <b>Ask again</b> repeats what they want, twice gives a clue.</li>
             <li>When they've got everything: <b>Pay &amp; Go</b>, then <b>Card</b> or <b>Cash</b>, whichever they say. The order goes on the pick list (its number stays on the till's screen) and the customer waits by the gap at the end of the counter.</li>
             <li>On a phone, Fusion uses the phone's keyboard; the keyboard button at the top swaps to an on-screen one.</li>
@@ -208,13 +215,13 @@
   <div class="ws-cover" id="msg" hidden><div class="ws-card"><p id="msgText"></p><div class="ws-row"><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div></div></div>
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
-<script src="warehouse-shift/world.js?v=9f4dfb8bb0"></script>
-<script src="warehouse-shift/scene.js?v=f5785ce8c5"></script>
+<script src="warehouse-shift/world.js?v=dc55ad37ad"></script>
+<script src="warehouse-shift/scene.js?v=29e0d1eb2a"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=a2895eea1c"></script>
-<script src="warehouse-shift/day.js?v=6e89599428"></script>
-<script src="warehouse-shift/bot.js?v=7377f95d85"></script>
+<script src="warehouse-shift/day.js?v=f2cd6436cd"></script>
+<script src="warehouse-shift/bot.js?v=8bd16c45f8"></script>
 <script src="warehouse-shift/tillui.js?v=28f00f6a94"></script>
-<script src="warehouse-shift/game.js?v=245ec7e985"></script>
+<script src="warehouse-shift/game.js?v=f9b496493c"></script>
 </body>
 </html>

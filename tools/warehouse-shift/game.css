@@ -226,3 +226,22 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-join div.on{border:2px solid #ffd34d;background:#2a2f1f}
 .ws-join b{display:block;font-size:1.05rem;color:#fff}
 .ws-join span{font-size:.85rem;color:#c3cede}
+/* the manager's PC: Sam's jobs (detailedfoil, 20 Nov 2026) */
+.ws-pc{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(6,12,24,.55);padding:12px}
+.ws-pc[hidden]{display:none}
+.ws-pc-box{width:min(520px,100%);max-height:100%;overflow:auto;background:#eef1f5;color:#1d232c;border-radius:10px;border:6px solid #23272e;box-shadow:0 10px 40px rgba(0,0,0,.5);font:15px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.ws-pc-top{display:flex;justify-content:space-between;align-items:center;background:#0f2f63;color:#fff;padding:10px 14px;font-size:18px}
+.ws-pc-top span{font-size:12px;opacity:.75}
+.ws-pc-box p{margin:10px 14px;color:#3a4350;font-size:13px}
+.ws-pc-list{list-style:none;margin:0 10px;padding:0}
+.ws-pc-list li{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #d3d8de;border-radius:8px;padding:8px 10px;margin:6px 0}
+.ws-pc-list li.on{border-color:#ffb400;box-shadow:0 0 0 2px #ffd400 inset}
+.ws-pc-list li.off .t{opacity:.45;text-decoration:line-through}
+.ws-pc-list .tick{width:30px;height:30px;border:2px solid #0f2f63;border-radius:6px;background:#fff;color:#0a8a3a;font-size:20px;font-weight:800;line-height:1;cursor:pointer;flex:none}
+.ws-pc-list .n{font-weight:800;color:#0f2f63;width:16px;flex:none}
+.ws-pc-list .t{flex:1;font-weight:700}
+.ws-pc-list .t small{display:block;font-weight:400;color:#5a6472;font-size:12px}
+.ws-pc-list button[data-pc=up],.ws-pc-list button[data-pc=down]{width:34px;height:30px;border:0;border-radius:6px;background:#2b5fae;color:#fff;font-size:13px;cursor:pointer;flex:none}
+.ws-pc-list button:disabled{opacity:.3;cursor:default}
+.ws-pc-keys{margin:6px 14px 0;font-size:12px;color:#5a6472}
+.ws-pc-close{display:block;margin:10px 14px 14px auto;padding:9px 22px;border:0;border-radius:6px;background:#c8191f;color:#fff;font-weight:800;font-size:15px;cursor:pointer}

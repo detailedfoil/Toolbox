@@ -155,6 +155,16 @@
     const tills = world.objects.filter((o) => o.kind === 'till' && o.x0 >= counter.x0 - 0.01 && o.x1 <= counter.x1 + 0.01).sort((a, b) => a.x0 - b.x0);
     const ALEX_TILL = tills[tills.length - 1]; // the left-hand one from behind the counter, by the gap
     const tillX = (t) => (t.x0 + t.x1) / 2;
+    // Sam's jobs, set on the manager's PC (detailedfoil, 20 Nov 2026): ticked ones, top first. Kept on the device.
+    const PRIO_NAMES = { cust: ['Customer picks', 'Click & collect, till orders, bag collections'], queue: ['Queue', 'Serving till customers'],
+      hold: ['Holding area picks', 'c picks for the holding area'], delivery: ['Delivery', 'Putting the delivery away'] };
+    const PRIO_DEFAULT = ['cust', 'queue', 'hold', 'delivery'];
+    let samPrio = PRIO_DEFAULT.map((id) => ({ id, on: true }));
+    try {
+      const sv = JSON.parse(localStorage.getItem('ws-sam-prio') || 'null');
+      if (Array.isArray(sv) && sv.length === PRIO_DEFAULT.length && PRIO_DEFAULT.every((id) => sv.some((j) => j && j.id === id))) samPrio = sv.map((j) => ({ id: j.id, on: !!j.on }));
+    } catch (e) { /* fine */ }
+    function saveSamPrio() { try { localStorage.setItem('ws-sam-prio', JSON.stringify(samPrio)); } catch (e) { /* fine */ } }
     // the service bell (detailedfoil, 19 Nov 2026): rung once, Sam serves that one waiting till customer; he never serves any other
     let bellCust = null;
     function bellQueue() { if (bellCust && !(day && day.queue().indexOf(bellCust) >= 0)) bellCust = null; return bellCust ? [bellCust] : []; }
@@ -379,6 +389,7 @@
       closing: () => { for (const p of players) { p.banner('All done', 'Lock the front door', 6000); p.queueChanged(); } SFX.order(); },
       locked: () => { SFX.key(); },
       holdSet: (code, parcel) => { if (S.hold) S.hold.set(code, parcel); dirty = true; },
+      delivery: (d) => { S.delivery.show(d); for (const p of players) p.deliveryChanged(); dirty = true; },
       over: () => dayOver()
     };
     function newDay() {
@@ -386,6 +397,7 @@
       day = Day.create({ world, World, Till, requests, mode: MODES[mode][0], env: dayEnv, hold: old ? old.hold : null });
       dayNo++;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
+      S.delivery.set(day.delivery);
       for (const p of players) p.newDay();
       dirty = true;
     }
@@ -406,8 +418,24 @@
       else if (name === 'slide') noise(0, 0.12, 0.25 * v, 700);
     }
     const pulling = new Set(); // boxes moving forward or back
+    const cartonGeo = new T.BoxGeometry(0.42, 0.3, 0.32), cartonMat = new T.MeshLambertMaterial({ color: 0xc49a64 });
     const crewEnv = {
-      board: () => (day && active ? { orders: day.listLate(), queue: bellQueue(), greet: day.ungreeted().filter((c) => day.t - c.here > 10) } : { orders: [], queue: [], greet: [] }),
+      board: () => {
+        if (!(day && active)) return { orders: [], queue: [], bell: [], greet: [], prio: [], delivery: 0 };
+        const on = samPrio.filter((j) => j.on).map((j) => j.id);
+        // the queue: till customers who've waited a few seconds with nobody coming to serve them
+        const q = on.includes('queue') ? day.queue().filter((c) => day.t - (c.greeted || c.here || 0) > 5 && !players.some((p) => p.tillCust === c)) : [];
+        return { orders: day.listLate(), queue: q, bell: bellQueue(), greet: day.ungreeted().filter((c) => day.t - c.here > 10), prio: on, delivery: day.deliveryLeft().length };
+      },
+      paSources: () => (day ? world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i) : []),
+      paTake(b, src) {
+        const d = day && day.paTake(src, b.name);
+        if (!d) return null;
+        const m = new T.Mesh(cartonGeo, cartonMat); m.position.set(0, 0, 0); b.fig.carry.add(m); b.fig.held = m;
+        dirty = true;
+        return d;
+      },
+      paPut(b, d) { if (b.fig.held) { b.fig.carry.remove(b.fig.held); b.fig.held = null; } day.paPut(d, b.name); dirty = true; },
       greet: (b, c) => { if (day) day.greet(c, b.name); },
       take: (b, o) => !!day && day.take(o, b.name),
       serve(b, c) { if (!day || !day.serve(c, b.name)) return false; showScreen(b.till, null); callTo(c, b.till); return true; },
@@ -644,7 +672,10 @@
       const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
       let order = null, cur = 0, state = 'idle', typed = '', full = false, viewLine = -1, viewTimer = 0, msgUntil = 0, msg = null, atCounter = false;
       let sel = 0, selId = null, slips = 0, carry = null;
-      const stats = { orders: 0, picks: 0, lines: 0, units: 0, wrong: 0, hints: 0, tills: 0, perfect: 0, since: Date.now() };
+      let homeSel = 1, carton = null; // the scanner's main menu (Putaway / Today Picking), the delivery carton in your hands
+      const HOME = ['Putaway', 'Today Picking'];
+      const idleState = () => state === 'list' || state === 'end' || state === 'home' || state === 'pa';
+      const stats = { putaway: 0, orders: 0, picks: 0, lines: 0, units: 0, wrong: 0, hints: 0, tills: 0, perfect: 0, since: Date.now() };
       let life = { orders: 0, lines: 0, units: 0 };
       try { life = Object.assign(life, JSON.parse(localStorage.getItem('ws-stats-v1') || '{}')); } catch (e) { /* fine */ }
       P.stats = stats; P.life = life;
@@ -652,7 +683,7 @@
       function lineHtml(text, cls) { const s = document.createElement('span'); s.className = 'sc-line' + (cls ? ' ' + cls : ''); s.textContent = text; return s; }
       function say(text, cls, ms) { msg = { text, cls }; msgUntil = performance.now() + (ms || 1700); renderScanner(); }
       function renderTote() {
-        if (!order || state === 'list' || state === 'idle' || state === 'end') { D.toteCount.textContent = '0'; return; }
+        if (!order || state === 'list' || state === 'idle' || state === 'end' || state === 'home' || state.indexOf('pa') === 0) { D.toteCount.textContent = '0'; return; }
         if (order.kind === 'hold') { D.toteCount.textContent = (state === 'deliver' ? 1 : 0) + '/1'; return; }
         D.toteCount.textContent = (state === 'deliver' || state === 'put' ? order.lines.length : cur) + '/' + order.lines.length;
       }
@@ -677,17 +708,21 @@
         else if (day && day.phase === 'lock') note = 'All done: lock the front door';
         else if (day && day.ungreeted().length) note = 'Customer waiting: say hello';
         else if (day && day.queue().length && !P.tillCust) note = 'Till customer waiting';
+        else if (day && !list.length && day.deliveryLeft().length) note = 'No picks: put the delivery away';
         D.scNote.textContent = note; D.scNote.className = 'sc-note ' + cls; D.scNote.hidden = !note;
       }
       function renderScanner() {
         renderTote();
         const showMsg = msg && performance.now() < msgUntil;
-        const listing = state === 'list' || state === 'end' || state === 'idle';
+        const listing = state === 'list' || state === 'end' || state === 'idle' || state === 'home';
         D.scList.hidden = !listing; D.scSelect.hidden = !listing; D.scText.hidden = listing; D.scHint.hidden = listing;
         D.scPicked.style.visibility = state === 'scan' || state === 'qty' ? '' : 'hidden';
         D.scEnter.classList.toggle('pulse', (state === 'deliver' && atCounter) || (state === 'qty' && full));
         D.scHint.classList.toggle('used', hint.until > performance.now());
-        if (listing) { renderList(showMsg); D.scNote.hidden = D.scNote.hidden && !showMsg; return; }
+        if (listing) {
+          if (state === 'home') renderHome(showMsg); else { D.scLt.textContent = 'Today Picking'; D.scLh.textContent = 'ORDER'; renderList(showMsg); }
+          D.scNote.hidden = D.scNote.hidden && !showMsg; return;
+        }
         D.scNote.hidden = true;
         const L = [];
         if (state === 'scan' || state === 'qty') {
@@ -696,6 +731,13 @@
           L.push(['Today Picking'], [viewLine >= 0 ? 'Line ' + (i + 1) + ' of ' + order.lines.length : 'Pick To Tote/Trolley', viewLine >= 0 ? 'warn' : '']);
           L.push([ln.loc.code, 'big'], [ln.item.code, 'gap'], [short(ln.item.name)], ['Qty: ' + ln.qty, 'gap']);
           if (full && viewLine < 0) L.push(['Press Enter', 'gap ok']);
+        } else if (state === 'pa') {
+          const n = day ? day.deliveryLeft().length : 0;
+          L.push(['Putaway'], ['Goods In', 'warn'], [n ? 'Scan a carton' : 'All put away', 'big'], [n ? plural(n, 'carton', 'cartons') + ' left' : 'Nothing left', 'gap dim'], ['on the cages', 'dim'], ['and pallets', 'dim']);
+          if (day && day.list().length) L.push(['Picks waiting: ' + day.list().length, 'gap warn']);
+        } else if (state === 'pato' || state === 'paqty') {
+          L.push(['Putaway'], ['Take to', 'warn'], [carton.loc.code, 'big'], [carton.item.code, 'gap'], [short(carton.item.name)], ['Qty: ' + carton.qty, 'gap']);
+          L.push(state === 'paqty' ? ['Press Enter', 'gap ok'] : ['Scan the location', 'gap dim']);
         } else if (state === 'hold') {
           L.push(['Click & Collect'], ['Holding area', 'warn'], [order.hold.code, 'big'], [order.hold.parcel.surname.toUpperCase(), 'gap'], ['Scan the tote', 'gap dim'], ['by Goods In', 'dim']);
         } else if (state === 'put') {
@@ -713,6 +755,31 @@
         D.scCur.className = 'sc-cur' + (state === 'qty' && !full ? '' : ' line');
       }
       P.render = renderScanner;
+      function renderHome(showMsg) {
+        D.scLt.textContent = 'Main Menu'; D.scLh.textContent = 'MENU';
+        const rows = HOME.map((t, i) => {
+          const li = document.createElement('li'), b = document.createElement('b');
+          li.className = i === homeSel ? 'on' : ''; li.dataset.i = String(i);
+          b.textContent = i === homeSel ? '>' : '';
+          const extra = i === 0 && day && day.deliveryLeft().length ? ' (' + day.deliveryLeft().length + ')' : '';
+          li.append(b, document.createTextNode((i + 1) + ' ' + t + extra));
+          return li;
+        });
+        D.scRows.replaceChildren(...rows);
+        let note = '', cls = 'warn';
+        if (showMsg) { note = msg.text; cls = msg.cls || 'warn'; }
+        else if (day && day.phase === 'lock') note = 'All done: lock the front door';
+        else if (day && day.ungreeted().length) note = 'Customer waiting: say hello';
+        else if (day && day.queue().length && !P.tillCust) note = 'Till customer waiting';
+        else if (day && day.list().length) note = 'Picks waiting';
+        D.scNote.textContent = note; D.scNote.className = 'sc-note ' + cls; D.scNote.hidden = !note;
+      }
+      function openHome(i) {
+        SFX.key();
+        if (i === 0) { state = 'pa'; if (day && !day.deliveryLeft().length) say('No delivery left', 'dim'); }
+        else state = 'list';
+        renderScanner();
+      }
       function flash(bad) { D.scFlash.className = 'sc-flash' + (bad ? ' bad' : ''); void D.scFlash.offsetWidth; D.scFlash.className = 'sc-flash go' + (bad ? ' bad' : ''); }
       let toastT = 0;
       function toast(text, kind) { D.toast.textContent = text; D.toast.className = 'ws-toast show' + (kind ? ' ' + kind : ''); clearTimeout(toastT); toastT = setTimeout(() => { D.toast.className = 'ws-toast'; }, 1300); }
@@ -733,7 +800,7 @@
         renderScanner();
       }
       P.listed = function (o) {
-        if (state !== 'list') return;
+        if (state !== 'list' && state !== 'home' && state !== 'pa') return;
         SFX.listed();
         toast('New pick: ' + day.label(o));
         renderScanner();
@@ -747,9 +814,10 @@
         }
         renderScanner();
       };
-      P.queueChanged = function () { if (state === 'list') renderScanner(); callOver(); };
-      P.newDay = function () { if (state === 'end' || state === 'idle') { state = 'list'; order = null; } sel = 0; selId = null; renderScanner(); };
-      P.dayOver = function () { if (!order) state = 'end'; renderScanner(); };
+      P.queueChanged = function () { if (idleState()) renderScanner(); callOver(); };
+      P.newDay = function () { if (state === 'end' || state === 'idle') { state = 'home'; homeSel = 1; order = null; } sel = 0; selId = null; renderScanner(); };
+      P.deliveryChanged = function () { if (state === 'pa' || state === 'home') renderScanner(); };
+      P.dayOver = function () { if (!order && !carton) state = 'end'; renderScanner(); };
 
       /* ---------- aiming and scanning ---------- */
       const ray = new T.Raycaster(), ndc = new T.Vector2();
@@ -780,6 +848,63 @@
         }
         return best;
       }
+      // the roll cage or pallet the line from the view goes through (Putaway)
+      const goodsB = new T.Box3();
+      function goodsBox(g) { const o = g.obj; return { x: (o.x0 + o.x1) / 2, y: (o.y0 + o.y1) / 2, z0: 0, z1: o.z1, w: o.x1 - o.x0, d: o.y1 - o.y0 }; }
+      function goodsHit(nx, ny) {
+        ray.setFromCamera(ndc.set(nx, ny), cam);
+        let best = null;
+        for (const g of world.goodsin || []) {
+          const o = g.obj; goodsB.min.set(o.x0, 0, o.y0); goodsB.max.set(o.x1, o.z1, o.y1);
+          if (ray.ray.intersectBox(goodsB, _hit)) { const d = _hit.distanceTo(ray.ray.origin); if (!best || d < best.dist) best = { g, dist: d }; }
+        }
+        return best;
+      }
+      function scanGoods(nx, ny) {
+        const h = goodsHit(nx, ny);
+        if (!h) { say('Scan a carton on a cage or pallet', 'dim'); SFX.miss(); return; }
+        if (h.dist > REACH + 0.5) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
+        const d = day && day.paTake(h.g.i, P.id);
+        if (!d) { say('Nothing left on that one', 'warn'); SFX.miss(); return; }
+        carton = d; slips = 0; hint.until = 0;
+        SFX.scan(); flash(false);
+        state = 'pato';
+        banner('Putaway', d.item.code + ': take it to ' + d.loc.code, 2200);
+        renderScanner(); dirty = true;
+      }
+      function scanPaLoc(nx, ny) {
+        const h = hitAt(nx, ny);
+        if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
+        if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
+        if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
+        const tr = S.trayOf(h.loc);
+        if (World.sameSpot(h.loc, carton.loc)) {
+          if (state === 'paqty') { say('Press Enter', 'warn'); SFX.miss(); return; }
+          SFX.scan(); flash(false);
+          state = 'paqty'; openTimer = 0;
+          if (tr) slideTray(tr, true); else if (carton.loc.item) { pulled = carton.loc.item; pulled.pullTarget = carton.loc.face.kind === 'BB' ? 0.12 : 0.07; pulling.add(pulled); }
+          if (hint.loc === carton.loc) hint.until = 0;
+          toast('Put ' + carton.qty + ' in: press Enter', 'good');
+          renderScanner();
+        } else {
+          stats.wrong++; slips++;
+          SFX.bad(); flash(true);
+          if (tr) { slideTray(tr, true); openTimer = 1.1; }
+          say('Wrong location', 'err', 2000);
+          toast(h.loc.code + '  ✗', 'bad');
+        }
+      }
+      function paConfirm() {
+        if (state !== 'paqty' || !carton) return;
+        const d = carton;
+        day.paPut(d, P.id);
+        SFX.pick(); flash(false); shut();
+        stats.putaway++; life.putaway = (life.putaway || 0) + 1; saveLife();
+        carton = null; hint.until = 0;
+        state = day.over ? 'end' : 'pa';
+        banner('Put away', d.qty + ' x ' + d.item.code + ' in ' + d.loc.code, 1800);
+        renderScanner(); dirty = true;
+      }
       const tillBox = new T.Box3();
       function tillHit(nx, ny) { // the line from the view goes through one of your tills
         ray.setFromCamera(ndc.set(nx, ny), cam);
@@ -797,7 +922,11 @@
         const c = centreNdc(), h = hitAt(c[0], c[1]);
         aim = h && h.dist <= REACH ? h : null;
         D.cross.classList.toggle('reach', !!aim);
-        if (aim && (state === 'scan' || state === 'qty')) { S.setBox(S.aimBox, S.locBox(aim.loc), 0.012); S.aimBox.visible = true; }
+        if (aim && (state === 'scan' || state === 'qty' || state === 'pato' || state === 'paqty')) { S.setBox(S.aimBox, S.locBox(aim.loc), 0.012); S.aimBox.visible = true; }
+        else if (state === 'pa') {
+          const g = goodsHit(c[0], c[1]);
+          if (g && g.dist <= REACH + 0.5) { S.setBox(S.aimBox, goodsBox(g.g), 0.02); S.aimBox.visible = true; D.cross.classList.add('reach'); } else S.aimBox.visible = false;
+        }
         else if (state === 'hold' || state === 'put') {
           const hh = holdHit(c[0], c[1]);
           if (hh && hh.dist <= REACH + 0.4) { S.setBox(S.aimBox, spotBox(hh.sp), 0.012); S.aimBox.visible = true; D.cross.classList.add('reach'); } else S.aimBox.visible = false;
@@ -813,8 +942,11 @@
       function shut() { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; }
       function scanAt(nx, ny) {
         if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } return; }
-        if ((doorOn || greetC || bellOn) && (state === 'list' || state === 'end') && useAction()) return;
-        if (nearTill && (state === 'list' || state === 'end' || tillHit(nx, ny))) { openTill(); return; }
+        if ((doorOn || greetC || bellOn || pcOn) && idleState() && useAction()) return;
+        if (nearTill && (idleState() || tillHit(nx, ny))) { openTill(); return; }
+        if (state === 'pa') { scanGoods(nx, ny); return; }
+        if (state === 'pato' || state === 'paqty') { scanPaLoc(nx, ny); return; }
+        if (state === 'home') { say('Choose with the arrows, then Enter', 'dim'); SFX.miss(); return; }
         if (state === 'list' || state === 'end') { const n = day ? day.list().length : 0; say(n ? 'Press Enter to start a pick' : 'No picks yet', 'dim'); SFX.miss(); return; }
         if (state === 'hold') { scanHold(nx, ny); return; }
         if (state === 'put') { scanPut(nx, ny); return; }
@@ -890,12 +1022,17 @@
           renderScanner();
           return;
         }
-        if (state === 'scan' || state === 'qty' || state === 'hold' || state === 'put' || state === 'deliver') { say('Finish task', 'err', 1800); SFX.bad(); flash(true); }
+        if (state === 'list' || state === 'pa') { SFX.key(); homeSel = state === 'pa' ? 0 : 1; state = 'home'; renderScanner(); return; }
+        if (state === 'scan' || state === 'qty' || state === 'hold' || state === 'put' || state === 'deliver' || state === 'pato' || state === 'paqty') { say('Finish task', 'err', 1800); SFX.bad(); flash(true); }
       }
       function digit() { if (state === 'qty' || state === 'scan') { say('Scan the location for each one', 'warn'); SFX.miss(); } }
       function enter() {
         if (!D.scMenu.hidden) return;
-        if (state === 'list') startPick();
+        if (state === 'home') openHome(homeSel);
+        else if (state === 'pa') { say(day && day.deliveryLeft().length ? 'Scan a carton at goods in' : 'No delivery left', 'warn'); SFX.miss(); }
+        else if (state === 'pato') { say('Scan the location first', 'warn'); SFX.miss(); }
+        else if (state === 'paqty') paConfirm();
+        else if (state === 'list') startPick();
         else if (state === 'qty') { if (full) confirmQty(); else { say('Scan the location for each one', 'warn'); SFX.miss(); } }
         else if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } }
         else if (state === 'scan') { say('Scan the location first', 'warn'); SFX.miss(); }
@@ -903,6 +1040,7 @@
         else if (state === 'put') { say('Scan an empty OC label', 'warn'); SFX.miss(); }
       }
       function page(dir) {
+        if (state === 'home') { SFX.key(); homeSel = (homeSel + dir + HOME.length) % HOME.length; renderScanner(); return; }
         if (state === 'list') {
           const n = day ? day.list().length : 0;
           if (!n) return;
@@ -918,7 +1056,7 @@
         viewTimer = viewLine >= 0 ? 4 : 0;
         renderScanner();
       }
-      function tapRow(i) { if (state !== 'list') return; if (i === sel) { SFX.key(); enter(); return; } const list = day ? day.list() : []; if (!list[i]) return; SFX.key(); sel = i; selId = list[i].id; renderScanner(); }
+      function tapRow(i) { if (state === 'home') { if (i === homeSel) openHome(i); else { SFX.key(); homeSel = i; renderScanner(); } return; } if (state !== 'list') return; if (i === sel) { SFX.key(); enter(); return; } const list = day ? day.list() : []; if (!list[i]) return; SFX.key(); sel = i; selId = list[i].id; renderScanner(); }
 
       /* ---------- the holding area: fetching a bag, putting a c pick away ---------- */
       function scanHold(nx, ny) {
@@ -970,7 +1108,25 @@
       /* ---------- hint: the location glows ---------- */
       const hint = { until: 0, loc: null, counter: false, till: null, spot: null, t: 0 };
       function useHint() {
-        if (state === 'list' || state === 'end') {
+        if (state === 'pa') {
+          const left = day ? day.deliveryLeft() : [];
+          if (!left.length) { toast('No delivery left', ''); return; }
+          const g = world.goodsin.filter((x) => left.some((d) => d.src === x.i)).reduce((b, x) => (Math.hypot(x.x - me.x, x.obj.y0 - me.y) < Math.hypot(b.x - me.x, b.obj.y0 - me.y) ? x : b));
+          SFX.hint(); stats.hints++;
+          hint.until = performance.now() + 12000; hint.t = 0; hint.loc = null; hint.counter = false; hint.till = null; hint.spot = null; hint.goods = g;
+          toast('Goods in: look for the glow', '');
+          renderScanner(); dirty = true;
+          return;
+        }
+        if (state === 'pato' || state === 'paqty') {
+          SFX.hint(); stats.hints++; slips++;
+          hint.until = performance.now() + 12000; hint.t = 0; hint.till = null; hint.spot = null; hint.goods = null; hint.counter = false; hint.loc = carton.loc;
+          toast('Look for the glow: ' + carton.loc.face.area + ' aisle', '');
+          renderScanner(); dirty = true;
+          return;
+        }
+        hint.goods = null;
+        if (state === 'list' || state === 'end' || state === 'home') {
           if (day && day.queue().length && !P.tillCust) {
             const t = tills.filter((x) => x !== ALEX_TILL).reduce((b, x) => (Math.abs(tillX(x) - me.x) < Math.abs(tillX(b) - me.x) ? x : b));
             SFX.hint(); stats.hints++;
@@ -1002,7 +1158,9 @@
         if (!(hint.until > performance.now())) return;
         const pulse = 0.5 + 0.5 * Math.sin(hint.t * 6.5);
         S.glowMat.opacity = 0.28 + 0.5 * pulse;
-        if (hint.spot) {
+        if (hint.goods) {
+          S.setBox(S.glow, goodsBox(hint.goods), 0.05); S.glow.visible = true; S.signGlow.visible = false;
+        } else if (hint.spot) {
           S.setBox(S.glow, spotBox(hint.spot), 0.03); S.glow.visible = true; S.signGlow.visible = false;
         } else if (hint.till) {
           const t = hint.till;
@@ -1128,7 +1286,7 @@
       /* ---------- the till ---------- */
       let nearTill = null;
       P.tillCust = null;
-      let greetC = null, doorOn = null, bellOn = false, aimedBox = null;
+      let greetC = null, doorOn = null, bellOn = false, pcOn = false, aimedBox = null;
       // what's in the middle of your view that you could use: a till, a customer to greet, the door, the service bell
       // (detailedfoil, 20 Nov 2026: "easy to accidentally do stuff around tills": only what you're looking at, with an outline)
       function aimAt(x, y, z) {
@@ -1138,9 +1296,9 @@
       }
       function checkTill() { // the thing you're looking at: a till behind the counter (the one by the gap is Sam's), the door, a customer to greet, the bell
         if (till && till.isOpen()) return; // at a till: keep it
-        let best = null, g = null, dr = null, br = false, box = null, bestAng = 9;
+        let best = null, g = null, dr = null, br = false, pcx = false, box = null, bestAng = 9;
         const behind = me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75;
-        const take = (a, lim, fn, b) => { if (a.ang < lim && a.ang < bestAng) { bestAng = a.ang; best = null; g = null; dr = null; br = false; fn(); box = b; } };
+        const take = (a, lim, fn, b) => { if (a.ang < lim && a.ang < bestAng) { bestAng = a.ang; best = null; g = null; dr = null; br = false; pcx = false; fn(); box = b; } };
         if (active) {
           if (behind) {
             for (const t of tills) {
@@ -1165,15 +1323,19 @@
             a.ang *= 0.4; // looking at the bell wins over a till behind it
             if (a.d < 2.8) take(a, 0.14, () => { br = true; }, { x: world.bell.x, y: world.bell.y - 0.02, z0: 0.46, z1: 0.8, w: 0.5, d: 0.1 });
           }
+          { // the manager's PC in the office
+            const q = world.pc, a = aimAt(q.x, q.y, 1.05);
+            if (a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
+          }
         }
         aimedBox = box;
-        const key = (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '');
-        const old = (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '');
-        nearTill = best; greetC = g; doorOn = dr; bellOn = br;
+        const key = (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '');
+        const old = (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '');
+        nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx;
         if (key === old) return;
         dirty = true;
-        D.tillBtn.hidden = !(nearTill || greetC || doorOn || bellOn) || !active;
-        D.tillBtn.firstChild.nodeValue = doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : 'Ring bell';
+        D.tillBtn.hidden = !(nearTill || greetC || doorOn || bellOn || pcOn) || !active;
+        D.tillBtn.firstChild.nodeValue = doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : pcOn ? 'Use PC' : 'Ring bell';
         renderScanner();
       }
       // the button, or Scan: lock the door, say hello to the customer, or open the till
@@ -1190,8 +1352,63 @@
           return true;
         }
         if (bellOn) { ringBell(P); return true; }
+        if (pcOn) { openPc(); return true; }
         return false;
       }
+      /* ---------- the manager's PC: what Sam does first (detailedfoil, 20 Nov 2026) ---------- */
+      const pc = { open: false, sel: 0, el: null };
+      function pcBuild() {
+        const el = document.createElement('div');
+        el.className = 'ws-pc'; el.hidden = true;
+        el.innerHTML = '<div class="ws-pc-box"><div class="ws-pc-top"><b>Sam\'s jobs</b><span>Manager PC</span></div>' +
+          '<p>Sam does the ticked jobs, the top one first. Untick a job and Sam leaves it to you. Sam always says hello to customers waiting, and the service bell always works.</p>' +
+          '<ol class="ws-pc-list"></ol><div class="ws-pc-keys"></div><button type="button" class="ws-pc-close">Close</button></div>';
+        D.root.appendChild(el);
+        el.addEventListener('click', (e) => {
+          const b = e.target.closest('[data-pc]'); if (!b) return;
+          const i = +b.dataset.i, a = b.dataset.pc;
+          initAudio();
+          if (a === 'tick') { pc.sel = i; pcToggle(); } else if (a === 'up') { pc.sel = i; pcShift(-1); } else if (a === 'down') { pc.sel = i; pcShift(1); }
+        });
+        el.querySelector('.ws-pc-close').addEventListener('click', () => closePc());
+        pc.el = el;
+      }
+      function pcRender() {
+        const list = pc.el.querySelector('.ws-pc-list');
+        list.innerHTML = samPrio.map((j, i) => '<li class="' + (i === pc.sel ? 'on' : '') + (j.on ? '' : ' off') + '">' +
+          '<button type="button" class="tick" data-pc="tick" data-i="' + i + '" aria-label="Tick">' + (j.on ? '&#10003;' : '') + '</button>' +
+          '<span class="n">' + (i + 1) + '</span><span class="t">' + PRIO_NAMES[j.id][0] + '<small>' + PRIO_NAMES[j.id][1] + '</small></span>' +
+          '<button type="button" data-pc="up" data-i="' + i + '" aria-label="Move up"' + (i ? '' : ' disabled') + '>&#9650;</button>' +
+          '<button type="button" data-pc="down" data-i="' + i + '" aria-label="Move down"' + (i < samPrio.length - 1 ? '' : ' disabled') + '>&#9660;</button></li>').join('');
+        pc.el.querySelector('.ws-pc-keys').textContent = P.padIndex !== null && P.padIndex !== undefined ? 'D-pad choose, A tick, LB move up, RB move down, B close' : touch ? 'Tap a box to tick it, the arrows to move it' : 'Arrow keys choose, Space ticks, [ and ] move it, Esc closes';
+      }
+      function openPc() {
+        if (!pc.el) pcBuild();
+        if (idx === 0 && locked()) document.exitPointerLock();
+        keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; me.vx = me.vy = 0;
+        pc.open = true; pc.sel = 0; pc.el.hidden = false; SFX.key(); pcRender();
+        D.tillBtn.hidden = true;
+      }
+      function closePc() { if (!pc.open) return; pc.open = false; pc.el.hidden = true; SFX.key(); if (idx === 0) canvas.focus({ preventScroll: true }); pcOn = false; checkTill(); renderScanner(); }
+      function pcMove(d) { pc.sel = (pc.sel + d + samPrio.length) % samPrio.length; SFX.key(); pcRender(); }
+      function pcToggle() { const j = samPrio[pc.sel]; j.on = !j.on; SFX.key(); saveSamPrio(); pcRender(); }
+      function pcShift(d) {
+        const i = pc.sel, k = i + d;
+        if (k < 0 || k >= samPrio.length) { SFX.miss(); return; }
+        const t = samPrio[i]; samPrio[i] = samPrio[k]; samPrio[k] = t; pc.sel = k; SFX.key(); saveSamPrio(); pcRender();
+      }
+      function pcKey(e) {
+        if (e.repeat && !(e.code === 'ArrowUp' || e.code === 'ArrowDown')) return;
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') pcMove(-1);
+        else if (e.code === 'ArrowDown' || e.code === 'KeyS') pcMove(1);
+        else if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') pcToggle();
+        else if (e.code === 'BracketLeft' || e.code === 'PageUp') pcShift(-1);
+        else if (e.code === 'BracketRight' || e.code === 'PageDown') pcShift(1);
+        else if (e.code === 'Escape' || e.code === 'Tab' || e.code === 'KeyF' || e.code === 'Backspace') closePc();
+        else return;
+        e.preventDefault();
+      }
+      P.pcOpen = () => pc.open; P.pcKey = pcKey; P.openPc = openPc; P.closePc = closePc;
       P.useAction = useAction;
       function openTill() {
         if (!till || till.isOpen() || !nearTill) return;
@@ -1412,6 +1629,14 @@
           if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false);
           return;
         }
+        if (pc.open) {
+          still();
+          const d = steer(true);
+          if (d === 'up' || d === 'down') pcMove(d === 'up' ? -1 : 1);
+          if (hit(0)) pcToggle(); if (hit(4)) pcShift(-1); if (hit(5)) pcShift(1);
+          if (hit(1) || hit(9)) closePc();
+          return;
+        }
         if (till.isOpen()) {
           still();
           const d = steer(true);
@@ -1445,7 +1670,7 @@
       };
 
       /* ---------- each frame ---------- */
-      P.playing = () => active && $('helpCover').hidden && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen());
+      P.playing = () => active && $('helpCover').hidden && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen()) && !pc.open;
       P.update = function (dt, now) {
         let changed = false;
         if (P.playing()) {
@@ -1634,6 +1859,7 @@
       if (!p) return;
       const D = p.D;
       if (p.till.isOpen() && $('helpCover').hidden) { if (e.key === 'Escape') p.closeTill(); return; }
+      if (p.pcOpen()) { p.pcKey(e); return; }
       if (!p.playing()) { if (e.key === 'Escape' && !$('helpCover').hidden) showHelp(false); return; }
       if (!D.scMenu.hidden) {
         const b = D.scMenu.querySelector('button[data-k="' + e.key + '"]');
@@ -1641,7 +1867,7 @@
         if (e.key === 'Escape' || e.key === 'Tab') { p.menu(false); e.preventDefault(); return; }
       }
       // on the pick list the arrow keys choose an order
-      if (p.state() === 'list' && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) { if (!e.repeat) p.page(e.code === 'ArrowUp' ? -1 : 1); e.preventDefault(); return; }
+      if ((p.state() === 'list' || p.state() === 'home') && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) { if (!e.repeat) p.page(e.code === 'ArrowUp' ? -1 : 1); e.preventDefault(); return; }
       if (KEYMAP[e.code]) { p.input.keys.add(KEYMAP[e.code]); e.preventDefault(); return; }
       if (e.key === 'Shift') { p.input.run(true); return; }
       if (e.repeat) return;
@@ -1692,7 +1918,7 @@
           const s = day.summary(p.id), st = p.stats, el = document.createElement('div');
           if (split) { const h = document.createElement('h2'); h.textContent = p.idx ? 'Player 2 (bottom)' : 'Player 1 (top)'; el.appendChild(h); }
           const rows = document.createElement('div'); el.appendChild(rows);
-          statsHtml(rows, [[s.picks, 'of the ' + s.total + ' picks'], [st.tills - (st.tillsAtStart || 0), 'till orders served'], [s.fetched, 'bags from holding'], [st.lines - (st.linesAtStart || 0), 'lines picked'], [st.perfect - (st.perfectAtStart || 0), 'perfect picks'], [Math.max(1, Math.round(s.minutes)) + ' min', 'the day took']]);
+          statsHtml(rows, [[s.picks, 'of the ' + s.total + ' picks'], [st.tills - (st.tillsAtStart || 0), 'till orders served'], [s.fetched, 'bags from holding'], [s.delivery, 'cartons put away'], [st.lines - (st.linesAtStart || 0), 'lines picked'], [st.perfect - (st.perfectAtStart || 0), 'perfect picks'], [Math.max(1, Math.round(s.minutes)) + ' min', 'the day took']]);
           box.appendChild(el);
         }
         $('dayTitle').textContent = 'All picks clear';
@@ -1863,7 +2089,7 @@
     $('startCover').hidden = false;
     me1.render();
     requestAnimationFrame(frame);
-    window.__shift = { bell: () => bellCust, world, S, me, cam: me1.cam, renderer, players, crew, figs, tills, ALEX_TILL, WAIT, SPOTS,
+    window.__shift = { prio: () => samPrio, bell: () => bellCust, world, S, me, cam: me1.cam, renderer, players, crew, figs, tills, ALEX_TILL, WAIT, SPOTS,
       day: () => day, newDay, scanAt: me1.scanAt, state: me1.state, order: me1.order, full: me1.full, sel: me1.sel, applyCam: me1.applyCam, hitAt: me1.hitAt, holdHit: me1.holdHit,
       scanHold: me1.scanHold, scanPut: me1.scanPut, spotBox, countOne: me1.countOne, confirmQty: me1.confirmQty, enter: me1.enter, back: me1.back, page: me1.page, tapRow: me1.tapRow,
       handOver: me1.handOver, useHint: me1.useHint, toggleSquat: me1.toggleSquat, layout, till: me1.till, openTill: me1.openTill, closeTill: me1.closeTill, nearTill: me1.nearTill,

@@ -884,20 +884,14 @@
           texturedBox(M.mesh, o.x0, o.y0, 0.15, o.x1, o.y1, z1, 0.2, 'shop');
           box(M.frame, o.x0, o.y0, 0.08, o.x1, o.y1, 0.15, 'shop');
           for (const [x, y] of [[o.x0 + 0.06, o.y0 + 0.06], [o.x1 - 0.06, o.y0 + 0.06], [o.x0 + 0.06, o.y1 - 0.06], [o.x1 - 0.06, o.y1 - 0.06]]) box(M.black, x - 0.035, y - 0.035, 0, x + 0.035, y + 0.035, 0.08, 'shop');
-          for (let k = 0; k < 3; k++) { const it = world.items[root.ShiftWorld.hash('cage' + o.x0 + k) % world.items.length]; _c.setHex(it.colour); box(displayMat(_c.getHex()), o.x0 + 0.08, o.y0 + 0.08 + k * 0.2, 0.15, o.x1 - 0.08, o.y0 + 0.24 + k * 0.2, 0.15 + 0.3 + 0.4 * h01(it.code, 'h'), 'shop'); }
+          // its cartons are the day's delivery (deliveryBoxes below)
+          for (let k = 1; k < 3; k++) box(M.frame, o.x0 + 0.05, o.y0 + 0.05, 0.14 + k * 0.52 - 0.02, o.x1 - 0.05, o.y1 - 0.05, 0.14 + k * 0.52, 'shop');
           break;
         }
-        case 'pallet': { // a delivery: cartons stacked on a pallet, shrink-wrapped
+        case 'pallet': { // a delivery pallet: the cartons on it are drawn by deliveryBoxes
           box(M.pallet, o.x0, o.y0, 0.1, o.x1, o.y1, 0.14, 'shop');
           for (const [a, b] of [[0, 0.12], [0.44, 0.56], [0.88, 1]]) box(M.pallet, o.x0, o.y0 + (o.y1 - o.y0) * a, 0, o.x1, o.y0 + (o.y1 - o.y0) * b, 0.1, 'shop');
-          const cw = (o.x1 - o.x0) / 2, cd = (o.y1 - o.y0) / 2;
-          for (let z = 0.14, layer = 0; z + 0.2 <= z1 + 0.01; z += 0.27, layer++) {
-            for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
-              const v = h01('pal' + o.x0 + layer + i + j, 'c');
-              box(v < 0.5 ? M.carton : M.carton2, o.x0 + i * cw + 0.01, o.y0 + j * cd + 0.01, z, o.x0 + (i + 1) * cw - 0.01, o.y0 + (j + 1) * cd - 0.01, Math.min(z1, z + 0.26), 'shop');
-            }
-          }
-          box(M.wrap, o.x0 - 0.01, o.y0 - 0.01, 0.15, o.x1 + 0.01, o.y1 + 0.01, z1 + 0.01, 'shop');
+          // its cartons are the day's delivery (deliveryBoxes below)
           break;
         }
         case 'stool': { // an elephant foot kick stool
@@ -975,6 +969,20 @@
       const btn = new T.Mesh(new T.CylinderGeometry(0.1, 0.12, 0.07, 28), M.red); btn.rotation.x = Math.PI / 2;
       btn.position.copy(V(bl.x, bl.y - 0.06, bl.z + 0.08)); groups.shop.add(btn);
       flat(wallSign('SERVICE BELL', '#c8191f', '#ffffff', 512, 96), bl.x, bl.y - 0.028, 0.5, 0.46, 0.086, Math.PI, 'shop');
+    }
+    // the manager's PC on the office desk (detailedfoil, 20 Nov 2026): it sets what Sam does first
+    {
+      const pc = world.pc;
+      box(M.till, pc.x - 0.12, pc.y - 0.08, 0.75, pc.x + 0.12, pc.y + 0.08, 0.77, 'shop');
+      box(M.till, pc.x - 0.02, pc.y + 0.01, 0.77, pc.x + 0.02, pc.y + 0.05, 0.92, 'shop');
+      box(M.till, pc.x - 0.27, pc.y - 0.02, 0.88, pc.x + 0.27, pc.y + 0.02, 1.22, 'shop');
+      flat(signTex(512, 300, (g, w, h) => {
+        g.fillStyle = '#0f2f63'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffffff'; g.font = '800 40px ' + FONT; g.textAlign = 'left'; g.textBaseline = 'top';
+        g.fillText("SAM'S JOBS", 24, 22); g.font = '600 30px ' + FONT;
+        g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText('Manager PC', 24, 80);
+        for (let k = 0; k < 4; k++) { g.fillStyle = '#ffd400'; g.fillRect(24, 140 + k * 38, 22, 22); g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(60, 146 + k * 38, 220 + ((k * 73) % 140), 10); }
+      }), pc.x, pc.y - 0.025, 1.05, 0.5, 0.3, Math.PI, 'shop');
+      box(M.till, pc.x - 0.3, pc.y - 0.3, 0.75, pc.x + 0.05, pc.y - 0.17, 0.765, 'shop'); // keyboard
     }
     // door plates on the walls
     const plate = (text, x, y, z, turn) => flat(wallSign(text, '#ffffff', '#1d232c', 512, 128), x, y, z, 0.42, 0.105, turn, 'shop');
@@ -1153,6 +1161,32 @@
       const add = (x0, y0, z0, x1, y1, z1) => { const g = new T.Mesh(unitBox, m); g.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); g.scale.set(x1 - x0, y1 - y0, z1 - z0); tote.add(g); };
       add(-0.3, 0, -0.2, 0.3, t, 0.2); add(-0.3, 0, -0.2, -0.3 + t, 0.22, 0.2); add(0.3 - t, 0, -0.2, 0.3, 0.22, 0.2); add(-0.3, 0, -0.2, 0.3, 0.22, -0.2 + t); add(-0.3, 0, 0.2 - t, 0.3, 0.22, 0.2);
     })();
+    /* ---------- the delivery: cartons on the roll cages and pallets at goods in, one per product to put away ---------- */
+    const dSlots = (world.goodsin || []).reduce((n, g) => n + g.slots.length, 0);
+    const dMesh = new T.InstancedMesh(unitBox, lam(0xffffff), Math.max(1, dSlots));
+    dMesh.instanceColor = new T.InstancedBufferAttribute(new Float32Array(Math.max(1, dSlots) * 3), 3);
+    dMesh.frustumCulled = false; groups.shop.add(dMesh);
+    const dIndex = new Map(); let dOff = []; { let n = 0; (world.goodsin || []).forEach((g) => { dOff.push(n); n += g.slots.length; }); }
+    const _dm = new T.Matrix4(), _dc = new T.Color();
+    function slotBox(d) { const g = world.goodsin[d.src], sl = g.slots[d.slot]; return { x: (sl.x0 + sl.x1) / 2, y: (sl.y0 + sl.y1) / 2, z0: sl.z0, z1: sl.z1, w: sl.x1 - sl.x0, d: sl.y1 - sl.y0 }; }
+    function deliverySet(list) {
+      for (let i = 0; i < dSlots; i++) dMesh.setMatrixAt(i, HIDE);
+      dIndex.clear();
+      list.forEach((d) => {
+        const i = dOff[d.src] + d.slot, b = slotBox(d);
+        dIndex.set(d, i);
+        _dm.makeScale(b.w, b.z1 - b.z0, b.d).setPosition(b.x, (b.z0 + b.z1) / 2, b.y);
+        dMesh.setMatrixAt(i, d.by || d.done ? HIDE : _dm);
+        _dc.setHex(h01(d.item.code, 'c') < 0.5 ? 0xc49a64 : 0xb88d58); dMesh.setColorAt(i, _dc);
+      });
+      dMesh.instanceMatrix.needsUpdate = true; dMesh.instanceColor.needsUpdate = true;
+    }
+    function deliveryShow(d) {
+      const i = dIndex.get(d); if (i === undefined) return;
+      const b = slotBox(d);
+      _dm.makeScale(b.w, b.z1 - b.z0, b.d).setPosition(b.x, (b.z0 + b.z1) / 2, b.y);
+      dMesh.setMatrixAt(i, d.by || d.done ? HIDE : _dm); dMesh.instanceMatrix.needsUpdate = true;
+    }
     // every hand over gets its own tote, with boxes in the colours of what was picked
     function makeTote(colours) {
       const t = tote.clone();
@@ -1370,7 +1404,7 @@
     return {
       scene, groups, photos: { update: updatePhotos, flush: flushPhotos, fill: fillPhotos, setExtra: (list) => { extra = list; }, slots: SLOTS, big },
       labelMesh, labelMat, trays, trayOf, placeTray, placeItem, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, toteBox, makeWorker, poseWorker, lamps, M,
-      makeTrolley, poseTrolley, trolleyTop, trolleyTake, tillScreen,
+      makeTrolley, poseTrolley, trolleyTop, trolleyTake, tillScreen, delivery: { set: deliverySet, show: deliveryShow, box: slotBox },
       hold: hold ? { spots: hold.spots, set: setParcel, carry: carryParcel } : null,
       clockTick, counts: { tags: tags.length, trays: trays.size, items: world.items.length }
     };

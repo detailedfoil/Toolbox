@@ -234,6 +234,17 @@
   function shop(o) { var c = {}; for (var k in o) c[k] = o[k]; if ('x0' in c) { c.x0 += SX; c.x1 += SX; c.y0 += SY; c.y1 += SY; } if (c.edges) c.edges = c.edges.map(function (e) { return e + (c.along === 'y' ? SY : SX); }); return c; }
   function staff(o) { var c = {}; for (var k in o) c[k] = o[k]; if ('y0' in c) { c.y0 += SY; c.y1 += SY; } return c; }
 
+  // carton slots: a roll cage takes 2 deep x 3 high, a pallet 2 x 2 a layer, 3 layers
+  function cageSlots(c) {
+    var out = [], w = c.x1 - c.x0 - 0.16, d = (c.y1 - c.y0 - 0.16) / 2;
+    for (var k = 0; k < 3; k++) for (var j = 0; j < 2; j++) out.push({ x0: c.x0 + 0.08, x1: c.x0 + 0.08 + w, y0: c.y0 + 0.08 + j * d + 0.01, y1: c.y0 + 0.08 + (j + 1) * d - 0.01, z0: 0.16 + k * 0.52, z1: 0.16 + k * 0.52 + 0.42 });
+    return out;
+  }
+  function palletSlots(p) {
+    var out = [], cw = (p.x1 - p.x0) / 2, cd = (p.y1 - p.y0) / 2;
+    for (var k = 0; k < 3; k++) for (var i = 0; i < 2; i++) for (var j = 0; j < 2; j++) out.push({ x0: p.x0 + i * cw + 0.01, x1: p.x0 + (i + 1) * cw - 0.01, y0: p.y0 + j * cd + 0.01, y1: p.y0 + (j + 1) * cd - 0.01, z0: 0.14 + k * 0.28, z1: 0.14 + k * 0.28 + 0.26 });
+    return out;
+  }
   function building(rk) {
     var D = 21.2 + SY;
     var b = { w: W, d: D, h: H, t: WT };
@@ -299,6 +310,12 @@
     for (var i = 0; i < 4; i++) cages.push({ kind: 'rollcage', x0: 5.0 + i * 0.85, y0: D - 2.6, x1: 5.72 + i * 0.85, y1: D - 1.8, z1: 1.75 });
     pallets.push({ kind: 'pallet', x0: 6.2, y0: D - 4.3, x1: 7.4, y1: D - 3.3, z1: 1.3 }, { kind: 'pallet', x0: 7.8, y0: D - 4.3, x1: 9.0, y1: D - 3.3, z1: 0.9 });
     objects = objects.concat(cages, pallets);
+    // the delivery waits on these to be put away (detailedfoil, 20 Nov 2026): each roll cage and pallet holds cartons in slots
+    var goodsin = cages.map(function (c) { return { kind: 'cage', obj: c, slots: cageSlots(c) }; }).concat(pallets.map(function (p) { return { kind: 'pallet', obj: p, slots: palletSlots(p) }; }));
+    goodsin.forEach(function (g, i) { var o = g.obj; g.i = i; g.x = (o.x0 + o.x1) / 2; g.stand = { x: g.x, y: o.y0 - 0.5, yaw: 0, alts: [{ x: g.x - 0.35, y: o.y0 - 0.5 }, { x: g.x + 0.35, y: o.y0 - 0.5 }, { x: g.x, y: o.y0 - 0.75 }] }; });
+    // the manager's desk in the office: its PC sets what Sam does first (detailedfoil, 20 Nov 2026)
+    var desk = objects.find(function (o) { return o.kind === 'desk'; });
+    var pc = { x: (desk.x0 + desk.x1) / 2 + 0.25, y: desk.y1 - 0.18, z: 1.0, desk: desk };
     // the everyday bits: kick stools at the end of a few aisles, a pallet truck, a stack of totes by the counter,
     // fire extinguishers on the walls, a mop bucket, a notice board and a clock
     rk.aisles.filter(function (a) { return a.no === 2 || a.no === 5 || a.no === 8 || a.no === 10; }).forEach(function (a) {
@@ -326,7 +343,7 @@
     objects.push(hold.obj);
     var columns = [[5.0, 0, 5.4, 0.45], [(LX1 + RX0) / 2 - 0.2, 0, (LX1 + RX0) / 2 + 0.2, 0.45], [16.9, 0, 17.3, 0.45]];
     var counter = objects[1];
-    return { b: b, openings: openings, walls: walls, rooms: rooms, objects: objects, zones: zones, columns: columns, counter: counter, D: D, holding: hold };
+    return { b: b, openings: openings, walls: walls, rooms: rooms, objects: objects, zones: zones, columns: columns, counter: counter, D: D, holding: hold, goodsin: goodsin, pc: pc };
   }
   // x0 = the back of the shelving (against the wall), y0 = its end nearest the back of the building. It faces +x:
   // standing in front of it you look towards the left wall, so your left is towards the shop front (bigger y).
@@ -431,7 +448,7 @@
       rows: rk.rows, faces: rk.faces, aisles: rk.aisles, faceOf: rk.byCode,
       locs: locs, items: placed, unplaced: items.length - placed.length,
       building: bl.b, openings: bl.openings, walls: bl.walls, rooms: bl.rooms, objects: bl.objects, zones: bl.zones, columns: bl.columns,
-      counter: counter, holding: bl.holding,
+      counter: counter, holding: bl.holding, goodsin: bl.goodsin, pc: bl.pc,
       // the service bell: a big red button on the staff side of the counter (your side, not the customers') (detailedfoil, 19 Nov 2026)
       bell: { x: counter.x0 + 0.9, y: counter.y0, z: 0.62 },
       // stand behind the counter (the warehouse side) to hand an order over; the customer waits on the shop side

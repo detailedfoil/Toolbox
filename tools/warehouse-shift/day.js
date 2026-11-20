@@ -31,6 +31,8 @@
   var TOTAL = 20;          // picks in a day, about (15 to 25 when not told)
   var MAX_LIST = 5;        // on the pick list at once
   var MAX_IN = 3;          // customers in at once
+  var MID_C = [2, 4];      // c picks that come in during the day, on top of the ones before opening
+  var TILLS = [0.55, 0.65];  // of the customers after that, the share who order at the till or the kiosk
   // which kinds of pick come after the opening c picks (the scanner's Function menu can narrow it, for practice)
   var MODES = { mixed: ['ck', 'collect', 'till', 'kiosk'], pick: ['ck'], hold: ['collect'], till: ['till'], kiosk: ['kiosk'] };
   var CC = ['Click and collect for {n}, please.', "Hiya, I've got a click and collect. Name's {n}.", 'Got an order to collect, under {n}.',
@@ -63,6 +65,7 @@
     this.plan = [];
     for (var i = 0; i < this.total; i++) this.plan.push(i < this.first ? 'c' : null);
     this.fillPlan(true);
+    this.makeDelivery(o.delivery);
     this.wait = 1.0;                       // seconds to the next pick
     if (this.first === 0) { this.phase = 'open'; this.wait = 3 + 3 * this.r(); }
   }
@@ -76,9 +79,15 @@
   Day.prototype.fillPlan = function (initial) {
     var self = this, from = Math.max(this.first, this.released), n = this.plan.length - from, rest, i;
     if (initial && this.mode === 'mixed') {
-      var nt = Math.min(n - 2, Math.round((0.35 + 0.1 * this.r()) * this.total)), tl = Math.max(1, Math.min(nt - 1, Math.round(nt / 2 + (this.r() - 0.5) * 2)));
-      var R = n - nt, C = Math.max(Math.min(2, R - 1), Math.min(R - 1, Math.round(R / 2 + (this.r() - 0.5) * 2)));
+      // balanced so one person on their own spends about as long on each kind of job (detailedfoil, 20 Nov 2026: the
+      // till queue, customer picks, holding area picks and the delivery): 2 to 4 more c picks come in during the day,
+      // about half the rest are till or kiosk orders
+      var nc = Math.min(n - 4, MID_C[0] + Math.floor(this.r() * (MID_C[1] - MID_C[0] + 1)));
+      n -= nc;
+      var nt = Math.min(n - 2, Math.round((TILLS[0] + (TILLS[1] - TILLS[0]) * this.r()) * n)), tl = Math.max(1, Math.min(nt - 1, Math.round(nt / 2 + (this.r() - 0.5) * 2)));
+      var R = n - nt, C = Math.max(Math.min(1, R - 1), Math.min(R - 1, Math.round(R / 2 + (this.r() - 0.5) * 2)));
       rest = [];
+      for (i = 0; i < nc; i++) rest.push('c');
       for (i = 0; i < nt; i++) rest.push(i < tl ? 'till' : 'kiosk');
       for (i = 0; i < R; i++) rest.push(i < C ? 'collect' : 'ck');
       shuffle(rest, this.r);
@@ -97,6 +106,45 @@
     void self;
   };
   Day.prototype.setMode = function (m) { if (!MODES[m]) return; this.mode = m; this.fillPlan(false); };
+
+  /* ---------- the delivery: cartons on the roll cages and pallets at goods in, each to go to its own location ---------- */
+  // detailedfoil, 20 Nov 2026: when there are no orders, put the delivery away (Putaway on the scanner). The day
+  // can't be locked up until it's all away.
+  var DELIVERY = [11, 16];  // cartons a day
+  Day.prototype.makeDelivery = function (n) {
+    var self = this, gi = this.world.goodsin || [];
+    this.delivery = [];
+    if (!gi.length || n === 0) return;
+    if (!n) n = DELIVERY[0] + Math.floor(this.r() * (DELIVERY[1] - DELIVERY[0] + 1));
+    var slots = [];
+    gi.forEach(function (g) { g.slots.forEach(function (sl, k) { slots.push({ src: g.i, slot: k }); }); });
+    // fill from the bottom up, spread over the cages and pallets
+    slots.sort(function (a, b) { return (gi[a.src].slots[a.slot].z0 - gi[b.src].slots[b.slot].z0) || (self.r() - 0.5); });
+    var lines = this.World.order(this.world, this.r, Math.min(n, slots.length));
+    lines.forEach(function (l, i) {
+      var q = 2 + Math.floor(self.r() * 5) * (l.item.size === 'T' ? 2 : 1);
+      self.delivery.push({ id: i + 1, item: l.item, loc: l.item.loc, qty: q, src: slots[i].src, slot: slots[i].slot, by: null, done: false });
+    });
+  };
+  // cartons nobody has taken yet (from one cage or pallet, or anywhere)
+  Day.prototype.deliveryLeft = function (src) { return this.delivery.filter(function (d) { return !d.by && !d.done && (src === undefined || src === null || d.src === src); }); };
+  // take the top carton off a cage or pallet: it's yours to put away
+  Day.prototype.paTake = function (src, who) {
+    var left = this.deliveryLeft(src);
+    if (!left.length) return null;
+    var gi = this.world.goodsin, top = left.reduce(function (a, b) { return gi[b.src].slots[b.slot].z0 > gi[a.src].slots[a.slot].z0 ? b : a; });
+    top.by = who; top.takenAt = this.t;
+    this.emit('delivery', top);
+    return top;
+  };
+  Day.prototype.paPut = function (d, who) {
+    if (!d || d.done || d.by !== who) return false;
+    d.done = true; d.doneBy = who;
+    this.log.push({ t: this.t, kind: 'putaway', by: who, took: this.t - d.takenAt });
+    this.emit('delivery', d);
+    this.check();
+    return true;
+  };
 
   /* ---------- numbers and names ---------- */
   // A and four numbers, never the same twice in a day
@@ -359,6 +407,8 @@
       var k = this.plan[this.released];
       if (k === 'c' && this.room() <= 0) { // the holding area's full: something else first
         for (var j = this.released + 1; j < this.plan.length; j++) if (this.plan[j] !== 'c') { this.plan[this.released] = this.plan[j]; this.plan[j] = 'c'; k = this.plan[this.released]; break; }
+        // only c picks left and nowhere to put them: a customer comes for a bag instead, which makes room
+        if (k === 'c' && this.collectable() && !this.customers.some(function (c) { return c.kind === 'collect' && c.state !== 'gone' && c.state !== 'leaving'; })) k = this.plan[this.released] = 'collect';
       }
       if (k === 'collect' && !this.collectable()) { // no bag to collect yet: a one product customer instead
         for (var m = this.released + 1; m < this.plan.length; m++) if (this.plan[m] !== 'collect') { this.plan[this.released] = this.plan[m]; this.plan[m] = 'collect'; k = this.plan[this.released]; break; }
@@ -389,6 +439,7 @@
     if (this.phase !== 'open') return;
     if (this.orders.some(function (o) { return o.status !== 'done'; })) return;
     if (this.present().length) return;
+    if (this.delivery.some(function (d) { return !d.done; })) return; // the delivery has to be away first
     this.phase = 'lock'; this.emit('closing');
   };
   // someone leaves the shift part way (Sam taken off): what they had goes back on the list, their customer back in the queue
@@ -401,16 +452,18 @@
     });
     this.customers.forEach(function (c) { if (c.by === who && c.state === 'serving') self.unserve(c); });
     for (var k in this.busy) if (this.busy[k] === 'put:' + who) this.busy[k] = null;
+    this.delivery.forEach(function (d) { if (d.by === who && !d.done) { d.by = null; self.emit('delivery', d); } });
   };
   // how the day went, from one person's point of view (who: whatever they passed to take())
   Day.prototype.summary = function (who) {
     var mine = this.orders.filter(function (o) { return o.doneBy === who; });
     return { picks: mine.filter(function (o) { return o.counts; }).length, fetched: mine.filter(function (o) { return o.kind === 'hold'; }).length,
-      putAway: mine.filter(function (o) { return o.kind === 'c' && o.code; }).length, total: this.total, minutes: this.t / 60 };
+      putAway: mine.filter(function (o) { return o.kind === 'c' && o.code; }).length, total: this.total, minutes: this.t / 60,
+      delivery: this.delivery.filter(function (d) { return d.doneBy === who; }).length };
   };
 
   function create(o) { var d = new Day(o); return d; }
-  var api = { create: create, Day: Day, TOTAL: TOTAL, MAX_LIST: MAX_LIST, MAX_IN: MAX_IN, MODES: MODES };
+  var api = { create: create, Day: Day, DELIVERY: DELIVERY, TOTAL: TOTAL, MAX_LIST: MAX_LIST, MAX_IN: MAX_IN, MODES: MODES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftDay = api;
 })(typeof window !== 'undefined' ? window : this);
