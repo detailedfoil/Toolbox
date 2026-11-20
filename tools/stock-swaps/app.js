@@ -1,14 +1,16 @@
 /* Stock Swaps page: the drive time slider, Swaps only, the store picker, the map and the ranked list.
    Every plan is worked out ahead by .github/stock-swaps/make-plans.py into data/plans.json; plan.js reads them, this
-   file only shows them. Remembered on this phone (localStorage ss-v1): the minutes, Swaps only and the store. The
-   address carries them too (#store=Dunstable&mins=60&swaps=1), so a link opens the same view. */
+   file only shows them. Two plans: "Best for each store" (the default: a store's own best runs, as if no other store
+   swaps first, P.planFor) and "If every store swaps" (the whole area at once, P.plan). Remembered on this phone
+   (localStorage ss-v1): the plan, the minutes, Swaps only and the store. The address carries them too
+   (#store=Dunstable&mins=60&swaps=1&plan=area), so a link opens the same view. */
 (function () {
   'use strict';
   var P = window.SwapPlan;
   var $ = function (id) { return document.getElementById(id); };
   var KEY = 'ss-v1', SHOW_SKIP = 6, DOT = 6;
   var doc, full, view, map, lineR;
-  var state = { mins: 60, swaps: false, store: -1 };
+  var state = { mins: 60, swaps: false, store: -1, area: false };
   var drawn = {};           // run key -> {line, hit, run}
   var icons = [];           // store index -> Leaflet marker
   var picked = null;        // key of the run picked on the map or in the list
@@ -38,24 +40,26 @@
     var h = new URLSearchParams(location.hash.replace(/^#/, ''));
     var mins = +(h.get('mins') || saved.mins || 60), store = h.has('store') ? h.get('store') : saved.store;
     var swaps = h.has('swaps') ? h.get('swaps') === '1' : !!saved.swaps;
+    state.area = h.has('plan') ? h.get('plan') === 'area' : !!saved.area;
     var lo = doc.steps[0], hi = 120;
     state.mins = doc.steps[P.stepIndex(doc, isFinite(mins) ? Math.min(hi, Math.max(lo, mins)) : 60)];
     state.swaps = swaps;
     state.store = store && doc.byName[store] != null ? doc.byName[store] : -1;
   }
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify({ mins: state.mins, swaps: state.swaps, store: state.store >= 0 ? name(state.store) : '' })); } catch (e) {}
+    try { localStorage.setItem(KEY, JSON.stringify({ mins: state.mins, swaps: state.swaps, area: state.area, store: state.store >= 0 ? name(state.store) : '' })); } catch (e) {}
     var h = new URLSearchParams();
     if (state.store >= 0) h.set('store', name(state.store));
     h.set('mins', state.mins);
     if (state.swaps) h.set('swaps', '1');
+    if (state.area) h.set('plan', 'area');
     try { history.replaceState(null, '', '#' + h.toString()); } catch (e) {}
   }
 
   /* ---------- controls ---------- */
   function setupControls() {
     var sel = $('store');
-    sel.innerHTML = '<option value="-1">All stores</option>' + doc.stores.map(function (s, i) { return [s.name, i]; })
+    sel.innerHTML = '<option value="-1"></option>' + doc.stores.map(function (s, i) { return [s.name, i]; })
       .sort(function (x, y) { return x[0].localeCompare(y[0]); })
       .map(function (o) { return '<option value="' + o[1] + '">' + esc(o[0]) + '</option>'; }).join('');
     sel.value = String(state.store);
@@ -76,6 +80,10 @@
     });
     $('swaps').checked = state.swaps;
     $('swaps').addEventListener('change', function () { state.swaps = $('swaps').checked; render(false); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
+      b.addEventListener('click', function () { setArea(b.getAttribute('data-mode') === 'area'); });
+    });
+    showMode();
     $('fit').addEventListener('click', function () { if (!map) return; map.closePopup(); pick(null); fitAll(true); });
     showMins();
 
@@ -84,6 +92,7 @@
       if (!b) return;
       if (b.getAttribute('data-act') === 'map') showOnMap(b.getAttribute('data-key'));
       else if (b.getAttribute('data-act') === 'more') { allSkip = true; renderList(); }
+      else if (b.getAttribute('data-act') === 'pick') setStore(+b.getAttribute('data-s'));
     });
     $('mine').addEventListener('click', function (e) {
       if (e.target.closest('[data-act="all"]')) setStore(-1);
@@ -93,6 +102,21 @@
     var r = $('mins'), pct = (r.value - r.min) / (r.max - r.min) * 100;
     r.style.setProperty('--fill', pct + '%');
     $('minsOut').textContent = r.value;
+  }
+  function setArea(on) {
+    if (state.area === on) return;
+    state.area = on;
+    picked = null;
+    allSkip = false;
+    if (map) map.closePopup();
+    showMode();
+    render(true);
+  }
+  function showMode() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
+      b.setAttribute('aria-checked', String((b.getAttribute('data-mode') === 'area') === state.area));
+    });
+    $('store').options[0].textContent = state.area ? 'All stores' : 'Pick your store';
   }
   function setStore(s) {
     state.store = s;
@@ -109,8 +133,14 @@
   }
 
   /* ---------- the plan for the current choices ---------- */
+  // the runs store s would see: its own best plan, or its part of the whole area's
+  function runsOf(s) {
+    return state.area ? P.forStore(P.plan(doc, state.mins, state.swaps), s).runs : P.planFor(doc, state.mins, state.swaps, s).runs;
+  }
   function render(refit) {
-    full = P.plan(doc, state.mins, state.swaps);
+    if (state.area) full = P.plan(doc, state.mins, state.swaps);
+    else if (state.store >= 0) full = P.planFor(doc, state.mins, state.swaps, state.store);
+    else full = { mins: doc.steps[P.stepIndex(doc, state.mins)], swapsOnly: state.swaps, runs: [], skip: [], choose: true };
     view = state.store >= 0 ? P.forStore(full, state.store) : full;
     if (picked && !view.runs.some(function (r) { return r.key === picked; })) picked = null;
     renderSummary();
@@ -122,7 +152,8 @@
 
   function renderSummary() {
     var t, s = state.store, html;
-    if (s >= 0) {
+    if (full.choose) html = 'Pick your store to see its best swaps';
+    else if (s >= 0) {
       t = P.totals(view.runs, s);
       html = t.runs ? esc(name(s)) + ': ' + count(t.runs, 'run') + ' <span>&middot; you send ' + fmt(t.sends) + ', you get ' + fmt(t.gets) + '</span>'
         : esc(name(s)) + ': <span>no runs worth the drive within ' + view.mins + ' min</span>';
@@ -151,7 +182,7 @@
     $('mine').innerHTML = '<section class="ss-mine"><h2>' + esc(name(s)) + '</h2>' +
       '<div class="row"><span>Can spare</span>' + (spare.length ? '<div class="ss-chips">' + spare.map(function (x) { return chip(x[0], x[1], false); }).join('') + '</div>' : '<div class="none">Nothing spare</div>') + '</div>' +
       '<div class="row"><span>Short for the next ' + doc.rules.horizon + ' days</span>' + (short.length ? '<div class="ss-chips">' + short.map(function (x) { return chip(x[0], x[1], x[2]); }).join('') + '</div>' : '<div class="none">Nothing short</div>') + '</div>' +
-      '<div class="ss-foot"><button class="ss-mapbtn" type="button" data-act="all">Show all stores</button></div></section>';
+      '<div class="ss-foot"><button class="ss-mapbtn" type="button" data-act="all">' + (state.area ? 'Show all stores' : 'Pick another store') + '</button></div></section>';
   }
 
   function title(r) {
@@ -192,6 +223,13 @@
   }
   function renderList() {
     var html = '', s = state.store;
+    if (full.choose) {
+      $('list').innerHTML = '<div class="ss-pickgrid">' + doc.stores.map(function (st, i) { return [st.name, i]; })
+        .sort(function (x, y) { return x[0].localeCompare(y[0]); })
+        .map(function (o) { return '<button type="button" data-act="pick" data-s="' + o[1] + '">' + esc(o[0]) + '</button>'; }).join('') + '</div>';
+      return;
+    }
+    if (!state.area) html += '<p class="ss-alone">These are ' + esc(name(s)) + '\'s best runs if no other store swaps first. Other stores see their own best, so two lists can count on the same stock: ring before you send the van.</p>';
     if (!view.runs.length) {
       html += '<div class="ss-empty">' + (s >= 0 ? 'No runs for ' + esc(name(s)) : 'No runs') + ' are worth the drive within ' + view.mins +
         ' minutes. Try a longer drive' + (state.swaps ? ', or turn off Swaps only' : '') + '.</div>';
@@ -228,7 +266,8 @@
       'Stock at <b>' + esc(doc.stockDate) + '</b>, sales <b>' + esc(doc.sales) + '</b>, worked out ' + esc(day(doc.made)) + '.',
       'Each store needs <b>' + rl.horizon + ' days</b> of each item: half from its own sales, half from its share of the area\'s transactions.',
       'A store only gives what it has over <b>' + Math.round(rl.keep * 100) + '%</b> of its own ' + rl.horizon + ' days, so it keeps what it needs.',
-      'The plan is worked out for the whole area at once, and again for every slider position, so two stores never count on the same stock. <b>Your store</b> shows your part of it.',
+      '<b>Best for each store</b> (the usual view) shows your store\'s own best runs, as if no other store swaps first. Most swaps won\'t all happen, so this is the plan to use day to day; ring the other store first, as their list may count on the same stock.',
+      '<b>If every store swaps</b> is the best case: one plan for the whole area at once, so two stores never count on the same stock. It only works out as shown if every store does its part, and it can change a lot as you move the slider, because stock that was going one way gets a better use further away.',
       'Stores with under <b>' + rl.lowDays + ' days</b> of an item get it first. A <b>swap</b> is at least ' + rl.swapMin + ' units each way, and swapped units count 1.5 times.',
       'Runs are ranked by units moved per van hour (the drive plus ' + rl.handling + ' minutes to load, unload and book it): <b>Most effective</b> ' + rl.tiers[0] + ' or more an hour, <b>Worth doing</b> ' + rl.tiers[1] + ' to ' + rl.tiers[0] +
         ', <b>Marginal</b> ' + rl.tiers[2] + ' to ' + rl.tiers[1] + '. Under ' + rl.minUnits + ' units, or under ' + rl.minScore + ' an hour, is <b>not worth your time</b>.',
@@ -426,10 +465,10 @@
       ' min round trip (rough)<br>' + P.TIERS[r.tier] + '</div><button type="button" data-act="card" data-key="' + r.key + '">See what to move</button></div>').openOn(map);
   }
   function storePop(i) {
-    var runs = full.runs.filter(function (r) { return r.a === i || r.b === i; });
+    var runs = runsOf(i);
     L.popup({ maxWidth: 240, autoPanPadding: [14, 14] }).setLatLng(ll(i)).setContent(
       '<div class="ss-pop"><b>' + esc(name(i)) + '</b><div class="m">' + (runs.length ? count(runs.length, 'run') : 'No runs') + ' within ' + full.mins + ' min</div>' +
-      (state.store === i ? '<button type="button" class="alt" data-act="store" data-s="-1">Show all stores</button>'
+      (state.store === i ? (state.area ? '<button type="button" class="alt" data-act="store" data-s="-1">Show all stores</button>' : '')
         : '<button type="button" data-act="store" data-s="' + i + '">Show ' + esc(name(i)) + '\'s runs</button>') + '</div>').openOn(map);
   }
 

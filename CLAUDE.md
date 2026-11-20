@@ -139,7 +139,7 @@ explain changes in plain English and say what they'll see.
   - `stock-swaps`: Stock Stealer (was Stock Swaps, renamed 20 Nov 2026 with a logo, `stock-swaps/logo.svg`, detailedfoil's say; the folder and file names stay), Area 20 only (built 20 Nov 2026 for detailedfoil; NO sign-in, his say: anyone with the
     link can open it, and he chose to publish the stock figures knowing the repo is public). Which stores should swap
     stock and what goes on each van, ranked Most effective / Worth doing / Marginal / Not worth your time. A slider sets
-    the longest round trip drive (30 to 180 min in 5s, driving only), Swaps only keeps runs with at least 3 units each
+    the longest round trip drive (30 to 120 min in 5s, driving only), Swaps only keeps runs with at least 3 units each
     way, and Your store (a picker, or tap a store on the map) shows that store's part of the area plan as "Swap with /
     Send to / Get from" with "You send / You get". Choices are kept on the phone (`ss-v1`) and in the address
     (`#store=Dunstable&mins=60&swaps=1`). Portrait phone first; map beside the list from 960 px. The page never works a
@@ -157,8 +157,14 @@ explain changes in plain English and say what they'll see.
     module.exports) turns a plan into ranked runs, the store view and the totals; `app.js` draws it: Leaflet from
     `area-map/leaflet/` with OpenStreetMap tiles greyed like the Area Map, runs as curved SVG lines with arrowheads (SVG
     markers; both ends = a swap), dashed for Marginal, store names placed so they never overlap (each tries four sides).
+    Two plans (detailedfoil, 20 Nov 2026: "most swaps won't happen"), a two-button switch above Your store:
+    **Best for each store** (the default) = each store's own best runs as if no other store swaps first (`mine` in
+    plans.json, `mine[mode][step][store]`, solved one store at a time; `planFor` in plan.js; with no store picked the
+    page shows a grid of stores to pick), and **If every store swaps** = the whole area at once (`index`, `plan`), the
+    best case, which reshuffles as the slider moves. `plan=area` in the address and `area` in `ss-v1`. The slider
+    runs 30 to 120 min and starts at 60.
     Tests: `.github/tests/stock-swaps.test.mjs` (every plan keeps its rules: nobody gives more than they can spare or
-    gets more than they're short).
+    gets more than they're short, in both plans).
   - `nps`: the NPS figures were taken off the public site on 22 Oct 2026. Anyone now loads them on the page for that
     visit only (sessionStorage, gone when the tab closes; never committed). Three ways in: the survey export (one row per
     customer, Store + LTR columns: 9-10 promoter, 7-8 passive, 0-6 detractor, blank LTR left out; `parseResponses`, checked

@@ -11,7 +11,7 @@
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
 <link rel="stylesheet" href="area-map/leaflet/leaflet.css?v=a783710282">
-<link rel="stylesheet" href="stock-swaps/stock-swaps.css?v=ad9534b1fb">
+<link rel="stylesheet" href="stock-swaps/stock-swaps.css?v=54a3613ac9">
 <script src="../analytics.js?v=f5e6d397aa"></script>
 </head>
 <body class="ss-page">
@@ -20,6 +20,11 @@
   <p class="desc" id="about">Which Area 20 stores should swap stock, best first.</p>
 
   <div class="ss-stamp" id="stamp" role="status" hidden></div>
+
+  <div class="ss-mode" role="radiogroup" aria-label="Which plan">
+    <button type="button" role="radio" data-mode="store" aria-checked="true"><b>Best for each store</b><small>Your best swaps, if no other store swaps first</small></button>
+    <button type="button" role="radio" data-mode="area" aria-checked="false"><b>If every store swaps</b><small>Best case for the whole area, if everyone does their part</small></button>
+  </div>
 
   <label class="ss-store" for="store">
     <span>Your store</span>
@@ -73,7 +78,7 @@
   </section>
 </div>
 <script src="area-map/leaflet/leaflet.js?v=dc71f8a688"></script>
-<script src="stock-swaps/plan.js?v=fd83931c3e"></script>
-<script src="stock-swaps/app.js?v=91ffb0cbc3"></script>
+<script src="stock-swaps/plan.js?v=228fa057e5"></script>
+<script src="stock-swaps/app.js?v=7596dc57e7"></script>
 </body>
 </html>

@@ -101,3 +101,42 @@ test('the stock notice says today, yesterday, days ago or the date', () => {
   assert.equal(P.stockAge('19.11.2026', at(2026, 12, 25)).text, 'STOCK LAST UPDATED 12:00AM ON 19.11.2026');
   assert.equal(P.stockAge('30.12.2026', at(2027, 1, 1)).text, 'STOCK LAST UPDATED 12:00AM 2 DAYS AGO');
 });
+
+test('Best for each store: every store\'s own plan keeps the rules, as if nobody else swaps', () => {
+  const d = doc(), R = d.rules;
+  for (const mode of ['all', 'swaps']) {
+    assert.equal(d.mine[mode].length, d.steps.length, mode);
+    d.mine[mode].forEach((row) => { assert.equal(row.length, d.stores.length); row.forEach((k) => assert.ok(d.plans[k])); });
+  }
+  let any = 0;
+  for (const swaps of [false, true]) {
+    for (const m of d.steps) {
+      for (let s = 0; s < d.stores.length; s++) {
+        const p = P.planFor(d, m, swaps, s), where = (swaps ? 'swaps only, ' : '') + m + ' min, ' + d.stores[s].name + ': ';
+        const out = d.stores.map(() => d.items.map(() => 0)), got = d.stores.map(() => d.items.map(() => 0));
+        p.runs.forEach((r, i) => {
+          any++;
+          assert.ok(r.a === s || r.b === s, where + 'a run without this store');
+          assert.equal(r.rank, i + 1);
+          assert.ok(r.mins <= m && r.tier <= 2 && r.units >= R.minUnits && r.score >= R.minScore - 1e-9, where + 'a run that breaks the rules');
+          if (swaps) assert.ok(r.swap, where + 'not a swap');
+          r.lines.forEach((l) => { out[l.from][l.item] += l.qty; got[l.to][l.item] += l.qty; });
+        });
+        d.stores.forEach((st, k) => d.items.forEach((it, i) => {
+          assert.ok(out[k][i] <= d.spare[k][i], where + st.name + ' gives more ' + it + ' than it can spare');
+          assert.ok(got[k][i] <= d.need[k][i], where + st.name + ' gets more ' + it + ' than it is short');
+        }));
+        p.skip.forEach((r) => assert.ok((r.a === s || r.b === s) && r.tier === 3));
+      }
+    }
+  }
+  assert.ok(any > 0, 'some store has runs');
+});
+
+test('the page offers both plans, Best for each store first and chosen to start with', () => {
+  const html = page();
+  const a = html.indexOf('data-mode="store"'), b = html.indexOf('data-mode="area"');
+  assert.ok(a > 0 && b > a, 'both buttons, each store first');
+  assert.match(html, /data-mode="store" aria-checked="true"/);
+  assert.match(fs.readFileSync(path.join(REPO, 'tools/stock-swaps/app.js'), 'utf8'), /area: false/, 'Best for each store is the default');
+});

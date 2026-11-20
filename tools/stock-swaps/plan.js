@@ -9,6 +9,8 @@
    stepIndex(doc, mins) -> the slider step nearest those minutes
    plan(doc, mins, swapsOnly) -> {mins, swapsOnly, runs, skip}: runs best first and numbered 1, 2, 3 ... (see enrich
      for what each holds); skip = runs not worth the trip, biggest first
+   planFor(doc, mins, swapsOnly, s) -> store s's own best plan, as if no other store swaps (doc.mine; "Best for
+     each store", the page's default). plan() is the whole area at once ("If every store swaps").
    forStore(p, s) -> the same plan with only the runs store s is in, numbered again from 1
    totals(runs, s) -> {runs, units, swaps, sends, gets}; sends and gets are from store s's side (when s is given)
    score(units, swapped, mins, rules) -> units a van hour, swapped units counting 1.5
@@ -18,7 +20,7 @@
   var TIERS = ['Most effective', 'Worth doing', 'Marginal', 'Not worth your time'];
 
   function setup(doc) {
-    if (!doc || !doc.plans || !doc.steps || !doc.index || !doc.stores || !doc.rules) throw new Error('This is not a Stock Swaps plan file');
+    if (!doc || !doc.plans || !doc.steps || !doc.index || !doc.mine || !doc.stores || !doc.rules) throw new Error('This is not a Stock Swaps plan file');
     doc.byName = {};
     doc.stores.forEach(function (s, i) { doc.byName[s.name] = i; });
     return doc;
@@ -53,7 +55,19 @@
   }
 
   function plan(doc, mins, swapsOnly) {
-    var k = stepIndex(doc, mins), p = doc.plans[doc.index[swapsOnly ? 'swaps' : 'all'][k]];
+    var k = stepIndex(doc, mins);
+    return build(doc, k, doc.plans[doc.index[swapsOnly ? 'swaps' : 'all'][k]], swapsOnly);
+  }
+
+  // store s's best runs on its own, as if no other store swaps (the page's "Best for each store")
+  function planFor(doc, mins, swapsOnly, s) {
+    var k = stepIndex(doc, mins);
+    var p = build(doc, k, doc.plans[doc.mine[swapsOnly ? 'swaps' : 'all'][k][s]], swapsOnly);
+    p.alone = s;
+    return p;
+  }
+
+  function build(doc, k, p, swapsOnly) {
     var runs = p.runs.map(function (r) { return enrich(doc, r); });
     runs.sort(function (x, y) { return x.tier - y.tier || y.score - x.score || y.units - x.units; });
     runs.forEach(function (r, i) { r.rank = i + 1; });
@@ -97,7 +111,7 @@
     return { text: 'STOCK LAST UPDATED 12:00AM ' + when, days: Math.max(0, days) };
   }
 
-  var api = { stockAge: stockAge, TIERS: TIERS, setup: setup, stepIndex: stepIndex, plan: plan, forStore: forStore, totals: totals, score: score, tierOf: tierOf };
+  var api = { stockAge: stockAge, TIERS: TIERS, setup: setup, stepIndex: stepIndex, plan: plan, planFor: planFor, forStore: forStore, totals: totals, score: score, tierOf: tierOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.SwapPlan = api;
 })(this);

@@ -178,9 +178,10 @@ def main():
     def hours(m):
         return (m + RULES["handling"]) / 60.0
 
-    def best(T, swaps, sur, need, urgent, fixed):
-        """fixed=True: the main plan (runs cost time, must clear the bar); False: whatever's left, no rules"""
-        pairs = [(a, b) for a in range(n) for b in range(a + 1, n) if mins[a, b] <= T]
+    def best(T, swaps, sur, need, urgent, fixed, only=None):
+        """fixed=True: the main plan (runs cost time, must clear the bar); False: whatever's left, no rules.
+        only=s: just the runs store s is in, as if no other store swaps (Best for each store)"""
+        pairs = [(a, b) for a in range(n) for b in range(a + 1, n) if mins[a, b] <= T and (only is None or only in (a, b))]
         xs, ub = [], []
         by_pair = {}
         for (a, b) in pairs:
@@ -291,46 +292,68 @@ def main():
     steps = list(range(lo_, hi_ + 1, st))
     if args.only:
         steps = [int(v) for v in args.only.split(",")]
-    plans, seen, index = [], {}, {"all": [], "swaps": []}
+    def solve(T, swaps, only=None):
+        """the plan for one slider step: {"runs", "skip"}; only=s plans store s alone, as if nobody else swaps"""
+        flows = best(T, swaps, sur, need, urgent, True, only)
+        runs = [as_run(p, mv) for p, mv in flows.items()]
+        out = np.zeros_like(sur); inn = np.zeros_like(need)
+        for mv in flows.values():
+            for d, r, i, q in mv:
+                out[d, i] += q; inn[r, i] += q
+        left = best(T, False, sur - out, need - inn, urgent * 0, False, only)
+        skips = []
+        for p, mv in left.items():
+            run = as_run(p, mv)
+            if passes(run, swaps):          # worth a trip after all (rare): it joins the plan
+                runs.append(run)
+                for d, r, i, q in mv:
+                    out[d, i] += q; inn[r, i] += q
+            elif not swaps or (any(l[0] == 0 for l in run[3]) and any(l[0] == 1 for l in run[3])):
+                skips.append(run)
+        # checks: nobody gives more than they can spare or gets more than they're short, every run clears the bar
+        assert (out <= sur + 1e-9).all() and (inn <= need + 1e-9).all(), (swaps, T, only)
+        for r in runs:
+            assert r[2] <= T and passes(r, swaps), (swaps, T, only, r)
+            assert only is None or only in (r[0], r[1]), (T, only, r)
+        for r in skips:
+            assert r[2] <= T and not passes(r, swaps), (swaps, T, only, r)
+        runs.sort(key=lambda r: (r[0], r[1]))
+        skips.sort(key=lambda r: (-sum(l[2] for l in r[3]), r[2]))
+        return {"runs": runs, "skip": skips[:40]}
+
+    plans, seen = [], {}
+
+    def keep(plan):
+        key = json.dumps(plan, separators=(",", ":"))
+        if key not in seen:
+            seen[key] = len(plans)
+            plans.append(plan)
+        return seen[key]
+
+    # the whole area at once ("If every store swaps")
+    index = {"all": [], "swaps": []}
     for mode in ("all", "swaps"):
         swaps = mode == "swaps"
         for T in steps:
-            flows = best(T, swaps, sur, need, urgent, True)
-            runs = [as_run(p, mv) for p, mv in flows.items()]
-            out = np.zeros_like(sur); inn = np.zeros_like(need)
-            for mv in flows.values():
-                for d, r, i, q in mv:
-                    out[d, i] += q; inn[r, i] += q
-            left = best(T, False, sur - out, need - inn, urgent * 0, False)
-            skips = []
-            for p, mv in left.items():
-                run = as_run(p, mv)
-                if passes(run, swaps):          # worth a trip after all (rare): it joins the plan
-                    runs.append(run)
-                    for d, r, i, q in mv:
-                        out[d, i] += q; inn[r, i] += q
-                elif not swaps or (any(l[0] == 0 for l in run[3]) and any(l[0] == 1 for l in run[3])):
-                    skips.append(run)
-            # checks: nobody gives more than they can spare or gets more than they're short, every run clears the bar
-            assert (out <= sur + 1e-9).all() and (inn <= need + 1e-9).all(), (mode, T)
-            for r in runs:
-                assert r[2] <= T and passes(r, swaps), (mode, T, r)
-            for r in skips:
-                assert r[2] <= T and not passes(r, swaps), (mode, T, r)
-            runs.sort(key=lambda r: (r[0], r[1]))
-            skips.sort(key=lambda r: (-sum(l[2] for l in r[3]), r[2]))
-            plan = {"runs": runs, "skip": skips[:40]}
-            key = json.dumps(plan, separators=(",", ":"))
-            if key not in seen:
-                seen[key] = len(plans)
-                plans.append(plan)
-            index[mode].append(seen[key])
+            plan = solve(T, swaps)
+            runs = plan["runs"]
+            index[mode].append(keep(plan))
             print("%-5s %3d min: %2d runs, %3d units, %2d not worth it" % (mode, T, len(runs),
-                  sum(l[2] for r in runs for l in r[3]), len(skips)), flush=True)
+                  sum(l[2] for r in runs for l in r[3]), len(plan["skip"])), flush=True)
             if args.only:
                 for r in sorted(runs, key=lambda r: -sum(l[2] for l in r[3])):
                     print("      %-18s %s %-18s %3d units %3d min" % (STORES[r[0]][1], "<->" if all(any(l[0] == d for l in r[3]) for d in (0, 1)) else "-> ",
                           STORES[r[1]][1], sum(l[2] for l in r[3]), r[2]))
+
+    # each store on its own, as if no other store swaps ("Best for each store", the page's default):
+    # mine[mode][step][store] = that store's plan
+    mine = {"all": [], "swaps": []}
+    for mode in ("all", "swaps"):
+        swaps = mode == "swaps"
+        for T in steps:
+            row = [keep(solve(T, swaps, s)) for s in range(n)]
+            mine[mode].append(row)
+            print("%-5s %3d min, each store: %d runs between them" % (mode, T, sum(len(plans[k]["runs"]) for k in row)), flush=True)
 
     area_need = SLD.sum(axis=0) * RULES["horizon"] / args.days
     short = [{"item": i, "short": int(round((area_need[i] - STK[:, i].sum()) / 10.0) * 10),
@@ -343,7 +366,7 @@ def main():
         "stockDate": args.stock_date, "sales": args.sales, "days": args.days,
         "rules": RULES, "steps": steps, "items": head,
         "stores": [{"name": s[1], "lat": s[3], "lng": s[4]} for s in STORES],
-        "index": index, "plans": plans, "short": short,
+        "index": index, "mine": mine, "plans": plans, "short": short,
         "spare": sur.astype(int).tolist(), "need": need.astype(int).tolist(), "low": low.astype(int).tolist(),
     }
     if args.only:
