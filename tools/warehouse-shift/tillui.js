@@ -547,11 +547,17 @@
       pdq('<h2>Cash</h2><dl class="fx-cash"><dt>To pay</dt><dd>' + Till.money(inc) + '</dd><dt>Customer gives you</dt><dd>' + Till.money(given) + '</dd><dt><b>Change due</b></dt><dd><b>' + Till.money(given - inc) + '</b></dd></dl><button type="button" class="fx-go" data-act="change">' + (given > inc ? 'Change given' : 'Done') + '</button>');
       sfx('drawer');
     }
-    function complete(how) {
+    async function complete(how) {
       const s = S.session; if (!s || s.stage !== 'paying') return;
-      s.stage = 'done';
+      s.stage = 'submitting';
       const lines = s.basket.filter((r) => r.status === 'ok').map((r) => ({ item: r.item, qty: r.qty }));
-      s.orderNo = (o.onComplete && o.onComplete({ lines, slips: s.slips, how })) || Till.orderNumber(Math.random);
+      const result = o.onComplete && o.onComplete({ lines, slips: s.slips, how });
+      if (result && typeof result.then === 'function') {
+        s.orderNo = await result;
+        if (S.session !== s) return;
+        if (!s.orderNo) { s.stage = 'ordering'; V.modal.hidden = true; fuMsg('Payment could not be confirmed. Try Pay & Go again.'); return; }
+      } else s.orderNo = result || Till.orderNumber(Math.random);
+      s.stage = 'done';
       V.orderno.textContent = s.orderNo;
       V.donetext.textContent = "It's on the pick list for whoever gets to it first. The customer waits by the counter.";
       V.modal.hidden = true;

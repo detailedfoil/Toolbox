@@ -12,7 +12,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=7d4fc37663">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=255d9e7e0d">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=16b209e198">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -25,6 +25,7 @@
   <div class="ws-top" id="topBar" hidden>
     <a class="ws-btn" href="../index.html" aria-label="Back to the Toolbox" title="Back to the Toolbox">&larr;</a>
     <button class="ws-btn" id="fullBtn" type="button" aria-label="Full screen" title="Full screen">&#x26F6;</button>
+    <button class="ws-btn room-badge" id="roomBtn" type="button" aria-label="Room details" hidden></button>
     <button class="ws-btn" id="helpBtn" type="button" aria-label="How to play" title="How to play">?</button>
   </div>
 
@@ -105,6 +106,7 @@
       <div class="ws-row">
         <button class="ws-go" id="startBtn" type="button">Start shift</button>
         <button class="ws-alt" id="twoBtn" type="button" hidden>Two players</button>
+        <button class="ws-alt" id="onlineBtn" type="button" hidden>Online co-op</button>
         <button class="ws-alt" id="howBtn" type="button">How to play</button>
         <button class="ws-alt" id="installBtn" type="button" hidden>Install game</button>
         <button class="ws-alt" id="updBtn" type="button">Check for updates</button>
@@ -113,6 +115,19 @@
       <p class="ws-small">A made-up warehouse with the store's 10,999 nailed products. Best played with your phone sideways.</p>
     </div>
   </div>
+
+  <section class="ws-cover" id="onlineCover" hidden aria-labelledby="roomTitle">
+    <div class="ws-card">
+      <h1 id="roomTitle">Online co-op</h1>
+      <p id="roomMessage" role="status"></p>
+      <div id="roomControls">
+        <button class="ws-go" id="hostRoom" type="button">Host a shift</button>
+        <label for="roomCode">Room code</label>
+        <div class="ws-row"><input id="roomCode" maxlength="6" placeholder="ABC234" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="ws-alt" id="joinRoom" type="button">Join shift</button></div>
+      </div>
+      <div class="ws-row"><button class="ws-alt" id="roomBack" type="button">Back</button><button class="ws-alt" id="leaveRoom" type="button" hidden>Leave shift</button></div>
+    </div>
+  </section>
 
   <div class="ws-cover" id="joinCover" hidden>
     <div class="ws-card">
@@ -223,7 +238,10 @@
 <script src="warehouse-shift/till.js?v=a2895eea1c"></script>
 <script src="warehouse-shift/day.js?v=eb3d41579c"></script>
 <script src="warehouse-shift/bot.js?v=8bd16c45f8"></script>
-<script src="warehouse-shift/tillui.js?v=28f00f6a94"></script>
-<script src="warehouse-shift/game.js?v=4b0b273497"></script>
+<script src="warehouse-shift/tillui.js?v=2949ae5d21"></script>
+<script src="warehouse-shift/online-day.js?v=98179e0912"></script>
+<script src="warehouse-shift/online.js?v=836d5b7132"></script>
+<script src="warehouse-shift/online-game.js?v=c2686fb705"></script>
+<script src="warehouse-shift/game.js?v=7aac8ba2ca"></script>
 </body>
 </html>
