@@ -111,7 +111,17 @@
     return { text: 'STOCK LAST UPDATED 6:00AM ' + when, days: Math.max(0, days) };
   }
 
-  var api = { stockAge: stockAge, TIERS: TIERS, setup: setup, stepIndex: stepIndex, plan: plan, planFor: planFor, forStore: forStore, totals: totals, score: score, tierOf: tierOf };
+  /* Which way to drive for a run's Directions button: [start, destination] as store numbers. With a store picked it is
+     from that store to the other one. On the whole list it is from the store that gets more units (benefits most)
+     to the one that gets fewer (worse off); a tie keeps the run's own order. */
+  function route(r, s) {
+    if (s >= 0 && (r.a === s || r.b === s)) return r.a === s ? [r.a, r.b] : [r.b, r.a];
+    var gotA = 0, gotB = 0;
+    r.lines.forEach(function (l) { if (l.to === r.a) gotA += l.qty; else gotB += l.qty; });
+    return gotB > gotA ? [r.b, r.a] : [r.a, r.b];
+  }
+
+  var api = { route: route, stockAge: stockAge, TIERS: TIERS, setup: setup, stepIndex: stepIndex, plan: plan, planFor: planFor, forStore: forStore, totals: totals, score: score, tierOf: tierOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.SwapPlan = api;
 })(this);

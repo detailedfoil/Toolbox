@@ -134,3 +134,11 @@ test('Best for each store: every store\'s own plan keeps the rules, as if nobody
 });
 
 
+
+test('Directions: from the store that gets more to the one that gets less; with a store picked, from that store', () => {
+  const run = { a: 3, b: 7, lines: [{ from: 3, to: 7, qty: 5 }, { from: 7, to: 3, qty: 9 }] };
+  assert.deepEqual(P.route(run, -1), [3, 7]);
+  assert.deepEqual(P.route({ a: 3, b: 7, lines: [{ from: 3, to: 7, qty: 12 }] }, -1), [7, 3]);
+  assert.deepEqual(P.route(run, 7), [7, 3]);
+  assert.deepEqual(P.route(run, 3), [3, 7]);
+});

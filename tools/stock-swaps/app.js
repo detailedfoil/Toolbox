@@ -173,6 +173,16 @@
       return { label: s >= 0 ? (w[0] === s ? 'You send' : 'You get') : esc(name(w[0])) + ' &rarr; ' + esc(name(w[1])), units: n, lines: ls };
     }).filter(Boolean);
   }
+  var DIR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-8-8 18-2-8-8-2Z"/></svg>';
+  // iPhones and iPads open Apple Maps; everything else gets the Google Maps link, which opens the Google Maps app on Android
+  var APPLE = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function directions(r) {
+    var w = P.route(r, state.store), a = doc.stores[w[0]], b = doc.stores[w[1]];
+    var from = a.lat + ',' + a.lng, to = b.lat + ',' + b.lng;
+    var href = APPLE ? 'https://maps.apple.com/?dirflg=d&saddr=' + from + '&daddr=' + to
+      : 'https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=' + from + '&destination=' + to;
+    return '<a class="ss-mapbtn" target="_blank" rel="noopener" href="' + href + '">' + DIR + 'Give me directions</a>';
+  }
   function card(r) {
     return '<article class="ss-card t' + r.tier + (picked === r.key ? ' on' : '') + '" id="run-' + r.key + '" data-key="' + r.key + '">' +
       '<div class="ss-top"><span class="ss-rank">' + r.rank + '</span><div class="ss-ttl">' +
@@ -182,7 +192,7 @@
         return '<div class="ss-way"><div>' + w.label + ' (' + w.units + ')</div><div class="ss-chips">' +
           w.lines.map(function (l) { return chip(l.item, l.qty, l.low); }).join('') + '</div></div>';
       }).join('') +
-      '<div class="ss-foot"><button class="ss-mapbtn" type="button" data-act="map" data-key="' + r.key + '">' + MAP + 'Show on map</button></div></article>';
+      '<div class="ss-foot">' + directions(r) + '<button class="ss-mapbtn" type="button" data-act="map" data-key="' + r.key + '">' + MAP + 'Show on map</button></div></article>';
   }
   function skipRow(r, hidden) {
     return '<div class="ss-skip t3"' + (hidden ? ' hidden' : '') + '><div class="h">' + title(r) + '<span>' + count(r.units, 'unit') + ' &middot; ' + r.mins + ' min</span></div>' +
