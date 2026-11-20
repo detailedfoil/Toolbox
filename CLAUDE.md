@@ -152,8 +152,11 @@ explain changes in plain English and say what they'll see.
     file as `rules`, which `plan.js` reads): demand = half own sales, half transactions share of area sales; a store gives
     what's over 125% of its own 7 days, gets up to 7 days (only if 2 or more short); a run must be 8+ units and 5+ units a
     van hour (drive + 30 min handling); swapped units and units to a store under 2 days count 1.5 when choosing; an hour
-    of van costs 10 units (it was 5: plans jumped about as the slider moved). Drive times are estimated from distance
-    (straight line x 1.3, then 4 min + 1.6 min a mile each way): no live routing. `plan.js` (window.SwapPlan /
+    of van costs 10 units (it was 5: plans jumped about as the slider moved). Drive times (20 Nov 2026) are real road
+    times: `.github/stock-swaps/drive-times.mjs` runs on GitHub (workflow `stock-drive-times.yml`, by hand or on a push to
+    the script; the sandbox can't reach a router) and saves `data/drive.json` from the OSRM car router (no live traffic);
+    make-plans.py makes a round trip of there + back x 1.2 (`traffic`, detailedfoil asked about rush hour). If the store
+    list changes, rerun that job first (make-plans asserts the names match). No drive.json = the old distance estimate. `plan.js` (window.SwapPlan /
     module.exports) turns a plan into ranked runs, the store view and the totals; `app.js` draws it: Leaflet from
     `area-map/leaflet/` with OpenStreetMap tiles greyed like the Area Map, runs as curved SVG lines with arrowheads (SVG
     markers; both ends = a swap), dashed for Marginal, store names placed so they never overlap (each tries four sides).

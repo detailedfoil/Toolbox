@@ -90,10 +90,31 @@ RULES = {
     "swapMin": 3,          # units each way for a run to be a swap
     "swapBonus": 0.5,      # swapped units count 1.5
     "lowBonus": 0.5,       # units to a store that's nearly out count 1.5 (when choosing)
-    "roadFactor": 1.3, "startMin": 4, "minPerMile": 1.6,
+    "traffic": 1.2, "roadFactor": 1.3, "startMin": 4, "minPerMile": 1.6,
     "steps": [30, 120, 5],
 }
 
+
+
+def drive_minutes():
+    """Round trip minutes between every pair of stores. Uses the real road times saved by the GitHub job
+    (tools/stock-swaps/data/drive.json, from the OSRM car router: no live traffic, so RULES["traffic"] adds an allowance).
+    Without that file it falls back to the old distance estimate."""
+    import json, os
+    f = os.path.join(os.path.dirname(__file__), "..", "..", "tools", "stock-swaps", "data", "drive.json")
+    if os.path.exists(f):
+        d = json.load(open(f))
+        names = [s[1] for s in STORES]
+        assert d["names"] == names, "drive.json stores differ from STORES: rerun the Stock Stealer drive times job"
+        m = np.array(d["minutes"], dtype=float)
+        out = np.rint((m + m.T) * RULES["traffic"]).astype(int)
+        RULES["source"] = "road"
+    else:
+        road = np.array([[miles(a, b) * RULES["roadFactor"] for b in STORES] for a in STORES])
+        out = np.rint(2 * (RULES["startMin"] + RULES["minPerMile"] * road)).astype(int)
+        RULES["source"] = "estimate"
+    np.fill_diagonal(out, 0)
+    return out
 
 def short_name(h):
     h = str(h).strip()
@@ -171,9 +192,7 @@ def main():
     urgent = np.minimum(need, np.ceil(np.maximum(0, RULES["lowDays"] * day - STK) - 1e-9))
     low = (STK < RULES["lowDays"] * day) | (STK == 0)
 
-    road = np.array([[miles(a, b) * RULES["roadFactor"] for b in STORES] for a in STORES])
-    mins = np.rint(2 * (RULES["startMin"] + RULES["minPerMile"] * road)).astype(int)
-    np.fill_diagonal(mins, 0)
+    mins = drive_minutes()
 
     def hours(m):
         return (m + RULES["handling"]) / 60.0
