@@ -27,7 +27,24 @@ function render(filter = "") {
 search.addEventListener("input", e => render(e.target.value));
 render();
 // tiles for one store only appear once that store has signed in
-window.addEventListener("toolbox:login", () => render(search.value));
+window.addEventListener("toolbox:login", () => { render(search.value); showWho(); });
+
+/* "Signed in as ... Sign out" under the tiles (the game has its own login, so there has to be a way to switch). */
+function showWho() {
+  const el = document.getElementById("who");
+  if (!el) return;
+  let who = "";
+  try { who = localStorage.getItem("toolbox.signedIn.area20") || ""; } catch (e) {}
+  el.textContent = "";
+  if (!who) return;
+  el.append("Signed in as " + who + " · ");
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = "Sign out";
+  b.style.cssText = "background:none;border:0;padding:6px;color:var(--accent,#4f8cff);font:inherit;text-decoration:underline;cursor:pointer";
+  b.addEventListener("click", () => { try { localStorage.removeItem("toolbox.signedIn.area20"); } catch (e) {} location.reload(); });
+  el.append(b);
+}
+showWho();
 
 /* Tiles that link to other sites open in a new tab, so count those opens in the stats as tool/<name>. */
 grid.addEventListener("click", e => {

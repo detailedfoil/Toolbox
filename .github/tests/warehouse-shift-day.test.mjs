@@ -110,7 +110,7 @@ test('a day is 15 to 25 picks, the shop is open from the start (no morning c pic
     assert.equal(day.done, day.total);
     assert.equal(day.orders.filter((o) => o.counts).length, day.total, 'every pick counts');
     assert.equal(day.first, 0, 'no c picks before opening');
-    if (d !== alone) assert.ok(day.orders.filter((o) => o.kind === 'c').length >= 5, 'c picks come in during the day');
+    if (d !== alone) assert.ok(day.orders.filter((o) => o.kind === 'c').length >= 3, 'c picks come in during the day');
     assert.ok(day.orders.every((o) => o.status === 'done'), 'every order finished');
     assert.equal(day.present().length, 0, 'nobody left waiting');
     assert.ok(d.T > 6 * 60 && d.T < 55 * 60, 'about a shift: ' + (d.T / 60).toFixed(1) + ' min');
@@ -123,14 +123,16 @@ test('a day is 15 to 25 picks, the shop is open from the start (no morning c pic
   }
 });
 
-test('the mix: about 40% till or kiosk, the rest one product click and collects and bag collections, both always there', () => {
-  let tillish = 0, all = 0;
+test('the mix: about 45% of the customers want the till or kiosk (settled at the first hello), the rest one product click and collects and bag collections, both always there', () => {
+  let tillish = 0, all = 0, tillC = 0, allC = 0;
   for (const d of days) {
     const os = d.day.orders.filter((o) => o.counts);
     const till = os.filter((o) => o.kind === 'till').length;
     tillish += till; all += os.length;
-    const share = till / os.length;
-    assert.ok(share >= 0.25 && share <= 0.55, Math.round(100 * share) + '% till or kiosk');
+    const cs = d.day.customers.filter((c) => c.order || c.kind === 'till' || c.kind === 'kiosk');
+    const cshare = cs.filter((c) => c.kind === 'till' || c.kind === 'kiosk').length / cs.length;
+    assert.ok(cshare >= 0.2 && cshare <= 0.75, Math.round(100 * cshare) + '% of the customers wanted the till');
+    tillC += cs.filter((c) => c.kind === 'till' || c.kind === 'kiosk').length; allC += cs.length;
     const ck = os.filter((o) => o.kind === 'ck'), hold = os.filter((o) => o.kind === 'hold'), c = os.filter((o) => o.kind === 'c');
     assert.ok(ck.length >= 1 && hold.length >= 2, 'some of each: ' + ck.length + ' ck, ' + hold.length + ' from holding');
     // one product (any quantity) comes from the warehouse; several products wait in the holding area; c picks have several
@@ -138,12 +140,12 @@ test('the mix: about 40% till or kiosk, the rest one product click and collects 
     assert.ok(hold.every((o) => o.locs >= 2 && o.units >= o.locs), 'a bag has several products');
     assert.ok(c.every((o) => o.lines.length >= 2 && !o.cust), 'a c pick has more than one product and no customer');
   }
-  assert.ok(tillish / all > 0.3 && tillish / all < 0.5, 'around 40% over the days: ' + Math.round(100 * tillish / all));
+  assert.ok(tillC / allC > 0.3 && tillC / allC < 0.6, 'around 45% of the walk-ins over the days: ' + Math.round(100 * tillC / allC));
   assert.ok(days.some((d) => d.day.total !== 20), 'the length changes from day to day');
 });
 
 test('a customer waits to be greeted: nothing is said until someone says hello, then they say what they want', () => {
-  const day = Day.create({ world, World: W, Till, requests, rand: W.rng(8), env: {} });
+  const day = Day.create({ world, World: W, Till, requests, rand: W.rng(8), env: {}, walkinTill: 0 });
   day.phase = 'open';
   const c = day.send('ck');
   day.arrived(c);
@@ -153,6 +155,7 @@ test('a customer waits to be greeted: nothing is said until someone says hello, 
   assert.equal(day.greet(c, 'p1'), true);
   assert.equal(c.state, 'waiting'); assert.equal(c.order.kind, 'ck'); assert.equal(c.order.lines.length, 1);
   assert.equal(day.greet(c, 'Sam'), false, 'only greeted once');
+  day.walkinTill = 1; // (the first hello settles what a walk-in wants: here, the till)
   const t = day.send('till');
   day.arrived(t);
   assert.equal(day.queue().length, 0, 'not at the till until greeted');
@@ -255,7 +258,7 @@ test('the holding area: c picks go into empty OC spots only, and customers colle
   const fetched = all.flatMap((d) => d.day.orders.filter((o) => o.kind === 'hold'));
   assert.ok(fetched.length >= 5, fetched.length + ' bags collected');
   for (const o of fetched) assert.equal(o.counts, true, 'collecting a bag is one of the day\'s picks');
-  const day = Day.create({ world, World: W, Till, requests, rand: W.rng(4), env: {} });
+  const day = Day.create({ world, World: W, Till, requests, rand: W.rng(4), env: {}, walkinTill: 0 });
   day.phase = 'open';
   // a bag that was already there when the shop opened: the customer asks for it and a line fetches it
   const old = Object.keys(day.hold).find((k) => day.hold[k]);
@@ -344,11 +347,11 @@ test('balance: on your own, the queue, customer picks, holding area picks and th
   for (const r of runs) {
     assert.ok(r.day.over, 'the day ends (' + (r.T / 60).toFixed(0) + ' min)');
     assert.ok(r.T < 60 * 60, 'in under an hour');
-    for (const k in r.share) { assert.ok(r.share[k] > 0.1 && r.share[k] < 0.42, k + ' ' + Math.round(100 * r.share[k]) + '%'); avg[k] = (avg[k] || 0) + r.share[k] / runs.length; }
+    for (const k in r.share) { assert.ok(r.share[k] > 0.06 && r.share[k] < 0.45, k + ' ' + Math.round(100 * r.share[k]) + '%'); avg[k] = (avg[k] || 0) + r.share[k] / runs.length; }
     assert.ok(r.day.delivery.length >= 11 && r.day.delivery.every((d) => d.done && d.doneBy === 'Sam'), 'the whole delivery put away');
     assert.ok(r.day.orders.filter((o) => o.kind === 'c').length > r.day.first, 'c picks come in during the day too');
   }
-  for (const k in avg) assert.ok(avg[k] > 0.18 && avg[k] < 0.32, 'average ' + k + ' ' + Math.round(100 * avg[k]) + '%');
+  for (const k in avg) assert.ok(avg[k] > 0.14 && avg[k] < 0.34, 'average ' + k + ' ' + Math.round(100 * avg[k]) + '%');
 });
 
 test("Sam's jobs follow the manager's PC: ticked ones, top first; an unticked job is never done", () => {

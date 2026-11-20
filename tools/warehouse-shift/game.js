@@ -1,4 +1,4 @@
-/* Warehouse Shift (Dunstable, LB1 only): a picking game in a made-up Screwfix-style warehouse.
+/* Warehouse Shift (its own login: STEPHEN): a picking game in a made-up Screwfix-style warehouse.
 
    The day's work is one pick list on the scanner (day.js), shared with Sam (bot.js). The scanner is drawn like the
    Symbol handsets in detailedfoil's photos: Today Picking, ORDER, a > by the order you're on, Select_. Each order is A
@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  const STORE = 'LB1';
+  const STORE = 'STEPHEN'; // the game's own login (detailedfoil, 20 Nov 2026), no longer the LB1 one
   const $ = (id) => document.getElementById(id);
   const stage = $('stage'), canvas = $('view');
   const touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -39,7 +39,13 @@
     const me = signedInAs();
     if (!me) return; // the sign-in screen is up; its "toolbox:login" event brings us back here
     booted = true;
-    if (me !== STORE) { fail('Warehouse Shift is only for Dunstable (LB1).'); return; }
+    if (me !== STORE) {
+      fail('Warehouse Shift has its own login.');
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'ws-go'; b.textContent = 'Sign in with the game login'; b.style.marginTop = '12px';
+      b.addEventListener('click', () => { try { localStorage.removeItem('toolbox.signedIn.area20'); } catch (e) { /* private mode */ } location.reload(); });
+      $('msgText').after(b);
+      return;
+    }
     if (!window.THREE || !window.ShiftWorld || !window.ShiftScene || !window.ShiftTill || !window.ShiftTillUI || !window.ShiftBot || !window.ShiftDay) { fail("The game didn't load. Check your signal and reload the page."); return; }
     progress(0.1, 'Loading the products…');
     // what till customers ask for: without it every till customer has a kiosk order

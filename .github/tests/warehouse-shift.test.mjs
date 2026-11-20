@@ -176,12 +176,12 @@ test('a scan finds the location aimed at: the shelf edge label or the tray front
   assert.equal(W.locationAt(world, world.faces[0], world.faces[0].x0 - 1, 1), null, 'off the end of the row');
 });
 
-test('only Dunstable (LB1) gets the tile; the game only uses the Toolbox\'s own photos and draws no floating labels', () => {
+test('only the Stephen login gets the tile (not LB1); the game only uses the Toolbox\'s own photos and draws no floating labels', () => {
   const sandbox = {};
   vm.runInNewContext(fs.readFileSync(path.join(REPO, 'tools.js'), 'utf8') + '\nthis.list = TOOLS;', sandbox);
   const tile = sandbox.list.find((t) => t.name === 'Warehouse Shift');
   assert.ok(tile && tile.url === 'tools/warehouse-shift.html');
-  assert.deepEqual([...tile.only], ['LB1']);
+  assert.deepEqual([...tile.only], ['STEPHEN']);
   const game = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/game.js'), 'utf8');
   assert.match(game, /me !== STORE/);
   const scene = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/scene.js'), 'utf8');

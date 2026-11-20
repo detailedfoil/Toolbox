@@ -31,7 +31,8 @@
   var TOTAL = 20;          // picks in a day, about (15 to 25 when not told)
   var MAX_LIST = 5;        // on the pick list at once
   var MAX_IN = 3;          // customers in at once
-  var MID_C = [6, 9];      // c picks that come in during the day (there are none before opening: detailedfoil, 20 Nov 2026)
+  var MID_C = [4, 7];      // c picks that come in during the day (there are none before opening: detailedfoil, 20 Nov 2026)
+  var WALKIN_TILL = 0.45;    // the chance a customer turns out to want the till when somebody first says hello (detailedfoil, 20 Nov 2026)
   var TILLS = [0.55, 0.65];  // of the customers after that, the share who order at the till or the kiosk
   // which kinds of pick come after the opening c picks (the scanner's Function menu can narrow it, for practice)
   var MODES = { mixed: ['ck', 'collect', 'till', 'kiosk'], pick: ['ck'], hold: ['collect'], till: ['till'], kiosk: ['kiosk'] };
@@ -48,6 +49,7 @@
     this.r = o.rand || Math.random; this.env = o.env || {};
     this.total = o.total || (15 + Math.floor(this.r() * 11)); // 15 to 25 picks (detailedfoil: it needn't be exactly 20)
     this.mode = MODES[o.mode] ? o.mode : 'mixed';
+    this.walkinTill = o.walkinTill === undefined ? WALKIN_TILL : o.walkinTill;
     this.canTill = !!(this.requests && this.requests.need && this.requests.need.length);
     this.t = 0; this.nextId = 1; this.used = {};
     this.orders = []; this.customers = []; this.owners = []; this.log = [];
@@ -302,15 +304,7 @@
     var Till = this.Till, c = { id: this.customers.length + 1, kind: kind, state: 'coming', surname: null, order: null, by: null, ready: false, t: this.t, say: '' };
     if (extra) for (var k in extra) c[k] = extra[k];
     if (kind === 'till' || kind === 'kiosk') {
-      c.cust = Till.makeCustomer(this.r); c.pay = Till.payment(this.r);
-      c.kiosk = Till.makeKiosk(this.world, this.r, c.cust);
-      if (kind === 'till') { // the kiosk list is everyone else's
-        c.kiosk.list.splice(c.kiosk.mine, 1); c.kiosk.mine = -1;
-        c.lines = Till.makeOrder(this.world, this.requests, this.r);
-        if (!c.lines.length) { c.kind = kind = 'kiosk'; c.kiosk = Till.makeKiosk(this.world, this.r, c.cust); }
-      }
-      c.surname = c.cust.surname;
-      c.say = this.pick(HELLO[kind]);
+      this.tillCust(c, kind);
     } else {
       if (!c.surname) c.surname = this.surname();
       if (c.code) this.busy[c.code] = 'collect:' + c.id;
@@ -319,6 +313,35 @@
     this.customers.push(c);
     this.emit('customer', c);
     return c;
+  };
+  // fills in a customer who wants the till (a till order, or one sent from the kiosk)
+  Day.prototype.tillCust = function (c, kind) {
+    var Till = this.Till;
+    c.kind = kind;
+    c.cust = c.cust || Till.makeCustomer(this.r); c.pay = Till.payment(this.r);
+    c.kiosk = Till.makeKiosk(this.world, this.r, c.cust);
+    if (kind === 'till') { // the kiosk list is everyone else's
+      c.kiosk.list.splice(c.kiosk.mine, 1); c.kiosk.mine = -1;
+      c.lines = Till.makeOrder(this.world, this.requests, this.r);
+      if (!c.lines.length) { c.kind = kind = 'kiosk'; c.kiosk = Till.makeKiosk(this.world, this.r, c.cust); }
+    }
+    c.surname = c.cust.surname;
+    c.say = this.pick(HELLO[kind]);
+  };
+  // what a walk-in turns out to want is settled when somebody first says hello: WALKIN_TILL of them want the till, the
+  // rest are click and collects (detailedfoil, 20 Nov 2026: so it can't be Sam who gets the till customers)
+  Day.prototype.decide = function (c) {
+    if (this.mode !== 'mixed' || !this.canTill) return;
+    var want = this.r() < this.walkinTill, isTill = c.kind === 'till' || c.kind === 'kiosk';
+    if (want === isTill) return;
+    if (want) {
+      if (c.code && this.busy[c.code] === 'collect:' + c.id) this.busy[c.code] = null;
+      c.code = null;
+      this.tillCust(c, this.r() < 0.5 ? 'till' : 'kiosk');
+    } else {
+      c.kind = 'ck'; c.say = this.pick(CC).replace('{n}', c.surname);
+      c.kiosk = null; c.lines = null; c.pay = null;
+    }
   };
   // they've walked up to the counter and wait to be greeted (detailedfoil: nobody should speak with no one there to hear)
   Day.prototype.arrived = function (c) {
@@ -330,6 +353,7 @@
   Day.prototype.greet = function (c, who) {
     if (!c || c.state !== 'greet') return false;
     c.greeter = who; c.greeted = this.t;
+    this.decide(c);
     if (c.kind === 'till' || c.kind === 'kiosk') { c.state = 'counter'; this.emit('step', c); return true; }
     if (c.code && this.hold[c.code]) { // a bag in the holding area (several products): a line to fetch it
       var p = this.hold[c.code];

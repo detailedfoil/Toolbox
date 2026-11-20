@@ -1,4 +1,5 @@
-/* Simple sign-in gate for Toolbox. Username: a store code (e.g. LB1). Password: that store's cost code.
+/* Simple sign-in gate for Toolbox. Username: a store code (e.g. LB1). Password: that store's cost code (not case sensitive).
+   One extra login, for the Warehouse Shift game, is in auth-data.js.
    This is a light lock to keep casual visitors out, not real security. */
 (function () {
   "use strict";
@@ -54,7 +55,7 @@
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var user = form.username.value.trim().toUpperCase();
-      var pass = form.password.value.trim().replace(/^0+(?=\d)/, "");
+      var pass = form.password.value.trim().toLowerCase().replace(/^0+(?=\d)/, "");
       var auth = window.TOOLBOX_AUTH;
       if (!user || !pass) { err.textContent = "Enter your username and password."; return; }
       if (!auth || !window.crypto || !crypto.subtle) { err.textContent = "Sign-in isn't available right now. Reload and try again."; return; }
