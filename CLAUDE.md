@@ -155,7 +155,7 @@ explain changes in plain English and say what they'll see.
     of van costs 10 units (it was 5: plans jumped about as the slider moved). Drive times (20 Nov 2026) are real road
     times: `.github/stock-swaps/drive-times.mjs` runs on GitHub (workflow `stock-drive-times.yml`, by hand or on a push to
     the script; the sandbox can't reach a router) and saves `data/drive.json` from the OSRM car router (no live traffic);
-    make-plans.py makes a round trip of there + back x 1.2 (`traffic`, detailedfoil asked about rush hour). If the store
+    make-plans.py makes a round trip of there + back with no traffic allowance (`traffic` is 1.0: a 1.2 allowance was tried on 20 Nov and taken off at detailedfoil's say; the page says travel times do not include traffic). If the store
     list changes, rerun that job first (make-plans asserts the names match). No drive.json = the old distance estimate. `plan.js` (window.SwapPlan /
     module.exports) turns a plan into ranked runs, the store view and the totals; `app.js` draws it: Leaflet from
     `area-map/leaflet/` with OpenStreetMap tiles greyed like the Area Map, runs as curved SVG lines with arrowheads (SVG

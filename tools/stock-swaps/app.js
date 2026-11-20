@@ -24,7 +24,6 @@
     'Royston': 'r', 'Saffron Walden': 'l', 'St Albans': 'b', 'Stevenage': 'r', 'Welwyn Garden City': 't'
   };
   var LOW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z"/><path d="M12 10v4.5M12 17.5v.01"/></svg>';
-  var MAP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 4-6 2v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>';
 
   function esc(t) { return String(t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function name(s) { return doc.stores[s].name; }
@@ -84,8 +83,7 @@
     $('list').addEventListener('click', function (e) {
       var b = e.target.closest('[data-act]');
       if (!b) return;
-      if (b.getAttribute('data-act') === 'map') showOnMap(b.getAttribute('data-key'));
-      else if (b.getAttribute('data-act') === 'more') { allSkip = true; renderList(); }
+      if (b.getAttribute('data-act') === 'more') { allSkip = true; renderList(); }
     });
     $('mine').addEventListener('click', function (e) {
       if (e.target.closest('[data-act="all"]')) setStore(-1);
@@ -192,7 +190,7 @@
         return '<div class="ss-way"><div>' + w.label + ' (' + w.units + ')</div><div class="ss-chips">' +
           w.lines.map(function (l) { return chip(l.item, l.qty, l.low); }).join('') + '</div></div>';
       }).join('') +
-      '<div class="ss-foot">' + directions(r) + '<button class="ss-mapbtn" type="button" data-act="map" data-key="' + r.key + '">' + MAP + 'Show on map</button></div></article>';
+      '<div class="ss-foot">' + directions(r) + '</div></article>';
   }
   function skipRow(r, hidden) {
     return '<div class="ss-skip t3"' + (hidden ? ' hidden' : '') + '><div class="h">' + title(r) + '<span>' + count(r.units, 'unit') + ' &middot; ' + r.mins + ' min</span></div>' +

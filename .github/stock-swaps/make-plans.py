@@ -90,7 +90,7 @@ RULES = {
     "swapMin": 3,          # units each way for a run to be a swap
     "swapBonus": 0.5,      # swapped units count 1.5
     "lowBonus": 0.5,       # units to a store that's nearly out count 1.5 (when choosing)
-    "traffic": 1.2, "roadFactor": 1.3, "startMin": 4, "minPerMile": 1.6,
+    "traffic": 1.0, "roadFactor": 1.3, "startMin": 4, "minPerMile": 1.6,
     "steps": [30, 120, 5],
 }
 
