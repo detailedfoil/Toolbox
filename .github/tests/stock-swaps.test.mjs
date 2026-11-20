@@ -133,10 +133,4 @@ test('Best for each store: every store\'s own plan keeps the rules, as if nobody
   assert.ok(any > 0, 'some store has runs');
 });
 
-test('the page offers both plans, Best for each store first and chosen to start with', () => {
-  const html = page();
-  const a = html.indexOf('data-mode="store"'), b = html.indexOf('data-mode="area"');
-  assert.ok(a > 0 && b > a, 'both buttons, each store first');
-  assert.match(html, /data-mode="store" aria-checked="true"/);
-  assert.match(fs.readFileSync(path.join(REPO, 'tools/stock-swaps/app.js'), 'utf8'), /area: false/, 'Best for each store is the default');
-});
+

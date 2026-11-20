@@ -157,12 +157,10 @@ explain changes in plain English and say what they'll see.
     module.exports) turns a plan into ranked runs, the store view and the totals; `app.js` draws it: Leaflet from
     `area-map/leaflet/` with OpenStreetMap tiles greyed like the Area Map, runs as curved SVG lines with arrowheads (SVG
     markers; both ends = a swap), dashed for Marginal, store names placed so they never overlap (each tries four sides).
-    Two plans (detailedfoil, 20 Nov 2026: "most swaps won't happen"), a two-button switch above Your store:
-    **Best for each store** (the default) = each store's own best runs as if no other store swaps first (`mine` in
-    plans.json, `mine[mode][step][store]`, solved one store at a time; `planFor` in plan.js; with no store picked the
-    page shows a grid of stores to pick), and **If every store swaps** = the whole area at once (`index`, `plan`), the
-    best case, which reshuffles as the slider moves. `plan=area` in the address and `area` in `ss-v1`. The slider
-    runs 30 to 120 min and starts at 60.
+    All stores = the whole area at once (`index`, `plan`), the "even" plan. Picking a store switches to that store's own
+    best runs, as if no other store gives stock away (`mine` in plans.json, `mine[mode][step][store]`, solved one store
+    at a time; `planFor`), with a note saying so (detailedfoil, 20 Nov 2026; a switch between the two was tried and
+    taken off the same evening). The slider runs 30 to 120 min and starts at 60.
     Tests: `.github/tests/stock-swaps.test.mjs` (every plan keeps its rules: nobody gives more than they can spare or
     gets more than they're short, in both plans).
   - `nps`: the NPS figures were taken off the public site on 22 Oct 2026. Anyone now loads them on the page for that
