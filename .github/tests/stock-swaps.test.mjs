@@ -95,11 +95,11 @@ test('anyone with the link can open the page (no sign-in), and it has a tile', (
 
 test('the stock notice says today, yesterday, days ago or the date', () => {
   const at = (y, m, d, h = 13) => new Date(y, m - 1, d, h, 30);
-  assert.equal(P.stockAge('19.11.2026', at(2026, 11, 19)).text, 'STOCK LAST UPDATED 12:00AM TODAY');
-  assert.equal(P.stockAge('19.11.2026', at(2026, 11, 20, 0)).text, 'STOCK LAST UPDATED 12:00AM YESTERDAY');
-  assert.equal(P.stockAge('19.11.2026', at(2026, 11, 22)).text, 'STOCK LAST UPDATED 12:00AM 3 DAYS AGO');
-  assert.equal(P.stockAge('19.11.2026', at(2026, 12, 25)).text, 'STOCK LAST UPDATED 12:00AM ON 19.11.2026');
-  assert.equal(P.stockAge('30.12.2026', at(2027, 1, 1)).text, 'STOCK LAST UPDATED 12:00AM 2 DAYS AGO');
+  assert.equal(P.stockAge('19.11.2026', at(2026, 11, 19)).text, 'STOCK LAST UPDATED 6:00AM TODAY');
+  assert.equal(P.stockAge('19.11.2026', at(2026, 11, 20, 0)).text, 'STOCK LAST UPDATED 6:00AM YESTERDAY');
+  assert.equal(P.stockAge('19.11.2026', at(2026, 11, 22)).text, 'STOCK LAST UPDATED 6:00AM 3 DAYS AGO');
+  assert.equal(P.stockAge('19.11.2026', at(2026, 12, 25)).text, 'STOCK LAST UPDATED 6:00AM ON 19.11.2026');
+  assert.equal(P.stockAge('30.12.2026', at(2027, 1, 1)).text, 'STOCK LAST UPDATED 6:00AM 2 DAYS AGO');
 });
 
 test('Best for each store: every store\'s own plan keeps the rules, as if nobody else swaps', () => {
