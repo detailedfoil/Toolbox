@@ -8,6 +8,7 @@ const TOOLS = [
   { name: "A4 Posters", desc: "Screwfix A4 price posters with live prices and photos", icon: "🖼️", url: "tools/posters.html", category: "Screwfix" },
   { name: "Offline site", desc: "Find any product by code or name, with photos, when screwfix.com is down", icon: "🔎", url: "tools/product-search.html", category: "Screwfix" },
   { name: "Area Map", desc: "Every Screwfix store on a map by area, with the nearest stores to anywhere", icon: "🗺️", url: "tools/area-map.html", category: "Screwfix" },
+  { name: "Stock Swaps", desc: "Area 20 stock swaps between stores, best first, for how far you'll drive", icon: "🚚", url: "tools/stock-swaps.html", category: "Screwfix" },
   { name: "Monday Price Check", desc: "Weekly shelf price check: what changed, plus printable sheets", icon: "📋", url: "tools/shelf-check.html", category: "Screwfix" },
   { name: "Price Compare", desc: "Copper pipe, 18V batteries and twin and earth at every major store, cheapest first", icon: "⚖️", url: "tools/price-compare.html", category: "Screwfix" },
   { name: "A25 Behind counter trial", desc: "Nightly price check on the behind counter tickets, kept until you tick them off", icon: "🧾", url: "tools/counter-trial.html", category: "Screwfix" },

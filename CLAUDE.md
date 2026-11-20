@@ -136,6 +136,29 @@ explain changes in plain English and say what they'll see.
     colour or two that look alike (`ALIKE`, checked for colour blindness). `geo.js` is the search and the sums (tested
     in `.github/tests/area-map.test.mjs`). A town or postcode that isn't a store is looked up on postcodes.io (UK only).
     "My store" and the street map setting stay on the phone.
+  - `stock-swaps`: Stock Swaps, Area 20 only (built 20 Nov 2026 for detailedfoil; NO sign-in, his say: anyone with the
+    link can open it, and he chose to publish the stock figures knowing the repo is public). Which stores should swap
+    stock and what goes on each van, ranked Most effective / Worth doing / Marginal / Not worth your time. A slider sets
+    the longest round trip drive (30 to 180 min in 5s, driving only), Swaps only keeps runs with at least 3 units each
+    way, and Your store (a picker, or tap a store on the map) shows that store's part of the area plan as "Swap with /
+    Send to / Get from" with "You send / You get". Choices are kept on the phone (`ss-v1`) and in the address
+    (`#store=Dunstable&mins=60&swaps=1`). Portrait phone first; map beside the list from 960 px. The page never works a
+    plan out itself: `.github/stock-swaps/make-plans.py` (Python: numpy, scipy 1.9+ for milp, openpyxl) solves the whole
+    area at once for every slider step, with and without Swaps only, into `data/plans.json` (about 20 KB; identical plans
+    stored once). Run it with the area stock export and the units sold export, e.g.
+    `python3 .github/stock-swaps/make-plans.py STOCK.xlsx SOLD.xlsx --days 4 --stock-date 19.11.2026 --sales "16.11 to 19.11.2026"`
+    (about 3 minutes; `--only 60,90` tries a few steps without writing). Each store's transactions (Area Overview) and
+    place are in its `STORES` list: update the transactions with the files. The rules (top of the script, copied into the
+    file as `rules`, which `plan.js` reads): demand = half own sales, half transactions share of area sales; a store gives
+    what's over 125% of its own 7 days, gets up to 7 days (only if 2 or more short); a run must be 8+ units and 5+ units a
+    van hour (drive + 30 min handling); swapped units and units to a store under 2 days count 1.5 when choosing; an hour
+    of van costs 10 units (it was 5: plans jumped about as the slider moved). Drive times are estimated from distance
+    (straight line x 1.3, then 4 min + 1.6 min a mile each way): no live routing. `plan.js` (window.SwapPlan /
+    module.exports) turns a plan into ranked runs, the store view and the totals; `app.js` draws it: Leaflet from
+    `area-map/leaflet/` with OpenStreetMap tiles greyed like the Area Map, runs as curved SVG lines with arrowheads (SVG
+    markers; both ends = a swap), dashed for Marginal, store names placed so they never overlap (each tries four sides).
+    Tests: `.github/tests/stock-swaps.test.mjs` (every plan keeps its rules: nobody gives more than they can spare or
+    gets more than they're short).
   - `nps`: the NPS figures were taken off the public site on 22 Oct 2026. Anyone now loads them on the page for that
     visit only (sessionStorage, gone when the tab closes; never committed). Three ways in: the survey export (one row per
     customer, Store + LTR columns: 9-10 promoter, 7-8 passive, 0-6 detractor, blank LTR left out; `parseResponses`, checked

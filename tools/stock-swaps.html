@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Toolbox">
+<title>Stock Swaps</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../style.css?v=b86f5823a5">
+<link rel="stylesheet" href="area-map/leaflet/leaflet.css?v=a783710282">
+<link rel="stylesheet" href="stock-swaps/stock-swaps.css?v=ac0a37a621">
+<script src="../analytics.js?v=f5e6d397aa"></script>
+</head>
+<body class="ss-page">
+<div class="wrap ss">
+  <a class="back" href="../index.html">&larr; Toolbox</a>
+  <h1>Stock Swaps</h1>
+  <p class="desc" id="about">Which Area 20 stores should swap stock, best first.</p>
+
+  <label class="ss-store" for="store">
+    <span>Your store</span>
+    <select id="store" disabled><option value="-1">All stores</option></select>
+  </label>
+
+  <div class="ss-bar" id="bar">
+    <div class="ss-bar-row">
+      <label class="ss-bar-lab" for="mins"><output id="minsOut" for="mins">90</output> min <span>longest round trip drive</span></label>
+      <label class="ss-switch" for="swaps">
+        <input type="checkbox" id="swaps" role="switch">
+        <span class="ss-track" aria-hidden="true"></span>
+        <span>Swaps only</span>
+      </label>
+    </div>
+    <input class="ss-range" type="range" id="mins" min="30" max="180" step="5" value="90" aria-label="Longest round trip drive, in minutes">
+    <div class="ss-ticks" aria-hidden="true"><span>30</span><span>60</span><span>90</span><span>120</span><span>150</span><span>180</span></div>
+  </div>
+
+  <div class="ss-main">
+    <div class="ss-mapcol">
+      <div class="ss-mapwrap">
+        <div id="map" aria-label="Map of the Area 20 stores and the stock runs between them"></div>
+        <button class="ss-fab" id="fit" type="button" title="Show all of Area 20" aria-label="Show all of Area 20">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+      </div>
+      <div class="ss-legend" aria-hidden="true">
+        <span class="lg t0">Most effective</span><span class="lg t1">Worth doing</span><span class="lg t2">Marginal</span>
+        <span class="lg-way">&#8644; swap &nbsp; &rarr; one way</span>
+      </div>
+    </div>
+
+    <div class="ss-listcol">
+      <p class="ss-sum" id="sum" aria-live="polite">Loading the plans&hellip;</p>
+      <div id="mine"></div>
+      <div id="list"></div>
+    </div>
+  </div>
+
+  <section class="ss-notes" id="notes" hidden>
+    <h2>Swaps can't fix these</h2>
+    <p class="ss-note-lead">The whole area is short of these for the next 7 days, so they need more stock in, not swaps.</p>
+    <div class="ss-short" id="short"></div>
+    <details class="ss-how">
+      <summary>How it works</summary>
+      <ul id="how"></ul>
+    </details>
+  </section>
+</div>
+<script src="area-map/leaflet/leaflet.js?v=dc71f8a688"></script>
+<script src="stock-swaps/plan.js?v=af5e4dd3b5"></script>
+<script src="stock-swaps/app.js?v=7d6f688ac4"></script>
+</body>
+</html>
