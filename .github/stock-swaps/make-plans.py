@@ -71,8 +71,8 @@ SHORT = {
     "NO NON HEAVY DUTY BIG MULTI-TASK WIPES 300PK": "Wipes",
     "SCRUFFS WINTER ESSENTIALS PACK 2020": "Scruffs pack",
     "SITE SWG420 PU PALM DIP GLOVES LARGE 9 - 10 PACK": "Palm gloves",
-    "SITE WILLSTROP SOCKS 5PK 3-7": "Socks 3-7",
-    "SITE WILLSTROP SOCKS 5PK 7-11": "Socks 7-11",
+    "SITE WILLSTROP SOCKS 5PK 3-7": "Socks mixed sizes",
+    "SITE WILLSTROP SOCKS 5PK 7-11": "Socks mixed sizes",
     "VARTA LONGLIFE POWER AA CUBE 40": "Varta AA",
     "VARTA LONGLIFE POWER AAA CUBE 40": "Varta AAA",
 }
@@ -115,6 +115,14 @@ def load(path):
         if any(v is not None and not isinstance(v, (int, float)) for v in cells):
             continue                                  # a second heading row ("Stock Quantity" and the like)
         data[str(k).strip().upper()] = [float(v or 0) for v in cells]
+    names = list(dict.fromkeys(head))                 # products sharing a short name (the sock sizes) are added together
+    if len(names) < len(head):
+        for k, row in data.items():
+            tot = {n: 0.0 for n in names}
+            for n, v in zip(head, row):
+                tot[n] += v
+            data[k] = [tot[n] for n in names]
+        head = names
     return head, data
 
 
