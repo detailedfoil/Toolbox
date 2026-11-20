@@ -173,7 +173,7 @@
     return '<article class="ss-card t' + r.tier + (picked === r.key ? ' on' : '') + '" id="run-' + r.key + '" data-key="' + r.key + '">' +
       '<div class="ss-top"><span class="ss-rank">' + r.rank + '</span><div class="ss-ttl">' +
       '<span class="ss-kind ' + (r.swap ? 'swap">SWAP' : 'one">ONE WAY') + '</span><h3>' + title(r) + '</h3>' +
-      '<div class="ss-meta"><b>' + count(r.units, 'unit') + '</b> &middot; ' + r.mins + ' min round trip</div></div></div>' +
+      '<div class="ss-meta"><b>' + count(r.units, 'unit') + '</b> &middot; ' + r.mins + ' min round trip (rough)</div></div></div>' +
       ways(r).map(function (w) {
         return '<div class="ss-way"><div>' + w.label + ' (' + w.units + ')</div><div class="ss-chips">' +
           w.lines.map(function (l) { return chip(l.item, l.qty, l.low); }).join('') + '</div></div>';
@@ -181,7 +181,7 @@
       '<div class="ss-foot"><button class="ss-mapbtn" type="button" data-act="map" data-key="' + r.key + '">' + MAP + 'Show on map</button></div></article>';
   }
   function skipRow(r, hidden) {
-    return '<div class="ss-skip t3"' + (hidden ? ' hidden' : '') + '><div class="h">' + title(r) + '<span>' + count(r.units, 'unit') + ' &middot; ' + r.mins + ' min</span></div>' +
+    return '<div class="ss-skip t3"' + (hidden ? ' hidden' : '') + '><div class="h">' + title(r) + '<span>' + count(r.units, 'unit') + ' &middot; ~' + r.mins + ' min</span></div>' +
       '<div class="d">' + ways(r).map(function (w) {
         return w.label + ': ' + w.lines.map(function (l) { return esc(doc.items[l.item]) + ' ' + l.qty; }).join(', ');
       }).join(' &middot; ') + '</div></div>';
@@ -423,7 +423,7 @@
   function runPop(r, at) {
     L.popup({ maxWidth: 250, autoPanPadding: [14, 14] }).setLatLng(at).setContent(
       '<div class="ss-pop"><b>' + (state.store >= 0 ? r.rank + '. ' : '#' + r.rank + ' ') + title(r) + '</b><div class="m">' + count(r.units, 'unit') + ' &middot; ' + r.mins +
-      ' min round trip<br>' + P.TIERS[r.tier] + '</div><button type="button" data-act="card" data-key="' + r.key + '">See what to move</button></div>').openOn(map);
+      ' min round trip (rough)<br>' + P.TIERS[r.tier] + '</div><button type="button" data-act="card" data-key="' + r.key + '">See what to move</button></div>').openOn(map);
   }
   function storePop(i) {
     var runs = full.runs.filter(function (r) { return r.a === i || r.b === i; });

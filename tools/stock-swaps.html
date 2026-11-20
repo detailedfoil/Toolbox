@@ -11,7 +11,7 @@
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../style.css?v=b86f5823a5">
 <link rel="stylesheet" href="area-map/leaflet/leaflet.css?v=a783710282">
-<link rel="stylesheet" href="stock-swaps/stock-swaps.css?v=2f7c3904f9">
+<link rel="stylesheet" href="stock-swaps/stock-swaps.css?v=ad9534b1fb">
 <script src="../analytics.js?v=f5e6d397aa"></script>
 </head>
 <body class="ss-page">
@@ -26,9 +26,11 @@
     <select id="store" disabled><option value="-1">All stores</option></select>
   </label>
 
+  <div class="ss-rough"><b>ROUGH ESTIMATE:</b> drive times are only worked out from the distance between stores, not from live maps. Check the real route before you set off.</div>
+
   <div class="ss-bar" id="bar">
     <div class="ss-bar-row">
-      <label class="ss-bar-lab" for="mins"><output id="minsOut" for="mins">60</output> min <span>longest round trip drive</span></label>
+      <label class="ss-bar-lab" for="mins"><output id="minsOut" for="mins">60</output> min <span>longest round trip drive (rough)</span></label>
       <label class="ss-switch" for="swaps">
         <input type="checkbox" id="swaps" role="switch">
         <span class="ss-track" aria-hidden="true"></span>
@@ -72,6 +74,6 @@
 </div>
 <script src="area-map/leaflet/leaflet.js?v=dc71f8a688"></script>
 <script src="stock-swaps/plan.js?v=fd83931c3e"></script>
-<script src="stock-swaps/app.js?v=99b2e578a1"></script>
+<script src="stock-swaps/app.js?v=91ffb0cbc3"></script>
 </body>
 </html>
