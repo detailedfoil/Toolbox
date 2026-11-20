@@ -197,7 +197,7 @@
   function renderList() {
     var html = '', s = state.store;
     html += s >= 0 ? '' : '<p class="ss-alone">Best case scenario if every store does their part.</p>';
-    if (s >= 0) html += '<p class="ss-alone">Best for ' + esc(name(s)) + ', based on no other store giving stock away first. Other stores see their own best, so ring before you send the van.</p>';
+    if (s >= 0) html += '<p class="ss-alone">Best for ' + esc(name(s)) + ', based on no other store giving stock away first.</p>';
     if (!view.runs.length) {
       html += '<div class="ss-empty">' + (s >= 0 ? 'No runs for ' + esc(name(s)) : 'No runs') + ' are worth the drive within ' + view.mins +
         ' minutes. Try a longer drive' + (state.swaps ? ', or turn off Swaps only' : '') + '.</div>';
@@ -235,7 +235,7 @@
       'Each store needs <b>' + rl.horizon + ' days</b> of each item: half from its own sales, half from its share of the area\'s transactions.',
       'A store only gives what it has over <b>' + Math.round(rl.keep * 100) + '%</b> of its own ' + rl.horizon + ' days, so it keeps what it needs.',
       '<b>All stores</b> shows one plan for the whole area at once, so two runs never count on the same stock. It only works out as shown if every store does its part, and it can change as you move the slider.',
-      'Pick <b>your store</b> and you get its own best runs, based on no other store giving stock away first. Ring the other store before you send the van: their list may count on the same stock.',
+      'Pick <b>your store</b> and you get its own best runs, based on no other store giving stock away first.',
       'Stores with under <b>' + rl.lowDays + ' days</b> of an item get it first. A <b>swap</b> is at least ' + rl.swapMin + ' units each way, and swapped units count 1.5 times.',
       'Runs are ranked by units moved per van hour (the drive plus ' + rl.handling + ' minutes to load, unload and book it): <b>Most effective</b> ' + rl.tiers[0] + ' or more an hour, <b>Worth doing</b> ' + rl.tiers[1] + ' to ' + rl.tiers[0] +
         ', <b>Marginal</b> ' + rl.tiers[2] + ' to ' + rl.tiers[1] + '. Under ' + rl.minUnits + ' units, or under ' + rl.minScore + ' an hour, is <b>not worth your time</b>.',
