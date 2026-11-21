@@ -36,6 +36,18 @@
   var TILLS = [0.55, 0.65];  // of the customers after that, the share who order at the till or the kiosk
   // which kinds of pick come after the opening c picks (the scanner's Function menu can narrow it, for practice)
   var MODES = { mixed: ['ck', 'collect', 'till', 'kiosk'], pick: ['ck'], hold: ['collect'], till: ['till'], kiosk: ['kiosk'] };
+  var EVENTS = {
+    sale: { title: 'Big sale today', message: 'Expect more customers throughout the shift.' },
+    failedDelivery: { title: 'Delivery cancelled', message: 'Serve customers and hand over their orders to advance the clock.' },
+    website: { title: 'Website down', message: 'Click & collect only. Expect fewer customers today.' },
+    fusion: { title: 'Fusion down', message: 'Click & collect only. The tills are closed today.' },
+    lightDuties: { title: 'Sam is on light duties', message: 'Sam can serve on tills and fetch orders from the holding area.' }
+  };
+  var EVENT_IDS = Object.keys(EVENTS);
+  function rollEvent(rand) {
+    var roll = rand();
+    return roll < 0.25 ? EVENT_IDS[Math.floor(roll / 0.25 * EVENT_IDS.length)] : null;
+  }
   var CC = ['Click and collect for {n}, please.', "Hiya, I've got a click and collect. Name's {n}.", 'Got an order to collect, under {n}.',
     "I've come for my click and collect. It's under {n}."];
   var HELLO = {
@@ -49,6 +61,7 @@
     this.r = o.rand || Math.random; this.env = o.env || {};
     this.total = o.total || (15 + Math.floor(this.r() * 11)); // 15 to 25 picks (detailedfoil: it needn't be exactly 20)
     this.mode = MODES[o.mode] ? o.mode : 'mixed';
+    this.event = this.mode === 'mixed' && EVENT_IDS.indexOf(o.event) >= 0 ? o.event : null;
     this.walkinTill = o.walkinTill === undefined ? WALKIN_TILL : o.walkinTill;
     this.canTill = !!(this.requests && this.requests.need && this.requests.need.length);
     this.t = 0; this.nextId = 1; this.used = {};
@@ -67,12 +80,24 @@
     this.plan = [];
     for (var i = 0; i < this.total; i++) this.plan.push(i < this.first ? 'c' : null);
     this.fillPlan(true);
-    this.makeDelivery(o.delivery);
+    this.makeDelivery(this.event === 'failedDelivery' ? 0 : o.delivery);
     this.wait = 1.0;                       // seconds to the next pick
     if (this.first === 0) { this.phase = 'open'; this.wait = 3 + 3 * this.r(); }
   }
   Day.prototype.emit = function (name, a, b) { var f = this.env[name]; if (typeof f === 'function') return f.call(this.env, a, b); return undefined; };
   Day.prototype.pick = function (list) { return list[Math.floor(this.r() * list.length)]; };
+  Day.prototype.tillsOpen = function () { return this.event !== 'website' && this.event !== 'fusion'; };
+  Day.prototype.samCanPick = function (o) { return this.event !== 'lightDuties' || o.kind === 'hold'; };
+  Day.prototype.clockMinute = function () {
+    var progress;
+    if (this.event === 'failedDelivery') {
+      progress = this.done / this.total;
+    } else {
+      var delivery = this.delivery;
+      progress = delivery.length ? delivery.reduce(function (done, d) { return done + Number(d.done); }, 0) / delivery.length : 1;
+    }
+    return 7 * 60 + Math.floor(Math.min(1, progress) * 13 * 60);
+  };
 
   /* ---------- the plan ---------- */
   function shuffle(a, r) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
@@ -92,6 +117,7 @@
       for (i = 0; i < nc; i++) rest.push('c');
       for (i = 0; i < nt; i++) rest.push(i < tl ? 'till' : 'kiosk');
       for (i = 0; i < R; i++) rest.push(i < C ? 'collect' : 'ck');
+      if (this.event) rest = this.eventPlan(rest, nc);
       shuffle(rest, this.r);
     } else {
       var kinds = MODES[this.mode];
@@ -107,7 +133,24 @@
     for (i = 0; i < rest.length; i++) this.plan[from + i] = (rest[i] === 'till' && !this.canTill) ? 'kiosk' : rest[i];
     void self;
   };
-  Day.prototype.setMode = function (m) { if (!MODES[m]) return; this.mode = m; this.fillPlan(false); };
+  Day.prototype.eventPlan = function (plan, holdingPicks) {
+    var customers = plan.slice(holdingPicks);
+    if (this.event === 'failedDelivery') {
+      plan = customers;
+    } else if (this.event === 'sale') {
+      var extra = Math.ceil(this.total * 0.4);
+      for (var i = 0; i < extra; i++) plan.push(this.pick(MODES.mixed));
+    } else if (!this.tillsOpen()) {
+      // Existing click & collect orders can still be picked and collected during either outage.
+      var size = this.event === 'website' ? Math.ceil(customers.length * 0.7) : customers.length;
+      plan = plan.slice(0, holdingPicks);
+      for (var j = 0; j < size; j++) plan.push(j % 2 ? 'ck' : 'collect');
+    }
+    this.total = plan.length;
+    this.plan.length = this.total;
+    return plan;
+  };
+  Day.prototype.setMode = function (m) { if (this.event || !MODES[m]) return; this.mode = m; this.fillPlan(false); };
 
   /* ---------- the delivery: cartons on the roll cages and pallets at goods in, each to go to its own location ---------- */
   // detailedfoil, 20 Nov 2026: when there are no orders, put the delivery away (Putaway on the scanner). The day
@@ -141,6 +184,7 @@
   Day.prototype.deliveryLeft = function (src) { return this.delivery.filter(function (d) { return !d.by && !d.done && (src === undefined || src === null || d.src === src); }); };
   // take the top carton off a cage or pallet: it's yours to put away
   Day.prototype.paTake = function (src, who) {
+    if (who === 'Sam' && this.event === 'lightDuties') return null;
     var left = this.deliveryLeft(src);
     if (!left.length) return null;
     var gi = this.world.goodsin, top = left.reduce(function (a, b) { return gi[b.src].slots[b.slot].z0 > gi[a.src].slots[a.slot].z0 ? b : a; });
@@ -228,7 +272,7 @@
   /* ---------- picking ---------- */
   // whoever starts an order has it, and there's no backing out
   Day.prototype.take = function (o, who) {
-    if (!o || o.status !== 'listed') return false;
+    if (!o || o.status !== 'listed' || (who === 'Sam' && !this.samCanPick(o))) return false;
     o.status = 'taken'; o.by = who; o.takenAt = this.t;
     this.emit('changed', o);
     if (this.phase === 'closed') this.check(); // Sam on the last morning pick: customers can start coming in
@@ -296,7 +340,7 @@
 
   /* ---------- the till ---------- */
   Day.prototype.serve = function (c, who) {
-    if (!c || c.state !== 'counter' || c.by) return false;
+    if (!this.tillsOpen() || !c || c.state !== 'counter' || c.by) return false;
     if (this.customers.some(function (other) { return other.state === 'serving' && other.by === who; })) return false;
     c.state = 'serving'; c.by = who; c.greeter = who; c.ready = false;
     this.emit('step', c);
@@ -363,7 +407,7 @@
   // what a walk-in turns out to want is settled when somebody first says hello: WALKIN_TILL of them want the till, the
   // rest are click and collects (detailedfoil, 20 Nov 2026: so it can't be Sam who gets the till customers)
   Day.prototype.decide = function (c) {
-    if (this.mode !== 'mixed' || !this.canTill || !this.walkinTill) return; // (walkinTill 0: customers stay as sent, for tests)
+    if (!this.tillsOpen() || this.mode !== 'mixed' || !this.canTill || !this.walkinTill) return;
     var want = this.r() < this.walkinTill, isTill = c.kind === 'till' || c.kind === 'kiosk';
     if (want) {
       if (isTill) return;
@@ -462,7 +506,7 @@
     if (this.phase === 'closed') return 0.4 + 0.8 * this.r();
     var L = Math.min(4, this.projected()), r = (this.r() + this.r()) / 2;
     var lo = [4, 12, 20, 30, 40][L], hi = [9, 26, 40, 55, 70][L];
-    return (lo + (hi - lo) * r) * (this.lag() > 0.15 ? 2 : 1);
+    return (lo + (hi - lo) * r) * (this.lag() > 0.15 ? 2 : 1) * (this.event === 'sale' ? 0.75 : 1);
   };
   // the c picks are all in the holding area: the shop opens by itself (detailedfoil: no unlocking, only locking up at the end)
   Day.prototype.open = function () {
@@ -550,7 +594,7 @@
   };
 
   function create(o) { var d = new Day(o); return d; }
-  var api = { create: create, Day: Day, DELIVERY: DELIVERY, TOTAL: TOTAL, MAX_LIST: MAX_LIST, MAX_IN: MAX_IN, MODES: MODES };
+  var api = { create: create, Day: Day, DELIVERY: DELIVERY, TOTAL: TOTAL, MAX_LIST: MAX_LIST, MAX_IN: MAX_IN, MODES: MODES, EVENTS: EVENTS, rollEvent: rollEvent };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftDay = api;
 })(typeof window !== 'undefined' ? window : this);

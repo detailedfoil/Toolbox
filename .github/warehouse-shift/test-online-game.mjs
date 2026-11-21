@@ -15,7 +15,7 @@ async function until(check, what) {
   const limit = Date.now() + 8000;
   while (!check()) { if (Date.now() > limit) assert.fail('Timed out waiting for ' + what); await pause(30); }
 }
-async function game(t, { online = true, phone = false, installed = false, loadPhotos = false } = {}) {
+async function game(t, { online = true, phone = false, installed = false, loadPhotos = false, event = null } = {}) {
   const w = new JSDOM(page, { runScripts: 'outside-only', pretendToBeVisual: true,
     url: origin + '/Toolbox/tools/warehouse-shift.html' + (online ? '?relay=' + relay : '') }).window;
 
@@ -46,6 +46,7 @@ async function game(t, { online = true, phone = false, installed = false, loadPh
   for (const script of w.document.scripts) {
     const asset = script.getAttribute('src')?.split('?')[0]; if (!asset || asset.startsWith('../')) continue;
     w.eval(readFileSync(path.join(base, asset), 'utf8'));
+    if (asset.endsWith('/day.js')) w.ShiftDay.rollEvent = () => event;
     if (asset.endsWith('cctv.js')) {
       const create = w.ShiftCCTV.create;
       w.ShiftCCTV.create = options => {
@@ -232,6 +233,20 @@ test('the wall clock follows shelved cartons from 07:00 to 20:00', async t => {
   assert.equal(minute, 20 * 60);
 });
 
+test('a cancelled delivery starts at 07:00 and appears on the handheld scanner', async t => {
+  const { $, s } = await game(t, { online: false, phone: true, event: 'failedDelivery' });
+  $('startBtn').click();
+  assert.equal($('bannerTitle').textContent, 'Delivery cancelled');
+  assert.equal(s.day().delivery.length, 0);
+  let minute;
+  s.S.clockTick = value => { minute = value; };
+  s.tick(0.05);
+  assert.equal(minute, 7 * 60);
+  s.players[0].page(-1);
+  s.enter();
+  assert.match($('scText').textContent, /Delivery cancelled/);
+});
+
 test('an installed phone with the ordinary launch URL can host or join from its start screen', async t => {
   const manifest = JSON.parse(readFileSync(path.join(base, 'warehouse-shift.webmanifest'), 'utf8'));
   assert.equal(manifest.id, './warehouse-shift.html');
@@ -409,11 +424,22 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   picker.$('nextDayBtn').click();
   assert.equal(picker.$('dayCover').hidden, false);
   assert.equal(s.day(), previous);
+  host.w.ShiftDay.rollEvent = () => 'failedDelivery';
   host.$('nextDayBtn').click();
-  await until(() => s.day() !== previous && s.day().total === host.s.day().total, 'new day');
+  await until(() => s.day() !== previous && guests.every(g => g.s.day().event === 'failedDelivery' &&
+    g.s.day().clockMinute() === 7 * 60 && g.$('bannerTitle').textContent === 'Delivery cancelled'), 'host event to start on all devices');
+  const cancelled = host.s.day();
+  assert.equal(cancelled.delivery.length, 0);
+  cancelled.walkinTill = 0;
+  const visitor = cancelled.start('ck');
+  cancelled.arrived(visitor); cancelled.greet(visitor, 'p1');
+  cancelled.take(visitor.order, 'p1'); cancelled.picked(visitor.order); cancelled.handOver(visitor.order, 'p1');
+  await until(() => guests.every(g => g.s.day().clockMinute() === cancelled.clockMinute() && g.s.day().done === 1),
+    'customer handover to advance the shared wall clock');
   host.sockets.at(-1).terminate();
   await until(() => host.sockets.length === 2 && guests.every(g => g.$('onlineCover').hidden), 'original host to reconnect');
   assert.equal(host.s.crew.length, 1);
+  assert.ok(guests.every(g => g.s.day().event === 'failedDelivery'));
   host.sockets.at(-1).send(JSON.stringify({ type: 'leave' }));
   await until(() => guests.every(g => !g.$('onlineCover').hidden && /host left/.test(g.$('roomMessage').textContent)), 'room to end for everyone');
 });

@@ -8,7 +8,7 @@
   }));
   function snapshot(day, tills, stockItems) {
     return {
-      ...fields(day, ['phase', 'total', 'done', 'over', 'mode']),
+      ...fields(day, ['phase', 'total', 'done', 'over', 'mode', 'event']),
       hold: Object.fromEntries(Object.entries(day.hold).map(([k, p]) => [k, parcel(p)])), busy: { ...day.busy },
       orders: day.orders.map(o => ({
         ...fields(o, ['id', 'no', 'kind', 'status', 'by', 'doneBy', 'counts', 'locs', 'units', 'surname', 'code']),
@@ -34,7 +34,7 @@
       this.tills = tills;
       this.request = request;
       this.hold = {}; this.busy = {}; this.orders = []; this.customers = []; this.delivery = []; this.t = 0;
-      for (const name of ['list', 'queue', 'label', 'freeSpots', 'ungreeted', 'canGreet', 'deliveryLeft', 'summary']) this[name] = Day.prototype[name];
+      for (const name of ['list', 'queue', 'label', 'freeSpots', 'ungreeted', 'canGreet', 'deliveryLeft', 'summary', 'tillsOpen', 'clockMinute']) this[name] = Day.prototype[name];
     }
     applyStock(rows) {
       const { world, World } = this;
@@ -63,7 +63,7 @@
         const prev = new Map(old.map(o => [o.id, o]));
         return next.map(row => Object.assign(prev.get(row.id) || {}, decode(row)));
       };
-      Object.assign(this, fields(s, ['phase', 'total', 'done', 'over', 'mode', 'hold', 'busy']));
+      Object.assign(this, fields(s, ['phase', 'total', 'done', 'over', 'mode', 'event', 'hold', 'busy']));
       this.orders = merge(this.orders, s.orders, row => ({ ...row, lines: unpack(row.lines) }));
       this.customers = merge(this.customers, s.customers, row => ({
         ...row, cust: row.accounts && Object.assign(row.accounts[0], { db: row.accounts }), at: this.tills[row.at], order: this.orders.find(o => o.id === row.orderId),
@@ -149,7 +149,7 @@
         return !!(d && atLoc(d.loc) && day.paPut(d, who));
       }
       case 'greet': return !!(c?.fig && ctx.canGreet() && near(c.fig.group.position.x, c.fig.group.position.z, 3.2) && day.greet(c, who));
-      case 'tillOpen': return ctx.open(a.till);
+      case 'tillOpen': return day.tillsOpen() && ctx.open(a.till);
       case 'tillClose': return ctx.close();
       case 'call': return ctx.call();
       case 'tillDone': {
