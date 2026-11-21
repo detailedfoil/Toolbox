@@ -1,0 +1,51 @@
+name: Warehouse online co-op
+
+on:
+  pull_request:
+    paths:
+      - 'tools/warehouse-shift*'
+      - 'tools/warehouse-shift/**'
+      - 'workers/warehouse-relay/**'
+      - '.github/warehouse-shift/test-*.mjs'
+      - '.github/warehouse-shift/browser-online.py'
+      - '.github/tests/warehouse-online.test.mjs'
+      - '.github/workflows/warehouse-online.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-relay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci --prefix .github --no-audit --no-fund
+      - run: python3 -m pip install playwright==1.62.0
+      - name: Install headless Chromium with its matching SwiftShader renderer
+        working-directory: ${{ runner.temp }}
+        run: |
+          npm install --prefix warehouse-browser --no-audit --no-fund @sparticuz/chromium@153.0.0
+          cd warehouse-browser
+          node --input-type=module -e "import chrome from '@sparticuz/chromium'; console.log('CHROME_BIN=' + await chrome.executablePath());" >> "$GITHUB_ENV"
+      - name: Play a shared shift against a local Durable Object
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+          RELAY_TEST_ORIGIN: 'http://127.0.0.1:8000'
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > "$RUNNER_TEMP/warehouse-web.log" 2>&1 &
+          web_pid=$!
+          npx --yes wrangler@4.166.0 dev --local --ip 127.0.0.1 --port 8787 --var "GAME_ORIGIN:$RELAY_TEST_ORIGIN" --config workers/warehouse-relay/wrangler.toml > "$RUNNER_TEMP/warehouse-relay.log" 2>&1 &
+          relay_pid=$!
+          trap 'kill "$relay_pid" "$web_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..90}; do
+            if curl --silent http://127.0.0.1:8787/ >/dev/null; then break; fi
+            if ! kill -0 "$relay_pid"; then cat "$RUNNER_TEMP/warehouse-relay.log"; exit 1; fi
+            sleep 1
+          done
+          node --test .github/warehouse-shift/test-relay.mjs .github/warehouse-shift/test-online-game.mjs
+          python3 .github/warehouse-shift/browser-online.py

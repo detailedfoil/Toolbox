@@ -12,7 +12,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=e86096bb39">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=f600af223e">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=b66e39ba67">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -25,6 +25,7 @@
   <div class="ws-top" id="topBar" hidden>
     <a class="ws-btn" href="../index.html" aria-label="Back to the Toolbox" title="Back to the Toolbox">&larr;</a>
     <button class="ws-btn" id="fullBtn" type="button" aria-label="Full screen" title="Full screen">&#x26F6;</button>
+    <button class="ws-btn room-badge" id="roomBtn" type="button" aria-label="Room details" hidden></button>
     <button class="ws-btn" id="helpBtn" type="button" aria-label="How to play" title="How to play">?</button>
   </div>
 
@@ -107,6 +108,7 @@
       <div class="ws-row">
         <button class="ws-go" id="startBtn" type="button">Start shift</button>
         <button class="ws-alt" id="twoBtn" type="button" hidden>Two players</button>
+        <button class="ws-alt" id="onlineBtn" type="button" hidden>Online co-op</button>
         <button class="ws-alt" id="howBtn" type="button">How to play</button>
         <button class="ws-alt" id="installBtn" type="button" hidden>Install game</button>
         <button class="ws-alt" id="updBtn" type="button">Check for updates</button>
@@ -115,6 +117,19 @@
       <p class="ws-small">A made-up warehouse with the store's 10,999 nailed products. Play with your phone sideways or upright, and turn it whenever you like.</p>
     </div>
   </div>
+
+  <section class="ws-cover" id="onlineCover" hidden aria-labelledby="roomTitle">
+    <div class="ws-card">
+      <h1 id="roomTitle">Online co-op</h1>
+      <p id="roomMessage" role="status"></p>
+      <div id="roomControls">
+        <button class="ws-go" id="hostRoom" type="button">Host a shift</button>
+        <label for="roomCode">Room code</label>
+        <div class="ws-row"><input id="roomCode" maxlength="6" placeholder="ABC234" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="ws-alt" id="joinRoom" type="button">Join shift</button></div>
+      </div>
+      <div class="ws-row"><button class="ws-alt" id="roomBack" type="button">Back</button><button class="ws-alt" id="leaveRoom" type="button" hidden>Leave shift</button></div>
+    </div>
+  </section>
 
   <div class="ws-cover" id="joinCover" hidden>
     <div class="ws-card">
@@ -212,12 +227,15 @@
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
 <script src="warehouse-shift/world.js?v=5c8bb742d3"></script>
 <script src="warehouse-shift/cctv.js?v=34a13a7fec"></script>
-<script src="warehouse-shift/scene.js?v=eea405f05c"></script>
+<script src="warehouse-shift/scene.js?v=622ff19601"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=66b69820b0"></script>
 <script src="warehouse-shift/day.js?v=55267ae277"></script>
 <script src="warehouse-shift/bot.js?v=e1975d5ece"></script>
-<script src="warehouse-shift/tillui.js?v=7dcf096cdb"></script>
-<script src="warehouse-shift/game.js?v=87987056b1"></script>
+<script src="warehouse-shift/tillui.js?v=86157498d7"></script>
+<script src="warehouse-shift/online-day.js?v=b5eb3dacca"></script>
+<script src="warehouse-shift/online.js?v=5f89bd9eee"></script>
+<script src="warehouse-shift/online-game.js?v=2ac550f812"></script>
+<script src="warehouse-shift/game.js?v=3eecc0c31a"></script>
 </body>
 </html>

@@ -751,7 +751,7 @@
       for (const it of near) {
         if (n >= PHOTO_MAX) break;
         const p = photos.get(it.code);
-        if (!p || p.state !== 'ok') continue;
+        if (!it.loc || !p || p.state !== 'ok') continue;
         p.slot.used = now;
         const b = it.box, f = it.loc.face, slide = it.trayRef ? it.trayRef.slide * 0.32 : (it.pull || 0);
         if (it.loc.tray >= 0) { // on top of the pack in the tray
@@ -1132,10 +1132,10 @@
       scene.add(g); s.group = g;
     }
     // what the customer carries out: a copy of the parcel
-    function carryParcel(code) {
+    function carryParcel(code, parcel) {
       const s = hold && hold.spots.find((x) => x.sp.code === code);
-      if (!s || !s.parcel) return null;
-      const g = parcelMesh(s.parcel, s.sp.kind === 'tote' ? 'tote' : 'shelf', s.sp.kind === 'tote' ? 0.45 : 0.9);
+      if (!s || !(parcel || s.parcel)) return null;
+      const g = parcelMesh(parcel || s.parcel, s.sp.kind === 'tote' ? 'tote' : 'shelf', s.sp.kind === 'tote' ? 0.45 : 0.9);
       g.rotation.y = Math.PI / 2;
       scene.add(g);
       return g;

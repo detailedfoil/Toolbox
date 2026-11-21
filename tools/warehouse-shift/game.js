@@ -85,7 +85,9 @@
     let lookPick = 0;
     try { lookPick = Math.max(0, LOOKS.findIndex((l) => l[0] === localStorage.getItem('ws-look'))); } catch (e) { /* fine */ }
     const players = [];
-    let active = false;
+    let active = false, online = null;
+    const onlineFlag = new URLSearchParams(location.search).get('online') === '1';
+    const guest = () => online?.guest();
 
     /* ---------- walking: the walls, racking and everything else that blocks ---------- */
     const BODY = 0.22;
@@ -236,6 +238,7 @@
     function freeFig(f) {
       f.free = true; f.group.visible = false; f.mode = 'away'; f.carry = false; f.giving = false;
       if (f.tote) { S.dropTote(f.tote); f.tote = null; }
+      if (f.counterTote) { S.dropTote(f.counterTote); f.counterTote = null; }
       speeches.delete(f);
       if (f.c) { f.c.fig = null; f.c = null; }
     }
@@ -339,7 +342,7 @@
     function giveTote(c, tote, x) {
       const f = c.fig;
       if (!f) { S.dropTote(tote); return; }
-      f.giving = true;
+      f.giving = true; f.counterTote = tote;
       tote.visible = true;
       tote.position.set(x, 1.0, counter.y0 + 0.22);
       standAt(c, null);
@@ -394,7 +397,7 @@
           const f = t.c && t.c.fig;
           if (f) { // the customer picks it up and goes
             if (f.tote) S.dropTote(f.tote);
-            f.carry = true; f.tote = t.tote; f.group.add(t.tote); t.tote.position.set(0, 0.95, 0.32); t.tote.rotation.set(0, 0, 0); t.tote.scale.setScalar(1 / f.group.scale.x);
+            f.carry = true; f.counterTote = null; f.tote = t.tote; f.group.add(t.tote); t.tote.position.set(0, 0.95, 0.32); t.tote.rotation.set(0, 0, 0); t.tote.scale.setScalar(1 / f.group.scale.x);
             f.giving = false;
             goOut(t.c);
           } else S.dropTote(t.tote);
@@ -432,19 +435,20 @@
     try { localStorage.removeItem('ws-orders'); } catch (e) { /* fine */ }
     let day = null, dayNo = 0;
     const dayEnv = {
-      listed: (o) => { for (const p of players) p.listed(o); },
+      listed: (o) => { if (online?.room()) for (const l of o.lines) online.trackStock(l.item); for (const p of players) p.listed(o); },
       changed: (o) => { for (const p of players) p.changed(o); tidyScreens(); },
       customer: (c) => comeIn(c),
       step: (c) => onStep(c),
       unlocked: () => { for (const p of players) { p.banner('Doors open', 'Customers will be in shortly', 2600); p.queueChanged(); } },
       closing: () => { for (const p of players) { p.banner('All done', 'Lock the front door', 6000); p.queueChanged(); } SFX.order(); },
       locked: () => { SFX.key(); },
-      stock: (it) => { if (S.stockChange && it.mesh) S.stockChange(it); dirty = true; },
+      stock: (it) => { if (online?.room()) online.trackStock(it); if (S.stockChange && it.mesh) S.stockChange(it); dirty = true; },
       holdSet: (code, parcel) => { if (S.hold) S.hold.set(code, parcel); dirty = true; },
       delivery: (d) => { S.delivery.show(d); for (const p of players) p.deliveryChanged(); dirty = true; },
       over: () => dayOver()
     };
     function newDay() {
+      if (guest()) return;
       const old = day;
       day = Day.create({ world, World, Till, requests, mode: MODES[mode][0], env: dayEnv, hold: old ? old.hold : null });
       dayNo++;
@@ -506,12 +510,13 @@
       },
       toteAdd(b, ln) { S.trolleyTop(b.fig.trolley, ln.item.colour); },
       open(b, loc) {
+        if (online?.room()) b.openSku = loc.item?.code;
         const tr = S.trayOf(loc);
         if (tr) { tr.target = 1; crewSound(b, 'slide'); }
         else if (loc.item) { loc.item.pullTarget = loc.face.kind === 'BB' ? 0.12 : 0.07; pulling.add(loc.item); }
         dirty = true;
       },
-      close(b, loc) { const tr = S.trayOf(loc); if (tr) tr.target = 0; else if (loc.item) loc.item.pullTarget = 0; dirty = true; },
+      close(b, loc) { b.openSku = null; const tr = S.trayOf(loc); if (tr) tr.target = 0; else if (loc.item) loc.item.pullTarget = 0; dirty = true; },
       tillDone(b, c, lines) { const o = day.tillDone(c, lines, { till: b.till }); showScreen(b.till, o); },
       // the top tote off the trolley (or the bag in their hands) goes on the counter; the customer comes for it
       handOver(b, o) {
@@ -546,7 +551,7 @@
     function removeSam() {
       const b = crew.find((x) => x.name === 'Sam');
       if (!b) return;
-      if (day) day.release('Sam');
+      if (day) { if (online?.room()) online.releaseWork('Sam'); else day.release('Sam'); }
       crew.splice(crew.indexOf(b), 1);
       speeches.delete(b);
       b.fig.group.visible = false; b.fig.trolley.group.visible = false;
@@ -560,7 +565,7 @@
       samOff = false; dirty = true;
       try { localStorage.removeItem('ws-sam'); } catch (e) { /* fine */ }
     }
-    if (!samOff) hire(SAM);
+
     // Sam and their trolley are in your way like anything else (you can step away from them, never into them)
     function trolleyGap(b, x, y) { // how far a point is from the edge of Sam's trolley
       const t = b.trolley;
@@ -570,7 +575,8 @@
       return Math.hypot(Math.max(0, along), Math.max(0, across)) + Math.min(0, Math.max(along, across));
     }
     function crewStop(me, x, y) {
-      for (const b of crew) {
+      const sam = online?.sam();
+      for (const b of sam ? [sam] : crew) {
         const dn = Math.hypot(x - b.x, y - b.y);
         if (dn < BODY + b.r && dn < Math.hypot(me.x - b.x, me.y - b.y) - 1e-4) return true;
         const g = trolleyGap(b, x, y);
@@ -580,11 +586,13 @@
     }
     // two players: neither walks into the other (two can share an aisle, detailedfoil)
     function peerStop(me, x, y) {
-      for (const q of players) {
-        if (q.me === me) continue;
-        const dn = Math.hypot(x - q.me.x, y - q.me.y);
-        if (dn < 2 * BODY && dn < Math.hypot(me.x - q.me.x, me.y - q.me.y) - 1e-4) return true;
-      }
+      if (players.length === 1 && !online?.peers.size) return false;
+      const closer = q => {
+        const dn = Math.hypot(x - q.x, y - q.y);
+        return dn < 2 * BODY && dn < Math.hypot(me.x - q.x, me.y - q.y) - 1e-4;
+      };
+      for (const q of players) if (q.me !== me && closer(q.me)) return true;
+      if (online) for (const q of online.peers.values()) if (closer(q)) return true;
       return false;
     }
     const _frus = new T.Frustum(), _fm = new T.Matrix4(), _sph = new T.Sphere(new T.Vector3(), 1.3);
@@ -592,6 +600,7 @@
     function updateCrew(dt) { // true when Sam needs drawing again
       if (!crew.length) return false;
       const people = players.map((p, i) => ({ id: -1 - i, x: p.me.x, y: p.me.y, r: BODY, moving: p.me.speed > 0.15, human: true }));
+      if (online) for (const [slot, q] of online.peers) people.push({ id: -slot, x: q.x, y: q.y, r: BODY, moving: q.speed > 0.15, human: true });
       let seen = false, busy = false;
       for (const b of crew) {
         const others = people.slice();
@@ -619,14 +628,14 @@
     function updateMoving(dt) {
       let any = false;
       for (const tr of S.trays.values()) {
-        const tgt = tr.target || 0;
+        const tgt = tr.netOpen ? 1 : tr.target || 0;
         if (Math.abs(tr.slide - tgt) > 0.001) {
           tr.slide += Math.sign(tgt - tr.slide) * Math.min(Math.abs(tgt - tr.slide), dt * 5.5);
           S.placeTray(tr); any = true;
         }
       }
       for (const it of pulling) {
-        const tgt = it.pullTarget || 0, now = it.pull || 0;
+        const tgt = it.netPull || it.pullTarget || 0, now = it.pull || 0;
         if (Math.abs(now - tgt) > 0.0005) { it.pull = now + Math.sign(tgt - now) * Math.min(Math.abs(tgt - now), dt * 0.6); S.placeItem(it); any = true; }
         else if (!tgt) { it.pull = 0; S.placeItem(it); pulling.delete(it); }
       }
@@ -654,6 +663,14 @@
       for (const p of players) p.fig.group.traverse((o) => { o.layers.disableAll(); for (const q of players) if (q !== p) o.layers.enable(1 + q.idx); });
       dirty = true;
     }
+    const STEP = 1.05; // 2.5 times the old 0.42 (detailedfoil, 21 Nov 2026), whatever the stool model's height
+    // a stool is only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level (detailedfoil, 21 Nov 2026)
+    const needsStep = (loc) => { const k = loc.face.kind, n = loc.shelf.no; return k === 'AA' ? n >= 13 : k === 'BA' ? n >= 7 : n >= loc.face.shelves.length; };
+    function poseStool(stool, x, y, yaw, stepped) {
+      const sy = Math.sin(yaw), cy = Math.cos(yaw);
+      if (stepped) S.setStool(stool.id, x, y);
+      else S.setStool(stool.id, x + cy * 0.75 + sy * 0.1, y - sy * 0.75 + cy * 0.1);
+    }
     function makePlayer(idx, D) {
       const P = { idx, id: 'p' + (idx + 1), D, kb: idx === 0 };
       const me = { x: world.start.x + idx * 0.7, y: world.start.y, yaw: world.start.yaw, pitch: -0.05, vx: 0, vy: 0, eye: 1.62, squat: false, bob: 0, speed: 0 };
@@ -675,11 +692,12 @@
       if (D.tag) D.tag.textContent = P.name;
       const figB = { x: me.x, y: me.y, yaw: 0, speed: 0, turning: 0, lookT: 0, beam: 0 };
       let lastYaw = me.yaw;
+      const carryPose = () => state === 'deliver' || state === 'hold' ? 'tote' : state === 'pato' || state === 'paqty' ? 'box' : null;
       P.poseFig = (dt) => {
         figB.x = me.x; figB.y = me.y; figB.yaw = me.yaw + Math.PI; figB.speed = me.speed;
         figB.turning = Math.abs(me.yaw - lastYaw) / Math.max(dt, 0.001); lastYaw = me.yaw;
         figB.kneeling = me.squat; figB.walking = me.speed > 0.15;
-        figB.carry = state === 'deliver' || state === 'hold' ? 'tote' : state === 'pato' || state === 'paqty' ? 'box' : null;
+        figB.carry = carryPose();
         figB.atTill = !!(till && till.isOpen()); figB.typing = figB.atTill && Math.random() < 0.5;
         S.poseWorker(P.fig, figB, dt);
         P.fig.group.position.y = me.step ? STEP : 0;
@@ -878,11 +896,20 @@
       P.toast = toast;
 
       /* ---------- the list: choosing an order ---------- */
-      function startPick() {
+      // Waiting for a guest action must never block or delay local controls in an offline shift.
+      let pending = false, generation = 0;
+      async function remote(action) {
+        if (pending || online.frozen()) return false;
+        const current = generation;
+        pending = true;
+        try { const value = await action(); return current === generation && value; }
+        finally { if (current === generation) pending = false; }
+      }
+      async function startPick() {
         const list = day ? day.list() : [];
         const o = list[sel];
         if (!o) { say('No picks yet', 'dim'); SFX.miss(); return; }
-        if (!day.take(o, P.id)) { say('Already taken', 'err'); SFX.bad(); renderScanner(); return; }
+        if (!(guest() ? await remote(() => day.take(o)) : day.take(o, P.id))) { say('Already taken', 'err'); SFX.bad(); renderScanner(); return; }
         order = o; cur = 0; typed = ''; full = false; viewLine = -1; hint.until = 0; slips = 0; carry = null;
         SFX.order(); flash(false);
         if (o.kind === 'hold') { state = 'hold'; banner(o.no + ' CK', 'Click & collect in the holding area: ' + o.hold.code, 2000); }
@@ -950,11 +977,11 @@
         }
         return best;
       }
-      function scanGoods(nx, ny) {
+      async function scanGoods(nx, ny) {
         const h = goodsHit(nx, ny);
         if (!h) { say('Scan a carton on a cage or pallet', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH + 0.5) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
-        const d = day && day.paTake(h.g.i, P.id);
+        const d = guest() ? await remote(() => day.paTake(h.g.i)) : day && day.paTake(h.g.i, P.id);
         if (!d) { say('Nothing left on that one', 'warn'); SFX.miss(); return; }
         carton = d; slips = 0; hint.until = 0;
         SFX.scan(); flash(false);
@@ -985,10 +1012,11 @@
           toast(h.loc.code + '  ✗', 'bad');
         }
       }
-      function paConfirm() {
+      async function paConfirm() {
         if (state !== 'paqty' || !carton) return;
         const d = carton;
-        day.paPut(d, P.id);
+        if (guest()) { if (!await remote(() => day.paPut(d))) { say('Confirm at the delivery location', 'warn'); return; } }
+        else day.paPut(d, P.id);
         SFX.pick(); flash(false); shut();
         stats.putaway++; life.putaway = (life.putaway || 0) + 1; saveLife();
         carton = null; hint.until = 0;
@@ -1026,6 +1054,7 @@
       // the tray this player has out, or the box pulled forward
       let openTray = null, openTimer = 0, pulled = null;
       P.openTray = () => openTray;
+      P.shelf = () => openTray?.target ? openTray.items[0]?.code : pulled?.pullTarget ? pulled.code : null;
       function slideTray(tr, out) {
         if (openTray && openTray !== tr) openTray.target = 0;
         if (tr) { tr.target = out ? 1 : 0; if (out) { openTray = tr; SFX.slide(); } }
@@ -1083,9 +1112,10 @@
         }
         renderScanner();
       }
-      function confirmQty() {
+      async function confirmQty() {
         if (state !== 'qty' || !full) return;
         const ln = order.lines[cur];
+        if (guest() && !await remote(() => day.line(order, cur))) { say('Confirm at the scanned shelf', 'warn'); return; }
         SFX.pick(); flash(false);
         stats.lines++; stats.units += ln.qty; life.lines++; life.units += ln.qty; saveLife();
         flyToTote(ln);
@@ -1098,7 +1128,7 @@
           state = order.kind === 'c' && !order.cust ? 'put' : 'deliver';
           if (state === 'put') banner('Pick complete', 'Put it in any empty OC spot in the holding area', 2400);
           else banner('Pick complete', 'Take the tote to the trade counter', 2200);
-          day.picked(order);
+          if (!guest()) day.picked(order);
         }
         renderScanner();
       }
@@ -1151,7 +1181,7 @@
       function tapRow(i) { if (state === 'home') { if (i === homeSel) openHome(i); else { SFX.key(); homeSel = i; renderScanner(); } return; } if (state !== 'list') return; if (i === sel) { SFX.key(); enter(); return; } const list = day ? day.list() : []; if (!list[i]) return; SFX.key(); sel = i; selId = list[i].id; renderScanner(); }
 
       /* ---------- the holding area: fetching a bag, putting a c pick away ---------- */
-      function scanHold(nx, ny) {
+      async function scanHold(nx, ny) {
         const h = holdHit(nx, ny);
         if (!h) { say('Scan the tote', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH + 0.4) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
@@ -1164,8 +1194,8 @@
           return;
         }
         SFX.pick(); flash(false);
-        carry = S.hold.carry(sp.code); if (carry) carry.visible = false;
-        day.fetch(order);
+        if (guest()) { if (!await remote(() => day.fetch(order))) return; }
+        else { carry = S.hold.carry(sp.code); if (carry) carry.visible = false; day.fetch(order); }
         if (hint.spot) hint.until = 0;
         state = 'deliver';
         toast(sp.code + ' ' + order.hold.parcel.surname + '  ✓', 'good');
@@ -1174,13 +1204,13 @@
         S.aimBox.visible = false;
         renderScanner(); dirty = true;
       }
-      function scanPut(nx, ny) {
+      async function scanPut(nx, ny) {
         const h = holdHit(nx, ny);
         if (!h) { say('Scan an OC label', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH + 0.4) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         const sp = h.sp;
         S.setBox(S.aimBox, spotBox(sp), 0.012); S.aimBox.visible = true;
-        const p = day.putAway(order, sp.code, P.id);
+        const p = guest() ? await remote(() => day.putAway(order, sp.code)) : day.putAway(order, sp.code, P.id);
         if (!p) {
           stats.wrong++; slips++; SFX.bad(); flash(true);
           say(sp.code + ' is full', 'err', 2000);
@@ -1278,7 +1308,7 @@
       const flyers = [];
       const flyGeo = new T.BoxGeometry(1, 1, 1);
       function flyToTote(ln) {
-        const it = ln.item, b = it.box, f = it.loc.face;
+        const it = ln.item, b = it.box, f = ln.loc.face;
         const n = Math.min(3, ln.qty);
         for (let k = 0; k < n; k++) {
           const m = new T.Mesh(flyGeo, new T.MeshLambertMaterial({ color: it.colour }));
@@ -1321,14 +1351,15 @@
         order = null; state = day && day.over ? 'end' : 'list'; atCounter = false; hint.until = 0; carry = null;
         renderScanner();
       }
-      function handOver() {
+      async function handOver() {
         if (state !== 'deliver' || !atCounter) return;
         const o = order, c = o.cust;
-        let tote;
-        if (o.kind === 'hold' && carry) tote = carry;
-        else tote = S.makeTote(o.lines.map((l) => l.item.colour));
-        if (c && c.fig) giveTote(c, tote, handX(me.x)); else S.dropTote(tote);
-        day.handOver(o, P.id);
+        if (guest()) { if (!await remote(() => day.handOver(o))) return; }
+        else {
+          const tote = o.kind === 'hold' && carry ? carry : S.makeTote(o.lines.map((l) => l.item.colour));
+          if (c && c.fig) giveTote(c, tote, handX(me.x)); else S.dropTote(tote);
+          day.handOver(o, P.id);
+        }
         finish(o.kind === 'hold' ? o.hold.code + ' handed over' : o.no + ' handed over',
           o.kind === 'hold' ? 'Click & collect for ' + o.hold.parcel.surname : plural(o.locs, 'line', 'lines') + ', ' + plural(o.units, 'unit', 'units'));
       }
@@ -1353,6 +1384,7 @@
         D.scMenu.replaceChildren();
         const h = document.createElement('h3'); h.textContent = 'Functions'; D.scMenu.appendChild(h);
         for (const [k, t, fn] of items) {
+          if (guest() && (k === '5' || k === '7')) continue; // shift settings belong to the host
           const b = document.createElement('button'); b.type = 'button';
           const kb = document.createElement('b'); kb.textContent = k; b.appendChild(kb); b.appendChild(document.createTextNode(t));
           b.addEventListener('click', (e) => { e.stopPropagation(); SFX.key(); menu(false); fn(); renderScanner(); });
@@ -1394,7 +1426,7 @@
         if (active) {
           if (behind) {
             for (const t of tills) {
-              if (t === ALEX_TILL || players.some((q) => q !== P && q.tillAt() === t)) continue;
+              if (t === ALEX_TILL || online?.occupied(t, P.id) || players.some((q) => q !== P && q.tillAt() === t)) continue;
               const a = aimAt(tillX(t), (t.y0 + t.y1) / 2, 1.15);
               if (a.d < 2.4) take(a, 0.16, () => { best = t; }, { x: tillX(t), y: (t.y0 + t.y1) / 2, z0: 1.0, z1: 1.34, w: t.x1 - t.x0, d: t.y1 - t.y0 });
             }
@@ -1425,7 +1457,7 @@
           }
           { // the manager's PC in the office
             const q = world.pc, a = aimAt(q.x, q.y, 1.05);
-            if (a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
+            if (!guest() && a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
           }
         }
         aimedBox = box;
@@ -1441,40 +1473,47 @@
       // the button, or Scan: lock the door, say hello to the customer, or open the till
       function useAction() {
         if (doorOn && day) {
+          if (guest()) { remote(() => day.lock()); return true; }
           const ok = day.lock();
           if (ok) { SFX.order(); toast('Door locked'); nearTill = greetC = doorOn = null; checkTill(); }
           return true;
         }
         if (greetC && day) {
           const c = greetC;
+          if (guest()) { remote(() => day.greet(c)).then(ok => { if (ok) toast('Hello!'); }); return true; }
           if (day.greet(c, P.id)) { SFX.key(); toast('Hello!'); say('Hello, how can I help?', 'dim', 1600); }
           greetC = null; checkTill();
           return true;
         }
         if (stoolOn) { takeStool(); return true; }
-        if (bellOn) { ringBell(P); return true; }
+        if (bellOn) { if (guest()) remote(() => online.bell()).then(msg => { if (msg) toast(msg); }); else ringBell(P); return true; }
         if (pcOn) { openPc(); return true; }
         return false;
       }
       /* ---------- kick stools (detailedfoil, 21 Nov 2026) ---------- */
       // a red stool at the end of every row: Take stool, carry it into an aisle, Step up to reach the high shelves (AA shelf 13 up,
       // BA 7 up, top BB level), Step down. Walk out of the aisle and it goes back to where it lives. Sam doesn't use them.
-      const STEP = 1.05; // 2.5 times the old 0.42 (detailedfoil, 21 Nov 2026), whatever the stool model's height
-      // a stool is only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level (detailedfoil, 21 Nov 2026)
-      const needsStep = (loc) => { const k = loc.face.kind, n = loc.shelf.no; return k === 'AA' ? n >= 13 : k === 'BA' ? n >= 7 : n >= loc.face.shelves.length; };
       function placeStool() {
-        const s = P.stool; if (!s) return;
-        const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);
-        if (me.step) S.setStool(s.id, me.x, me.y); else S.setStool(s.id, me.x + cy * 0.75 + sy * 0.1, me.y - sy * 0.75 + cy * 0.1);
+        if (P.stool) poseStool(P.stool, me.x, me.y, me.yaw, me.step);
       }
       function stepBtnSync() { D.stepBtn.hidden = !P.stool || !active; D.stepBtn.setAttribute('aria-pressed', String(!!me.step)); D.stepBtn.firstChild.textContent = me.step ? 'Down' : 'Step'; }
       function takeStool() {
         const s = stoolOn; if (!s || s.by || P.stool) return;
+        if (guest()) {
+          remote(() => online.stool('takeStool', s.id)).then(ok => {
+            if (ok) { SFX.key(); toast('Kick stool: Step up for high shelves', 'good'); }
+          });
+          return;
+        }
         s.by = P.id; P.stool = s; P.stoolAisle = false; stoolOn = null;
         SFX.key(); toast('Kick stool: take it into an aisle, Step up for high shelves', 'good'); placeStool(); stepBtnSync(); D.tillBtn.hidden = true; checkTill(); dirty = true;
       }
       function dropStool(msg) {
         const s = P.stool; if (!s) return;
+        if (guest()) {
+          if (!pending) remote(() => online.stool('dropStool', s.id)).then(ok => { if (msg && ok) toast('Stool put back', 'dim'); });
+          return;
+        }
         me.step = false; s.by = null; P.stool = null; P.stoolAisle = false;
         S.setStool(s.id, s.home.x, s.home.y); stepBtnSync(); dirty = true;
         if (msg) toast('Stool put back', 'dim');
@@ -1484,6 +1523,12 @@
         if (me.squat) toggleSquat();
         me.step = !me.step; me.vx = me.vy = 0; SFX.key(); placeStool(); stepBtnSync(); dirty = true;
       }
+      P.syncStool = (s) => {
+        if (s === P.stool) return;
+        P.stool = s; P.stoolAisle = false; me.step = false; stoolOn = null;
+        if (s) placeStool();
+        stepBtnSync(); dirty = true;
+      };
       P.toggleStep = toggleStep; P.stoolSync = stepBtnSync;
       /* ---------- the manager's PC: what Sam does first (detailedfoil, 20 Nov 2026) ---------- */
       const pc = { open: false, sel: 0, el: null };
@@ -1541,8 +1586,14 @@
       }
       P.pcOpen = () => pc.open; P.pcKey = pcKey; P.openPc = openPc; P.closePc = closePc;
       P.useAction = useAction;
-      function openTill() {
+      async function openTill() {
         if (!till || till.isOpen() || !nearTill) return;
+        if (online?.room()) {
+          const target = nearTill;
+          const ok = guest() ? await remote(() => online.open(target)) : online.open(target);
+          if (!ok) { toast('Till unavailable'); return; }
+          nearTill = target;
+        }
         if (idx === 0 && locked()) document.exitPointerLock();
         keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0;
         if (P.onTill) P.onTill();
@@ -1556,6 +1607,12 @@
       // the next till customer comes over to the till you're at
       function callOver() {
         if (!till || !till.isOpen() || !nearTill || !day) return;
+        if (guest()) {
+          if (!pending && !P.tillCust && !day.customers.some(c => c.by === P.id) && (day.queue().length || day.ungreeted().length)) remote(() => online.call());
+          const done = screenOf(nearTill);
+          if (done && !till.session()) till.showDone(done.no, 'On the shared pick list.');
+          return;
+        }
         const c0 = P.tillCust;
         if (c0) { if (c0.at !== nearTill && c0.fig) callTo(c0, nearTill, () => talkTo(c0)); return; }
         let c = day.queue()[0];
@@ -1583,7 +1640,13 @@
         till.close();
         // not talking yet: back in the queue for whoever's free
         const c = P.tillCust;
-        if (c && (!till.session() || till.stage() === 'arrived')) { P.tillCust = null; till.clear(); day.unserve(c); }
+        const serving = c && till.session() && till.stage() !== 'arrived';
+        if (online?.room()) {
+          if (!serving) {
+            online.close(); P.tillCust = null; till.clear();
+            if (!guest() && c) day.unserve(c);
+          }
+        } else if (c && !serving) { P.tillCust = null; till.clear(); day.unserve(c); }
         if (idx === 0) canvas.focus({ preventScroll: true });
         sayShown = performance.now() - 9000; dirty = true; // their last words stay up a few seconds
         renderScanner();
@@ -1591,9 +1654,13 @@
       function tillComplete(info) {
         const c = P.tillCust;
         if (!c || !day) return null;
-        const o = day.tillDone(c, info.lines, { till: c.at || nearTill });
+        if (guest()) return remote(() => day.tillDone(c, info)).then(o => o ? paid(c, o) : null);
+        return paid(c, day.tillDone(c, info.lines, { till: c.at || nearTill }));
+      }
+      function paid(c, o) {
         showScreen(c.at || nearTill, o);
         P.tillCust = null; stats.tills++;
+        if (online?.room() && !till.isOpen()) online.close();
         toast('Order ' + o.no + ' is on the pick list', 'good');
         later(2.2, () => { if (till.isOpen() && (!till.session() || till.stage() === 'done')) callOver(); });
         renderScanner();
@@ -1638,6 +1705,17 @@
         idleText: () => (P.tillCust && !P.tillCust.ready ? 'The customer is coming over to this till.' : day && day.queue().length ? 'A customer is waiting at the counter: they\'re coming over.' : 'No customer is waiting to order at the till. Their orders are on the pick list.')
       });
       P.till = till;
+      P.remoteTill = () => {
+        if (!till.isOpen()) return;
+        const c = day.customers.find(c => c.state === 'serving' && c.by === P.id);
+        if (c) { P.tillCust = c; if (c.ready && c.fig) talkTo(c); }
+        else if (!P.tillCust && !pending && (day.ungreeted().length || day.queue().length)) callOver();
+      };
+      P.resetOnline = () => {
+        generation++; pending = false; keys.clear(); shut(); hint.until = 0; carton = order = carry = null;
+        state = 'idle'; typed = ''; full = false; cur = 0; msg = null; viewLine = -1;
+        D.scMenu.hidden = true; till.close(); till.clear(); P.tillCust = null;
+      };
 
       /* ---------- speech bubbles: Sam and the customers, only when near and nothing tall is in the way ---------- */
       const bubs = new Map(); // who -> {el, p}
@@ -1759,7 +1837,7 @@
         const cover = ['startCover', 'helpCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
         if (cover) {
           still();
-          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false);
+          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false);
           return;
         }
         if (pc.open) {
@@ -1804,7 +1882,7 @@
       };
 
       /* ---------- each frame ---------- */
-      P.playing = () => active && $('helpCover').hidden && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen()) && !pc.open;
+      P.playing = () => active && !online?.frozen() && !online?.panel() && $('helpCover').hidden && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen()) && !pc.open;
       P.update = function (dt, now) {
         let changed = false;
         if (players.length > 1) { P.poseFig(dt); changed = changed || me.speed > 0.01; }
@@ -2002,7 +2080,7 @@
     /* ---------- controls: keyboard ---------- */
     const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', KeyD: 'r', ArrowLeft: 'tl', ArrowRight: 'tr', KeyQ: 'tl', KeyE: 'tr' };
     window.addEventListener('keydown', (e) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.altKey || e.ctrlKey || e.metaKey || online?.panel()) return;
       if (joining && e.target && e.target.tagName === 'INPUT') { if (e.key === 'Enter') e.target.blur(); return; } // typing a name
       if (joining) { if (e.key === 'Escape') { leaveJoin(); return; } if (joined.length >= 2 && e.key === 'Enter') { startSplit(); e.preventDefault(); return; } join({ kind: 'kb' }); e.preventDefault(); return; }
       const p = kbPlayer();
@@ -2072,11 +2150,13 @@
           statsHtml(rows, [[s.picks, 'of the ' + s.total + ' picks'], [st.tills - (st.tillsAtStart || 0), 'till orders served'], [s.fetched, 'bags from holding'], [s.delivery, 'cartons put away'], [st.lines - (st.linesAtStart || 0), 'lines picked'], [st.perfect - (st.perfectAtStart || 0), 'perfect picks'], [Math.max(1, Math.round(s.minutes)) + ' min', 'the day took']]);
           box.appendChild(el);
         }
-        $('dayTitle').textContent = 'All picks clear';
+        $('nextDayBtn').hidden = !!guest();
+        $('dayTitle').textContent = guest() ? 'All picks clear · waiting for the host' : 'All picks clear';
         $('dayCover').hidden = false;
       });
     }
     $('nextDayBtn').addEventListener('click', () => {
+      if (guest()) return;
       $('dayCover').hidden = true;
       for (const p of players) { const st = p.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; }
       newDay();
@@ -2096,7 +2176,12 @@
     const standalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
     // (the "turn your phone sideways" prompt was taken off in stage 6: upright is easier for typing at the till)
 
-    newDay(); // the holding area is stocked behind the start screen; the day's picks start with the shift
+    function ensureLocal() {
+      if (day) return;
+      if (!samOff) hire(SAM);
+      newDay();
+    }
+    if (!onlineFlag) ensureLocal();
     statsHtml($('startStats'), [[me1.life.orders, 'orders done'], [me1.life.lines, 'lines picked'], [world.items.length.toLocaleString('en-GB'), 'products']]);
     function beginShift() {
       initAudio();
@@ -2117,7 +2202,7 @@
       canvas.focus({ preventScroll: true });
       dirty = true;
     }
-    $('startBtn').addEventListener('click', beginShift);
+    $('startBtn').addEventListener('click', () => { ensureLocal(); beginShift(); });
 
     /* ---------- two players (computers only): split screen, side by side ---------- */
     // Each joins with a press: A on a controller, or any key or a click for the keyboard and mouse. The first to join
@@ -2158,7 +2243,7 @@
     }));
     function startSplit() {
       if (split || joined.length < 2) return;
-      joining = false; split = true;
+      ensureLocal(); joining = false; split = true;
       stage.classList.add('split');
       addPlayer2();
       players.forEach((p, i) => { const j = joined[i]; p.padIndex = j.kind === 'pad' ? j.pad : null; p.kb = j.kind === 'kb'; });
@@ -2212,12 +2297,14 @@
     /* ---------- the shared world, a step at a time ---------- */
     function worldStep(dt) {
       let changed = false;
+      if (online?.frozen()) return false;
       runTimers(dt);
-      if (active && day) day.tick(dt);
+      if (active && day && !guest()) day.tick(dt);
       if (updateMoving(dt)) changed = true;
-      if (updateFigs(dt)) changed = true;
+      if (!guest() && updateFigs(dt)) changed = true;
       if (updateTotes(dt)) changed = true;
-      if (active && updateCrew(dt)) changed = true;
+      if (active && !guest() && updateCrew(dt)) changed = true;
+      if (online && online.animate(dt)) changed = true;
       if (updateCCTV(dt)) changed = true;
       return changed;
     }
@@ -2234,6 +2321,9 @@
         out.push({ x: p.x, y: p.z, state, colour: '#' + f.parts.body.color.getHexString() });
       }
       for (const p of players) out.push({ x: p.me.x, y: p.me.y, staff: true, label: p.name });
+      if (online) for (const q of online.peers.values()) out.push({ x: q.x, y: q.y, staff: true, label: q.name });
+      const sam = online?.sam();
+      if (sam) out.push({ x: sam.x, y: sam.y, staff: true, label: sam.name });
       for (const b of crew) if (b.fig && b.fig.group.visible) out.push({ x: b.x, y: b.y, staff: true, label: b.name });
       return out;
     }
@@ -2244,7 +2334,7 @@
       const o = cctvMon.obj, near = players.some((p) => Math.hypot(p.me.x - o.x0, p.me.y - (o.y0 + o.y1) / 2) < 16);
       if (!near && cctvSig) return false; // nobody close enough to see it: it's drawn again when someone is
       const people = cctvPeople(), now = new Date();
-      const sig = now.getSeconds() + '|' + people.map((p) => Math.round(p.x * 8) + ',' + Math.round(p.y * 8) + p.state).join(';');
+      const sig = now.getSeconds() + '|' + people.map((p) => Math.round(p.x * 8) + ',' + Math.round(p.y * 8) + (p.label || p.state)).join(';');
       if (sig === cctvSig) return false;
       cctvSig = near ? sig : 'far';
       cctv.draw({ people, now });
@@ -2273,7 +2363,8 @@
       last = now;
       if (document.hidden) return;
       let changed = dirty;
-      pollPads(dt);
+      online?.tick(now);
+      if (!online?.panel() && !online?.frozen()) pollPads(dt);
       for (const p of players) if (p.update(dt, now)) { changed = true; photoDirty = true; }
       if (worldStep(dt)) changed = true;
       if (S.photos.flush()) changed = true;
@@ -2290,6 +2381,21 @@
     }
 
     /* ---------- warm up behind the loading bar, then show the start screen ---------- */
+    if (onlineFlag && window.ShiftOnlineGame && window.ShiftOnline && window.ShiftOnlineDay) {
+      online = window.ShiftOnlineGame.attach({
+        $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
+        catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
+        makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
+        ringBell, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, dirty: () => { dirty = true; },
+        setDay(d, n) { day = d; dayNo = n; },
+        resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },
+        clearDayView() {
+          timers.length = 0; for (const f of figs) if (!f.free) freeFig(f);
+          for (const t of tills) showScreen(t, null);
+          $('dayCover').hidden = true;
+        }
+      });
+    }
     progress(0.9, 'Nearly there…'); await breathe();
     try { renderer.compile(scene, me1.cam); } catch (e) { /* compiled on first draw instead */ }
     S.photos.update(me1.cam);

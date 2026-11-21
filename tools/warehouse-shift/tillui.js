@@ -634,11 +634,17 @@
         later(520, () => { V.drawer.hidden = true; V.drawer.classList.remove('shut'); complete('cash'); });
       });
     }
-    function complete(how) {
+    async function complete(how) {
       const s = S.session; if (!s || s.stage !== 'paying') return;
-      s.stage = 'done';
+      s.stage = 'submitting';
       const lines = s.basket.filter((r) => r.status === 'ok').map((r) => ({ item: r.item, qty: r.qty }));
-      s.orderNo = (o.onComplete && o.onComplete({ lines, slips: s.slips, how })) || Till.orderNumber(Math.random);
+      const result = o.onComplete && o.onComplete({ lines, slips: s.slips, how, change: s.cash ? handSum() : 0 });
+      if (result && typeof result.then === 'function') {
+        s.orderNo = await result;
+        if (S.session !== s) return;
+        if (!s.orderNo) { s.stage = 'ordering'; s.cash = null; V.modal.hidden = true; show('order'); fuMsg('Payment could not be confirmed. Try Pay & Go again.'); return; }
+      } else s.orderNo = result || Till.orderNumber(Math.random);
+      s.stage = 'done';
       V.orderno.textContent = s.orderNo;
       V.donetext.textContent = "It's on the pick list for whoever gets to it first. The customer waits by the counter.";
       V.modal.hidden = true;

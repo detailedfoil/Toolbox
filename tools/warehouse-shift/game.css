@@ -252,3 +252,10 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-pc-list button:disabled{opacity:.3;cursor:default}
 .ws-pc-keys{margin:6px 14px 0;font-size:12px;color:#5a6472}
 .ws-pc-close{display:block;margin:10px 14px 14px auto;padding:9px 22px;border:0;border-radius:6px;background:#c8191f;color:#fff;font-weight:800;font-size:15px;cursor:pointer}
+
+#onlineCover{z-index:32}
+#roomControls label{display:block;margin-top:1rem;font-weight:700}
+#roomControls .ws-row{margin-top:.4rem}
+#roomCode{width:8em;padding:.55em;color:#fff;background:#0c1522;border:1px solid #8395a9;border-radius:.45em;font:700 1.1rem monospace;letter-spacing:.12em;text-transform:uppercase;user-select:text}
+#roomBtn{width:auto;padding-inline:.65em;font:700 .85rem system-ui}
+.ws-stage:has(#roomBtn:not([hidden])) .ws-chips{left:max(8px,env(safe-area-inset-left));top:calc(max(8px,env(safe-area-inset-top)) + 46px)}
