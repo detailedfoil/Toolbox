@@ -71,6 +71,32 @@ test('the normal game starts solo and local split-screen without opening a socke
   }
 });
 
+test('the wall clock follows shelved cartons from 07:00 to 20:00', async t => {
+  const { $, s } = await game(t, { online: false });
+  $('startBtn').click();
+  for (const job of s.prio()) job.on = false;
+  const day = s.day();
+  const cartons = day.delivery.slice(0, 2);
+  assert.equal(cartons.length, 2);
+  day.delivery = cartons;
+  let minute;
+  s.S.clockTick = value => { minute = value; };
+  s.tick(0.05);
+  assert.equal(minute, 7 * 60);
+
+  const first = day.paTake(null, 'p1');
+  assert.ok(first);
+  s.tick(0.05);
+  assert.equal(minute, 7 * 60);
+  assert.ok(day.paPut(first, 'p1'));
+  s.tick(0.05);
+  assert.equal(minute, 13 * 60 + 30);
+
+  assert.ok(day.paPut(day.paTake(null, 'p1'), 'p1'));
+  s.tick(0.05);
+  assert.equal(minute, 20 * 60);
+});
+
 test('an installed phone with the ordinary launch URL can host or join from its start screen', async t => {
   const manifest = JSON.parse(readFileSync(path.join(base, 'warehouse-shift.webmanifest'), 'utf8'));
   assert.equal(manifest.id, './warehouse-shift.html');

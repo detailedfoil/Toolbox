@@ -865,18 +865,22 @@
     }
     const clockCanvas = canvas(256, 256), clockTex = new T.CanvasTexture(clockCanvas); clockTex.colorSpace = T.SRGBColorSpace;
     let clockMesh = null;
-    function clockTick() {
-      const g = clockCanvas.getContext('2d'), d = new Date(), c = 128;
+    let clockMinute = -1;
+    function clockTick(minute) {
+      if (minute === clockMinute) return false;
+      clockMinute = minute;
+      const g = clockCanvas.getContext('2d'), c = 128;
       g.fillStyle = '#fbfbf8'; g.fillRect(0, 0, 256, 256);
       g.fillStyle = '#1d232c';
       for (let i = 0; i < 60; i++) { const a = i * Math.PI / 30, r0 = i % 5 ? 112 : 100; g.save(); g.translate(c, c); g.rotate(a); g.fillRect(-(i % 5 ? 1.5 : 4), -122, i % 5 ? 3 : 8, 122 - r0); g.restore(); }
       const hand = (a, len, w) => { g.save(); g.translate(c, c); g.rotate(a); g.fillRect(-w / 2, -len, w, len + 14); g.restore(); };
-      const m = d.getMinutes() + d.getSeconds() / 60, hh = (d.getHours() % 12) + m / 60;
+      const m = minute % 60, hh = (minute / 60) % 12;
       hand(hh * Math.PI / 6, 62, 10); hand(m * Math.PI / 30, 96, 6);
       g.fillStyle = '#c3222b'; g.beginPath(); g.arc(c, c, 7, 0, Math.PI * 2); g.fill();
       clockTex.needsUpdate = true;
+      return true;
     }
-    clockTick();
+    clockTick(7 * 60);
     for (const o of world.objects) {
       const z1 = o.z1 || 1;
       switch (o.kind) {

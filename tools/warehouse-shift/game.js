@@ -2323,6 +2323,12 @@
       if (updateTotes(dt)) changed = true;
       if (active && !guest() && updateCrew(dt)) changed = true;
       if (online && online.animate(dt)) changed = true;
+      if (day) {
+        const cartons = day.delivery;
+        const completed = cartons.reduce((count, carton) => count + Number(carton.done), 0);
+        const progress = cartons.length ? completed / cartons.length : 1;
+        if (S.clockTick(7 * 60 + Math.floor(progress * 13 * 60))) changed = true;
+      }
       if (updateCCTV(dt)) changed = true;
       return changed;
     }
