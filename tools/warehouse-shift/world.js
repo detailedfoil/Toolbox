@@ -418,15 +418,48 @@
     if (it.size === 'S') return u < 0.72 ? 1 : u < 0.92 ? 2 : 3;
     return u < 0.88 ? 1 : 2;
   }
+  // stock (detailedfoil, 21 Nov 2026): every place holds a few of its product, picks take them off, and a pick that takes
+  // the last of them leaves the place empty (the product goes out of stock until a delivery brings it back, into an EMPTY
+  // place). `it.stock` is how many are there now, `it.reserved` how many are promised to orders on the list.
+  function stockOf(it) {
+    var u = (hash(it.code + 'stock') % 1000) / 1000;
+    return it.size === 'T' ? 3 + Math.floor(u * 22) : it.size === 'B' ? 2 + Math.floor(u * 4) : 2 + Math.floor(u * 8);
+  }
+  function room(it) { if (it.stock === undefined) it.stock = stockOf(it); return it.stock - (it.reserved || 0); }
+  // takes the product off its place (it's out of stock): the place is empty
+  function vacate(world, it) {
+    if (!it.loc) return;
+    it.old = it.loc; it.loc.item = null; it.loc = null; it.stock = 0; it.reserved = 0;
+    (world.out = world.out || []).push(it);
+  }
+  // puts a product into an empty place
+  function place(world, it, loc, n) {
+    it.loc = loc; loc.item = it; it.stock = n; it.reserved = 0;
+    if (world.out) { var k = world.out.indexOf(it); if (k >= 0) world.out.splice(k, 1); }
+  }
+  // an empty place of the product's own kind, in the same row as where it was (so it goes back to its own part of the
+  // store), a different one if there is one; `taken` are places already promised to other cartons
+  function emptyFor(world, it, taken, r) {
+    var old = it.old, cands = [];
+    if (!old) return null;
+    world.locs.list.forEach(function (l) {
+      if (l.item || taken[l.code] || l.face !== old.face || l.cls !== old.cls) return;
+      cands.push(l);
+    });
+    cands.sort(function (a, b) { return Math.abs(a.order - old.order) - Math.abs(b.order - old.order); });
+    var diff = cands.filter(function (l) { return l !== old; });
+    var from = (diff.length ? diff : cands).slice(0, 5);
+    return from.length ? from[Math.floor(r() * from.length)] : null;
+  }
   function order(world, r, n) {
     var items = world.items, lines = [], seen = {};
     if (!n) { var u = r(); n = u < 0.28 ? 1 : u < 0.6 ? 2 : u < 0.82 ? 3 : u < 0.94 ? 4 : 5; }
     var guard = 0;
     while (lines.length < n && guard++ < 1000) {
       var it = items[Math.floor(r() * items.length)];
-      if (seen[it.code]) continue;
+      if (seen[it.code] || !it.loc || room(it) < 1) continue;
       seen[it.code] = 1;
-      lines.push({ item: it, loc: it.loc, qty: quantity(it, r) });
+      lines.push({ item: it, loc: it.loc, qty: Math.min(quantity(it, r), room(it)) });
     }
     lines.sort(function (a, b) { return a.loc.order - b.loc.order; });
     return lines;
@@ -461,7 +494,7 @@
     return world;
   }
 
-  var api = { WALK: WALK, build: build, order: order, quantity: quantity, locationAt: locationAt, sameSpot: sameSpot, shelfZ: shelfZ, rng: rng, hash: hash, pad2: pad2,
+  var api = { WALK: WALK, build: build, order: order, stockOf: stockOf, room: room, vacate: vacate, place: place, emptyFor: emptyFor, quantity: quantity, locationAt: locationAt, sameSpot: sameSpot, shelfZ: shelfZ, rng: rng, hash: hash, pad2: pad2,
     AREAS: AREAS, SHELVES: SHELVES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftWorld = api;

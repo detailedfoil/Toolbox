@@ -420,6 +420,27 @@ explain changes in plain English and say what they'll see.
       end of the counter (your right as you serve), `QX`/`QSIDE`; new customers join it (`comeIn` -> `there`), it moves up
       when someone leaves (`standAt` -> `shuffleQueue`), a customer called to a till and then left rejoins it (`joinQueue`);
       `route(from {x,y}, to)` steps out of / into the line sideways; `WAIT` (paid or checked in) is on your left by the gap.
+    - Stage 2 (21 Nov): customer and Sam rules. (a) Bag collections are about HALF of all click and collects: `Day.decide(c)`
+      (runs at the first hello, only when `walkinTill` > 0, so tests with 0 keep customers as sent) rolls till 45%, else
+      bag 50% (takes a free bag from the holding area, `freeCode`) or one product from the warehouse. (b) Customers no longer
+      say the OC number (`Till.holdSay` says the surname only; the OC spot is on the scanner). (c) Surname FIRST, then
+      postcode (tillui.js `begin`, `askAgain`, the bot's `tillOrder`); after the player's first Search (or Sam's) they give a
+      third detail, `cust.third` from `Till.makeCustomer`: first name, email or door number (never the organisation; a
+      customer with a twin at the address never uses the door number). (d) Greet only shows when you're behind the counter
+      within 1.6 m (along it) of a till (`checkTill`); Sam walks to his till before saying hello (`bot.js` greet job).
+      (e) Sam takes a pick after it has sat 4 s (`LATE_PICK`, was 5) and while one is about to be his (`Day.listEarly`,
+      `board().early`) he waits at his till and doesn't start the delivery. (f) STOCK: every place holds a few of its
+      product (`World.stockOf`, `room`); `Day.makeOrder` caps a line at what's there and reserves it; `Day.picked` takes
+      the units off and a pick of the last ones empties the place (`World.vacate`, product goes to `world.out`, hidden by
+      `scene.js stockChange`, game env `stock`). The DELIVERY is out-of-stock products (earlier empties, topped up by taking
+      a few more off the shelves at the start of the day) and each carton goes into an EMPTY place of its own kind in the
+      same row (`World.emptyFor`, never two cartons to one place); `Day.paPut` fills it (`World.place`). (g) Customer flow
+      follows the delivery (`Day.lag()`: picks released minus delivery put away; over 0.15 the wait doubles, over 0.4 no
+      more come until the delivery catches up). Tests: `warehouse-shift-stage2.test.mjs`; day/alex/till tests adjusted.
+      Asked for and still to do: stage 3 also gets the holding area swap (OC 3 to 8 on the GROUND, OC 9 to 14 on the shelf
+      above) and ONE row of shelves in the middle island of the shop (so one side is the queue, the other the paid
+      customers); stage 6 also gets switching between landscape and portrait at any time on a phone (portrait makes typing
+      easier).
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

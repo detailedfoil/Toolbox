@@ -2,7 +2,7 @@
    .github/warehouse-shift/make-requests.mjs.
 
    Till customers (detailedfoil, 19 Nov 2026): a customer comes to the trade counter and orders at the till, Fusion
-   (the store's till system). They give their postcode, then their surname; you search, pick them from the results,
+   (the store's till system). They give their surname, then their postcode, then (after a search) a third detail; you search, pick them from the results,
    then they ask for what they want one thing at a time: by product code, by describing it, or by quoting the
    product's description from the website ("I need the one that says ..."). You find it on the CrashFix tab (the
    Product Search page's own search), add it to the basket on the Fusion tab, and the customer says whether it's
@@ -87,6 +87,11 @@
       var nb = person(r, pick(r, SURNAMES.filter(function (s) { return s !== surname; }))); nb.postcode = c.postcode; nb.address = address(r); nb.trade = 'DIY'; nb.org = ''; db.push(nb);
     }
     c.db = db;
+    // after a search they give a third detail so you can tell them apart in the results: first name, email or door
+    // number (never the organisation). Someone with a twin at the address can't use the door number.
+    var kinds = c.twin ? ['first', 'email'] : ['first', 'email', 'door'], kd = pick(r, kinds), door = c.address.split(',')[0].replace(/ .*/, '') === 'Flat' ? c.address.split(',')[0] : c.address.split(' ')[0];
+    c.third = kd === 'first' ? { kind: kd, say: "That's me, " + c.first + '.' } : kd === 'email' ? { kind: kd, say: "My email's " + c.email + '.' } : { kind: kd, say: 'I live at number ' + door + '.' };
+    if (kd === 'door' && /^Flat/.test(c.address)) c.third.say = "I'm in " + door + '.';
     return c;
   }
 
@@ -256,15 +261,15 @@
   // surname; every surname in the holding area is different (detailedfoil: no repeated names for now).
   var HOLD_CODES = [];
   for (var hc = 1; hc <= 14; hc++) HOLD_CODES.push('OC-0' + pad(hc));
-  var HOLD_SAY = ["Click and collect, please. It's in {oc}, surname {s}.", "Hiya, I've got a click and collect. The email says {oc}. Name's {s}.",
-    'Collecting an order for {s}, please. It said {oc}.', "I've come to pick up my order. {s}, location {oc}.", 'Click and collect for {s}. It\'s {oc} on my email.'];
+  var HOLD_SAY = ["Click and collect, please. Surname {s}.", "Hiya, I've got a click and collect. Name's {s}.",
+    'Collecting an order for {s}, please.', "I've come to pick up my order. {s}.", 'Click and collect for {s}, please.'];
   function holdParcel(r, used) {
     var s, guard = 0;
     do { s = pick(r, SURNAMES); } while (used[s] && guard++ < 400);
     var d = ''; for (var i = 0; i < 4; i++) d += Math.floor(r() * 10);
     return { surname: s, num: d, collection: String(100 + Math.floor(r() * 900)), despatch: orderNumber(r) };
   }
-  function holdSay(r, code, surname) { return pick(r, HOLD_SAY).replace('{oc}', code).replace('{s}', surname); }
+  function holdSay(r, code, surname) { return pick(r, HOLD_SAY).replace('{s}', surname); }
 
   var api = { hash: hash, searchItems: searchItems, makeCustomer: makeCustomer, lookup: lookup, matches: matches, postcode: postcode,
     price: price, avail: avail, vat: vat, money: money, tender: tender, orderNumber: orderNumber, makeOrder: makeOrder, judge: judge,

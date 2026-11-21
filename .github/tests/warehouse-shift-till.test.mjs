@@ -222,5 +222,6 @@ test('the holding area: OC-001 and OC-002 for big loose items, OC-003 to OC-014 
   // it stands clear of everything else, and can be reached (the walk test covers the rest of the floor)
   const used = {};
   for (let i = 0; i < 14; i++) { const p = Till.holdParcel(rnd, used); assert.ok(!used[p.surname], 'unique'); used[p.surname] = 1; assert.match(p.despatch, /^A9\d{9}$/); }
-  assert.match(Till.holdSay(rnd, 'OC-007', 'Tomlin'), /OC-007[\s\S]*Tomlin|Tomlin[\s\S]*OC-007/);
+  const say = Till.holdSay(rnd, 'OC-007', 'Tomlin');
+  assert.match(say, /Tomlin/); assert.doesNotMatch(say, /OC-/, 'customers no longer say the OC number (it is on the scanner)');
 });

@@ -351,7 +351,7 @@ test('balance: on your own, the queue, customer picks, holding area picks and th
     assert.ok(r.day.delivery.length >= 11 && r.day.delivery.every((d) => d.done && d.doneBy === 'Sam'), 'the whole delivery put away');
     assert.ok(r.day.orders.filter((o) => o.kind === 'c').length > r.day.first, 'c picks come in during the day too');
   }
-  for (const k in avg) assert.ok(avg[k] > 0.14 && avg[k] < 0.34, 'average ' + k + ' ' + Math.round(100 * avg[k]) + '%');
+  for (const k in avg) assert.ok(avg[k] > 0.14 && avg[k] < 0.37, 'average ' + k + ' ' + Math.round(100 * avg[k]) + '%');
 });
 
 test("Sam's jobs follow the manager's PC: ticked ones, top first; an unticked job is never done", () => {
@@ -370,12 +370,13 @@ test('the delivery: cartons on the cages and pallets, taken from the top, put aw
   assert.ok(d.delivery.length >= Day.DELIVERY[0] && d.delivery.length <= Day.DELIVERY[1]);
   const slots = new Set(d.delivery.map((x) => x.src + ':' + x.slot));
   assert.equal(slots.size, d.delivery.length, 'one carton a slot');
-  for (const x of d.delivery) assert.ok(x.loc && x.loc === x.item.loc && x.qty >= 2, 'goes back where the product lives');
+  for (const x of d.delivery) { assert.ok(x.loc && !x.loc.item && x.item.loc === null && x.qty >= 2, 'goes into an EMPTY place (the product was out of stock)'); assert.equal(x.loc.face, x.item.old.face, 'in the same row it came from'); }
   const src = d.delivery[0].src, top = d.paTake(src, 'p1');
   const z = (x) => world.goodsin[x.src].slots[x.slot].z0;
   assert.ok(d.deliveryLeft(src).every((x) => z(x) <= z(top)), 'the top one first');
   assert.equal(d.paPut(top, 'Sam'), false, 'only the one who took it');
   assert.equal(d.paPut(top, 'p1'), true);
+  assert.equal(top.item.loc, top.loc, 'the product is in its new place'); assert.equal(top.loc.item, top.item);
   const t2 = d.paTake(null, 'Sam');
   d.release('Sam');
   assert.equal(t2.by, null, 'Sam going home puts it back');

@@ -432,6 +432,7 @@
       unlocked: () => { for (const p of players) { p.banner('Doors open', 'Customers will be in shortly', 2600); p.queueChanged(); } },
       closing: () => { for (const p of players) { p.banner('All done', 'Lock the front door', 6000); p.queueChanged(); } SFX.order(); },
       locked: () => { SFX.key(); },
+      stock: (it) => { if (S.stockChange && it.mesh) S.stockChange(it); dirty = true; },
       holdSet: (code, parcel) => { if (S.hold) S.hold.set(code, parcel); dirty = true; },
       delivery: (d) => { S.delivery.show(d); for (const p of players) p.deliveryChanged(); dirty = true; },
       over: () => dayOver()
@@ -465,11 +466,12 @@
     const cartonGeo = new T.BoxGeometry(0.42, 0.3, 0.32), cartonMat = new T.MeshLambertMaterial({ color: 0xc49a64 });
     const crewEnv = {
       board: () => {
-        if (!(day && active)) return { orders: [], queue: [], bell: [], greet: [], prio: [], delivery: 0 };
+        if (!(day && active)) return { orders: [], queue: [], bell: [], greet: [], prio: [], delivery: 0, early: [] };
         const on = samPrio.filter((j) => j.on).map((j) => j.id);
         // the queue: till customers who've waited a few seconds with nobody coming to serve them
         const q = on.includes('queue') ? day.queue().filter((c) => day.t - (c.greeted || c.here || 0) > 5 && !players.some((p) => p.tillCust === c)) : [];
-        return { orders: day.listLate(), queue: q, bell: bellQueue(), greet: day.ungreeted().filter((c) => day.t - c.here > 10), prio: on, delivery: day.deliveryLeft().length };
+        return { orders: day.listLate(), queue: q, bell: bellQueue(), greet: day.ungreeted().filter((c) => day.t - c.here > 10), prio: on, delivery: day.deliveryLeft().length,
+          early: day.listEarly().filter((o) => on.includes(o.kind === 'c' ? 'hold' : 'cust')) };
       },
       paSources: () => (day ? world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i) : []),
       paTake(b, src) {
@@ -1351,7 +1353,8 @@
               if (a.d < 2.4) take(a, 0.16, () => { best = t; }, { x: tillX(t), y: (t.y0 + t.y1) / 2, z0: 1.0, z1: 1.34, w: t.x1 - t.x0, d: t.y1 - t.y0 });
             }
           }
-          if (day && behind && me.x > counter.x0 - 0.4 && me.x < counter.x1 + 0.4) {
+          // Greet only from the till area: within about 1.6 m (along the counter) of one of the tills (detailedfoil, 21 Nov 2026)
+          if (day && behind && tills.some((t) => Math.abs(tillX(t) - me.x) < 1.6)) {
             for (const c of day.ungreeted()) {
               if (!c.fig) continue;
               const px = c.fig.group.position.x, py = c.fig.group.position.z, a = aimAt(px, py, 1.2);

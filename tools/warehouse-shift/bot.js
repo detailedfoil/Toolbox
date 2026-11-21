@@ -5,7 +5,7 @@
    Sam works from the same pick list as you (day.js), in detailedfoil's order: first any pick a customer is waiting
    for (CK, and orders paid for at the till), then the next customer at the till, then the c picks for the holding
    area. Free again, they look at the list straight away. They serve till customers at the right-hand till of the trade
-   counter (postcode, surname, then each product asked for, card or cash; kiosk orders found on Kiosk Orders), and the
+   counter (surname, postcode, a third detail, then each product asked for, card or cash; kiosk orders found on Kiosk Orders), and the
    order goes on the list for whoever gets to it first. Once they start an order they finish it: picked into a tote,
    then over the counter to its customer, or into an empty OC spot in the holding area for a c pick (to the counter
    instead if its customer walks in meanwhile). Everything takes as long as it would take a person: walking at about
@@ -572,7 +572,9 @@
         yield this.T(PACE.look);
         continue;
       }
-      if (job.greet) { // say hello across the counter (no walking)
+      if (job.greet) { // say hello from the till: he has to be there first (detailedfoil, 21 Nov 2026)
+        if (!this.atPost()) yield* this.walkTo(this.post);
+        this.atTill = this.till;
         this.say(this.pick(SAY.greet));
         yield this.T(0.5, 1.1);
         this.emit('greet', job.greet);
@@ -607,7 +609,7 @@
       if (p === 'cust') { for (i = 0; i < orders.length; i++) if (orders[i].kind !== 'c') return { pick: orders[i], cat: 'cust' }; }
       else if (p === 'queue') { if (queue.length) return { serve: queue[0], cat: 'queue' }; }
       else if (p === 'hold') { for (i = 0; i < orders.length; i++) if (orders[i].kind === 'c') return { pick: orders[i], cat: 'hold' }; }
-      else if (p === 'delivery') { if (b.delivery > 0) return { putaway: true, cat: 'delivery' }; }
+      else if (p === 'delivery') { if (b.early && b.early.length) return null; if (b.delivery > 0) return { putaway: true, cat: 'delivery' }; } // a pick is about to be his: wait at the till for it, nothing else
     }
     return null;
   };
@@ -708,6 +710,10 @@
     if (!c.greeter) { this.say(this.pick(SAY.greet)); yield this.T(0.8, 1.5); }
     this.cSay(c.say || this.pick(kiosk ? SAY.kioskHi : SAY.tillHi));
     yield this.T(1.0, 1.8);
+    this.cSay("Surname's " + cu.surname + '.');
+    yield this.T(0.4, 0.8);
+    yield* this.typeIn(cu.surname);
+    yield this.T(0.6, 1.2);
     this.cSay("Postcode's " + cu.postcode + '.');
     yield this.T(0.4, 0.8);
     yield* this.typeIn(cu.postcode);
@@ -717,18 +723,9 @@
       this.cSay("It's " + cu.postcode + '.');
       yield* this.typeIn(cu.postcode);
     }
-    yield this.T(0.6, 1.2);
-    this.cSay("Surname's " + cu.surname + '.');
-    yield this.T(0.4, 0.8);
-    yield* this.typeIn(cu.surname);
     yield this.T(0.8, 1.6); // the search, then finding them in the results
-    if (cu.twin) {
-      yield this.T(0.8, 1.6);
-      this.say('Which one are you?');
-      yield this.T(PACE.reply);
-      this.cSay("That's me, " + cu.first + '.');
-      yield this.T(0.6, 1.2);
-    }
+    this.cSay(cu.third.say); // the third detail, after the search
+    yield this.T(0.8, 1.6);
     yield this.T(0.8, 1.6); // select
     if (kiosk) {
       this.cSay(c.kiosk.say);

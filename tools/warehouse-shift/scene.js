@@ -772,6 +772,7 @@
       cam.updateMatrixWorld(); _pm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); _frustum.setFromProjectionMatrix(_pm);
       const ex = cam.position.x, ey = cam.position.z, ez = cam.position.y, R = PHOTO_NEAR, cand = [];
       for (const it of world.items) {
+        if (!it.loc) continue; // out of stock: nothing on the shelf
         if (it.loc.tray >= 0 && !(it.trayRef && it.trayRef.slide > 0.05)) continue; // tray contents only show when it's out
         const b = it.box, f = it.loc.face, dx = b.x - ex, dy = b.y - ey;
         if (dx > R || dx < -R || dy > R || dy < -R) continue;
@@ -1400,10 +1401,19 @@
       it.mesh.instanceMatrix.needsUpdate = true;
     }
     function trayOf(loc) { return loc.tray >= 0 ? trays.get(trayKey(loc)) : null; }
+    // a product left its place (out of stock) or was put into an empty one (World.vacate / World.place)
+    function stockChange(it) {
+      if (it.trayRef) { const k = it.trayRef.items.indexOf(it); if (k >= 0) it.trayRef.items.splice(k, 1); it.trayRef = null; }
+      it.pull = 0; it.pullTarget = 0;
+      if (!it.loc) { it.hidden = true; it.mesh.setMatrixAt(it.i, HIDE); it.mesh.instanceMatrix.needsUpdate = true; return; }
+      it.hidden = false; it.box = itemBox(it);
+      const tr = trays.get(trayKey(it.loc));
+      if (it.loc.tray >= 0 && tr) { tr.items.push(it); it.trayRef = tr; placeTray(tr); } else placeItem(it);
+    }
 
     return {
       scene, groups, photos: { update: updatePhotos, flush: flushPhotos, fill: fillPhotos, setExtra: (list) => { extra = list; }, slots: SLOTS, big },
-      labelMesh, labelMat, trays, trayOf, placeTray, placeItem, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, toteBox, makeWorker, poseWorker, lamps, M,
+      labelMesh, labelMat, trays, trayOf, placeTray, placeItem, stockChange, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, toteBox, makeWorker, poseWorker, lamps, M,
       makeTrolley, poseTrolley, trolleyTop, trolleyTake, tillScreen, delivery: { set: deliverySet, show: deliveryShow, box: slotBox },
       hold: hold ? { spots: hold.spots, set: setParcel, carry: carryParcel } : null,
       clockTick, counts: { tags: tags.length, trays: trays.size, items: world.items.length }

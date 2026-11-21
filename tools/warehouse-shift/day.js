@@ -122,10 +122,19 @@
     gi.forEach(function (g) { g.slots.forEach(function (sl, k) { slots.push({ src: g.i, slot: k }); }); });
     // fill from the bottom up, spread over the cages and pallets
     slots.sort(function (a, b) { return (gi[a.src].slots[a.slot].z0 - gi[b.src].slots[b.slot].z0) || (self.r() - 0.5); });
-    var lines = this.World.order(this.world, this.r, Math.min(n, slots.length));
-    lines.forEach(function (l, i) {
-      var q = 2 + Math.floor(self.r() * 5) * (l.item.size === 'T' ? 2 : 1);
-      self.delivery.push({ id: i + 1, item: l.item, loc: l.item.loc, qty: q, src: slots[i].src, slot: slots[i].slot, by: null, done: false });
+    // the delivery is products that are out of stock: ones a pick emptied earlier, topped up with a few more taken off
+    // their shelves now. Each carton goes into an EMPTY place (its own old one, or another empty one in the same row).
+    var World = this.World, world = this.world, taken = {}, items = (world.out || []).filter(function (it) { return it.old; }).slice(0, Math.min(n, slots.length)), guard = 0;
+    while (items.length < Math.min(n, slots.length) && guard++ < 3000) {
+      var it = world.items[Math.floor(this.r() * world.items.length)];
+      if (!it.loc || items.indexOf(it) >= 0 || (it.reserved || 0) > 0) continue;
+      World.vacate(world, it); this.emit('stock', it); items.push(it);
+    }
+    items.forEach(function (it, i) {
+      var to = World.emptyFor(world, it, taken, self.r) || it.old;
+      taken[to.code] = 1;
+      var q = 2 + Math.floor(self.r() * 5) * (it.size === 'T' ? 2 : 1);
+      self.delivery.push({ id: i + 1, item: it, loc: to, qty: q, src: slots[i].src, slot: slots[i].slot, by: null, done: false });
     });
   };
   // cartons nobody has taken yet (from one cage or pallet, or anywhere)
@@ -142,6 +151,7 @@
   Day.prototype.paPut = function (d, who) {
     if (!d || d.done || d.by !== who) return false;
     d.done = true; d.doneBy = who;
+    this.World.place(this.world, d.item, d.loc, d.qty); this.emit('stock', d.item);
     this.log.push({ t: this.t, kind: 'putaway', by: who, took: this.t - d.takenAt });
     this.emit('delivery', d);
     this.check();
@@ -189,12 +199,18 @@
   Day.prototype.queue = function () { return this.customers.filter(function (c) { return c.state === 'counter' && !c.by; }); };
   // picks nobody has started for a while: Sam only takes a pick after it has sat on the list for 15 s, and never serves
   // a till customer, so what you serve and pick is yours (detailedfoil, 19 Nov 2026)
-  var LATE_PICK = 5;
+  var LATE_PICK = 4;  // 4 s (detailedfoil, 21 Nov 2026; it was 5)
   Day.prototype.listLate = function () { var t = this.t; return this.list().filter(function (o) { return t - o.t > LATE_PICK; }); };
+  // picks on the list that Sam will take once they've sat 4 s: he waits at his till for them and does nothing else
+  Day.prototype.listEarly = function () { var t = this.t; return this.list().filter(function (o) { return t - o.t <= LATE_PICK; }); };
   // customers at the counter nobody has said hello to yet, the one waiting longest first
   Day.prototype.ungreeted = function () { return this.customers.filter(function (c) { return c.state === 'greet'; }); };
   Day.prototype.makeOrder = function (kind, lines, cust, counts, extra) {
-    lines = (lines || []).filter(function (l) { return l.item && l.item.loc; }).map(function (l) { return { item: l.item, loc: l.item.loc, qty: l.qty }; });
+    var World = this.World;
+    lines = (lines || []).filter(function (l) { return l.item && l.item.loc && World.room(l.item) >= 1; }).map(function (l) {
+      var q = Math.min(l.qty, World.room(l.item)); l.item.reserved = (l.item.reserved || 0) + q;
+      return { item: l.item, loc: l.item.loc, qty: q };
+    });
     lines.sort(function (a, b) { return a.loc.order - b.loc.order; });
     var locs = {}, units = 0;
     lines.forEach(function (l) { locs[l.loc.code] = 1; units += l.qty; });
@@ -215,7 +231,19 @@
     if (this.phase === 'closed') this.check(); // Sam on the last morning pick: customers can start coming in
     return true;
   };
-  Day.prototype.picked = function (o) { if (o.status === 'taken') o.status = 'picked'; this.emit('changed', o); };
+  // the picked units come off the shelf; a pick of everything that was there leaves the place empty
+  Day.prototype.picked = function (o) {
+    var self = this;
+    if (o.status === 'taken') {
+      o.status = 'picked';
+      (o.lines || []).forEach(function (l) {
+        var it = l.item;
+        it.stock = (it.stock === undefined ? self.World.stockOf(it) : it.stock) - l.qty; it.reserved = Math.max(0, (it.reserved || 0) - l.qty);
+        if (it.stock <= 0 && it.loc) { self.World.vacate(self.world, it); self.emit('stock', it); }
+      });
+    }
+    this.emit('changed', o);
+  };
   // the bag out of its OC spot, for a customer at the counter
   Day.prototype.fetch = function (o) {
     var code = o.hold && o.hold.code;
@@ -331,17 +359,29 @@
   // what a walk-in turns out to want is settled when somebody first says hello: WALKIN_TILL of them want the till, the
   // rest are click and collects (detailedfoil, 20 Nov 2026: so it can't be Sam who gets the till customers)
   Day.prototype.decide = function (c) {
-    if (this.mode !== 'mixed' || !this.canTill) return;
+    if (this.mode !== 'mixed' || !this.canTill || !this.walkinTill) return; // (walkinTill 0: customers stay as sent, for tests)
     var want = this.r() < this.walkinTill, isTill = c.kind === 'till' || c.kind === 'kiosk';
-    if (want === isTill) return;
     if (want) {
-      if (c.code && this.busy[c.code] === 'collect:' + c.id) this.busy[c.code] = null;
-      c.code = null;
+      if (isTill) return;
+      this.freeCode(c);
       this.tillCust(c, this.r() < 0.5 ? 'till' : 'kiosk');
-    } else {
-      c.kind = 'ck'; c.say = this.pick(CC).replace('{n}', c.surname);
-      c.kiosk = null; c.lines = null; c.pay = null;
+      return;
     }
+    // a click and collect: about half of them are a bag from the holding area, half one product from the warehouse
+    // (detailedfoil, 21 Nov 2026), whatever the walk-in was going to be
+    if (isTill) { c.kiosk = null; c.lines = null; c.pay = null; c.cust = null; }
+    var bag = this.r() < 0.5;
+    if (bag && !(c.code && this.hold[c.code])) {
+      this.freeCode(c);
+      var code = this.collectable();
+      if (code) { c.code = code; c.surname = this.hold[code].surname; this.busy[code] = 'collect:' + c.id; }
+    } else if (!bag) this.freeCode(c);
+    c.kind = c.code ? 'collect' : 'ck';
+    c.say = c.code ? this.Till.holdSay(this.r, c.code, c.surname) : this.pick(CC).replace('{n}', c.surname);
+  };
+  Day.prototype.freeCode = function (c) {
+    if (c.code && this.busy[c.code] === 'collect:' + c.id) this.busy[c.code] = null;
+    c.code = null;
   };
   // they've walked up to the counter and wait to be greeted (detailedfoil: nobody should speak with no one there to hear)
   Day.prototype.arrived = function (c) {
@@ -385,7 +425,17 @@
   };
 
   /* ---------- the director: when the next pick comes ---------- */
+  // customer flow follows the delivery (detailedfoil, 21 Nov 2026): the further the day's picks are ahead of the
+  // delivery being put away, the longer the wait for the next one, and past a point no more come until it catches up,
+  // so the delivery and the picks finish around the same time
+  Day.prototype.lag = function () {
+    var n = this.delivery.length;
+    if (!n || !this.plan.length) return 0;
+    var done = this.delivery.filter(function (x) { return x.done; }).length;
+    return this.released / this.plan.length - done / n;
+  };
   Day.prototype.canStart = function (k) {
+    if (this.lag() > 0.4) return false;
     if (this.projected() >= MAX_LIST) return false;
     if (k === 'c') return this.room() > 0;
     if (k === 'collect') return this.present().length < MAX_IN && !!this.collectable();
@@ -402,7 +452,7 @@
     if (this.phase === 'closed') return 0.4 + 0.8 * this.r();
     var L = Math.min(4, this.projected()), r = (this.r() + this.r()) / 2;
     var lo = [4, 12, 20, 30, 40][L], hi = [9, 26, 40, 55, 70][L];
-    return lo + (hi - lo) * r;
+    return (lo + (hi - lo) * r) * (this.lag() > 0.15 ? 2 : 1);
   };
   // the c picks are all in the holding area: the shop opens by itself (detailedfoil: no unlocking, only locking up at the end)
   Day.prototype.open = function () {

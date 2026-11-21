@@ -250,7 +250,7 @@
       const s = S.session;
       if (!s) return;
       sfx('key');
-      if (s.stage === 'details') { say({ text: "Postcode's " + s.cust.postcode + ", surname " + s.cust.surname + '.' + (s.cust.twin ? ' First name ' + s.cust.first + '.' : '') }); return; }
+      if (s.stage === 'details') { say({ text: "Surname's " + s.cust.surname + ', postcode ' + s.cust.postcode + '.' + (s.searched ? ' ' + s.cust.third.say : '') }); return; }
       if (s.stage === 'kiosk') { say(s.kiosk.say + ' ' + s.kiosk.sayName); return; }
       if (s.stage === 'paying') { say(s.pay.say); return; }
       if (s.stage !== 'ordering') return;
@@ -294,7 +294,7 @@
     }
     function focusDefault() {
       if (touch || !S.open) return;
-      const f = S.screen === 'who' ? (F.postcode.value ? (F.surname.value ? null : F.surname) : F.postcode) : S.screen === 'order' ? F.part : null;
+      const f = S.screen === 'who' ? (F.surname.value ? (F.postcode.value ? null : F.postcode) : F.surname) : S.screen === 'order' ? F.part : null;
       if (f) setTimeout(() => f.focus({ preventScroll: true }), 0);
     }
     function renderCust() {
@@ -322,9 +322,9 @@
       show('res');
       if (s && s.stage === 'details') {
         const me = S.results.indexOf(s.cust);
-        if (me >= 0 && S.results.length > 1 && !s.saidFirst && S.results.some((r, i) => i !== me && r.surname === s.cust.surname && r.postcode === s.cust.postcode)) {
-          s.saidFirst = true; later(700, () => say("That's me, " + s.cust.first + '.'));
-        } else if (me < 0 && S.results.length && !s.saidNotMe) { s.saidNotMe = true; later(700, () => say("I'm not on there.")); }
+        s.searched = true;
+        if (me >= 0 && !s.saidThird) { s.saidThird = true; later(700, () => say(s.cust.third.say)); }
+        else if (me < 0 && S.results.length && !s.saidNotMe) { s.saidNotMe = true; later(700, () => say("I'm not on there.")); }
       }
     }
     function renderResults() {
@@ -789,7 +789,7 @@
         case 'leave': sfx('key'); if (o.onClose) o.onClose(); break;
         case 'ask': askAgain(); break;
         case 'search': search(); break;
-        case 'saysno': sfx('key'); if (s && s.stage === 'details') say("I've got an account, mate. Postcode's " + s.cust.postcode + ', surname ' + s.cust.surname + '.'); else fuMsg('No customer to serve.'); break;
+        case 'saysno': sfx('key'); if (s && s.stage === 'details') say("I've got an account, mate. Surname's " + s.cust.surname + ', postcode ' + s.cust.postcode + '.'); else fuMsg('No customer to serve.'); break;
         case 'refine': sfx('key'); show('who'); break;
         case 'select': select(); break;
         case 'create': sfx('key'); if (s && s.stage === 'details') say("I've already got an account."); else fuMsg('No customer to create.'); break;
@@ -800,7 +800,7 @@
           if (s && (s.selected || s.basket.length)) {
             s.selected = false; s.basket = []; s.cur = 0; s.ready = false; s.stage = 'details'; if (s.kind === 'kiosk') s.lines = []; s.lines.forEach((l) => { l.done = false; });
             renderBasket(); clearWho(); S.results = []; show('who');
-            say("Eh? I still need my stuff! Postcode's " + s.cust.postcode + '.');
+            say("Eh? I still need my stuff! Surname's " + s.cust.surname + '.');
           } else { clearWho(); show('who'); }
           break;
         case 'back':
@@ -861,7 +861,7 @@
       if (S.last && items.indexOf(S.last) >= 0) return S.last;
       let want = null;
       if (S.tab === 'crashfix') want = F.q.value.trim() ? el.querySelector('.cf-card [data-copy]') : F.q;
-      else if (S.screen === 'who') want = F.postcode.value ? F.surname : F.postcode;
+      else if (S.screen === 'who') want = F.surname.value ? F.postcode : F.surname;
       else if (S.screen === 'res') want = el.querySelector('.fu-tab tbody tr[data-i].sel') || el.querySelector('.fu-tab tbody tr[data-i]') || el.querySelector('[data-act="refine"]');
       else if (S.screen === 'kiosk') want = el.querySelector('.fu-kiosk tbody tr[data-k].sel') || el.querySelector('.fu-kiosk tbody tr[data-k]');
       else if (S.screen === 'order') want = el.querySelector('.fu-line.qty .fu-q') || F.part;
@@ -908,13 +908,13 @@
       show('who');
       renderBasket();
     }
-    // the customer gives their details once you're at the till: postcode first, then surname (detailedfoil's order)
+    // the customer gives their details once you're at the till: surname first, then postcode (detailedfoil, 21 Nov 2026)
     function begin() {
       const s = S.session;
       if (!s || s.stage !== 'arrived') return;
       s.stage = 'details';
-      later(700, () => say("Postcode's " + s.cust.postcode + '.'));
-      later(2100, () => say("Surname's " + s.cust.surname + '.'));
+      later(700, () => say("Surname's " + s.cust.surname + '.'));
+      later(2100, () => say("Postcode's " + s.cust.postcode + '.'));
     }
     return {
       el,
