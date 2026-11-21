@@ -528,6 +528,14 @@ explain changes in plain English and say what they'll see.
       Cash goes through the normal drawer. The host checks the basket, payment method and change before listing the order.
       Tests: `.github/tests/warehouse-online.test.mjs` and `.github/warehouse-shift/test-{online-game,relay}.mjs`.
       Next stage: shared kick stools, online player badges and CCTV. Physical phone, PC and controller playtesting is pending.
+    - Online co-op, shared equipment and figures (21 Nov, same draft). Two players reaching for one red kick stool get
+      one winner. Everyone sees it move with that person and return home when they leave their aisle or disconnect.
+      The host checks high shelves against the stool holder. Other players wear their chosen badge names, appear on
+      CCTV with Sam, and carry the tote, holding bag or delivery carton from the shared day. The same parcel slides
+      over the counter on each device. A fetched bag keeps its OC slot reserved until handover so a disconnect can
+      return it without replacing someone else's order. On phones the room code sits above the order counts.
+      The rendered Chrome check lives in `.github/warehouse-shift/browser-online.py`. Cloudflare deployment and a
+      shift on physical hardware are still pending. Keep the online entry behind `?online=1`.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

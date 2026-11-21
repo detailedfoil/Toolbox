@@ -3,6 +3,8 @@ import { DurableObject } from 'cloudflare:workers';
 const CODE = /^\/room\/([A-HJ-NP-Z2-9]{6})$/;
 const GRACE = 30_000;
 const HOST = 1;
+// After many days the host's join snapshot can describe every shelf in the catalogue.
+const HOST_MESSAGE = 1024 * 1024, GUEST_MESSAGE = 2048;
 const VERSION = '1';
 const players = [1, 2, 3, 4];
 const send = (ws, data) => { try { ws.send(JSON.stringify(data)); } catch { /* close event follows */ } };
@@ -97,10 +99,11 @@ export class WarehouseRoom extends DurableObject {
   webSocketMessage(ws, raw) {
     const a = ws.deserializeAttachment(), host = a.slot === HOST;
     if (this.room?.seats[a.slot]?.connection !== a.connection) return;
-    if (typeof raw !== 'string' || raw.length > (host ? 196608 : 2048)) return ws.close(4008, 'Message too large');
+    if (typeof raw !== 'string' || raw.length > (host ? HOST_MESSAGE : GUEST_MESSAGE)) return ws.close(4008, 'Message too large');
     const now = Date.now();
-    if (now - a.since >= 1000) { a.since = now; a.count = 0; }
-    if (++a.count > (host ? 100 : 30)) return ws.close(4008, 'Message rate exceeded');
+    if (now - a.since >= 1000) { a.since = now; a.count = 0; a.volume = 0; }
+    a.volume = (a.volume || 0) + raw.length;
+    if (++a.count > (host ? 100 : 30) || a.volume > (host ? 4 * HOST_MESSAGE : 30 * GUEST_MESSAGE)) return ws.close(4008, 'Message rate exceeded');
     ws.serializeAttachment(a);
     let m;
     try { m = JSON.parse(raw); } catch { return ws.close(4008, 'Invalid message'); }

@@ -36,6 +36,8 @@ node --test .github/warehouse-shift/test-relay.mjs .github/warehouse-shift/test-
 
 The tests connect to loopback port 8787 (override with `RELAY_PORT`). Keep the configured GitHub Pages origin for these tests. They open four WebSocket connections to the local Durable Object and exercise the game DOM, including a touch layout. The game test uses the real scene graph, scanners and till with canvas drawing stubbed. For a manual local browser run, serve the Toolbox checkout over HTTP and start Wrangler with `--var GAME_ORIGIN:http://localhost:8000` if the game is served on that origin. Open the game with `?online=1&relay=http://127.0.0.1:8787`.
 
+For the rendered browser check, install Python Playwright (the workflow pins the version) and use Chrome with SwiftShader. Start a static server from the repo root on port 8000 and run local Wrangler with `--var GAME_ORIGIN:http://127.0.0.1:8000`. Set `CHROME_BIN` to the Chrome executable and run `python3 .github/warehouse-shift/browser-online.py`. It checks a desktop host, a touch guest, shelf relocation, rotation and two simulated controllers. Set `WAREHOUSE_SCREENSHOT` to a PNG path to capture the guest's view.
+
 ## Room behaviour
 
 - The host runs Day, customer paths, Sam and the till queues. The relay assigns identities, limits room size and forwards messages. Guests run their own camera, input and scanner UI. The host verifies ownership, line order, proximity and till baskets before accepting shared actions.

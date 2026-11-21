@@ -107,7 +107,7 @@
     const c = day.customers.find(c => c.id === a.id);
     const holding = () => day.orders.some(o => o.by === who && o.status !== 'done') || day.delivery.some(d => d.by === who && !d.done);
     const near = (x, y, r) => Math.hypot(ctx.pose.x - x, ctx.pose.y - y) <= r;
-    const atLoc = loc => near((loc.x0 + loc.x1) / 2, loc.face.front, 3.6) && (loc.z0 >= 0.45 || ctx.pose.squat);
+    const atLoc = loc => near((loc.x0 + loc.x1) / 2, loc.face.front, 3.6) && (loc.z0 >= 0.45 || ctx.pose.squat) && (!ctx.needsStep(loc) || ctx.pose.step);
     const atSpot = code => { const sp = day.world.holding.spots.find(s => s.code === code); return sp && near(sp.x1, (sp.y0 + sp.y1) / 2, 3.6); };
     switch (op) {
       case 'take':
@@ -121,7 +121,12 @@
         if (a.index + 1 === o.lines.length) day.picked(o);
         return true;
       }
-      case 'fetch': return !!(own && o.status === 'taken' && o.kind === 'hold' && atSpot(o.hold.code) && day.fetch(o));
+      case 'fetch': {
+        if (!own || o.status !== 'taken' || o.kind !== 'hold' || !atSpot(o.hold.code) || !day.fetch(o)) return false;
+        // A disconnected guest's parcel can safely go back to its original OC slot.
+        day.busy[o.hold.code] = 'fetch:' + o.id;
+        return true;
+      }
       case 'putAway': {
         if (!own || o.status !== 'picked' || o.kind !== 'c' || o.cust || !atSpot(a.code)) return false;
         return parcel(day.putAway(o, a.code, who));
@@ -129,7 +134,10 @@
       case 'handOver': {
         const h = day.world.handover, p = ctx.pose;
         if (!own || o.status !== 'picked' || !o.cust || p.x < h.x0 || p.x > h.x1 || p.y < h.y0 || p.y > h.y1 + 0.08) return false;
-        ctx.give(o); return day.handOver(o, who);
+        ctx.give(o);
+        const done = day.handOver(o, who);
+        if (done && o.hold && day.busy[o.hold.code] === 'fetch:' + o.id) day.busy[o.hold.code] = null;
+        return done;
       }
       case 'paTake': {
         const g = Number.isInteger(a.src) && day.world.goodsin[a.src];

@@ -10,7 +10,7 @@ const { snapshot, command, DayProxy, release } = require(dir + 'online-day.js');
 const read = name => JSON.parse(fs.readFileSync(new URL(dir + 'data/' + name + '.json', import.meta.url)));
 const cat = read('catalogue'), requests = read('requests'), world = W.build(cat), other = W.build(cat);
 const fresh = () => Day.create({ world, World: W, Till, requests, rand: W.rng(1234) });
-const context = () => ({ progress: new Map(), pose: { x: 0, y: 0, squat: true }, items: new Map(world.items.map(it => [it.code, it])) });
+const context = () => ({ progress: new Map(), needsStep: () => false, pose: { x: 0, y: 0, squat: true }, items: new Map(world.items.map(it => [it.code, it])) });
 const wire = (d, tracked = new Set([...d.delivery.map(d => d.item), ...d.orders.flatMap(o => o.lines.map(l => l.item))])) =>
   JSON.parse(JSON.stringify(snapshot(d, [], tracked)));
 
@@ -38,6 +38,10 @@ test('two scanners contend for one pick and only its owner can scan each line an
   assert.equal(act('p2', 'putAway', { code }), false);
   o.lines.forEach((l, index) => {
     ctx.pose.x = (l.loc.x0 + l.loc.x1) / 2; ctx.pose.y = l.loc.face.front;
+    ctx.needsStep = () => true;
+    ctx.pose.step = false;
+    assert.equal(act('p2', 'line', { index }), false, 'a high shelf needs a claimed stool and a step up');
+    ctx.pose.step = true;
     assert.equal(act('p3', 'line', { index }), false);
     assert.equal(act('p2', 'line', { index }), true); assert.equal(act('p2', 'line', { index }), false);
   });

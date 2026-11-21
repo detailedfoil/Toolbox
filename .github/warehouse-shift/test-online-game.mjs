@@ -7,7 +7,7 @@ import { JSDOM } from 'jsdom';
 import WebSocket from 'ws';
 import { REPO } from '../tests/load.mjs';
 
-const origin = 'https://detailedfoil.github.io', base = path.join(REPO, 'tools');
+const origin = process.env.RELAY_TEST_ORIGIN || 'https://detailedfoil.github.io', base = path.join(REPO, 'tools');
 const page = readFileSync(path.join(base, 'warehouse-shift.html'), 'utf8');
 const relay = 'http://127.0.0.1:' + (process.env.RELAY_PORT || 8787);
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -37,9 +37,17 @@ async function game(t, { online = true, phone = false } = {}) {
   const blank = () => {}, gradient = () => ({ addColorStop: blank });
   w.HTMLCanvasElement.prototype.getContext = () => new Proxy({ measureText: s => ({ width: String(s).length * 8 }),
     createRadialGradient: gradient, createLinearGradient: gradient }, { get: (o, k) => o[k] || blank });
+  let lastCCTV = [];
   for (const script of w.document.scripts) {
     const asset = script.getAttribute('src')?.split('?')[0]; if (!asset || asset.startsWith('../')) continue;
     w.eval(readFileSync(path.join(base, asset), 'utf8'));
+    if (asset.endsWith('cctv.js')) {
+      const create = w.ShiftCCTV.create;
+      w.ShiftCCTV.create = options => {
+        const cctv = create(options);
+        return { ...cctv, draw(frame) { lastCCTV = frame.people; return cctv.draw(frame); } };
+      };
+    }
     if (asset.endsWith('three.min.js')) {
       w.THREE = { ...w.THREE, WebGLRenderer: class {
         capabilities = { getMaxAnisotropy: () => 1, maxTextureSize: 1024 };
@@ -49,7 +57,7 @@ async function game(t, { online = true, phone = false } = {}) {
     }
   }
   await until(() => w.__shift, 'warehouse to load: ' + $('msgText').textContent);
-  return { w, $, s: w.__shift, sockets };
+  return { w, $, s: w.__shift, sockets, cctv: () => lastCCTV };
 }
 
 test('the normal game starts solo and local split-screen without opening a socket', async t => {
@@ -73,6 +81,8 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const room = host.$('roomBtn').textContent.slice(0, 6);
   for (let i = 0; i < 3; i++) {
     const guest = await game(t, { phone: i === 0 });
+    guest.$('nameIn').value = ['River', 'Lake', 'Oak'][i];
+    guest.$('nameIn').dispatchEvent(new guest.w.Event('input'));
     guest.$('onlineBtn').click(); guest.$('roomCode').value = room; guest.$('joinRoom').click();
     await until(() => !guest.$('roomBtn').hidden, 'guest admission: ' + guest.$('roomMessage').textContent);
     assert.equal(guest.s.crew.length, 0); guests.push(guest);
@@ -81,6 +91,36 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const [phone] = guests;
   assert.equal(phone.$('stickZone').hidden, false);
   assert.equal(host.$('roomBtn').textContent, room + ' · 4/4');
+  await until(() => [host, ...guests].every(g => ['Sam', 'River', 'Lake', 'Oak'].every(name =>
+    g.cctv().some(p => p.staff && p.label === name))), 'named staff and one Sam on each CCTV monitor');
+  const visibility = hidden => {
+    Object.defineProperty(host.w.document, 'hidden', { configurable: true, value: hidden });
+    host.w.document.dispatchEvent(new host.w.Event('visibilitychange'));
+  };
+  visibility(true);
+  await until(() => guests.every(g => !g.$('onlineCover').hidden && /paused/.test(g.$('roomMessage').textContent)), 'host tab to pause every guest');
+  visibility(false);
+  await until(() => guests.every(g => g.$('onlineCover').hidden), 'host tab to resume every guest');
+  const stoolId = host.s.world.stools[0].id;
+  const aimAtStool = g => {
+    const s = g.s, stool = s.world.stools.find(v => v.id === stoolId);
+    const side = stool.home.x < (s.world.centre.x0 + s.world.centre.x1) / 2 ? 1 : -1;
+    s.me.x = stool.home.x + side * 0.9; s.me.y = stool.home.y;
+    s.me.yaw = side * Math.PI / 2; s.me.pitch = Math.atan2(0.25 - s.me.eye, 0.9); s.applyCam();
+    return s.players[0].D.tillBtn;
+  };
+  const stoolButtons = guests.slice(0, 2).map(aimAtStool);
+  for (const b of stoolButtons) { assert.match(b.textContent, /Take stool/); b.dispatchEvent(new b.ownerDocument.defaultView.Event('pointerdown', { bubbles: true })); }
+  await until(() => host.s.world.stools[0].by && guests.every(g => g.s.world.stools[0].by === host.s.world.stools[0].by),
+    'exactly one player to get the contested stool');
+  const holder = guests.find(g => g.s.players[0].stool);
+  assert.equal(guests.filter(g => g.s.players[0].stool).length, 1);
+  holder.s.players[0].toggleStep(); assert.ok(holder.s.me.step);
+  holder.sockets.at(-1).terminate();
+  await until(() => holder.sockets.length === 2 && holder.$('onlineCover').hidden &&
+    [host, ...guests].every(g => g.s.world.stools[0].by === null), 'disconnected stool returns home');
+  assert.ok(!holder.s.me.step && !holder.s.players[0].stool);
+
   const items = ['AAA', 'BBC'].map(area => host.s.world.items.find(it => it.loc?.face.area === area && it.loc.z0 < 1.3 && it.loc.z0 > 0.2));
   const lastShelf = items[0].loc.code;
   const order = day.makeOrder('c', items.map((item, i) => ({ item, qty: i ? 2 : host.w.ShiftWorld.room(item) })), null, true, { surname: 'Test' });
@@ -112,9 +152,10 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const second = day.start('c');
   await until(() => s.day().list().some(o => o.id === second.id), 'second pick');
   s.enter(); await until(() => second.by === s.players[0].id, 'second claim');
+  const connections = picker.sockets.length;
   picker.sockets.at(-1).terminate();
   await until(() => second.status === 'listed', 'disconnect to release the job');
-  await until(() => picker.sockets.length === 2 && s.state() === 'home' && picker.$('onlineCover').hidden, 'phone to rejoin and reset scanner');
+  await until(() => picker.sockets.length === connections + 1 && s.state() === 'home' && picker.$('onlineCover').hidden, 'phone to rejoin and reset scanner');
   assert.equal(s.world.locs.byCode[lastShelf].item, null, 'reconnecting keeps the shelf empty');
   for (const d of s.day().delivery) assert.equal(d.loc.code, day.delivery.find(x => x.id === d.id).loc.code);
   // A guest occupies an existing till, identifies the kiosk customer, and pays through Fusion.
@@ -137,6 +178,12 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   ui.goPay(); ui.payCash();
   const cash = session.cash, tillPage = guests[2].w.document;
   assert.ok(cash.due > 0);
+  ui.drTake(1);
+  cashier.closeTill();
+  await cashier.openTill();
+  assert.equal(cashier.till.session(), session, 'returning to the till resumes the same sale');
+  assert.deepEqual([...cash.hand], [1], 'the coin already taken stays in hand');
+  ui.drStart();
   const give = tillPage.querySelector('[data-act="drgive"]');
   give.click();
   assert.ok(!customer.order, 'the host waits for the drawer');
@@ -153,6 +200,22 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   assert.equal(cashier.till.session().orderNo, customer.order.no);
   assert.equal(day.orders.filter(o => o.cust === customer).length, 1);
   cashier.closeTill();
+  // Reserve the fetched bag's OC slot until the tote actually crosses the counter.
+  day.mode = 'hold';
+  const collect = day.send('collect', { code, surname: day.hold[code].surname });
+  day.arrived(collect); day.greet(collect, 'p1');
+  const runner = guests[1].s, runnerDay = runner.day();
+  await until(() => runnerDay.list().some(o => o.id === collect.order.id), 'holding-area collection');
+  const job = runnerDay.list().find(o => o.id === collect.order.id);
+  assert.ok(await runnerDay.take(job));
+  runner.me.x = sp.x1 + 0.65; runner.me.y = (sp.y0 + sp.y1) / 2;
+  assert.ok(await runnerDay.fetch(job));
+  assert.ok(!day.freeSpots().includes(code), 'no other order can occupy a bag return slot');
+  const h = runner.world.handover;
+  runner.me.x = (h.x0 + h.x1) / 2; runner.me.y = (h.y0 + h.y1) / 2;
+  assert.ok(await runnerDay.handOver(job));
+  assert.ok(day.freeSpots().includes(code));
+  await until(() => guests.every(g => g.s.figs.some(f => f.c?.id === collect.id && f.counterTote)), 'the same parcel on every counter');
   const previous = s.day();
   day.phase = 'lock'; assert.equal(day.lock(), true);
   await until(() => !host.$('dayCover').hidden && guests.every(g => !g.$('dayCover').hidden), 'end of day screens');

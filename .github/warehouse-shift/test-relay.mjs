@@ -1,9 +1,10 @@
 // Run against local Wrangler. Uses the ws dependency already installed by the repository tests.
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
+import { createRequire } from 'node:module';
 import WebSocket from 'ws';
 import { test } from 'node:test';
-const origin = 'https://detailedfoil.github.io';
+const origin = process.env.RELAY_TEST_ORIGIN || 'https://detailedfoil.github.io';
 const newCode = () => Array.from(randomBytes(6), n => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[n % 32]).join('');
 
 function connect(room, mode, token, build = 'abc') {
@@ -40,6 +41,13 @@ test('local Durable Object admits four, enforces versions and roles, resumes sea
   assert.deepEqual(seats.map(x => x.slot).sort(), [2, 3, 4]);
   assert.match((await dial('join').next('closed')).reason, /full/);
   await host.next(m => m.type === 'roster' && m.slots.length === 4);
+  // A long-running warehouse can have moved every product by the time the last guest joins.
+  const require = createRequire(import.meta.url);
+  const World = require('../../tools/warehouse-shift/world.js');
+  const world = World.build(require('../../tools/warehouse-shift/data/catalogue.json'));
+  const stock = world.items.map(it => [it.code, it.loc.code, World.stockOf(it), 0]);
+  host.send({ type: 'state', to: seats[1].slot, state: { day: { stock } } });
+  assert.deepEqual((await guests[1].next('state')).state.day.stock, stock);
   guests[0].send({ type: 'act', from: 1, id: 1, op: 'take' });
   const act = await host.next('act'); assert.equal(act.from, seats[0].slot);
   host.send({ type: 'ack', to: act.from, id: 1, result: true });

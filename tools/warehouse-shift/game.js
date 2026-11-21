@@ -238,6 +238,7 @@
     function freeFig(f) {
       f.free = true; f.group.visible = false; f.mode = 'away'; f.carry = false; f.giving = false;
       if (f.tote) { S.dropTote(f.tote); f.tote = null; }
+      if (f.counterTote) { S.dropTote(f.counterTote); f.counterTote = null; }
       speeches.delete(f);
       if (f.c) { f.c.fig = null; f.c = null; }
     }
@@ -341,7 +342,7 @@
     function giveTote(c, tote, x) {
       const f = c.fig;
       if (!f) { S.dropTote(tote); return; }
-      f.giving = true;
+      f.giving = true; f.counterTote = tote;
       tote.visible = true;
       tote.position.set(x, 1.0, counter.y0 + 0.22);
       standAt(c, null);
@@ -396,7 +397,7 @@
           const f = t.c && t.c.fig;
           if (f) { // the customer picks it up and goes
             if (f.tote) S.dropTote(f.tote);
-            f.carry = true; f.tote = t.tote; f.group.add(t.tote); t.tote.position.set(0, 0.95, 0.32); t.tote.rotation.set(0, 0, 0); t.tote.scale.setScalar(1 / f.group.scale.x);
+            f.carry = true; f.counterTote = null; f.tote = t.tote; f.group.add(t.tote); t.tote.position.set(0, 0.95, 0.32); t.tote.rotation.set(0, 0, 0); t.tote.scale.setScalar(1 / f.group.scale.x);
             f.giving = false;
             goOut(t.c);
           } else S.dropTote(t.tote);
@@ -550,7 +551,7 @@
     function removeSam() {
       const b = crew.find((x) => x.name === 'Sam');
       if (!b) return;
-      if (day) day.release('Sam');
+      if (day) { if (online?.room()) online.releaseWork('Sam'); else day.release('Sam'); }
       crew.splice(crew.indexOf(b), 1);
       speeches.delete(b);
       b.fig.group.visible = false; b.fig.trolley.group.visible = false;
@@ -662,6 +663,14 @@
       for (const p of players) p.fig.group.traverse((o) => { o.layers.disableAll(); for (const q of players) if (q !== p) o.layers.enable(1 + q.idx); });
       dirty = true;
     }
+    const STEP = 1.05; // 2.5 times the old 0.42 (detailedfoil, 21 Nov 2026), whatever the stool model's height
+    // a stool is only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level (detailedfoil, 21 Nov 2026)
+    const needsStep = (loc) => { const k = loc.face.kind, n = loc.shelf.no; return k === 'AA' ? n >= 13 : k === 'BA' ? n >= 7 : n >= loc.face.shelves.length; };
+    function poseStool(stool, x, y, yaw, stepped) {
+      const sy = Math.sin(yaw), cy = Math.cos(yaw);
+      if (stepped) S.setStool(stool.id, x, y);
+      else S.setStool(stool.id, x + cy * 0.75 + sy * 0.1, y - sy * 0.75 + cy * 0.1);
+    }
     function makePlayer(idx, D) {
       const P = { idx, id: 'p' + (idx + 1), D, kb: idx === 0 };
       const me = { x: world.start.x + idx * 0.7, y: world.start.y, yaw: world.start.yaw, pitch: -0.05, vx: 0, vy: 0, eye: 1.62, squat: false, bob: 0, speed: 0 };
@@ -683,11 +692,12 @@
       if (D.tag) D.tag.textContent = P.name;
       const figB = { x: me.x, y: me.y, yaw: 0, speed: 0, turning: 0, lookT: 0, beam: 0 };
       let lastYaw = me.yaw;
+      const carryPose = () => state === 'deliver' || state === 'hold' ? 'tote' : state === 'pato' || state === 'paqty' ? 'box' : null;
       P.poseFig = (dt) => {
         figB.x = me.x; figB.y = me.y; figB.yaw = me.yaw + Math.PI; figB.speed = me.speed;
         figB.turning = Math.abs(me.yaw - lastYaw) / Math.max(dt, 0.001); lastYaw = me.yaw;
         figB.kneeling = me.squat; figB.walking = me.speed > 0.15;
-        figB.carry = state === 'deliver' || state === 'hold' ? 'tote' : state === 'pato' || state === 'paqty' ? 'box' : null;
+        figB.carry = carryPose();
         figB.atTill = !!(till && till.isOpen()); figB.typing = figB.atTill && Math.random() < 0.5;
         S.poseWorker(P.fig, figB, dt);
         P.fig.group.position.y = me.step ? STEP : 0;
@@ -1483,22 +1493,27 @@
       /* ---------- kick stools (detailedfoil, 21 Nov 2026) ---------- */
       // a red stool at the end of every row: Take stool, carry it into an aisle, Step up to reach the high shelves (AA shelf 13 up,
       // BA 7 up, top BB level), Step down. Walk out of the aisle and it goes back to where it lives. Sam doesn't use them.
-      const STEP = 1.05; // 2.5 times the old 0.42 (detailedfoil, 21 Nov 2026), whatever the stool model's height
-      // a stool is only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level (detailedfoil, 21 Nov 2026)
-      const needsStep = (loc) => { const k = loc.face.kind, n = loc.shelf.no; return k === 'AA' ? n >= 13 : k === 'BA' ? n >= 7 : n >= loc.face.shelves.length; };
       function placeStool() {
-        const s = P.stool; if (!s) return;
-        const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);
-        if (me.step) S.setStool(s.id, me.x, me.y); else S.setStool(s.id, me.x + cy * 0.75 + sy * 0.1, me.y - sy * 0.75 + cy * 0.1);
+        if (P.stool) poseStool(P.stool, me.x, me.y, me.yaw, me.step);
       }
       function stepBtnSync() { D.stepBtn.hidden = !P.stool || !active; D.stepBtn.setAttribute('aria-pressed', String(!!me.step)); D.stepBtn.firstChild.textContent = me.step ? 'Down' : 'Step'; }
       function takeStool() {
         const s = stoolOn; if (!s || s.by || P.stool) return;
+        if (guest()) {
+          remote(() => online.stool('takeStool', s.id)).then(ok => {
+            if (ok) { SFX.key(); toast('Kick stool: Step up for high shelves', 'good'); }
+          });
+          return;
+        }
         s.by = P.id; P.stool = s; P.stoolAisle = false; stoolOn = null;
         SFX.key(); toast('Kick stool: take it into an aisle, Step up for high shelves', 'good'); placeStool(); stepBtnSync(); D.tillBtn.hidden = true; checkTill(); dirty = true;
       }
       function dropStool(msg) {
         const s = P.stool; if (!s) return;
+        if (guest()) {
+          if (!pending) remote(() => online.stool('dropStool', s.id)).then(ok => { if (msg && ok) toast('Stool put back', 'dim'); });
+          return;
+        }
         me.step = false; s.by = null; P.stool = null; P.stoolAisle = false;
         S.setStool(s.id, s.home.x, s.home.y); stepBtnSync(); dirty = true;
         if (msg) toast('Stool put back', 'dim');
@@ -1508,6 +1523,12 @@
         if (me.squat) toggleSquat();
         me.step = !me.step; me.vx = me.vy = 0; SFX.key(); placeStool(); stepBtnSync(); dirty = true;
       }
+      P.syncStool = (s) => {
+        if (s === P.stool) return;
+        P.stool = s; P.stoolAisle = false; me.step = false; stoolOn = null;
+        if (s) placeStool();
+        stepBtnSync(); dirty = true;
+      };
       P.toggleStep = toggleStep; P.stoolSync = stepBtnSync;
       /* ---------- the manager's PC: what Sam does first (detailedfoil, 20 Nov 2026) ---------- */
       const pc = { open: false, sel: 0, el: null };
@@ -1619,12 +1640,13 @@
         till.close();
         // not talking yet: back in the queue for whoever's free
         const c = P.tillCust;
-        if (online?.room()) online.close();
+        const serving = c && till.session() && till.stage() !== 'arrived';
         if (online?.room()) {
-          P.tillCust = null; till.clear();
-          if (!guest() && c) day.unserve(c);
-        }
-        else if (c && (!till.session() || till.stage() === 'arrived')) { P.tillCust = null; till.clear(); day.unserve(c); }
+          if (!serving) {
+            online.close(); P.tillCust = null; till.clear();
+            if (!guest() && c) day.unserve(c);
+          }
+        } else if (c && !serving) { P.tillCust = null; till.clear(); day.unserve(c); }
         if (idx === 0) canvas.focus({ preventScroll: true });
         sayShown = performance.now() - 9000; dirty = true; // their last words stay up a few seconds
         renderScanner();
@@ -1638,6 +1660,7 @@
       function paid(c, o) {
         showScreen(c.at || nearTill, o);
         P.tillCust = null; stats.tills++;
+        if (online?.room() && !till.isOpen()) online.close();
         toast('Order ' + o.no + ' is on the pick list', 'good');
         later(2.2, () => { if (till.isOpen() && (!till.session() || till.stage() === 'done')) callOver(); });
         renderScanner();
@@ -2298,6 +2321,9 @@
         out.push({ x: p.x, y: p.z, state, colour: '#' + f.parts.body.color.getHexString() });
       }
       for (const p of players) out.push({ x: p.me.x, y: p.me.y, staff: true, label: p.name });
+      if (online) for (const q of online.peers.values()) out.push({ x: q.x, y: q.y, staff: true, label: q.name });
+      const sam = online?.sam();
+      if (sam) out.push({ x: sam.x, y: sam.y, staff: true, label: sam.name });
       for (const b of crew) if (b.fig && b.fig.group.visible) out.push({ x: b.x, y: b.y, staff: true, label: b.name });
       return out;
     }
@@ -2308,7 +2334,7 @@
       const o = cctvMon.obj, near = players.some((p) => Math.hypot(p.me.x - o.x0, p.me.y - (o.y0 + o.y1) / 2) < 16);
       if (!near && cctvSig) return false; // nobody close enough to see it: it's drawn again when someone is
       const people = cctvPeople(), now = new Date();
-      const sig = now.getSeconds() + '|' + people.map((p) => Math.round(p.x * 8) + ',' + Math.round(p.y * 8) + p.state).join(';');
+      const sig = now.getSeconds() + '|' + people.map((p) => Math.round(p.x * 8) + ',' + Math.round(p.y * 8) + (p.label || p.state)).join(';');
       if (sig === cctvSig) return false;
       cctvSig = near ? sig : 'far';
       cctv.draw({ people, now });
@@ -2359,7 +2385,7 @@
       online = window.ShiftOnlineGame.attach({
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
-        begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
+        makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
         ringBell, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; },
         resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },

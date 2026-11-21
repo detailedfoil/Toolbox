@@ -25,16 +25,22 @@
       openShelves = open;
     }
     const guest = () => !!net && net.slot > 1;
-    const pose = () => ({ x: p.me.x, y: p.me.y, yaw: p.me.yaw + Math.PI, speed: p.me.speed, squat: p.me.squat, shelf: p.shelf() });
+    const pose = () => ({ x: p.me.x, y: p.me.y, yaw: p.me.yaw + Math.PI, speed: p.me.speed, squat: p.me.squat,
+      name: p.name, step: !!p.me.step, atTill: p.tillOpen(), shelf: p.shelf() });
     function peerPose(slot, data) {
       if (!Number.isInteger(slot) || slot < 1 || slot > 4 || slot === net.slot || !data) return false;
       if (![data.x, data.y, data.yaw, data.speed].every(Number.isFinite) || data.x < 0 || data.x > world.W || data.y < 0 || data.y > world.D || g.blocked(data.x, data.y)) return false;
-      peers.set(slot, { x: data.x, y: data.y, yaw: data.yaw % (2 * Math.PI), speed: Math.max(0, Math.min(3.2, data.speed)), squat: !!data.squat, shelf: items.has(data.shelf) ? data.shelf : null });
+      const name = typeof data.name === 'string' && g.cleanName(data.name.slice(0, 32)) || 'Player ' + slot;
+      const who = 'p' + slot, stool = world.stools.find(s => s.by === who);
+      peers.set(slot, { name, step: !!stool && !!data.step,
+        atTill: locks.has(who) && !!data.atTill, x: data.x, y: data.y, yaw: data.yaw % (2 * Math.PI), speed: Math.max(0, Math.min(3.2, data.speed)), squat: !!data.squat, shelf: items.has(data.shelf) ? data.shelf : null });
       return true;
     }
     function release(slot) {
       const who = 'p' + slot;
       locks.delete(who); progress.delete(who); peers.delete(slot);
+      const stool = world.stools.find(s => s.by === who);
+      if (stool) { stool.by = null; S.setStool(stool.id, stool.home.x, stool.home.y); }
       if (g.day()) wire.release(g.day(), who);
     }
     function frame() {
@@ -46,17 +52,19 @@
       return {
         epoch: g.epoch(), t: g.day().t, people: [[1, pose()], ...peers],
         sam: b && Object.fromEntries(['x', 'y', 'yaw', 'speed', 'turning', 'walking', 'kneeling', 'bending', 'giving', 'typing', 'reading', 'atTill', 'aim', 'beam', 'beamTo', 'carry', 'toteDown'].map(k => [k, b[k]])),
-        samSpeech: speech(b), openSku: b?.openSku,
+        trolleyItems: b?.items || [], samSpeech: speech(b), openSku: b?.openSku,
         trolley: b && { x: b.trolley.x, y: b.trolley.y, phi: b.trolley.phi },
         customers: g.figs.filter(f => !f.free).map(f => {
           const m = f.group, parts = f.parts;
-          return { id: f.c.id, x: m.position.x, y: m.position.z, yaw: m.rotation.y, step: parts.legL.rotation.x, carry: f.carry, receipt: !!f.holdR,
+          const spot = f.c.spot;
+          return { id: f.c.id, spot: spot?.queue ? 'queue' : spot?.wait ? 'wait' : spot?.till ? 'till' : null, x: m.position.x, y: m.position.z, yaw: m.rotation.y, step: parts.legL.rotation.x, carry: f.carry, receipt: !!f.holdR,
+            counterTote: f.counterTote && [f.counterTote.position.x, f.counterTote.position.y, f.counterTote.position.z],
             speech: speech(f), scale: m.scale.x, colours: [parts.body, parts.legsM, parts.stripe, parts.skin, parts.hair].map(mat => mat.color.getHex()) };
         })
       };
     }
     function snapshot() {
-      return { epoch: g.epoch(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], screens: tills.map(t => g.screenOf(t)?.id || null) };
+      return { epoch: g.epoch(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
     }
     function apply(s, reset) {
       const newDay = epoch !== s.epoch;
@@ -69,6 +77,12 @@
       }
       epoch = s.epoch; replica.apply(s.day); g.setDay(replica, epoch);
       locks.clear(); for (const [who, index] of s.locks) locks.set(who, index);
+      world.stools.forEach((stool, i) => {
+        const by = s.stools[i];
+        if (stool.by !== by) S.setStool(stool.id, stool.home.x, stool.home.y);
+        stool.by = by;
+      });
+      p.syncStool(world.stools.find(stool => stool.by === p.id) || null);
       for (const [code, parcel] of Object.entries(replica.hold)) if (reset || oldHold[code]?.num !== parcel?.num) S.hold.set(code, parcel);
       S.delivery.set(replica.delivery);
       tills.forEach((t, i) => { const o = replica.orders.find(o => o.id === s.screens[i]); if (g.screenOf(t) !== (o || null)) g.screen(t, o); });
@@ -95,6 +109,15 @@
         mirroredSam.fig.group.visible = mirroredSam.fig.trolley.group.visible = !!f.sam;
         if (f.sam) {
           Object.assign(mirroredSam, f.sam, { trolley: f.trolley, openSku: f.openSku });
+          const key = f.trolleyItems.join(',');
+          if (key !== mirroredSam.trolleyKey) {
+            const trolley = mirroredSam.fig.trolley;
+            S.trolleyTop(trolley, null);
+            for (const colour of f.trolleyItems) S.trolleyTop(trolley, colour);
+            mirroredSam.trolleyKey = key;
+          }
+          const order = replica.orders.find(o => o.by === 'Sam' && o.status === 'picked');
+          syncLoad(mirroredSam.fig, f.sam.carry, order);
           if (f.samSpeech && mirroredSam.speechId !== f.samSpeech.id) {
             mirroredSam.speechId = f.samSpeech.id; g.speakCrew(mirroredSam, f.samSpeech.line);
           }
@@ -106,6 +129,7 @@
         const c = replica.customers.find(c => c.id === row.id);
         if (!c) continue;
         const fig = c.fig || g.figFor(c), parts = fig.parts;
+        c.spot = row.spot ? { [row.spot]: true } : null;
         present.add(fig);
         fig.group.position.set(row.x, 0, row.y); fig.group.rotation.y = row.yaw; fig.group.scale.setScalar(row.scale);
         [parts.body, parts.legsM, parts.stripe, parts.skin, parts.hair].forEach((mat, i) => mat.color.setHex(row.colours[i]));
@@ -113,12 +137,30 @@
         parts.armL.rotation.x = -row.step; parts.armR.rotation.x = row.carry ? -1 : row.step;
         if (parts.receipt) parts.receipt.visible = row.receipt;
         if (row.speech && fig.speechId !== row.speech.id) { fig.speechId = row.speech.id; g.speakFig(c, row.speech.line); }
-        if (row.carry && !fig.tote) {
-          fig.tote = S.makeTote([]); fig.group.add(fig.tote); fig.tote.position.set(0, 0.95, 0.32);
+        if (row.counterTote) {
+          fig.counterTote ||= orderLoad(c.order);
+          fig.counterTote.position.set(...row.counterTote);
+        } else if (row.carry && !fig.tote) {
+          fig.tote = fig.counterTote || orderLoad(c.order); fig.counterTote = null;
+          fig.group.add(fig.tote); fig.tote.position.set(0, 0.95, 0.32);
+          fig.tote.rotation.set(0, 0, 0); fig.tote.scale.setScalar(1 / row.scale);
         } else if (!row.carry && fig.tote) { S.dropTote(fig.tote); fig.tote = null; }
       }
       for (const fig of g.figs) if (!fig.free && !present.has(fig)) g.freeFig(fig);
       p.remoteTill(); g.dirty();
+    }
+    function orderLoad(order) {
+      if (order?.hold) return S.hold.carry(order.hold.code, order.hold.parcel);
+      return S.makeTote(order?.lines.map(l => l.item.colour) || []);
+    }
+    function syncLoad(fig, kind, order) {
+      const key = kind ? kind + ':' + (order?.id || 0) : '';
+      if (fig.loadKey === key) return;
+      fig.loadKey = key;
+      if (fig.held) { S.dropTote(fig.held); fig.held = null; }
+      if (!kind) return;
+      fig.held = order?.hold || kind === 'tote' ? orderLoad(order) : g.makeCarton();
+      fig.carry.add(fig.held); fig.held.position.set(0, 0, 0);
     }
     function animate(dt) {
       if (!net?.slot) return false;
@@ -126,12 +168,21 @@
       for (const [slot, fig] of models) if (!peers.has(slot)) fig.group.visible = false;
       for (const [slot, data] of peers) {
         let fig = models.get(slot);
-        if (!fig) { fig = S.makeWorker({ name: 'Player ' + slot, skin: [0, 0xf1c9a5, 0xc68b62, 0x8d5a3b, 0xe0b394][slot] }); models.set(slot, fig); }
+        if (!fig) { fig = S.makeWorker({ name: data.name, skin: [0, 0xf1c9a5, 0xc68b62, 0x8d5a3b, 0xe0b394][slot] }); fig.badgeName = data.name; models.set(slot, fig); }
+        if (fig.badgeName !== data.name) { S.setBadge(fig, data.name); fig.badgeName = data.name; }
         const from = fig.group.position, k = !fig.group.visible || !fig.placed ? 1 : Math.min(1, dt * 15);
         fig.group.visible = fig.placed = true;
         const yaw = fig.group.rotation.y, d = data.yaw - yaw;
+        const who = 'p' + slot, day = g.day();
+        const order = day.orders.find(o => o.by === who && o.status === 'picked');
+        const carry = order ? (order.hold ? 'bag' : 'tote') : day.delivery.some(d => d.by === who && !d.done) ? 'box' : null;
+        syncLoad(fig, carry, order);
         S.poseWorker(fig, { x: from.x + (data.x - from.x) * k, y: from.z + (data.y - from.z) * k,
-          yaw: yaw + Math.atan2(Math.sin(d), Math.cos(d)) * k, speed: data.speed, turning: 0, kneeling: data.squat }, dt);
+          yaw: yaw + Math.atan2(Math.sin(d), Math.cos(d)) * k, speed: data.speed, turning: 0, kneeling: data.squat,
+          walking: data.speed > 0.15, carry, atTill: data.atTill }, dt);
+        fig.group.position.y = data.step ? g.stepHeight : 0;
+        const stool = world.stools.find(s => s.by === 'p' + slot);
+        if (stool) g.poseStool(stool, from.x, from.z, fig.group.rotation.y - Math.PI, data.step);
       }
       if (guest() && mirroredSam?.fig.group.visible) { S.poseWorker(mirroredSam.fig, mirroredSam, dt); S.poseTrolley(mirroredSam.fig.trolley, mirroredSam); }
       return peers.size > 0 || !!mirroredSam?.fig.group.visible;
@@ -145,12 +196,30 @@
     }
     function action(slot, op, args) {
       const who = 'p' + slot, pos = peers.get(slot), day = g.day(), till = () => tills[locks.get(who)];
+      if (op === 'takeStool' || op === 'dropStool') {
+        const stool = world.stools.find(s => s.id === args.id);
+        if (!stool) return false;
+        if (op === 'takeStool') {
+          if (stool.by || world.stools.some(s => s.by === who) || Math.hypot(pos.x - stool.home.x, pos.y - stool.home.y) > 2) return false;
+          stool.by = who;
+        } else {
+          if (stool.by !== who) return false;
+          stool.by = null; pos.step = false; S.setStool(stool.id, stool.home.x, stool.home.y);
+        }
+        return true;
+      }
       return wire.command(day, who, op, args, {
+        needsStep: g.needsStep,
         pose: pos, progress, items, screen: g.screen, doorX: g.doorX, till,
         canGreet: () => pos.y < world.counter.y0 + 0.05 && pos.y > world.counter.y0 - 1.75 &&
           tills.some(t => Math.abs((t.x0 + t.x1) / 2 - pos.x) < 1.6),
-        give(o) { const tote = S.makeTote(o.lines.map(l => l.item.colour)); if (o.cust?.fig) g.give(o.cust, tote, g.handX(pos.x)); else S.dropTote(tote); },
-        open: i => Number.isInteger(i) && open(who, i, pos),
+        give(o) { const tote = orderLoad(o); if (o.cust?.fig) g.give(o.cust, tote, g.handX(pos.x)); else S.dropTote(tote); },
+        open(i) {
+          if (!Number.isInteger(i) || !open(who, i, pos)) return false;
+          const c = day.customers.find(c => c.by === who && c.state === 'serving');
+          if (c && c.at !== tills[i]) g.callTo(c, tills[i]);
+          return true;
+        },
         close() { locks.delete(who); const c = day.customers.find(c => c.by === who && c.state === 'serving'); if (c) day.unserve(c); return true; },
         call() {
           const t = till(); if (!t || day.customers.some(c => c.by === who)) return false;
@@ -217,10 +286,11 @@
     $('leaveRoom').onclick = () => { if (net && !net.ended) net.leave(); location.reload(); };
     document.addEventListener('visibilitychange', () => net?.visibility());
     return {
-      trackStock: item => stockItems.add(item), guest, peers, occupied, room: () => net, animate, sam: () => mirroredSam?.fig.group.visible ? mirroredSam : null,
+      releaseWork: who => wire.release(g.day(), who), trackStock: item => stockItems.add(item), guest, peers, occupied, room: () => net, animate, sam: () => mirroredSam?.fig.group.visible ? mirroredSam : null,
       frozen: () => !!net && (!net.ready || net.paused), panel: () => !panel.hidden,
       open: t => guest() ? net.request('tillOpen', { till: tills.indexOf(t) }) : open(p.id, tills.indexOf(t), p.me),
       close: () => guest() ? net.request('tillClose', {}) : locks.delete(p.id),
+      stool: (op, id) => net.request(op, { id }),
       call: () => net.request('call', {}), bell: () => net.request('bell', {}), tick: now => net?.tick(now)
     };
   }
