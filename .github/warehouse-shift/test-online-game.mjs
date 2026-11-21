@@ -17,7 +17,7 @@ async function until(check, what) {
 }
 async function game(t, { online = true, phone = false, installed = false } = {}) {
   const w = new JSDOM(page, { runScripts: 'outside-only', pretendToBeVisual: true,
-    url: origin + '/Toolbox/tools/warehouse-shift.html' + (online ? '?online=1&relay=' + relay : '') }).window;
+    url: origin + '/Toolbox/tools/warehouse-shift.html' + (online ? '?relay=' + relay : '') }).window;
 
   const $ = id => w.document.getElementById(id);
   w.matchMedia = q => ({ matches: (phone && q === '(pointer: coarse)') || (installed && q.includes('display-mode: fullscreen')) });
@@ -63,7 +63,7 @@ async function game(t, { online = true, phone = false, installed = false } = {})
 test('the normal game starts solo and local split-screen without opening a socket', async t => {
   for (const split of [false, true]) {
     const { $, s, sockets } = await game(t, { online: false });
-    assert.equal($('onlineBtn').hidden, true);
+    assert.equal($('onlineBtn').hidden, false);
     if (split) { $('twoBtn').click(); s.join({ kind: 'kb' }); s.join({ kind: 'pad', pad: 0 }); $('joinGo').click(); }
     else $('startBtn').click();
     assert.equal(s.split(), split); assert.equal(s.players.length, split ? 2 : 1);
@@ -71,12 +71,12 @@ test('the normal game starts solo and local split-screen without opening a socke
   }
 });
 
-test('an installed phone with the old launch URL can host or join from its start screen', async t => {
+test('an installed phone with the ordinary launch URL can host or join from its start screen', async t => {
   const manifest = JSON.parse(readFileSync(path.join(base, 'warehouse-shift.webmanifest'), 'utf8'));
   assert.equal(manifest.id, './warehouse-shift.html');
-  assert.equal(manifest.start_url, './warehouse-shift.html?online=1');
+  assert.equal(manifest.start_url, './warehouse-shift.html');
   const { w, $, sockets } = await game(t, { online: false, phone: true, installed: true });
-  assert.equal(w.location.search, '?online=1');
+  assert.equal(w.location.search, '');
   assert.equal($('onlineBtn').hidden, false);
   $('onlineBtn').click();
   assert.equal($('onlineCover').hidden, false);

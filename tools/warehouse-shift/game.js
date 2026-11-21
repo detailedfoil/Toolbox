@@ -87,13 +87,6 @@
     const players = [];
     let active = false, online = null;
     const standalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
-    const launchURL = new URL(location.href);
-    // Existing installations may still launch the original URL from their home screen.
-    if (standalone && !launchURL.searchParams.has('online')) {
-      launchURL.searchParams.set('online', '1');
-      history.replaceState(history.state, '', launchURL);
-    }
-    const onlineFlag = launchURL.searchParams.get('online') === '1';
     const guest = () => online?.guest();
 
     /* ---------- walking: the walls, racking and everything else that blocks ---------- */
@@ -2191,7 +2184,6 @@
       if (!samOff) hire(SAM);
       newDay();
     }
-    if (!onlineFlag) ensureLocal();
     statsHtml($('startStats'), [[me1.life.orders, 'orders done'], [me1.life.lines, 'lines picked'], [world.items.length.toLocaleString('en-GB'), 'products']]);
     function beginShift() {
       initAudio();
@@ -2407,7 +2399,7 @@
     }
 
     /* ---------- warm up behind the loading bar, then show the start screen ---------- */
-    if (onlineFlag && window.ShiftOnlineGame && window.ShiftOnline && window.ShiftOnlineDay) {
+    if (window.ShiftOnlineGame && window.ShiftOnline && window.ShiftOnlineDay) {
       online = window.ShiftOnlineGame.attach({
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
