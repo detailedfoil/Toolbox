@@ -14,7 +14,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=3d2f6231af">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=fd9bf9b2e5">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=b66e39ba67">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -63,6 +63,7 @@
           <button class="sc-ico" id="scDown" data-el="scDown" type="button" aria-label="Down"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 37l11-12h-7V12h-8v13h-7z" fill="#fff"/></svg></button>
         </div>
         <button class="sc-hint" id="scHint" data-el="scHint" type="button"><span>&lt;F4&gt;</span><span>Hint</span></button>
+        <button class="sc-hint sc-quick-pick" id="scQuickPick" data-el="scQuickPick" type="button" hidden>Quick Pick</button>
         <div class="sc-picked" id="scPicked" data-el="scPicked">Picked : <span class="val" id="scQty" data-el="scQty"></span><span class="sc-cur line" id="scCur" data-el="scCur"></span></div>
         <div class="sc-keys">
           <button class="sc-k sc-fn" id="scFn" data-el="scFn" type="button">Function</button>
@@ -87,6 +88,9 @@
           <button type="button" data-k="back" class="pb" aria-label="Delete">&#x232B;</button><button type="button" data-k="0">0</button><button type="button" data-k="enter" class="pe" aria-label="Enter">&#x21B5;</button>
         </div>
         <div class="sc-menu" id="scMenu" data-el="scMenu" hidden></div>
+        <div class="sc-confirm" id="scConfirm" data-el="scConfirm" hidden>
+          <button class="sc-k sc-fn" data-el="scConfirmBtn" type="button"></button>
+        </div>
         <div class="sc-flash" id="scFlash" data-el="scFlash"></div>
       </div>
     </div>
@@ -229,16 +233,16 @@
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
 <script src="warehouse-shift/world.js?v=5c8bb742d3"></script>
-<script src="warehouse-shift/cctv.js?v=34a13a7fec"></script>
-<script src="warehouse-shift/scene.js?v=d51ecbdbd0"></script>
+<script src="warehouse-shift/cctv.js?v=9edc2acee5"></script>
+<script src="warehouse-shift/scene.js?v=062d43a6a6"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=ad9ad407b9"></script>
-<script src="warehouse-shift/day.js?v=55267ae277"></script>
+<script src="warehouse-shift/day.js?v=fd3fed22ea"></script>
 <script src="warehouse-shift/bot.js?v=e1975d5ece"></script>
 <script src="warehouse-shift/tillui.js?v=b855e77b8f"></script>
 <script src="warehouse-shift/online-day.js?v=b5eb3dacca"></script>
 <script src="warehouse-shift/online.js?v=5f89bd9eee"></script>
 <script src="warehouse-shift/online-game.js?v=9e695e3246"></script>
-<script src="warehouse-shift/game.js?v=15b31ed5cd"></script>
+<script src="warehouse-shift/game.js?v=a0c85c66e9"></script>
 </body>
 </html>

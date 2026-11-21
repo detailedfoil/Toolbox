@@ -786,6 +786,7 @@
       let sel = 0, selId = null, slips = 0, carry = null;
       let homeSel = 1, carton = null; // the scanner's main menu (Putaway / Today Picking), the delivery carton in your hands
       const HOME = ['Putaway', 'Today Picking'];
+      let blueAction = null;
       const idleState = () => state === 'list' || state === 'end' || state === 'home' || state === 'pa';
       const stats = { putaway: 0, orders: 0, picks: 0, lines: 0, units: 0, wrong: 0, hints: 0, tills: 0, perfect: 0, since: Date.now() };
       let life = { orders: 0, lines: 0, units: 0 };
@@ -828,6 +829,8 @@
         const showMsg = msg && performance.now() < msgUntil;
         const listing = state === 'list' || state === 'end' || state === 'idle' || state === 'home';
         D.scList.hidden = !listing; D.scSelect.hidden = !listing; D.scText.hidden = listing; D.scHint.hidden = listing;
+        D.scQuickPick.hidden = state !== 'pa' || !!carton || !day?.list().length;
+        if (blueAction?.button.hidden) cancelBlueAction();
         D.scPicked.style.visibility = state === 'scan' || state === 'qty' ? '' : 'hidden';
         D.scEnter.classList.toggle('pulse', (state === 'deliver' && atCounter) || (state === 'qty' && full));
         D.scHint.classList.toggle('used', hint.until > performance.now());
@@ -846,7 +849,6 @@
         } else if (state === 'pa') {
           const n = day ? day.deliveryLeft().length : 0;
           L.push(['Putaway'], ['Goods In', 'warn'], [n ? 'Scan a carton' : 'All put away', 'big'], [n ? plural(n, 'carton', 'cartons') + ' left' : 'Nothing left', 'gap dim'], ['on the cages', 'dim'], ['and pallets', 'dim']);
-          if (day && day.list().length) L.push(['Picks waiting: ' + day.list().length, 'gap warn']);
         } else if (state === 'pato' || state === 'paqty') {
           L.push(['Putaway'], ['Take to', 'warn'], [carton.loc.code, 'big'], [carton.item.code, 'gap'], [short(carton.item.name)], ['Qty: ' + carton.qty, 'gap']);
           L.push(state === 'paqty' ? ['Press Enter', 'gap ok'] : ['Scan the location', 'gap dim']);
@@ -909,9 +911,7 @@
         try { const value = await action(); return current === generation && value; }
         finally { if (current === generation) pending = false; }
       }
-      async function startPick() {
-        const list = day ? day.list() : [];
-        const o = list[sel];
+      async function startPick(o = day?.list()[sel]) {
         if (!o) { say('No picks yet', 'dim'); SFX.miss(); return; }
         if (!(guest() ? await remote(() => day.take(o)) : day.take(o, P.id))) { say('Already taken', 'err'); SFX.bad(); renderScanner(); return; }
         order = o; cur = 0; typed = ''; full = false; viewLine = -1; hint.until = 0; slips = 0; carry = null;
@@ -1065,6 +1065,7 @@
       }
       function shut() { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; }
       function scanAt(nx, ny) {
+        if (blueAction) return;
         if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } return; }
         if ((doorOn || greetC || bellOn || pcOn) && idleState() && useAction()) return;
         if (nearTill && (idleState() || tillHit(nx, ny))) { openTill(); return; }
@@ -1138,6 +1139,7 @@
       }
       // no backing out of an order once it's started (detailedfoil): Back only puts the last item back
       function back() {
+        if (blueAction) { cancelBlueAction(); return; }
         if (!D.scMenu.hidden) { menu(false); return; }
         if (state === 'qty' && Number(typed) > 0) {
           SFX.key();
@@ -1153,7 +1155,7 @@
       }
       function digit() { if (state === 'qty' || state === 'scan') { say('Scan the location for each one', 'warn'); SFX.miss(); } }
       function enter() {
-        if (!D.scMenu.hidden) return;
+        if (blueAction || !D.scMenu.hidden) return;
         if (state === 'home') openHome(homeSel);
         else if (state === 'pa') { say(day && day.deliveryLeft().length ? 'Scan a carton at goods in' : 'No delivery left', 'warn'); SFX.miss(); }
         else if (state === 'pato') { say('Scan the location first', 'warn'); SFX.miss(); }
@@ -1603,6 +1605,7 @@
         if (P.onTill) P.onTill();
         me.vx = me.vy = 0;
         SFX.key();
+        cancelBlueAction();
         till.open(tills.indexOf(nearTill) + 1);
         callOver();
         D.say.hidden = true;
@@ -1716,6 +1719,7 @@
         else if (!P.tillCust && !pending && (day.ungreeted().length || day.queue().length)) callOver();
       };
       P.resetOnline = () => {
+        cancelBlueAction();
         generation++; pending = false; keys.clear(); shut(); hint.until = 0; carton = order = carry = null;
         state = 'idle'; typed = ''; full = false; cur = 0; msg = null; viewLine = -1;
         D.scMenu.hidden = true; till.close(); till.clear(); P.tillCust = null;
@@ -1797,10 +1801,37 @@
       };
       press(D.scScan, () => { const c = centreNdc(); scanAt(c[0], c[1]); });
       press(D.scEnter, () => { SFX.key(); enter(); });
-      press(D.scFn, () => { SFX.key(); menu(D.scMenu.hidden); });
       press(D.scBack, () => back());
       press(D.scLogoff, () => { SFX.key(); endShift(); });
-      press(D.scHint, () => useHint());
+      function cancelBlueAction() {
+        blueAction = null;
+        D.scConfirm.hidden = true;
+      }
+      function previewBlueAction(button, label, run) {
+        button.addEventListener('click', () => {
+          if (!P.playing()) return;
+          initAudio();
+          SFX.key();
+          if (!D.scMenu.hidden && button === D.scFn) { menu(false); return; }
+          if (!D.scMenu.hidden) return;
+          blueAction = { button, run };
+          D.scConfirmBtn.textContent = label;
+          D.scConfirm.hidden = false;
+          D.scConfirmBtn.focus({ preventScroll: true });
+        });
+      }
+      previewBlueAction(D.scFn, 'Function', () => menu(true));
+      previewBlueAction(D.scHint, 'Hint', useHint);
+      previewBlueAction(D.scQuickPick, 'Quick Pick', () => {
+        if (pending || state !== 'pa' || carton) return;
+        const first = day?.list()[0];
+        if (first) startPick(first);
+      });
+      D.scConfirmBtn.addEventListener('click', () => {
+        const action = blueAction;
+        cancelBlueAction();
+        if (P.playing() && action && !action.button.hidden) action.run();
+      });
       press(D.tillBtn, () => { if (!useAction()) openTill(); });
       press(D.scKbd, () => { SFX.key(); toast(state === 'list' ? 'Up and down choose, Enter starts the pick' : 'No typing: scan the location once for each item'); });
       press(D.scUp, () => page(-1)); press(D.scDown, () => page(1));
@@ -2098,6 +2129,11 @@
         if (b) { b.click(); e.preventDefault(); return; }
         if (e.key === 'Escape' || e.key === 'Tab') { p.menu(false); e.preventDefault(); return; }
       }
+      if (!D.scConfirm.hidden && e.key === 'Escape') { p.back(); e.preventDefault(); return; }
+      if ([D.scHint, D.scQuickPick, D.scFn, D.scConfirmBtn].includes(e.target) && (e.key === 'Enter' || e.key === ' ')) {
+        if (e.repeat) e.preventDefault();
+        return;
+      }
       // on the pick list the arrow keys choose an order
       if ((p.state() === 'list' || p.state() === 'home') && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) { if (!e.repeat) p.page(e.code === 'ArrowUp' ? -1 : 1); e.preventDefault(); return; }
       if (KEYMAP[e.code]) { p.input.keys.add(KEYMAP[e.code]); e.preventDefault(); return; }
@@ -2380,7 +2416,7 @@
     }
 
     /* ---------- the frame loop ---------- */
-    let last = performance.now(), photoT = 0, photoDirty = true, slow = 0, quick = 0, photoTurn = 0;
+    let last = performance.now(), photoT = 0, photoDirty = true, slow = 0, quick = 0;
     function frame(now) {
       requestAnimationFrame(frame);
       const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
@@ -2393,7 +2429,10 @@
       if (worldStep(dt)) changed = true;
       if (S.photos.flush()) changed = true;
       photoT -= dt;
-      if (photoT <= 0 && (photoDirty || changed)) { photoTurn = (photoTurn + 1) % players.length; S.photos.update(players[photoTurn].cam); photoT = 0.2; photoDirty = false; changed = true; }
+      if (photoT <= 0 && (photoDirty || changed)) {
+        S.photos.update(...players.map(p => p.cam));
+        photoT = 0.2; photoDirty = false; changed = true;
+      }
       if (!changed) return;
       dirty = false;
       drawViews();
