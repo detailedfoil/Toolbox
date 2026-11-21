@@ -471,6 +471,12 @@ explain changes in plain English and say what they'll see.
       Sounds: `coin` added to game.js. Sam's own till is unchanged (he takes his time, no drawer drawn). State is
       `session.cash` {inc, given, due, hand, done}; leaving the till and coming back keeps the drawer as it was. Tests:
       `warehouse-shift-stage4.test.mjs`.
+      Same night (detailedfoil): about 1 cash customer in 5 gives the EXACT money (`pay.exact` from `Till.payment`; no drawer,
+      they say "Exact money: £x" and it finishes, the only time a customer can hand over pence); everyone else hands over a
+      whole note (£5 / £10 / £20 / £50 / £100), usually the smallest that covers it, 1 in 4 the next one up (`pay.up`;
+      `Till.tender(inc, pay)`). Kick stools are only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level
+      (`needsStep` in game.js, replacing the 1.75 m rule). The queue to be served stands 1.0 m (was 0.38) in from the wall
+      end of the counter (`QX`).
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

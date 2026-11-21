@@ -190,7 +190,7 @@
     const SPOTS = tills.map((t) => ({ x: tillX(t), y: CY, till: t }));
     // the queue to be served (detailedfoil, 20 Nov 2026): a line down the left-hand wall end of the counter, on your right
     // as you stand serving. The first in the line is at the counter; the line runs towards the shop front.
-    const QX = counter.x0 + 0.38, QSIDE = QX + 0.65;
+    const QX = counter.x0 + 1.0, QSIDE = QX + 0.65; // off the wall (detailedfoil, 21 Nov 2026)
     const QUEUE = [{ x: QX, y: CY, queue: true }, { x: QX, y: CY + 0.62, queue: true }, { x: QX, y: CY + 1.24, queue: true }, { x: QSIDE, y: CY + 1.24, queue: true }];
     // paid or checked in, waiting for their order: on your left as you stand serving, by the gap at the end of the counter
     const WAIT = [{ x: counter.x1 - 0.3, y: CY, wait: true }, { x: counter.x1 - 0.9, y: CY + 0.6, wait: true }, { x: counter.x1 - 0.25, y: CY + 0.75, wait: true }, { x: counter.x1 - 0.8, y: CY + 1.25, wait: true }];
@@ -929,7 +929,7 @@
         if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
-        if (h.loc.z0 >= HIGH && !me.step) { say('Too high: use a kick stool', 'warn'); toast(P.stool ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
+        if (needsStep(h.loc) && !me.step) { say('Too high: use a kick stool', 'warn'); toast(P.stool ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
         const tr = S.trayOf(h.loc);
         if (World.sameSpot(h.loc, carton.loc)) {
           if (state === 'paqty') { say('Press Enter', 'warn'); SFX.miss(); return; }
@@ -1008,7 +1008,7 @@
         if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
-        if (h.loc.z0 >= HIGH && !me.step) { say('Too high: use a kick stool', 'warn'); toast(P.stool ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
+        if (needsStep(h.loc) && !me.step) { say('Too high: use a kick stool', 'warn'); toast(P.stool ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
         const ln = order.lines[cur], tr = S.trayOf(h.loc);
         S.setBox(S.aimBox, S.locBox(h.loc), 0.012); S.aimBox.visible = true;
         if (World.sameSpot(h.loc, ln.loc)) {
@@ -1419,9 +1419,11 @@
         return false;
       }
       /* ---------- kick stools (detailedfoil, 21 Nov 2026) ---------- */
-      // a red stool at the end of every row: Take stool, carry it into an aisle, Step up to reach the high shelves (from
-      // 1.75 m up), Step down. Walk out of the aisle and it goes back to where it lives. Sam doesn't use them.
-      const HIGH = 1.75, STEP = 0.42;
+      // a red stool at the end of every row: Take stool, carry it into an aisle, Step up to reach the high shelves (AA shelf 13 up,
+      // BA 7 up, top BB level), Step down. Walk out of the aisle and it goes back to where it lives. Sam doesn't use them.
+      const STEP = 0.42;
+      // a stool is only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level (detailedfoil, 21 Nov 2026)
+      const needsStep = (loc) => { const k = loc.face.kind, n = loc.shelf.no; return k === 'AA' ? n >= 13 : k === 'BA' ? n >= 7 : n >= loc.face.shelves.length; };
       function placeStool() {
         const s = P.stool; if (!s) return;
         const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);

@@ -767,7 +767,7 @@
       yield this.T(1.5, 3.0);
     } else {
       yield this.T(PACE.cash[0] * 0.5, PACE.cash[1] * 0.5);
-      this.cSay("There's " + Till.money(Till.tender(total)) + '.');
+      this.cSay(c.pay.exact ? 'Exact money: ' + Till.money(total) + '.' : "There's " + Till.money(Till.tender(total, c.pay)) + '.');
       yield this.T(PACE.cash[0] * 0.5, PACE.cash[1] * 0.5);
       this.emit('sfx', 'drawer');
       yield this.T(1.5, 3.0);

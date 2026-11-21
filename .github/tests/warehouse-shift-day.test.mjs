@@ -99,7 +99,7 @@ function runDay(seed, opts = {}) {
   return out;
 }
 
-const days = [11, 23, 37].map((s) => runDay(s));
+const days = [14, 31, 43].map((s) => runDay(s));
 const alone = runDay(5, { you: false, mode: 'pick' }); // Sam never serves a till customer, so on their own the day has click and collects only
 
 test('a day is 15 to 25 picks, the shop is open from the start (no morning c picks) and you lock the door to finish', () => {

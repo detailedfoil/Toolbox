@@ -137,10 +137,14 @@
   function money(p) { return '£' + (p / 100).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   // what a customer paying cash hands over: the next note up, or enough twenties and fifties
   // what a cash customer hands over: always MORE than the total, so there's change to give (detailedfoil, 21 Nov 2026)
-  function tender(inc) {
-    var notes = [500, 1000, 2000, 3000, 4000, 5000, 6000, 8000, 10000, 15000, 20000, 25000, 30000, 40000, 50000];
-    for (var i = 0; i < notes.length; i++) if (notes[i] > inc) return notes[i];
-    return Math.floor(inc / 5000) * 5000 + 5000;
+  // `pay` (from payment()): exact = the right money (about 1 in 5, the only time it can have pence); otherwise a note,
+  // usually the smallest that covers it, sometimes the next one up (detailedfoil, 21 Nov 2026)
+  function tender(inc, pay) {
+    if (pay && pay.exact) return inc;
+    var notes = [500, 1000, 2000, 5000, 10000], i = 0;
+    while (i < notes.length - 1 && notes[i] <= inc) i++;
+    if (pay && pay.up && i < notes.length - 1) i++;
+    return notes[i] > inc ? notes[i] : Math.floor(inc / 5000) * 5000 + 5000;
   }
   // the cash drawer, biggest first: four notes, eight coins (whole pence)
   var DENOMS = [5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1];
@@ -264,7 +268,11 @@
 
   // how they'll pay: they say which when you get to the checkout (detailedfoil), and put you right if you pick the other
   var PAY_SAY = { card: ["I'll pay by card.", 'Card, please.', 'On card, mate.', "I'll tap my card."], cash: ["I'll pay cash.", 'Cash, please.', "I've got cash.", 'Paying cash today.'] };
-  function payment(r) { var how = r() < 0.6 ? 'card' : 'cash'; return { how: how, say: pick(r, PAY_SAY[how]) }; }
+  function payment(r) {
+    var how = r() < 0.6 ? 'card' : 'cash', p = { how: how, say: pick(r, PAY_SAY[how]) };
+    if (how === 'cash') { p.exact = r() < 0.2; p.up = r() < 0.25; if (p.exact) p.say = pick(r, ['I have the exact money.', "I'll pay cash, I've got it exact.", 'Cash, and I have the right money.']); }
+    return p;
+  }
 
   /* ---------- the holding area: multi-item click and collects, bagged and waiting ---------- */
   // OC-001 (on the floor) and OC-002 (the shelf above) hold big loose items; OC-003 to OC-014 are blue totes, six a

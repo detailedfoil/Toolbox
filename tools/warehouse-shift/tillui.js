@@ -563,7 +563,14 @@
       const s = S.session; if (!s || s.stage !== 'paying' || !V.modal.hidden || s.cash) return;
       if (s.pay.how !== 'cash') { wrongMethod(); return; }
       sfx('key');
-      const inc = basketTotal(), given = Till.tender(inc);
+      const inc = basketTotal(), given = Till.tender(inc, s.pay);
+      if (given === inc) { // the exact money: nothing to count out, a beat to take it, then done
+        s.cash = { inc, given, due: 0, hand: [], done: true };
+        say(pick(['Exact money: ' + Till.money(inc) + '.', 'Here, ' + Till.money(inc) + ' exactly.', "That's the right money."]));
+        sfx('coin');
+        later(1400, () => { sfx('drawer'); complete('cash'); });
+        return;
+      }
       s.cash = { inc, given, due: given - inc, hand: [], done: false };
       say(pick(['Here you go.', "There's " + Till.money(given) + '.', 'Cash OK? ' + Till.money(given) + ' there.']));
       openDrawer();

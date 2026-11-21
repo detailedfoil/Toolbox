@@ -54,7 +54,7 @@ test('customers ask by code or by key words from the product name, never by a de
 
 test('the game: stool pick-up, Step, the high shelf rule and the stool going home are wired up', () => {
   const g = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/game.js'), 'utf8');
-  assert.match(g, /HIGH = 1\.75/); assert.match(g, /function takeStool/); assert.match(g, /function dropStool/); assert.match(g, /function toggleStep/);
+  assert.match(g, /needsStep/); assert.match(g, /function takeStool/); assert.match(g, /function dropStool/); assert.match(g, /function toggleStep/);
   assert.equal((g.match(/Too high: use a kick stool/g) || []).length, 2, 'the pick scan and the putaway scan both need the stool for high shelves');
   assert.match(g, /Crew\.aisleAt\(world, me\.x, me\.y\)/);
   const html = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift.html'), 'utf8');
