@@ -35,7 +35,7 @@
   var SOFT = 0.5;        // closer than this to a shelf costs a little more, so paths keep to the middle of aisles
   var DI = [1, -1, 0, 0, 1, 1, -1, -1], DJ = [0, 0, 1, -1, 1, -1, 1, -1], DIAG = CELL * Math.SQRT2;
   // Sam's trolley (detailedfoil, 19 Nov 2026): a stack of blue totes on a grey base with wheels. Pushed in front
-  // while walking; parked behind them while they pick, across the aisle, so nobody gets past
+  // on the open floor and parked across the entrance when Sam is inside a pick aisle.
   var TROLLEY = { len: 0.78, wide: 0.5, ahead: 0.6, behind: 0.56 };
 
   function Nav(world) {
@@ -189,7 +189,10 @@
   }
   // is anyone (other than me) in that aisle?
   function inAisle(world, a, people) {
-    for (var i = 0; i < people.length; i++) if (aisleAt(world, people[i].x, people[i].y) === a) return people[i];
+    for (var i = 0; i < people.length; i++) {
+      var p = people[i], r = p.r || 0;
+      if (p.x + r > a.x0 && p.x - r < a.x1 && p.y + r > a.y0 && p.y - r < a.y1) return p;
+    }
     return null;
   }
 
@@ -230,7 +233,7 @@
     done: ['There you go!', 'Here you go, all done.', 'There you are. Have a good one!', 'All yours, cheers!'],
     excuse: ['Excuse me!', 'Sorry, can I just get past?', 'Just squeezing by, sorry!', 'Scuse me!'],
     queue: ["I'll wait till you're out.", "No rush, I'll wait.", "I'll go down after you."],
-    busy: ["Won't be a sec!", 'Two secs, nearly done.', "I'm just in here, won't be long."],
+    busy: ["Sorry, won't be a moment.", "Sorry about the tote! Just finishing up.", "Thanks for waiting. I'll move it as soon as I'm out.", "Won't be a sec!", 'Two secs, nearly done.', "I'm just in here, won't be long."],
     // the customers (the till's own lines are in till.js, day.js and tillui.js); a right product is never "that's it",
     // which sounds like the end of the order (detailedfoil)
     tillHi: ['Morning! Can I order a few bits?', "Hiya, I'd like to order some stuff.", 'Alright? Need to order a couple of things.', "Hello, I'd like to place an order."],
@@ -316,6 +319,12 @@
   Bot.prototype.moveTrolley = function (dt) {
     var t = this.trolley;
     if (!t) return;
+    var aisle = aisleAt(this.world, this.x, this.y);
+    if (aisle) {
+      t.x = aisle.mouth + (aisle.side === 'R' ? 1 : -1) * TROLLEY.wide / 2;
+      t.y = aisle.cy; t.phi = 0;
+      return;
+    }
     var parked = !this.walking || !!(this.queue && this.queue.there);
     var wantT = parked ? this.yaw + Math.PI : this.yaw, wantD = parked ? TROLLEY.behind : TROLLEY.ahead, wantF = parked ? this.yaw + Math.PI / 2 : this.yaw;
     var k = Math.min(1, dt * 5);
@@ -325,11 +334,6 @@
     if (df > Math.PI / 2) df -= Math.PI; else if (df < -Math.PI / 2) df += Math.PI; // a box looks the same turned round
     t.phi = ang(t.phi + df * k);
     t.x = this.x + Math.sin(t.theta) * t.d; t.y = this.y + Math.cos(t.theta) * t.d;
-    var a = aisleAt(this.world, this.x, this.y);
-    if (a) { // its width across the aisle, wherever it's pointing
-      var half = (Math.abs(Math.cos(t.phi)) * TROLLEY.len + Math.abs(Math.sin(t.phi)) * TROLLEY.wide) / 2 + 0.02;
-      t.y = Math.max(a.y0 + half, Math.min(a.y1 - half, t.y));
-    }
   };
   // the job is a list of steps written as a generator: each step hands back how long to wait (seconds), or a test to
   // wait for (a function), or nothing for "next frame"

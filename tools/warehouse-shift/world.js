@@ -323,7 +323,7 @@
     rk.rows.forEach(function (r, i) {
       var x = r.side === 'R' ? r.x0 - POST / 2 - 0.35 : r.x1 + POST / 2 + 0.35, y = (r.y0 + r.y1) / 2;
       stools.push({ id: i, area: r.s || r.n, x: x, y: y, home: { x: x, y: y }, by: null });
-      objects.push({ kind: 'kickstool', x0: x - 0.32, y0: y - 0.32, x1: x + 0.32, y1: y + 0.32, z1: 0.7 }); // bigger (detailedfoil, 21 Nov 2026)
+      objects.push({ kind: 'kickstool', stoolId: i, x0: x - 0.32, y0: y - 0.32, x1: x + 0.32, y1: y + 0.32, z1: 0.7 }); // bigger (detailedfoil, 21 Nov 2026)
     });
     objects.push({ kind: 'stool', x0: 3.9, y0: 0.35, x1: 4.32, y1: 0.77, z1: 0.42 }, { kind: 'stool', x0: 14.3, y0: 0.4, x1: 14.72, y1: 0.82, z1: 0.42 });
     objects.push({ kind: 'pallettruck', x0: 10.35, y0: D - 3.6, x1: 10.9, y1: D - 2.0, z1: 1.2 });
@@ -382,7 +382,16 @@
     rk.rows.forEach(function (r) { out.push(rect(r.x0, r.y0, r.x1, r.y1)); });
     bl.walls.forEach(function (w) { out.push(rect(w[0], w[1], w[2], w[3])); });
     bl.columns.forEach(function (c) { out.push(rect(c[0], c[1], c[2], c[3])); });
-    bl.objects.forEach(function (o) { if (BLOCKS[o.kind]) out.push(rect(o.x0, o.y0, o.x1, o.y1)); });
+    bl.objects.forEach(function (o) {
+      if (!BLOCKS[o.kind]) return;
+      var bounds = rect(o.x0, o.y0, o.x1, o.y1);
+      if (o.kind === 'kickstool') {
+        var dx = (o.x1 - o.x0) / 4, dy = (o.y1 - o.y0) / 4;
+        bounds.walk = rect(o.x0 + dx, o.y0 + dy, o.x1 - dx, o.y1 - dy);
+        bounds.stool = bl.stools[o.stoolId];
+      }
+      out.push(bounds);
+    });
     return out;
   }
 

@@ -93,7 +93,11 @@
     const BODY = 0.22;
     function blocked(x, y) {
       if (x < BODY || x > world.W - BODY || y < BODY || y > world.D - BODY) return true;
-      for (const o of world.obstacles) if (x > o.x0 - BODY && x < o.x1 + BODY && y > o.y0 - BODY && y < o.y1 + BODY) return true;
+      for (const obstacle of world.obstacles) {
+        if (obstacle.stool?.by) continue;
+        const o = obstacle.walk || obstacle;
+        if (x > o.x0 - BODY && x < o.x1 + BODY && y > o.y0 - BODY && y < o.y1 + BODY) return true;
+      }
       return false;
     }
 
@@ -591,11 +595,34 @@
       start: staffRoom ? { x: staffRoom.x1 + 0.6, y: staffRoom.y0 + 0.65, yaw: Math.PI / 2 } : null };
     let samSaved = null, samOff = false;
     try { samOff = localStorage.getItem('ws-sam') === 'off'; } catch (e) { /* fine */ }
+    const missingScanners = new Set();
+    function checkScannerMixup(c, who) {
+      if (c.scannerChecked || c.by !== who || c.state !== 'serving' || !c.ready) return;
+      c.scannerChecked = true;
+      if (!crew.length || missingScanners.has(who) || day.r() >= 0.1) return;
+      missingScanners.add(who);
+      players.find(p => p.id === who)?.syncScanner(true);
+    }
+    const returns = ["Sorry, I thought that one was mine!", "Oh, that's yours! Hmm, I wonder where mine went.", "Sorry about that. Picked up the wrong scanner again."];
+    function returnScanners(b) {
+      for (const who of missingScanners) {
+        const local = players.find(p => p.id === who);
+        const pos = local?.me || online?.peers.get(Number(who.slice(1)));
+        if (!pos || (local ? local.tillOpen() : pos.atTill) || Math.hypot(pos.x - b.x, pos.y - b.y) > 1.65) continue;
+        const samAisle = Crew.aisleAt(world, b.x, b.y);
+        const atEntrance = samAisle && Math.hypot(pos.x - samAisle.mouth, pos.y - samAisle.cy) < 1;
+        if (!atEntrance && Crew.aisleAt(world, pos.x, pos.y) !== samAisle) continue;
+        missingScanners.delete(who);
+        b.say(b.pick(returns));
+        local?.syncScanner(false);
+      }
+    }
     function removeSam() {
       const b = crew.find((x) => x.name === 'Sam');
       if (!b) return;
       if (day) { if (online?.room()) online.releaseWork('Sam'); else day.release('Sam'); }
       crew.splice(crew.indexOf(b), 1);
+      missingScanners.clear(); for (const p of players) p.syncScanner(false);
       speeches.delete(b);
       b.fig.group.visible = false; b.fig.trolley.group.visible = false;
       samSaved = b; samOff = true; dirty = true;
@@ -620,6 +647,8 @@
     function crewStop(me, x, y) {
       const sam = online?.sam();
       for (const b of sam ? [sam] : crew) {
+        const aisle = Crew.aisleAt(world, b.x, b.y);
+        if (aisle && Crew.aisleAt(world, x, y) === aisle && Crew.aisleAt(world, me.x, me.y) !== aisle) return true;
         const dn = Math.hypot(x - b.x, y - b.y);
         if (dn < BODY + b.r && dn < Math.hypot(me.x - b.x, me.y - b.y) - 1e-4) return true;
         const g = trolleyGap(b, x, y);
@@ -649,6 +678,9 @@
         const others = people.slice();
         for (const o of crew) if (o !== b) others.push({ id: o.id, x: o.x, y: o.y, r: o.r, moving: o.moving });
         b.update(dt, others);
+        const aisle = Crew.aisleAt(world, b.x, b.y);
+        if (aisle && people.some(p => Math.hypot(p.x - aisle.mouth, p.y - aisle.cy) < 1.25)) b.sayBusy();
+        if (missingScanners.size) returnScanners(b);
         S.poseWorker(b.fig, b, dt); S.poseTrolley(b.fig.trolley, b);
         _sph.center.set(b.x, 1.0, b.y);
         for (const p of players) {
@@ -943,6 +975,16 @@
       let bannerT = 0;
       function banner(title, text, ms, kind) { D.bannerTitle.textContent = title; D.bannerText.textContent = text || ''; D.banner.className = kind === 'bell' ? 'ws-banner show bell' : 'ws-banner show'; clearTimeout(bannerT); bannerT = setTimeout(() => { D.banner.className = 'ws-banner'; }, ms || 1800); }
       P.toast = toast;
+      P.scannerMissing = false;
+      P.syncScanner = missing => {
+        if (P.scannerMissing === missing) return;
+        P.scannerMissing = missing;
+        D.scanner.hidden = missing || !active;
+        if (missing) {
+          cancelBlueAction(); D.scMenu.hidden = true; hint.until = 0;
+          banner('Sam has your scanner', 'Find Sam to get it back.', 5500, 'bell');
+        } else banner('Scanner returned', 'Your scanner is ready to use.', 2500);
+      };
 
       /* ---------- the list: choosing an order ---------- */
       // Waiting for a guest action must never block or delay local controls in an offline shift.
@@ -1085,6 +1127,7 @@
       P.centre = centreNdc;
       let aim = null;
       function updateAim() {
+        if (P.scannerMissing) { aim = null; D.cross.classList.remove('reach'); S.aimBox.visible = false; return; }
         const c = centreNdc(), h = hitAt(c[0], c[1]);
         aim = h && h.dist <= REACH ? h : null;
         D.cross.classList.toggle('reach', !!aim);
@@ -1108,6 +1151,7 @@
       }
       function shut() { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; }
       function scanAt(nx, ny) {
+        if (P.scannerMissing) { if (!useAction() && nearTill) openTill(); return; }
         if (blueAction) return;
         if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } return; }
         if ((doorOn || greetC || bellOn || pcOn) && idleState() && useAction()) return;
@@ -1182,6 +1226,7 @@
       }
       // no backing out of an order once it's started (detailedfoil): Back only puts the last item back
       function back() {
+        if (P.scannerMissing) return;
         if (blueAction) { cancelBlueAction(); return; }
         if (!D.scMenu.hidden) { menu(false); return; }
         if (state === 'qty' && Number(typed) > 0) {
@@ -1198,7 +1243,7 @@
       }
       function digit() { if (state === 'qty' || state === 'scan') { say('Scan the location for each one', 'warn'); SFX.miss(); } }
       function enter() {
-        if (blueAction || !D.scMenu.hidden) return;
+        if (P.scannerMissing || blueAction || !D.scMenu.hidden) return;
         if (state === 'home') openHome(homeSel);
         else if (state === 'pa') { say(day && day.deliveryLeft().length ? 'Scan a carton at goods in' : 'No delivery left', 'warn'); SFX.miss(); }
         else if (state === 'pato') { say('Scan the location first', 'warn'); SFX.miss(); }
@@ -1211,6 +1256,7 @@
         else if (state === 'put') { say('Scan an empty OC label', 'warn'); SFX.miss(); }
       }
       function page(dir) {
+        if (P.scannerMissing) return;
         if (state === 'home') { SFX.key(); homeSel = (homeSel + dir + HOME.length) % HOME.length; renderScanner(); return; }
         if (state === 'list') {
           const n = day ? day.list().length : 0;
@@ -1279,6 +1325,7 @@
       /* ---------- hint: the location glows ---------- */
       const hint = { until: 0, loc: null, counter: false, till: null, spot: null, t: 0 };
       function useHint() {
+        if (P.scannerMissing) return;
         if (state === 'pa') {
           const left = day ? day.deliveryLeft() : [];
           if (!left.length) { toast('No delivery left', ''); return; }
@@ -1419,6 +1466,7 @@
 
       /* ---------- the function menu ---------- */
       function menu(open) {
+        if (open && P.scannerMissing) return;
         if (!open) { D.scMenu.hidden = true; return; }
         const items = [
           ['1', me.squat ? 'Stand up' : 'Squat', () => toggleSquat()],
@@ -1686,6 +1734,7 @@
         if (P.tillCust !== c || !c.fig) return;
         const s = till.session();
         if (s && s.dayCust === c) return; // already talking
+        if (!guest()) checkScannerMixup(c, P.id);
         speeches.delete(c.fig);
         till.serve(c.cust, c.lines, '#' + c.fig.parts.body.color.getHexString(), { kind: c.kind, kiosk: c.kiosk, pay: c.pay, hello: c.say, dayCust: c });
       }
@@ -1992,7 +2041,7 @@
       };
       P.afterRender = (now) => { placeSay(); placeBubs(now); };
       P.start = () => { if (state === 'idle') state = day && day.over ? 'end' : 'list'; renderScanner(); };
-      P.show = () => { D.scanner.hidden = false; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; stepBtnSync(); };
+      P.show = () => { D.scanner.hidden = P.scannerMissing; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; stepBtnSync(); };
       // things the controls and the tests use
       Object.assign(P, { banner, scanAt, enter, back, page, digit, useHint, toggleSquat, openTill, closeTill, countOne, confirmQty, handOver, hitAt, holdHit, scanHold, scanPut, tapRow,
         state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
@@ -2497,7 +2546,7 @@
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
-        ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
+        missingScanners, checkScannerMixup, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; },
         resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },
         clearDayView() {

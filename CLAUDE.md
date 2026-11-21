@@ -515,7 +515,7 @@ explain changes in plain English and say what they'll see.
       "to greet" line (the "!" over an unGreeted customer stays; `draw()` still returns the counts); the map is as big as the screen
       allows under a slim CAM 01 / date / REC line (cctv.js `u(x)` / `v(y)`, `map.k`). The screen is taller (z 0.78 to 2.4, the clock
       at 2.46 to 2.82) so the nearly square shop fills more of it.
-    - Planned for the aisle collision stage: halve the walking collision width and depth of unused kick stools on the ground. Keep the visible stool and its interaction target the same size.
+    - Unused kick stools have half-width walking collision bounds. Sam parks the tote trolley across an occupied aisle entrance. Each Fusion customer has one 10% chance of a scanner mix-up for the cashier. Walk up to Sam to recover it.
     - Online co-op: choose Online co-op from the normal start screen in a browser or the installed game.
       The host shares a six-character code with up to three guests. Solo and local split-screen use the same page.
       Cloudflare relay setup is documented in `workers/warehouse-relay/README.md`.
