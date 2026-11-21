@@ -47,7 +47,7 @@
       const b = crew[0];
       const speech = key => {
         const msg = g.speeches.get(key);
-        return msg && msg.until > performance.now() ? { id: msg.until, line: msg.line } : null;
+        return msg && (msg.waiting || msg.until > performance.now()) ? { id: msg.until, line: msg.line, waiting: msg.waiting } : null;
       };
       return {
         epoch: g.epoch(), t: g.day().t, people: [[1, pose()], ...peers],
@@ -136,7 +136,8 @@
         parts.legL.rotation.x = row.step; parts.legR.rotation.x = -row.step;
         parts.armL.rotation.x = -row.step; parts.armR.rotation.x = row.carry ? -1 : row.step;
         if (parts.receipt) parts.receipt.visible = row.receipt;
-        if (row.speech && fig.speechId !== row.speech.id) { fig.speechId = row.speech.id; g.speakFig(c, row.speech.line); }
+        if (row.speech && fig.speechId !== row.speech.id) { fig.speechId = row.speech.id; g.speakFig(c, row.speech.line, row.speech.waiting); }
+        if (!row.speech && g.speeches.get(fig)?.waiting) g.speeches.delete(fig);
         if (row.counterTote) {
           fig.counterTote ||= orderLoad(c.order);
           fig.counterTote.position.set(...row.counterTote);

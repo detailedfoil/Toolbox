@@ -87,6 +87,10 @@ def shared_shift(browser, errors):
           return s.players[0].view.w === w && room.bottom <= stats.top && room.width > 0 &&
             !document.querySelector('#stickZone').hidden && s.players[0].view.landscape === (w > 500);
         }""", arg=w)
+        if portrait:
+            scanner = guest.locator("#scanner").bounding_box()
+            assert scanner["x"] > w / 2 and scanner["y"] < h / 8
+            assert scanner["height"] <= h * 0.4
     # Wait for the other browser's worker figure to reach the host's new spot.
     host_xy = host.evaluate("[__shift.me.x,__shift.me.y]")
     guest.wait_for_function("""([x,y]) => __shift.S.scene.children.some(o => o.visible &&

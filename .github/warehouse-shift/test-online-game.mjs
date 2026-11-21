@@ -164,6 +164,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   cashier.me.yaw = Math.PI; cashier.me.pitch = Math.atan2(1.15 - cashier.me.eye, (till.y0 + till.y1) / 2 - cashier.me.y);
   cashier.applyCam(); assert.equal(cashier.nearTill(), till);
   await cashier.openTill(); assert.equal(cashier.till.isOpen(), true);
+  assert.equal(guests[2].w.document.querySelector('[data-v="tillNumber"]').textContent, '1');
   day.mode = 'kiosk';
   const customer = day.send('kiosk'); customer.pay = { how: 'cash', say: 'Cash, please.' };
   day.arrived(customer);

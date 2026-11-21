@@ -73,7 +73,7 @@
           <div class="fu-logo">FUSION</div>
           <div class="fu-cust" data-v="cust"></div>
           <div class="fu-pills"><button class="fu-pill" type="button" data-act="cancel">Cancel</button><button class="fu-pill back" type="button" data-act="back">Back</button></div>
-          <div class="fu-user"><b>Trainee01</b> <span class="fu-logout">Logout</span><br>Till:2 TC:Dunstable TC<br><b>PDQ Status:</b></div>
+          <div class="fu-user"><b>Trainee01</b> <span class="fu-logout">Logout</span><br>Till:<span data-v="tillNumber"></span> TC:Dunstable TC<br><b>PDQ Status:</b></div>
         </header>
         <nav class="fu-nav">${NAV.map((n) => n[0] ? `<button class="fu-nb" type="button" data-go="${n[0]}">${n[2]}<span>${n[1]}</span></button>` : '<span class="fu-nb blank"></span>').join('')}</nav>
         <main class="fu-main">
@@ -1017,8 +1017,9 @@
     return {
       el,
       isOpen: () => S.open,
-      open() {
+      open(number) {
         if (S.open) return;
+        V.tillNumber.textContent = number;
         S.open = true; el.hidden = false;
         begin();
         if (!P.searcher && !P.loading) loadProducts();

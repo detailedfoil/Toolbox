@@ -296,7 +296,7 @@ explain changes in plain English and say what they'll see.
     page site-first with a 4 s fallback, its files and photos kept-first; a copy still registered at the old floor-plan scope
     removes itself). Stats (orders, lines, units) stay on the device (`ws-stats-v1`).
     **The day** (`day.js`, detailedfoil, 19 Nov 2026; tested in `.github/tests/warehouse-shift-day.test.mjs` with whole days
-    simulated): 20 picks of any kind, the first 2 to 4 of them c picks on the list as the day starts. The rest are a mix of
+    simulated): 15 to 25 picks of any kind, the first 2 to 4 of them c picks on the list as the day starts. The rest are a mix of
     c (online orders), CK (a click and collect customer walks in and their order isn't picked yet) and till and kiosk
     customers (never three of a kind in a row). The list stays steady: at most 5 at once (counting customers on their way in
     who'll add one, and till customers not yet paid), the next one after a wait that's shorter the emptier it is (4 to 9 s
@@ -331,11 +331,8 @@ explain changes in plain English and say what they'll see.
     search.js over products.json, web-names.json and desc-words.json, built with the same fields as product-search/app.js
     via `till.js` `searchItems`; photos only from product-search/photos, descriptions on tap; when nothing has every
     typed word it leaves out words no product has, then tries without each word, and says which it left out). The
-    customer gives their postcode, then their surname (made up: LU8 and LU9 don't exist, emails at example.com/net/org;
-    sometimes someone else at the same address, then they say their first name); you Search, pick them, Select. Then
-    they ask for one thing at a time: by code, by describing it (REMOVED 19 Nov 2026, it did not work; `till.js` no longer picks it, the data is still in requests.json) ("a pack of 100 ... screws 5mm x 80mm", from its
-    screwfix.com name, half without the make) or by quoting a sentence of its description ("I need the one that says:
-    ...", plus a hint like "The 30m one." when several products say the same). Find it on CrashFix and tap its code to
+    customer gives their surname and postcode, then a third detail after Search to identify their record.
+    They ask for one product at a time, by code or by a short name with details such as brand or size. Find it on CrashFix and tap its code to
     copy it: that shows it to the customer, who says right or wrong straight away (detailedfoil; a wrong one counts against
     a perfect pick once). Then switch to Fusion (phones get a Paste key), type the part number and quantity, Enter; any
     product that fits counts. A wrong quantity lights that line's Qty box up, selected, so typing the right number and
@@ -390,7 +387,7 @@ explain changes in plain English and say what they'll see.
     passing Sam is the trolley, not a rule. In the open Sam goes round you, slides past at close quarters,
     takes another spot if you're on theirs (`alts`) and says excuse me after a moment. The holding area is shared through
     day.js (`busy`: a spot being fetched from or filled is kept for whoever's on the way). Drawn by scene.js `makeWorker` /
-    `poseWorker` (navy uniform with a CrashFix patch and an ALEX badge, knees and elbows, both hands on the trolley handle
+    `poseWorker` (navy uniform with a CrashFix patch and a Sam badge, knees and elbows, both hands on the trolley handle
     while walking, the scanner's red line), speech in small grey bubbles only when near and in sight (`placeBubs`, drawn
     by each player), sounds quieter with distance. `__shift.tick(sec)` fast-forwards the game for playtests.
 
@@ -512,7 +509,7 @@ explain changes in plain English and say what they'll see.
       Tests: `warehouse-shift-stage6.test.mjs`.
     - After stage 6 (21 Nov, detailedfoil): (a) the kick stool is bigger: 0.64 m wide and 0.7 m tall (was 0.42 x 0.42; `kickstool` in
       world.js, `kick` / `kickTop` geometry in scene.js, the aim box in game.js; the two decorative stools by the back wall are
-      unchanged) and Step lifts you 1.05 m (`STEP` in game.js, was 0.42: 2.5 times as high, so the stool model is lower than your
+      unchanged) and Step lifts you 1.26 m (`STEP` in game.js, three times the original 0.42 m, so the stool model is lower than your
       feet, his say). (b) The CCTV map is landscape: counter and tills (plain dots now, no numbers) along the BOTTOM, front door at
       the TOP, right on the screen = small x (your right as you stand behind the counter facing the door), no count panel and no
       "to greet" line (the "!" over an unGreeted customer stays; `draw()` still returns the counts); the map is as big as the screen

@@ -259,3 +259,8 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 #roomCode{width:8em;padding:.55em;color:#fff;background:#0c1522;border:1px solid #8395a9;border-radius:.45em;font:700 1.1rem monospace;letter-spacing:.12em;text-transform:uppercase;user-select:text}
 #roomBtn{width:auto;padding-inline:.65em;font:700 .85rem system-ui}
 .ws-stage:has(#roomBtn:not([hidden])) .ws-chips{left:max(8px,env(safe-area-inset-left));top:calc(max(8px,env(safe-area-inset-top)) + 46px)}
+
+.phone-portrait .sc{top:calc(max(8px,env(safe-area-inset-top)) + 44px);bottom:auto}
+.phone-portrait .ws-chips{left:max(8px,env(safe-area-inset-left));top:calc(max(8px,env(safe-area-inset-top)) + 46px)}
+.phone-portrait .ws-squat,.phone-portrait .ws-tillbtn{bottom:max(14px,env(safe-area-inset-bottom))}
+.phone-portrait .ws-squat.ws-step{bottom:calc(max(14px,env(safe-area-inset-bottom)) + 82px)}
