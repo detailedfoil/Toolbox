@@ -153,6 +153,59 @@ test('both split-screen cameras retain their shelf photos across frame refreshes
   }
 });
 
+test('greeted customers walk to separate tills, wait for a free one and can be served by a teammate', async t => {
+  const { $, s } = await game(t, { online: false });
+  $('startBtn').click();
+  const day = s.day();
+  day.mode = 'kiosk'; day.wait = 999;
+  day.plan.length = 0;
+  // Keep Sam busy while the counter fills.
+  s.crew[0].update = () => {};
+  const customers = Array.from({ length: 4 }, () => day.send('kiosk'));
+  s.tick(20);
+  const [first, second, third, fourth] = customers;
+  assert.ok(day.greet(first, 'p2'));
+  assert.equal(day.greet(second, 'p2'), false);
+  assert.ok(day.greet(second, 'p3'));
+  assert.ok(day.greet(third, 'p4'));
+  assert.ok(day.greet(fourth, 'p1'));
+  assert.equal(new Set(customers.slice(0, 3).map(c => c.at)).size, 3);
+  assert.ok(fourth.spot.queue);
+  s.tick(8);
+  assert.ok(customers.slice(0, 3).every(c => c.ready && Math.abs(c.fig.group.position.x - c.spot.x) < 0.02));
+
+  const till = first.at;
+  s.me.x = (till.x0 + till.x1) / 2; s.me.y = s.world.counter.y0 - 0.7;
+  s.me.yaw = Math.PI; s.me.pitch = Math.atan2(1.15 - s.me.eye, (till.y0 + till.y1) / 2 - s.me.y);
+  s.applyCam(); await s.openTill();
+  assert.equal(s.till.session().dayCust, first);
+  assert.equal(first.by, 'p1');
+  assert.ok(day.canGreet('p2'));
+  assert.equal(day.serve(first, 'Sam'), false);
+  assert.equal(day.serve(second, 'p1'), false);
+  day.tillDone(first, first.kiosk.list[first.kiosk.mine].lines);
+  s.tick(9);
+  assert.equal(fourth.at, till);
+  assert.equal(fourth.ready, true);
+});
+
+test('Sam rings once at six seconds for unattended customers and skips customers already helped', async t => {
+  const { $, s } = await game(t, { online: false });
+  $('twoBtn').click(); s.join({ kind: 'kb' }); s.join({ kind: 'pad', pad: 0 }); $('joinGo').click();
+  const day = s.day();
+  day.plan.length = 0; day.mode = 'kiosk';
+  s.crew[0].update = () => {};
+  const waiting = day.send('kiosk'); day.arrived(waiting);
+  s.tick(5.7);
+  assert.ok(s.players.every(p => p.D.bannerTitle.textContent !== 'Ding dong'));
+  s.tick(0.5);
+  assert.ok(s.players.every(p => p.D.bannerTitle.textContent === 'Ding dong' && p.D.bannerText.textContent === 'Help needed on tills'));
+  for (const p of s.players) p.banner('Picking', '', 1500);
+  const helped = day.send('kiosk'); day.arrived(helped); day.greet(helped, 'p1'); day.serve(helped, 'p2');
+  s.tick(8);
+  assert.ok(s.players.every(p => p.D.bannerTitle.textContent === 'Picking'));
+});
+
 test('the wall clock follows shelved cartons from 07:00 to 20:00', async t => {
   const { $, s } = await game(t, { online: false });
   $('startBtn').click();
@@ -222,6 +275,16 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   await until(() => guests.every(g => !g.$('onlineCover').hidden && /paused/.test(g.$('roomMessage').textContent)), 'host tab to pause every guest');
   visibility(false);
   await until(() => guests.every(g => g.$('onlineCover').hidden), 'host tab to resume every guest');
+  assert.equal(day.customerLimit(), 4);
+  const bell = phone.s.world.bell;
+  phone.s.me.x = bell.x; phone.s.me.y = bell.y - 0.9;
+  phone.s.me.yaw = Math.PI; phone.s.me.pitch = Math.atan2(bell.z - phone.s.me.eye, 0.9);
+  phone.s.applyCam();
+  const bellButton = phone.s.players[0].D.tillBtn;
+  assert.match(bellButton.textContent, /Ring bell/);
+  bellButton.dispatchEvent(new phone.w.Event('pointerdown', { bubbles: true }));
+  await until(() => [host, ...guests].every(g => g.$('bannerTitle').textContent === 'Ding dong' &&
+    g.$('bannerText').textContent === 'Help needed on tills'), 'phone bell press to reach all four players');
   const stoolId = host.s.world.stools[0].id;
   const aimAtStool = g => {
     const s = g.s, stool = s.world.stools.find(v => v.id === stoolId);

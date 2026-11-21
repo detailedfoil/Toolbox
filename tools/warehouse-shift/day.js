@@ -297,7 +297,8 @@
   /* ---------- the till ---------- */
   Day.prototype.serve = function (c, who) {
     if (!c || c.state !== 'counter' || c.by) return false;
-    c.state = 'serving'; c.by = who; c.ready = false;
+    if (this.customers.some(function (other) { return other.state === 'serving' && other.by === who; })) return false;
+    c.state = 'serving'; c.by = who; c.greeter = who; c.ready = false;
     this.emit('step', c);
     return true;
   };
@@ -392,9 +393,14 @@
     c.here = this.t; c.state = 'greet';
     this.emit('step', c);
   };
+  Day.prototype.canGreet = function (who) {
+    return !this.customers.some(function (c) {
+      return (c.state === 'counter' && c.greeter === who) || (c.state === 'serving' && c.by === who);
+    });
+  };
   // someone says hello: now they say what they're here for
   Day.prototype.greet = function (c, who) {
-    if (!c || c.state !== 'greet') return false;
+    if (!c || c.state !== 'greet' || (who !== 'Sam' && !this.canGreet(who))) return false;
     c.greeter = who; c.greeted = this.t;
     this.decide(c);
     if (c.kind === 'till' || c.kind === 'kiosk') { c.state = 'counter'; this.emit('step', c); return true; }
@@ -437,12 +443,13 @@
     var done = this.delivery.filter(function (x) { return x.done; }).length;
     return this.released / this.plan.length - done / n;
   };
+  Day.prototype.customerLimit = function () { return Math.max(MAX_IN, this.emit('playerCount') || 0); };
   Day.prototype.canStart = function (k) {
     if (this.lag() > 0.4) return false;
     if (this.projected() >= MAX_LIST) return false;
     if (k === 'c') return this.room() > 0;
-    if (k === 'collect') return this.present().length < MAX_IN && !!this.collectable();
-    return this.present().length < MAX_IN;
+    if (k === 'collect') return this.present().length < this.customerLimit() && !!this.collectable();
+    return this.present().length < this.customerLimit();
   };
   Day.prototype.start = function (k) {
     this.released++;
@@ -492,7 +499,7 @@
         if (k === 'collect') { k = this.plan[this.released] = 'ck'; }
       }
       if (!this.canStart(k)) this.wait = 1 + this.r();
-      else if (k !== 'c' && this.present().length >= MAX_IN - 1 && this.projected() > 0 && !(this.crowdT && this.t >= this.crowdT)) {
+      else if (k !== 'c' && this.present().length >= this.customerLimit() - 1 && this.projected() > 0 && !(this.crowdT && this.t >= this.crowdT)) {
         // two in already and something to do: a third comes in a while later, so it's seldom three for long
         if (!this.crowdT) this.crowdT = this.t + 15 + 25 * this.r();
         this.wait = 1 + this.r();
@@ -527,7 +534,10 @@
       if (o.kind === 'hold' && o.hold && o.status === 'picked') { self.hold[o.hold.code] = o.hold.parcel; self.busy[o.hold.code] = 'fetch:' + o.id; self.emit('holdSet', o.hold.code, o.hold.parcel); }
       o.status = 'listed'; o.by = null; self.emit('changed', o);
     });
-    this.customers.forEach(function (c) { if (c.by === who && c.state === 'serving') self.unserve(c); });
+    this.customers.forEach(function (c) {
+      if (c.greeter === who) c.greeter = null;
+      if (c.by === who && c.state === 'serving') self.unserve(c);
+    });
     for (var k in this.busy) if (this.busy[k] === 'put:' + who) this.busy[k] = null;
     this.delivery.forEach(function (d) { if (d.by === who && !d.done) { d.by = null; self.emit('delivery', d); } });
   };

@@ -20,8 +20,12 @@ test('walk-ins who want click and collect: about half collect a bag from the hol
     const day = Day.create({ world: W.build(read('tools/warehouse-shift/data/catalogue.json'), 5), World: W, Till, requests, rand: W.rng(s), env: {} });
     day.phase = 'open';
     for (let i = 0; i < 6; i++) {
-      const c = day.send('ck'); day.arrived(c); day.greet(c, 'p1');
+      const c = day.send('ck'); day.arrived(c); assert.ok(day.greet(c, 'p1'));
       if (c.kind === 'collect') { bag++; assert.ok(c.order && c.order.kind === 'hold'); } else if (c.kind === 'ck') one++; else till++;
+      if (c.state === 'counter') {
+        assert.ok(day.serve(c, 'p1'));
+        day.tillDone(c, c.kind === 'kiosk' ? c.kiosk.list[c.kiosk.mine].lines : c.lines);
+      }
       assert.doesNotMatch(c.say, /OC-/, 'customers do not say the OC number');
     }
   }

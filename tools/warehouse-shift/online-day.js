@@ -15,7 +15,7 @@
         customer: o.cust?.id, lines: lines(o.lines), hold: o.hold && { code: o.hold.code, parcel: parcel(o.hold.parcel) }
       })),
       customers: day.customers.filter(c => c.state !== 'gone').map(c => ({
-        ...fields(c, ['id', 'kind', 'state', 'by', 'ready', 'say', 'pay', 'surname', 'code']),
+        ...fields(c, ['id', 'kind', 'state', 'greeter', 'by', 'ready', 'say', 'pay', 'surname', 'code']),
         accounts: c.cust?.db.map(({ db, ...account }) => account),
         orderId: c.order?.id, at: tills.indexOf(c.at), lines: lines(c.lines),
         kiosk: c.kiosk && { ...c.kiosk, list: c.kiosk.list.map(k => ({ ...k, lines: lines(k.lines) })) }
@@ -34,7 +34,7 @@
       this.tills = tills;
       this.request = request;
       this.hold = {}; this.busy = {}; this.orders = []; this.customers = []; this.delivery = []; this.t = 0;
-      for (const name of ['list', 'queue', 'label', 'freeSpots', 'ungreeted', 'deliveryLeft', 'summary']) this[name] = Day.prototype[name];
+      for (const name of ['list', 'queue', 'label', 'freeSpots', 'ungreeted', 'canGreet', 'deliveryLeft', 'summary']) this[name] = Day.prototype[name];
     }
     applyStock(rows) {
       const { world, World } = this;
