@@ -26,11 +26,16 @@ jobs:
           node-version: 24
       - run: npm ci --prefix .github --no-audit --no-fund
       - run: python3 -m pip install playwright==1.62.0
+      - name: Install headless Chromium with its matching SwiftShader renderer
+        working-directory: ${{ runner.temp }}
+        run: |
+          npm install --prefix warehouse-browser --no-audit --no-fund @sparticuz/chromium@153.0.0
+          cd warehouse-browser
+          node --input-type=module -e "import chrome from '@sparticuz/chromium'; console.log('CHROME_BIN=' + await chrome.executablePath());" >> "$GITHUB_ENV"
       - name: Play a shared shift against a local Durable Object
         env:
           WRANGLER_SEND_METRICS: 'false'
           RELAY_TEST_ORIGIN: 'http://127.0.0.1:8000'
-          CHROME_BIN: /usr/bin/google-chrome
         run: |
           python3 -m http.server 8000 --bind 127.0.0.1 > "$RUNNER_TEMP/warehouse-web.log" 2>&1 &
           web_pid=$!
