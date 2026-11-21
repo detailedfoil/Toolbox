@@ -163,7 +163,7 @@
     var desc = (requests && requests.describe) || [], need = (requests && requests.need) || [];
     while (lines.length < n && guard++ < 400) {
       // customers no longer describe a product by its name (detailedfoil, 19 Nov 2026: it didn't work): a code, or a sentence from its description
-      var k = r(), kind = k < 0.3 || !need.length ? 'code' : 'need';
+      var kind = 'code'; // customers only ever ask by code (detailedfoil, 21 Nov 2026: a description often says something like "suitable for all uses", which nobody would ask for)
       var it, accept, words = [], quote = '', hint = '', clue = '';
       if (kind === 'code') {
         it = world.items[Math.floor(r() * world.items.length)];

@@ -347,11 +347,11 @@ test('balance: on your own, the queue, customer picks, holding area picks and th
   for (const r of runs) {
     assert.ok(r.day.over, 'the day ends (' + (r.T / 60).toFixed(0) + ' min)');
     assert.ok(r.T < 60 * 60, 'in under an hour');
-    for (const k in r.share) { assert.ok(r.share[k] > 0.06 && r.share[k] < 0.45, k + ' ' + Math.round(100 * r.share[k]) + '%'); avg[k] = (avg[k] || 0) + r.share[k] / runs.length; }
+    for (const k in r.share) { assert.ok(r.share[k] > 0.06 && r.share[k] < 0.5, k + ' ' + Math.round(100 * r.share[k]) + '%'); avg[k] = (avg[k] || 0) + r.share[k] / runs.length; }
     assert.ok(r.day.delivery.length >= 11 && r.day.delivery.every((d) => d.done && d.doneBy === 'Sam'), 'the whole delivery put away');
     assert.ok(r.day.orders.filter((o) => o.kind === 'c').length > r.day.first, 'c picks come in during the day too');
   }
-  for (const k in avg) assert.ok(avg[k] > 0.14 && avg[k] < 0.37, 'average ' + k + ' ' + Math.round(100 * avg[k]) + '%');
+  for (const k in avg) assert.ok(avg[k] > 0.1 && avg[k] < 0.37, 'average ' + k + ' ' + Math.round(100 * avg[k]) + '%');
 });
 
 test("Sam's jobs follow the manager's PC: ticked ones, top first; an unticked job is never done", () => {

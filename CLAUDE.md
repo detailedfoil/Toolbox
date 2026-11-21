@@ -441,6 +441,21 @@ explain changes in plain English and say what they'll see.
       above) and ONE row of shelves in the middle island of the shop (so one side is the queue, the other the paid
       customers); stage 6 also gets switching between landscape and portrait at any time on a phone (portrait makes typing
       easier).
+    - Stage 3 (21 Nov): (a) CUSTOMERS ONLY ASK BY CODE (`Till.makeOrder` always `kind: 'code'`; descriptions often say things like
+      "suitable for all uses", which nobody would ask for; the `need` data and `ln.kind === 'need'` code are still there, unused).
+      (b) Holding area: OC-009 to OC-014 are the bottom (ground) row of totes and OC-003 to OC-008 sit above them (detailedfoil said
+      "oc 3 to 8 should be above oc 9 to 14, they should be on the ground": read as 9 to 14 on the ground; if he meant the other way
+      round, swap the `(row ? 3 : 9)` in `holding()` in world.js). (c) The middle of the shop has ONE row of shelves (one gondola,
+      x 12.65 to 13.75, y 17.0 to 20.4) so the queue (left) and the paid customers (right) are easy to tell apart; the other two
+      islands and the small cross shelf are gone. (d) KICK STOOLS: `world.stools`, one red stool at the centre aisle end of every
+      row (22), in front of its yellow and black end guard, blocking like any obstacle (`kickstool` in `BLOCKS`; the old
+      decorative stools at the aisle ends are gone, the two by the back wall stay). Look at one and the button says Take stool
+      (also Scan / RT); then a Step button (above Squat; V on a keyboard, LB on a controller) puts you on it (eye +0.42 m,
+      can't walk or squat while on it; walking steps you down). Locations from 1.75 m up (`HIGH` in game.js) can only be
+      scanned, for picks and putaway, while stepped up. Walk out of the pick aisle you took it into and it goes back to
+      where it lives (`dropStool`, `Crew.aisleAt`). Drawn by scene.js `setStool` (it follows you, under your feet when
+      stepped). Sam does not use stools. Tests: `warehouse-shift-stage3.test.mjs`; a few Sam timing tests loosened (the
+      world changed, so their random plans did).
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

@@ -158,7 +158,7 @@ test('till orders: 1 to 3 different products on the shelves, asked for by code, 
       assert.equal(Till.judge(ln, 'ZZZZZ', ln.qty), 'wrong');
     }
   }
-  assert.ok(kinds.code > 100 && kinds.describe === 0 && kinds.need > 100, JSON.stringify(kinds));
+  assert.ok(kinds.code > 100 && kinds.describe === 0 && kinds.need === 0, JSON.stringify(kinds) + ' (customers only ask by code: detailedfoil, 21 Nov 2026)');
 });
 
 test('the till page: Fusion and CrashFix tabs, the real search, no real usernames, addresses or Screwfix servers', () => {
@@ -203,7 +203,7 @@ test('kiosk orders: the customer\'s is on the list once, every name different, s
 
 test('the holding area: OC-001 and OC-002 for big loose items, OC-003 to OC-014 totes six a shelf on the bottom two, every surname different', () => {
   const h = world.holding;
-  assert.deepEqual([...h.spots.map((s) => s.code)], [...Till.HOLD_CODES]);
+  assert.deepEqual([...h.spots.map((s) => s.code)].sort(), [...Till.HOLD_CODES].sort());
   assert.deepEqual([...Till.HOLD_CODES.slice(0, 3)], ['OC-001', 'OC-002', 'OC-003']);
   assert.equal(Till.HOLD_CODES[13], 'OC-014');
   const [a, b] = h.spots;

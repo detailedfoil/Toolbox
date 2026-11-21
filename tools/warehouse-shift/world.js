@@ -284,9 +284,9 @@
       shop({ kind: 'till', x0: 11.18, y0: 15.05, x1: 11.5, y1: 15.3 }), shop({ kind: 'till', x0: 12.48, y0: 15.05, x1: 12.8, y1: 15.3 }),
       shop({ kind: 'till', x0: 13.78, y0: 15.05, x1: 14.1, y1: 15.3 }), shop({ kind: 'till', x0: 15.08, y0: 15.05, x1: 15.4, y1: 15.3 }),
       shop({ kind: 'gondola', x0: 9.65, y0: 17.6, x1: 10.25, y1: 20.42, z1: 1.8, along: 'y', edges: [17.6, 18.41, 19.41, 20.42], open: 'E' }),
-      shop({ kind: 'gondola', x0: 11.69, y0: 17.1, x1: 12.83, y1: 19.15, z1: 1.5, along: 'y', edges: [17.1, 18.1, 19.15], open: 'EW' }),
-      shop({ kind: 'gondola', x0: 11.71, y0: 19.15, x1: 12.81, y1: 19.48, z1: 1.2, along: 'x', edges: [11.71, 12.81], open: 'S' }),
-      shop({ kind: 'gondola', x0: 14.3, y0: 17.6, x1: 15.4, y1: 19.6, z1: 1.5, along: 'y', edges: [17.6, 18.6, 19.6], open: 'EW' }),
+      // ONE row of shelves in the middle of the floor (detailedfoil, 21 Nov 2026): the queue to be served stands on one side of
+      // it, customers waiting for orders they've paid for on the other, so it's easy to see which is which
+      shop({ kind: 'gondola', x0: 12.65, y0: 17.0, x1: 13.75, y1: 20.4, z1: 1.5, along: 'y', edges: [17.0, 18.13, 19.27, 20.4], open: 'EW' }),
       shop({ kind: 'gondola', x0: 17.05, y0: 17.6, x1: 17.6, y1: 20.62, z1: 1.8, along: 'y', edges: [17.6, 18.6, 19.6, 20.62], open: 'W' }),
       // staff room and toilets
       staff({ kind: 'table', x0: 0.3, y0: 15.2, x1: 1.0, y1: 16.4, z1: 0.75 }),
@@ -317,9 +317,13 @@
     var pc = { x: (desk.x0 + desk.x1) / 2 + 0.25, y: desk.y1 - 0.18, z: 1.0, desk: desk };
     // the everyday bits: kick stools at the end of a few aisles, a pallet truck, a stack of totes by the counter,
     // fire extinguishers on the walls, a mop bucket, a notice board and a clock
-    rk.aisles.filter(function (a) { return a.no === 2 || a.no === 5 || a.no === 8 || a.no === 10; }).forEach(function (a) {
-      var x = a.side === 'R' ? a.x1 - 0.27 : a.x0 + 0.27, y = (a.y0 + a.y1) / 2 + (a.no % 2 ? 0.25 : -0.25);
-      objects.push({ kind: 'stool', x0: x - 0.21, y0: y - 0.21, x1: x + 0.21, y1: y + 0.21, z1: 0.42 });
+    // (the red kick stools live at the centre aisle end of every row, in front of its yellow and black end guard: see `stools`)
+    var stools = [];
+    rk.faces.forEach(function (f, i) {
+      var r = f.row, ya = Math.min(f.y0, f.y1), yb = Math.max(f.y0, f.y1);
+      var x = r.side === 'R' ? r.x0 - POST / 2 - 0.35 : r.x1 + POST / 2 + 0.35, y = (ya + yb) / 2;
+      stools.push({ id: i, area: f.area, x: x, y: y, home: { x: x, y: y }, by: null });
+      objects.push({ kind: 'kickstool', x0: x - 0.21, y0: y - 0.21, x1: x + 0.21, y1: y + 0.21, z1: 0.42 });
     });
     objects.push({ kind: 'stool', x0: 3.9, y0: 0.35, x1: 4.32, y1: 0.77, z1: 0.42 }, { kind: 'stool', x0: 14.3, y0: 0.4, x1: 14.72, y1: 0.82, z1: 0.42 });
     objects.push({ kind: 'pallettruck', x0: 10.35, y0: D - 3.6, x1: 10.9, y1: D - 2.0, z1: 1.2 });
@@ -336,13 +340,13 @@
     // the holding area, beside goods in against the staff room wall (detailedfoil, 19 Nov 2026): long-span shelving
     // you face from goods in. On your left the bay for big loose items (OC-001 on the floor, OC-002 on the shelf
     // above, labels on the shelf edge), on your right the bay of blue totes, six a shelf on the bottom two shelves
-    // (OC-003 to OC-008 at the bottom, OC-009 to OC-014 above, from the left), each with an order in a yellow bag.
+    // (OC-009 to OC-014 at the bottom, on the ground, OC-003 to OC-008 above them, from the left; detailedfoil, 21 Nov 2026), each with an order in a yellow bag.
     // The shelves higher up stay empty.
     var hold = holding(3.3, D - 5.95);
     objects.push(hold.obj);
     var columns = [[5.0, 0, 5.4, 0.45], [(LX1 + RX0) / 2 - 0.2, 0, (LX1 + RX0) / 2 + 0.2, 0.45], [16.9, 0, 17.3, 0.45]];
     var counter = objects[1];
-    return { b: b, openings: openings, walls: walls, rooms: rooms, objects: objects, zones: zones, columns: columns, counter: counter, D: D, holding: hold, goodsin: goodsin, pc: pc };
+    return { b: b, openings: openings, walls: walls, rooms: rooms, objects: objects, zones: zones, columns: columns, counter: counter, D: D, holding: hold, goodsin: goodsin, pc: pc, stools: stools };
   }
   // x0 = the back of the shelving (against the wall), y0 = its end nearest the back of the building. It faces +x:
   // standing in front of it you look towards the left wall, so your left is towards the shop front (bigger y).
@@ -361,7 +365,7 @@
     [low, decks[0]].forEach(function (z, row) {
       for (var i = 0; i < 6; i++) {
         var yr = tB - i * tw;
-        spots.push({ code: 'OC-0' + pad2(3 + row * 6 + i), kind: 'tote', y0: yr - tw + 0.012, y1: yr - 0.012, z0: z, z1: z + 0.32 });
+        spots.push({ code: 'OC-0' + pad2((row ? 3 : 9) + i), kind: 'tote', y0: yr - tw + 0.012, y1: yr - 0.012, z0: z, z1: z + 0.32 });
       }
     });
     spots.forEach(function (sp) { sp.x0 = x0 + 0.04; sp.x1 = front - 0.02; });
@@ -370,7 +374,7 @@
   }
 
   /* ---------- walking ---------- */
-  var BLOCKS = { holding: 1, counter: 1, cupboard: 1, cage: 1, panel: 1, gondola: 1, table: 1, worktop: 1, desk: 1, wc: 1, rollcage: 1, pallet: 1, stool: 1, pallettruck: 1, totes: 1, bucket: 1 };
+  var BLOCKS = { holding: 1, counter: 1, cupboard: 1, cage: 1, panel: 1, gondola: 1, table: 1, worktop: 1, desk: 1, wc: 1, rollcage: 1, pallet: 1, stool: 1, kickstool: 1, pallettruck: 1, totes: 1, bucket: 1 };
   function obstacles(rk, bl) {
     var out = [];
     rk.rows.forEach(function (r) { out.push(rect(r.x0, r.y0, r.x1, r.y1)); });
@@ -480,7 +484,7 @@
       rows: rk.rows, faces: rk.faces, aisles: rk.aisles, faceOf: rk.byCode,
       locs: locs, items: placed, unplaced: items.length - placed.length,
       building: bl.b, openings: bl.openings, walls: bl.walls, rooms: bl.rooms, objects: bl.objects, zones: bl.zones, columns: bl.columns,
-      counter: counter, holding: bl.holding, goodsin: bl.goodsin, pc: bl.pc,
+      counter: counter, holding: bl.holding, goodsin: bl.goodsin, pc: bl.pc, stools: bl.stools,
       // the service bell: a big red button on the staff side of the counter (your side, not the customers') (detailedfoil, 19 Nov 2026)
       bell: { x: counter.x0 + 0.9, y: counter.y0, z: 0.62 },
       // stand behind the counter (the warehouse side) to hand an order over; the customer waits on the shop side

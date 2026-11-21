@@ -12,7 +12,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=7d4fc37663">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=09adb41a6c">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=16b209e198">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -39,6 +39,7 @@
     <span class="ws-order ws-chip-done" id="orderChip" data-el="orderChip"><span>Orders done</span> <b id="doneCount" data-el="doneCount">0</b></span>
     <span class="ws-order" id="toteChip" data-el="toteChip" title="Lines in the tote"><svg viewBox="0 0 24 16" width="20" height="14" aria-hidden="true"><path d="M1 3h22l-2 12H3z" fill="#2e66b5" stroke="#9cc0ff" stroke-width="1.2"/><path d="M5 6h14" stroke="#9cc0ff" stroke-width="1.2"/></svg><b id="toteCount" data-el="toteCount">0</b></span>
   </div>
+  <button class="ws-squat ws-step" id="stepBtn" data-el="stepBtn" type="button" aria-pressed="false" hidden>Step<small>V</small></button>
   <button class="ws-squat" id="squatBtn" data-el="squatBtn" type="button" aria-pressed="false" hidden>Squat<small>C</small></button>
   <button class="ws-tillbtn" id="tillBtn" data-el="tillBtn" type="button" hidden>Use till<small>F</small></button>
   <section class="sc" id="scanner" data-el="scanner" hidden aria-label="Scanner">
@@ -143,7 +144,7 @@
             <li>Then take the tote to the <b>trade counter</b> and press Enter: its customer comes over for it.</li>
             <li>A <b>c</b> pick goes in the <b>holding area</b> by goods in: scan the label of any empty OC spot.</li>
             <li>Some click and collects are already bagged in the holding area: the line on the scanner gives the <b>OC location</b> (big green label) and surname. Scan that tote, then take the bag to the counter.</li>
-            <li>Bottom shelves are low: <b>squat</b> to scan them. Stuck? <b>Hint</b> makes the location glow.</li>
+            <li>Bottom shelves are low: <b>squat</b> to scan them. High shelves (over about 1.75 m): <b>take a red kick stool</b> from the end of a row, carry it into the aisle and <b>Step</b> up. Stuck? <b>Hint</b> makes the location glow.</li>
           </ul>
           <h2>Putaway</h2>
           <ul>
@@ -179,9 +180,9 @@
           <h2>Phone</h2>
           <ul><li>Left thumb: walk (push further to jog)</li><li>Drag the view to look round</li><li>Tap a label to scan it</li><li>Squat button next to the scanner</li></ul>
           <h2>Controller</h2>
-          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
+          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>LB</b> step on the stool, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
           <h2>Computer</h2>
-          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or <kbd>F</kbd> scan, <kbd>Space</kbd> (or <kbd>Enter</kbd>) next, <kbd>C</kbd> squat, <kbd>H</kbd> hint</li><li><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose on the pick list</li><li><kbd>Tab</kbd> opens the scanner's Function menu</li></ul>
+          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or <kbd>F</kbd> scan, <kbd>Space</kbd> (or <kbd>Enter</kbd>) next, <kbd>C</kbd> squat, <kbd>V</kbd> step on the stool, <kbd>H</kbd> hint</li><li><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose on the pick list</li><li><kbd>Tab</kbd> opens the scanner's Function menu</li></ul>
         </div>
       </div>
       <div class="ws-row"><button class="ws-go" id="helpClose" type="button">Got it</button></div>
@@ -217,13 +218,13 @@
   <div class="ws-cover" id="msg" hidden><div class="ws-card"><p id="msgText"></p><div class="ws-row"><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div></div></div>
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
-<script src="warehouse-shift/world.js?v=639f3a5ef6"></script>
-<script src="warehouse-shift/scene.js?v=25fc837c4a"></script>
+<script src="warehouse-shift/world.js?v=a554f1bea6"></script>
+<script src="warehouse-shift/scene.js?v=042f60f976"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
-<script src="warehouse-shift/till.js?v=29f047371e"></script>
+<script src="warehouse-shift/till.js?v=b99f769a86"></script>
 <script src="warehouse-shift/day.js?v=55267ae277"></script>
 <script src="warehouse-shift/bot.js?v=d5a5a17436"></script>
 <script src="warehouse-shift/tillui.js?v=9ce681249e"></script>
-<script src="warehouse-shift/game.js?v=5490b535fe"></script>
+<script src="warehouse-shift/game.js?v=ef6e89c0f8"></script>
 </body>
 </html>

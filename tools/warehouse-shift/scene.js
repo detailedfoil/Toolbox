@@ -836,6 +836,15 @@
       ext: new T.CylinderGeometry(0.075, 0.075, 0.5, 16), extTop: new T.CylinderGeometry(0.03, 0.05, 0.08, 10)
     };
     Object.assign(M, { carton: lam(0xc49a64), carton2: lam(0xb88d58), stool: lam(0xc3222b), truck: lam(0xf07a1a), toteRim: lam(0x24508f), red: lam(0xc8191f) });
+    // the kick stools at the end of every row (they can be carried into an aisle: game.js moves them with setStool)
+    const stoolMeshes = new Map();
+    for (const st of world.stools || []) {
+      const g = new T.Group();
+      const m = new T.Mesh(geoProp.stool, M.stool); m.position.y = 0.21; g.add(m);
+      const t = new T.Mesh(geoProp.stoolTop, M.black); t.position.y = 0.425; g.add(t);
+      g.position.set(st.x, 0, st.y); groups.shop.add(g); stoolMeshes.set(st.id, g);
+    }
+    function setStool(id, x, y) { const g = stoolMeshes.get(id); if (g) g.position.set(x, 0, y); }
     const firePoint = wallSign('FIRE POINT', '#c3222b', '#ffffff', 300, 200);
     const noticeTex = signTex(520, 360, (g, w, h) => {
       g.fillStyle = '#b58a5a'; g.fillRect(0, 0, w, h); speckle(g, w, h, 1500, 0.15);
@@ -895,6 +904,7 @@
           // its cartons are the day's delivery (deliveryBoxes below)
           break;
         }
+        case 'kickstool': break; // (the red kick stools move: stoolMeshes below)
         case 'stool': { // an elephant foot kick stool
           const m = new T.Mesh(geoProp.stool, M.stool); m.position.copy(V((o.x0 + o.x1) / 2, (o.y0 + o.y1) / 2, 0.21)); groups.shop.add(m);
           const t = new T.Mesh(geoProp.stoolTop, M.black); t.position.copy(V((o.x0 + o.x1) / 2, (o.y0 + o.y1) / 2, 0.425)); groups.shop.add(t);
@@ -1413,7 +1423,7 @@
 
     return {
       scene, groups, photos: { update: updatePhotos, flush: flushPhotos, fill: fillPhotos, setExtra: (list) => { extra = list; }, slots: SLOTS, big },
-      labelMesh, labelMat, trays, trayOf, placeTray, placeItem, stockChange, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, toteBox, makeWorker, poseWorker, lamps, M,
+      labelMesh, labelMat, trays, trayOf, placeTray, placeItem, stockChange, setStool, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, toteBox, makeWorker, poseWorker, lamps, M,
       makeTrolley, poseTrolley, trolleyTop, trolleyTake, tillScreen, delivery: { set: deliverySet, show: deliveryShow, box: slotBox },
       hold: hold ? { spots: hold.spots, set: setParcel, carry: carryParcel } : null,
       clockTick, counts: { tags: tags.length, trays: trays.size, items: world.items.length }

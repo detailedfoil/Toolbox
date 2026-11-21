@@ -694,7 +694,8 @@
         let len = Math.hypot(f, s);
         if (len > 1) { f /= len; s /= len; len = 1; }
         const jog = running || Math.hypot(stickIn.x, stickIn.y) > 0.93;
-        const top = me.squat ? 0.85 : jog ? 3.1 : 1.75;
+        if (me.step && len > 0.3) toggleStep(); // walking steps you down
+        const top = me.step ? 0 : me.squat ? 0.85 : jog ? 3.1 : 1.75;
         const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);
         const tx = (-sy * f + cy * s) * top, ty = (-cy * f - sy * s) * top;
         const k = Math.min(1, dt * (len ? 9 : 12));
@@ -707,8 +708,12 @@
           me.bob += me.speed * dt * 2.3;
           moved = true;
         } else { me.vx = me.vy = 0; me.speed = 0; }
-        const want = me.squat ? 0.95 : 1.62;
+        const want = (me.squat ? 0.95 : 1.62) + (me.step ? STEP : 0);
         if (Math.abs(me.eye - want) > 0.002) { me.eye += (want - me.eye) * Math.min(1, dt * 11); moved = true; }
+        if (P.stool) { // out of the aisle it came into: it goes back to where it lives
+          if (Crew.aisleAt(world, me.x, me.y)) P.stoolAisle = true; else if (P.stoolAisle && !me.step) dropStool(true);
+          if (P.stool && moved) placeStool();
+        }
         if (moved) applyCam();
         return moved;
       }
@@ -923,6 +928,7 @@
         if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
+        if (h.loc.z0 >= HIGH && !me.step) { say('Too high: use a kick stool', 'warn'); toast(P.stool ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
         const tr = S.trayOf(h.loc);
         if (World.sameSpot(h.loc, carton.loc)) {
           if (state === 'paqty') { say('Press Enter', 'warn'); SFX.miss(); return; }
@@ -1001,6 +1007,7 @@
         if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
+        if (h.loc.z0 >= HIGH && !me.step) { say('Too high: use a kick stool', 'warn'); toast(P.stool ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
         const ln = order.lines[cur], tr = S.trayOf(h.loc);
         S.setBox(S.aimBox, S.locBox(h.loc), 0.012); S.aimBox.visible = true;
         if (World.sameSpot(h.loc, ln.loc)) {
@@ -1332,7 +1339,7 @@
       /* ---------- the till ---------- */
       let nearTill = null;
       P.tillCust = null;
-      let greetC = null, doorOn = null, bellOn = false, pcOn = false, aimedBox = null;
+      let greetC = null, doorOn = null, bellOn = false, pcOn = false, stoolOn = null, aimedBox = null;
       // what's in the middle of your view that you could use: a till, a customer to greet, the door, the service bell
       // (detailedfoil, 20 Nov 2026: "easy to accidentally do stuff around tills": only what you're looking at, with an outline)
       function aimAt(x, y, z) {
@@ -1342,9 +1349,9 @@
       }
       function checkTill() { // the thing you're looking at: a till behind the counter (the one by the gap is Sam's), the door, a customer to greet, the bell
         if (till && till.isOpen()) return; // at a till: keep it
-        let best = null, g = null, dr = null, br = false, pcx = false, box = null, bestAng = 9;
+        let best = null, g = null, dr = null, br = false, pcx = false, st = null, box = null, bestAng = 9;
         const behind = me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75;
-        const take = (a, lim, fn, b) => { if (a.ang < lim && a.ang < bestAng) { bestAng = a.ang; best = null; g = null; dr = null; br = false; pcx = false; fn(); box = b; } };
+        const take = (a, lim, fn, b) => { if (a.ang < lim && a.ang < bestAng) { bestAng = a.ang; best = null; g = null; dr = null; br = false; pcx = false; st = null; fn(); box = b; } };
         if (active) {
           if (behind) {
             for (const t of tills) {
@@ -1370,19 +1377,26 @@
             a.ang *= 0.4; // looking at the bell wins over a till behind it
             if (a.d < 2.8) take(a, 0.14, () => { br = true; }, { x: world.bell.x, y: world.bell.y - 0.02, z0: 0.46, z1: 0.8, w: 0.5, d: 0.1 });
           }
+          if (!P.stool) { // a red kick stool at the end of a row, by its yellow and black guard
+            for (const s of world.stools || []) {
+              if (s.by) continue;
+              const a = aimAt(s.x, s.y, 0.25);
+              if (a.d < 2.0) take(a, 0.3, () => { st = s; }, { x: s.x, y: s.y, z0: 0, z1: 0.44, w: 0.45, d: 0.45 });
+            }
+          }
           { // the manager's PC in the office
             const q = world.pc, a = aimAt(q.x, q.y, 1.05);
             if (a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
           }
         }
         aimedBox = box;
-        const key = (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '');
-        const old = (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '');
-        nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx;
+        const key = (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '') + (st ? 's' + st.id : '');
+        const old = (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '') + (stoolOn ? 's' + stoolOn.id : '');
+        nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx; stoolOn = st;
         if (key === old) return;
         dirty = true;
-        D.tillBtn.hidden = !(nearTill || greetC || doorOn || bellOn || pcOn) || !active;
-        D.tillBtn.firstChild.nodeValue = doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : pcOn ? 'Use PC' : 'Ring bell';
+        D.tillBtn.hidden = !(nearTill || greetC || doorOn || bellOn || pcOn || stoolOn) || !active;
+        D.tillBtn.firstChild.nodeValue = doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : pcOn ? 'Use PC' : stoolOn ? 'Take stool' : 'Ring bell';
         renderScanner();
       }
       // the button, or Scan: lock the door, say hello to the customer, or open the till
@@ -1398,10 +1412,38 @@
           greetC = null; checkTill();
           return true;
         }
+        if (stoolOn) { takeStool(); return true; }
         if (bellOn) { ringBell(P); return true; }
         if (pcOn) { openPc(); return true; }
         return false;
       }
+      /* ---------- kick stools (detailedfoil, 21 Nov 2026) ---------- */
+      // a red stool at the end of every row: Take stool, carry it into an aisle, Step up to reach the high shelves (from
+      // 1.75 m up), Step down. Walk out of the aisle and it goes back to where it lives. Sam doesn't use them.
+      const HIGH = 1.75, STEP = 0.42;
+      function placeStool() {
+        const s = P.stool; if (!s) return;
+        const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);
+        if (me.step) S.setStool(s.id, me.x, me.y); else S.setStool(s.id, me.x + cy * 0.5 + sy * 0.1, me.y - sy * 0.5 + cy * 0.1);
+      }
+      function stepBtnSync() { D.stepBtn.hidden = !P.stool || !active; D.stepBtn.setAttribute('aria-pressed', String(!!me.step)); D.stepBtn.firstChild.textContent = me.step ? 'Down' : 'Step'; }
+      function takeStool() {
+        const s = stoolOn; if (!s || s.by || P.stool) return;
+        s.by = P.id; P.stool = s; P.stoolAisle = false; stoolOn = null;
+        SFX.key(); toast('Kick stool: take it into an aisle, Step up for high shelves', 'good'); placeStool(); stepBtnSync(); D.tillBtn.hidden = true; checkTill(); dirty = true;
+      }
+      function dropStool(msg) {
+        const s = P.stool; if (!s) return;
+        me.step = false; s.by = null; P.stool = null; P.stoolAisle = false;
+        S.setStool(s.id, s.home.x, s.home.y); stepBtnSync(); dirty = true;
+        if (msg) toast('Stool put back', 'dim');
+      }
+      function toggleStep() {
+        if (!P.stool) { toast('Take a kick stool first (at the end of a row)', 'warn'); return; }
+        if (me.squat) toggleSquat();
+        me.step = !me.step; me.vx = me.vy = 0; SFX.key(); placeStool(); stepBtnSync(); dirty = true;
+      }
+      P.toggleStep = toggleStep; P.stoolSync = stepBtnSync;
       /* ---------- the manager's PC: what Sam does first (detailedfoil, 20 Nov 2026) ---------- */
       const pc = { open: false, sel: 0, el: null };
       function pcBuild() {
@@ -1616,6 +1658,7 @@
 
       /* ---------- squat ---------- */
       function toggleSquat() {
+        if (me.step) return; // you can't squat on the stool
         me.squat = !me.squat;
         D.squatBtn.setAttribute('aria-pressed', String(me.squat));
         D.squatBtn.firstChild.textContent = me.squat ? 'Stand' : 'Squat';
@@ -1642,6 +1685,7 @@
       D.scPad.querySelectorAll('button').forEach((b) => press(b, () => { const k = b.dataset.k; if (k === 'back') back(); else if (k === 'enter') enter(); else digit(k); }));
       D.scRows.addEventListener('pointerdown', (e) => { const li = e.target.closest('li[data-i]'); if (!li) return; e.preventDefault(); e.stopPropagation(); initAudio(); tapRow(+li.dataset.i); });
       press(D.squatBtn, () => toggleSquat());
+      press(D.stepBtn, () => toggleStep());
       D.scanner.addEventListener('pointerdown', (e) => e.stopPropagation());
       D.scScreen.addEventListener('scroll', (e) => { e.target.scrollTop = 0; e.target.scrollLeft = 0; }); // never scrolled (older browsers without overflow: clip)
 
@@ -1709,6 +1753,7 @@
         if (hit(7)) { initAudio(); const c = centreNdc(); scanAt(c[0], c[1]); }
         if (hit(1)) back();
         if (hit(2)) toggleSquat();
+        if (hit(4)) toggleStep();
         if (hit(3)) useHint();
         if (hit(0)) { SFX.key(); enter(); }
         if (hit(9)) { SFX.key(); menu(true); }
@@ -1745,7 +1790,7 @@
       };
       P.afterRender = (now) => { placeSay(); placeBubs(now); };
       P.start = () => { if (state === 'idle') state = day && day.over ? 'end' : 'list'; renderScanner(); };
-      P.show = () => { D.scanner.hidden = false; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; };
+      P.show = () => { D.scanner.hidden = false; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; stepBtnSync(); };
       // things the controls and the tests use
       Object.assign(P, { banner, scanAt, enter, back, page, digit, useHint, toggleSquat, openTill, closeTill, countOne, confirmQty, handOver, hitAt, holdHit, scanHold, scanPut, tapRow,
         state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
@@ -1923,6 +1968,7 @@
       switch (e.code) {
         case 'KeyF': { const c = p.centre(); p.scanAt(c[0], c[1]); e.preventDefault(); break; }
         case 'KeyC': p.toggleSquat(); break;
+        case 'KeyV': p.toggleStep(); break;
         case 'KeyH': case 'F4': p.useHint(); e.preventDefault(); break;
         case 'Enter': case 'NumpadEnter': case 'Space': SFX.key(); p.enter(); e.preventDefault(); break;
         case 'Backspace': p.back(); e.preventDefault(); break;
