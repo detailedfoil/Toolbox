@@ -190,21 +190,19 @@
     const SPOTS = tills.map((t) => ({ x: tillX(t), y: CY, till: t }));
     // the queue to be served (detailedfoil, 20 Nov 2026): a line down the left-hand wall end of the counter, on your right
     // as you stand serving. The first in the line is at the counter; the line runs towards the shop front.
-    const QX = counter.x0 + 1.0, QSIDE = QX + 0.65; // off the wall (detailedfoil, 21 Nov 2026)
-    const QUEUE = [{ x: QX, y: CY, queue: true }, { x: QX, y: CY + 0.62, queue: true }, { x: QX, y: CY + 1.24, queue: true }, { x: QSIDE, y: CY + 1.24, queue: true }];
-    // paid or checked in, waiting for their order: on your left as you stand serving, by the gap at the end of the counter
-    const WAIT = [{ x: counter.x1 - 0.3, y: CY, wait: true }, { x: counter.x1 - 0.9, y: CY + 0.6, wait: true }, { x: counter.x1 - 0.25, y: CY + 0.75, wait: true }, { x: counter.x1 - 0.8, y: CY + 1.25, wait: true }];
+    const QX = counter.x0 + 1.1, QSIDE = QX + 0.7; // off the wall; the line is spread out (detailedfoil, 21 Nov 2026: "a bigger area")
+    const QUEUE = [0, 1, 2, 3, 4].map((i) => ({ x: QX, y: CY + i * 0.9, queue: true }));
+    // paid or checked in, waiting for their order: on your left as you stand serving, by the gap at the end of the counter.
+    // Spread over a wide patch so nobody stands shoulder to shoulder
+    const WAIT = [[0.3, 0], [1.0, 0.8], [1.9, 1.5], [0.5, 1.7], [2.5, 0.7], [1.4, 2.4], [2.4, 2.0], [0.4, 2.7]].map((o) => ({ x: counter.x1 - o[0], y: CY + o[1], wait: true }));
     const IN = [[entX, world.D - 0.5], [LANE - 0.18, world.D - 1.2], [LANE - 0.18, MID]];
     const OUT = [[LANE + 0.22, MID], [LANE + 0.22, world.D - 1.2], [entX, world.D - 0.5], [entX, world.D + 0.6]];
     const taken = new Map(); // spot -> the customer standing there
-    // the two waiting areas (detailedfoil, 21 Nov 2026): pale red where customers wait to be served, pale green where they
-    // wait for orders they've paid for; marked on the floor and on the CCTV
+    // the two waiting areas, shown on the CCTV map only (detailedfoil, 21 Nov 2026: nothing painted on the real floor)
     const ZONES = {
-      queue: { x0: QX - 0.5, x1: QSIDE + 0.45, y0: counter.y1 + 0.05, y1: CY + 1.74 },
-      wait: { x0: counter.x1 - 1.35, x1: counter.x1 + 0.3, y0: counter.y1 + 0.05, y1: CY + 1.7 }
+      queue: { x0: counter.x0 + 0.5, x1: QSIDE + 0.55, y0: counter.y1 + 0.05, y1: CY + 4 * 0.9 + 0.55 },
+      wait: { x0: counter.x1 - 3.2, x1: counter.x1 + 0.3, y0: counter.y1 + 0.05, y1: CY + 3.2 }
     };
-    S.floorZone(ZONES.queue, 'rgba(255,150,150,.55)', '#c43a3a', 'WAITING TO\nBE SERVED');
-    S.floorZone(ZONES.wait, 'rgba(150,235,170,.55)', '#1f8a3f', 'WAITING FOR\nORDERS');
     const clampX = (x) => Math.min(x, counter.x1 - 0.25); // keeps clear of the shelving by the gap
     // the way from one place in front of the counter to another, round anyone standing at it
     // (from the queue they step out to the side first; into the queue they come up beside it)

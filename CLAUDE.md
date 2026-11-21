@@ -489,8 +489,9 @@ explain changes in plain English and say what they'll see.
       their initial. A panel on the right counts each, "! N to greet" flashing, CAM 01, the date and time, REC. game.js
       `updateCCTV` redraws it 4 times a second only when something on it changed and a player is within 16 m (`cctvPeople`
       builds the list from `figs`, `players`, `crew`). (b) `ZONES` in game.js (queue and wait rectangles round `QUEUE` and
-      `WAIT`) are also painted on the shop floor (scene.js `floorZone`, pale, dashed edge, words reading as you walk up to the
-      counter). (c) Every player has a figure like Sam's (navy uniform, CrashFix patch, name badge; `P.fig` from
+      `WAIT`) are on the CCTV map only: the coloured boxes painted on the real floor were taken off on 21 Nov 2026 (detailedfoil,
+      "customers can wait in a larger area, they are all clumped together"; `S.floorZone` is still in scene.js, unused). The line to
+      be served is now 5 spots 0.9 m apart down the left, and `WAIT` is 8 spots scattered over about 3 m by 2.7 m by the gap. (c) Every player has a figure like Sam's (navy uniform, CrashFix patch, name badge; `P.fig` from
       `S.makeWorker`, posed each frame by `P.poseFig`: walking, squatting, on a stool, carrying a tote or carton, at a till).
       `figLayers()` puts each figure on every OTHER player's camera layer (camera layer = 1 + player number) and never their
       own, so in one-player games it's never drawn; call it again after adding a player. (d) Names: "Name on your badge" on

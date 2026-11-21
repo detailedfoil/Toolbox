@@ -58,8 +58,7 @@ test('the map: counter on the left, door on the right, waiting to be served on y
 
 test('the floor is marked, players have figures only the other player sees, and names on their badges', () => {
   const g = read('tools/warehouse-shift/game.js'), s = read('tools/warehouse-shift/scene.js'), h = read('tools/warehouse-shift.html');
-  assert.ok(g.includes("S.floorZone(ZONES.queue, ") && g.includes("'WAITING TO\\nBE SERVED');"), 'the pale red area on the floor');
-  assert.ok(g.includes("S.floorZone(ZONES.wait, ") && g.includes("'WAITING FOR\\nORDERS');"), 'the pale green area on the floor');
+  assert.ok(!g.includes('S.floorZone('), 'nothing painted on the real shop floor (detailedfoil, 21 Nov 2026)');
   assert.match(g, /function figLayers\(\)[\s\S]{0,200}if \(q !== p\) o\.layers\.enable\(1 \+ q\.idx\)/, 'never their own camera');
   assert.match(g, /P\.fig = S\.makeWorker\(\{ name: P\.name/);
   assert.match(s, /function setBadge\(w, name\)/);
