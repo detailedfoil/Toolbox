@@ -95,7 +95,7 @@
         this.hooks.roster(m.slots);
         const present = this.peers.has(1);
         if (!this.host && present && !this.hostPresent) {
-          this.ready = false; this.hooks.status('Joining the shared shift…'); this.send({ type: 'sync' });
+          this.ready = false; this.hooks.status('Joining the shared shift…'); this.send({ type: 'sync', freshSeat: this.epoch == null });
         }
         if (!present) { this.ready = false; this.cancel(); this.hooks.status('Waiting for the host to reconnect…'); }
         this.hostPresent = present;
@@ -104,7 +104,7 @@
       if (this.host) {
         if (!this.peers.has(m.from) || m.from === 1) return;
         if (m.type === 'sync') {
-          this.hooks.release(m.from); this.lastAction.delete(m.from);
+          this.hooks.release(m.from, m.freshSeat === true); this.lastAction.delete(m.from);
           this.send({ type: 'init', to: m.from, state: this.hooks.snapshot(), frame: this.hooks.frame(), paused: document.hidden });
         } else if (m.type === 'pose') this.hooks.peerPose(m.from, m.pose);
         else if (m.type === 'act' && Number.isSafeInteger(m.id) && m.id > (this.lastAction.get(m.from) || 0)) {

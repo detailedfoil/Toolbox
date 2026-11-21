@@ -178,16 +178,49 @@ test('greeted customers walk to separate tills, wait for a free one and can be s
   const till = first.at;
   s.me.x = (till.x0 + till.x1) / 2; s.me.y = s.world.counter.y0 - 0.7;
   s.me.yaw = Math.PI; s.me.pitch = Math.atan2(1.15 - s.me.eye, (till.y0 + till.y1) / 2 - s.me.y);
+  const rand = day.r; day.r = () => 0.099;
   s.applyCam(); await s.openTill();
+  day.r = rand;
+  assert.equal($('scanner').hidden, true);
+  assert.equal($('bannerTitle').textContent, 'Sam has your scanner');
   assert.equal(s.till.session().dayCust, first);
   assert.equal(first.by, 'p1');
   assert.ok(day.canGreet('p2'));
   assert.equal(day.serve(first, 'Sam'), false);
   assert.equal(day.serve(second, 'p1'), false);
+  s.closeTill();
+  const sam = s.crew[0];
+  s.me.x = sam.x; s.me.y = sam.y;
+  s.tick(0.1);
+  assert.equal($('scanner').hidden, false);
+  assert.equal($('bannerTitle').textContent, 'Scanner returned');
   day.tillDone(first, first.kiosk.list[first.kiosk.mine].lines);
   s.tick(9);
   assert.equal(fourth.at, till);
   assert.equal(fourth.ready, true);
+});
+
+test('the parked tote closes the aisle until Sam leaves, and idle stools have half-size walking bounds', async t => {
+  const { $, s } = await game(t, { online: false });
+  $('startBtn').click();
+  const player = s.players[0], sam = s.crew[0], a = s.world.aisles.find(a => a.side === 'R');
+  sam.update = () => {};
+  sam.x = (a.x0 + a.x1) / 2; sam.y = a.cy;
+  sam.moveTrolley(0.05);
+  player.me.x = a.mouth - 0.8; player.me.y = a.cy; player.me.yaw = 0;
+  player.input.keys.add('r');
+  const walk = () => { for (let i = 0; i < 35; i++) player.update(0.05, i * 50); };
+  walk();
+  assert.ok(player.me.x < a.mouth);
+  sam.x = s.world.start.x; sam.y = s.world.start.y;
+  sam.trolley.x = sam.x; sam.trolley.y = sam.y;
+  walk();
+  assert.ok(player.me.x > a.mouth + 0.5);
+  for (const bounds of s.world.obstacles.filter(o => o.stool)) {
+    const model = s.world.objects.find(o => o.kind === 'kickstool' && o.stoolId === bounds.stool.id);
+    assert.ok(Math.abs(2 * (bounds.walk.x1 - bounds.walk.x0) - (model.x1 - model.x0)) < 1e-8);
+    assert.ok(Math.abs(2 * (bounds.walk.y1 - bounds.walk.y0) - (model.y1 - model.y0)) < 1e-8);
+  }
 });
 
 test('Sam rings once at six seconds for unattended customers and skips customers already helped', async t => {
@@ -368,7 +401,10 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const customer = day.send('kiosk'); customer.pay = { how: 'cash', say: 'Cash, please.' };
   day.arrived(customer);
   await until(() => customer.by === 'p4', 'cashier to claim the customer');
-  host.s.tick(6);
+  const rand = day.r; day.r = () => 0.05;
+  host.s.tick(6); day.r = rand;
+  await until(() => guests[2].$('scanner').hidden, 'guest cashier to lose their scanner');
+  assert.ok([host, ...guests.slice(0, 2)].every(g => !g.$('scanner').hidden));
   await until(() => cashier.till.stage() === 'details', 'customer to walk to the guest till');
   const ui = cashier.till.debug, session = cashier.till.session();
   assert.equal(session.cust.third.say, customer.cust.third.say);
@@ -400,6 +436,9 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   assert.equal(cashier.till.session().orderNo, customer.order.no);
   assert.equal(day.orders.filter(o => o.cust === customer).length, 1);
   cashier.closeTill();
+  cashier.me.x = host.s.crew[0].x; cashier.me.y = host.s.crew[0].y;
+  cashier.applyCam();
+  await until(() => !guests[2].$('scanner').hidden, 'guest to collect their scanner from Sam');
   // Reserve the fetched bag's OC slot until the tote actually crosses the counter.
   day.mode = 'hold';
   const collect = day.send('collect', { code, surname: day.hold[code].surname });

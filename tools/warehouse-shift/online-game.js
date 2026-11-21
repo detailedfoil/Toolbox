@@ -30,15 +30,25 @@
     function peerPose(slot, data) {
       if (!Number.isInteger(slot) || slot < 1 || slot > 4 || slot === net.slot || !data) return false;
       if (![data.x, data.y, data.yaw, data.speed].every(Number.isFinite) || data.x < 0 || data.x > world.W || data.y < 0 || data.y > world.D || g.blocked(data.x, data.y)) return false;
+      if (!guest() && crew.length) {
+        const aisle = g.aisleAt(crew[0].x, crew[0].y);
+        if (aisle && g.aisleAt(data.x, data.y) === aisle) {
+          const previous = peers.get(slot);
+          const safe = previous || { ...world.start, speed: 0, name: 'Player ' + slot };
+          peers.set(slot, { ...safe, corrected: true });
+          return false;
+        }
+      }
       const name = typeof data.name === 'string' && g.cleanName(data.name.slice(0, 32)) || 'Player ' + slot;
       const who = 'p' + slot, stool = world.stools.find(s => s.by === who);
       peers.set(slot, { name, step: !!stool && !!data.step,
         atTill: locks.has(who) && !!data.atTill, x: data.x, y: data.y, yaw: data.yaw % (2 * Math.PI), speed: Math.max(0, Math.min(3.2, data.speed)), squat: !!data.squat, shelf: items.has(data.shelf) ? data.shelf : null });
       return true;
     }
-    function release(slot) {
+    function release(slot, freshSeat = false) {
       const who = 'p' + slot;
       locks.delete(who); progress.delete(who); peers.delete(slot);
+      if (freshSeat) g.missingScanners.delete(who);
       const stool = world.stools.find(s => s.by === who);
       if (stool) { stool.by = null; S.setStool(stool.id, stool.home.x, stool.home.y); }
       if (g.day()) wire.release(g.day(), who);
@@ -64,7 +74,7 @@
       };
     }
     function snapshot() {
-      return { epoch: g.epoch(), bell: g.bellCount(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
+      return { epoch: g.epoch(), missingScanners: [...g.missingScanners], bell: g.bellCount(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
     }
     function apply(s, reset) {
       const newDay = epoch !== s.epoch;
@@ -94,6 +104,7 @@
       p.render(); p.queueChanged();
       if (!reset && s.bell !== lastBell) g.showBell();
       lastBell = s.bell;
+      p.syncScanner(s.missingScanners.includes(p.id));
       if (newDay && started) g.announceDayEvent();
       if (!over && replica.over) g.dayOver();
       g.dirty();
@@ -103,7 +114,13 @@
       replica.t = f.t;
       const slots = new Set(f.people.map(([slot]) => slot));
       for (const slot of peers.keys()) if (!slots.has(slot)) peers.delete(slot);
-      for (const [slot, data] of f.people) peerPose(slot, data);
+      for (const [slot, data] of f.people) {
+        if (slot === net.slot && data.corrected && f.sam) {
+          const aisle = g.aisleAt(f.sam.x, f.sam.y);
+          if (aisle && g.aisleAt(p.me.x, p.me.y) === aisle) { p.me.x = data.x; p.me.y = data.y; p.applyCam(); }
+        }
+        peerPose(slot, data);
+      }
       if (f.sam && !mirroredSam) {
         const fig = S.makeWorker(g.sam); fig.trolley = S.makeTrolley();
         mirroredSam = { name: 'Sam', fig, r: 0.24 };
@@ -201,6 +218,7 @@
     }
     function action(slot, op, args) {
       const who = 'p' + slot, pos = peers.get(slot), day = g.day(), till = () => tills[locks.get(who)];
+      if (g.missingScanners.has(who) && ['take', 'line', 'fetch', 'putAway', 'handOver', 'paTake', 'paPut'].includes(op)) return false;
       if (op === 'takeStool' || op === 'dropStool') {
         const stool = world.stools.find(s => s.id === args.id);
         if (!stool) return false;
@@ -226,7 +244,7 @@
         call() {
           const t = till(); if (!t || day.customers.some(c => c.by === who)) return false;
           const c = g.claimAtTill(t, who); if (!c) return false;
-          g.screen(t, null); g.callTo(c, t); return true;
+          g.screen(t, null); g.callTo(c, t, () => g.checkScannerMixup(c, who)); return true;
         },
         bell: () => g.ringBell(who)
       });

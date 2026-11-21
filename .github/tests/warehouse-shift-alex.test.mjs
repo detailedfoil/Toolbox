@@ -208,11 +208,12 @@ test('the game: Sam is on the page, has their own till, and you can\'t walk thro
   const loc = world.locs.byCode['AAC-03-12-02'], st = bot.standFor(loc);
   bot.x = st.x; bot.y = st.y; bot.yaw = st.yaw; bot.walking = false;
   for (let i = 0; i < 60; i++) bot.moveTrolley(0.05);
-  const a = loc.face.aisle, t = bot.trolley, across = Math.abs(Math.sin(t.phi)) * B.TROLLEY.len + Math.abs(Math.cos(t.phi)) * B.TROLLEY.wide;
-  const ty0 = t.y - (Math.abs(Math.cos(t.phi)) * B.TROLLEY.len + Math.abs(Math.sin(t.phi)) * B.TROLLEY.wide) / 2, ty1 = t.y + (Math.abs(Math.cos(t.phi)) * B.TROLLEY.len + Math.abs(Math.sin(t.phi)) * B.TROLLEY.wide) / 2;
-  const gaps = [ty0 - a.y0, a.y1 - ty1, Math.max(ty0, bot.y + B.BODY) - Math.min(ty1, bot.y - B.BODY)].map((g) => Math.max(0, g));
-  void across;
-  const lo = Math.min(bot.y - B.BODY, ty0) - a.y0, hi = a.y1 - Math.max(bot.y + B.BODY, ty1);
-  assert.ok(Math.max(lo, hi) < 2 * YOU, 'room left beside them: ' + lo.toFixed(2) + ' and ' + hi.toFixed(2) + ' m (' + gaps.map((g) => g.toFixed(2)).join(', ') + ')');
-  assert.ok(Math.abs(t.y - bot.y) > B.BODY + B.TROLLEY.wide / 2 - 0.02, 'and Sam isn\'t standing in it');
+  const a = loc.face.aisle, t = bot.trolley;
+  assert.ok(Math.abs(t.x - a.mouth) <= B.TROLLEY.wide / 2 + 1e-6);
+  assert.equal(t.y, a.cy);
+  assert.equal(t.phi, 0); // the long side lies across the entrance
+  const clear = { x: a.x0 - 0.4, y: a.cy, r: YOU };
+  const partlyInside = { x: a.x0 - 0.1, y: a.cy, r: YOU };
+  assert.equal(B.inAisle(world, a, [clear, partlyInside]), partlyInside);
+  assert.equal(B.inAisle(world, a, [clear, { ...clear }]), null);
 });
