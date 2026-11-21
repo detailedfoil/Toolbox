@@ -486,12 +486,17 @@
     function newDay() {
       if (guest()) return;
       const old = day;
-      day = Day.create({ world, World, Till, requests, mode: MODES[mode][0], env: dayEnv, hold: old ? old.hold : null });
+      const event = mode === 0 ? Day.rollEvent(Math.random) : null;
+      day = Day.create({ world, World, Till, requests, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null });
       dayNo++; bellCust = null; bellCount = 0; nextBellCheck = 0;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
       S.delivery.set(day.delivery);
       for (const p of players) p.newDay();
       dirty = true;
+    }
+    function announceDayEvent() {
+      const event = Day.EVENTS[day?.event];
+      if (event) for (const p of players) p.banner(event.title, event.message, 6500);
     }
 
     /* ---------- Sam, a coworker (bot.js) ---------- */
@@ -518,10 +523,11 @@
         const on = samPrio.filter((j) => j.on).map((j) => j.id);
         // the queue: till customers who've waited a few seconds with nobody coming to serve them
         const q = on.includes('queue') ? day.queue().filter((c) => c.greeter === 'Sam' || day.t - c.greeted > 5) : [];
-        return { orders: day.listLate(), queue: samTillFree() ? q : [], bell: samTillFree() ? bellQueue() : [], greet: day.ungreeted().filter((c) => day.t - c.here > 2), prio: on, delivery: day.deliveryLeft().length,
-          early: day.listEarly().filter((o) => on.includes(o.kind === 'c' ? 'hold' : 'cust')) };
+        return { orders: day.listLate().filter((o) => day.samCanPick(o)), queue: samTillFree() ? q : [], bell: samTillFree() ? bellQueue() : [], greet: day.ungreeted().filter((c) => day.t - c.here > 2), prio: on,
+          delivery: day.event === 'lightDuties' ? 0 : day.deliveryLeft().length,
+          early: day.listEarly().filter((o) => day.samCanPick(o) && on.includes(o.kind === 'c' ? 'hold' : 'cust')) };
       },
-      paSources: () => (day ? world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i) : []),
+      paSources: () => (day && day.event !== 'lightDuties' ? world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i) : []),
       paTake(b, src) {
         const d = day && day.paTake(src, b.name);
         if (!d) return null;
@@ -884,7 +890,8 @@
           if (full && viewLine < 0) L.push(['Press Enter', 'gap ok']);
         } else if (state === 'pa') {
           const n = day ? day.deliveryLeft().length : 0;
-          L.push(['Putaway'], ['Goods In', 'warn'], [n ? 'Scan a carton' : 'All put away', 'big'], [n ? plural(n, 'carton', 'cartons') + ' left' : 'Nothing left', 'gap dim'], ['on the cages', 'dim'], ['and pallets', 'dim']);
+          if (day?.event === 'failedDelivery') L.push(['Putaway'], ['Delivery cancelled', 'warn']);
+          else L.push(['Putaway'], ['Goods In', 'warn'], [n ? 'Scan a carton' : 'All put away', 'big'], [n ? plural(n, 'carton', 'cartons') + ' left' : 'Nothing left', 'gap dim'], ['on the cages', 'dim'], ['and pallets', 'dim']);
         } else if (state === 'pato' || state === 'paqty') {
           L.push(['Putaway'], ['Take to', 'warn'], [carton.loc.code, 'big'], [carton.item.code, 'gap'], [short(carton.item.name)], ['Qty: ' + carton.qty, 'gap']);
           L.push(state === 'paqty' ? ['Press Enter', 'gap ok'] : ['Scan the location', 'gap dim']);
@@ -926,7 +933,7 @@
       }
       function openHome(i) {
         SFX.key();
-        if (i === 0) { state = 'pa'; if (day && !day.deliveryLeft().length) say('No delivery left', 'dim'); }
+        if (i === 0) { state = 'pa'; if (day && day.event !== 'failedDelivery' && !day.deliveryLeft().length) say('No delivery left', 'dim'); }
         else state = 'list';
         renderScanner();
       }
@@ -1426,7 +1433,7 @@
         D.scMenu.replaceChildren();
         const h = document.createElement('h3'); h.textContent = 'Functions'; D.scMenu.appendChild(h);
         for (const [k, t, fn] of items) {
-          if (guest() && (k === '5' || k === '7')) continue; // shift settings belong to the host
+          if ((k === '5' && day?.event) || (guest() && (k === '5' || k === '7'))) continue;
           const b = document.createElement('button'); b.type = 'button';
           const kb = document.createElement('b'); kb.textContent = k; b.appendChild(kb); b.appendChild(document.createTextNode(t));
           b.addEventListener('click', (e) => { e.stopPropagation(); SFX.key(); menu(false); fn(); renderScanner(); });
@@ -1634,6 +1641,7 @@
       P.useAction = useAction;
       async function openTill() {
         if (!till || till.isOpen() || !nearTill || !canUseTill(nearTill)) return;
+        if (!day.tillsOpen()) { toast(Day.EVENTS[day.event].title + ' · Click & collect only'); return; }
         if (online?.room()) {
           const target = nearTill;
           const ok = guest() ? await remote(() => online.open(target)) : online.open(target);
@@ -2240,6 +2248,7 @@
       for (const p of players) { const st = p.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; }
       newDay();
       for (const p of players) p.start();
+      announceDayEvent();
     });
     $('fullBtn').hidden = !(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
     function fullScreen(on) {
@@ -2272,6 +2281,7 @@
       layout();
       for (const p of players) p.start();
       for (const p of players) p.till.preload();
+      announceDayEvent();
       let helped = false;
       try { helped = localStorage.getItem('ws-helped') === '1'; localStorage.setItem('ws-helped', '1'); } catch (e) { /* fine */ }
       if (!helped) showHelp(true);
@@ -2402,12 +2412,7 @@
         checkServiceBell();
       }
       if (online && online.animate(dt)) changed = true;
-      if (day) {
-        const cartons = day.delivery;
-        const completed = cartons.reduce((count, carton) => count + Number(carton.done), 0);
-        const progress = cartons.length ? completed / cartons.length : 1;
-        if (S.clockTick(7 * 60 + Math.floor(progress * 13 * 60))) changed = true;
-      }
+      if (day && S.clockTick(day.clockMinute())) changed = true;
       if (updateCCTV(dt)) changed = true;
       return changed;
     }
@@ -2492,7 +2497,7 @@
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
-        ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, dirty: () => { dirty = true; },
+        ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; },
         resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },
         clearDayView() {

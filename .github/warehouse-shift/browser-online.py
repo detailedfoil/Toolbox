@@ -27,6 +27,7 @@ def open_game(browser, errors, *, phone=False, online=True):
     page.goto(GAME + ("?relay=" + RELAY if online else ""), wait_until="domcontentloaded")
     page.wait_for_function("!!window.__shift || !!document.getElementById('msgText').textContent", timeout=100_000)
     assert page.evaluate("!!window.__shift"), page.locator("#msgText").text_content()
+    page.evaluate("ShiftDay.rollEvent = () => null")
     return page
 
 

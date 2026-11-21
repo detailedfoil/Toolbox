@@ -73,7 +73,7 @@
       if (reset) {
         p.resetOnline(); g.clearDayView();
         replica = new wire.DayProxy(world, Day.Day, tills, (op, args) => net.request(op, args), g.World, S.stockChange);
-        if (newDay && epoch != null) g.resetStats();
+        if (newDay && started) g.resetStats();
       }
       epoch = s.epoch; replica.apply(s.day); g.setDay(replica, epoch);
       locks.clear(); for (const [who, index] of s.locks) locks.set(who, index);
@@ -94,6 +94,7 @@
       p.render(); p.queueChanged();
       if (!reset && s.bell !== lastBell) g.showBell();
       lastBell = s.bell;
+      if (newDay && started) g.announceDayEvent();
       if (!over && replica.over) g.dayOver();
       g.dirty();
     }
