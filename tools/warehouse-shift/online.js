@@ -4,8 +4,7 @@
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const code = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), n => alphabet[n % alphabet.length]).join('');
   const VERSION = '1';
-  // Set this to the public https://...workers.dev origin after deploying the relay.
-  const RELAY = '';
+  const RELAY = 'https://warehouse-shift-relay.detailedfoil.workers.dev';
 
   class Session {
     constructor(endpoint, build, hooks) {
