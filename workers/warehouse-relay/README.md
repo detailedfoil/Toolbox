@@ -18,6 +18,10 @@ The configuration creates the `ROOMS` binding and the SQLite-backed `WarehouseRo
 
 Put the deployed HTTPS origin in the `RELAY` constant in `tools/warehouse-shift/online.js`, run `node .github/stamp.mjs`, and publish the game build. To test a staging build before setting its default, append `&relay=https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev` to its flagged game URL on every device. The normal game URL continues to open solo or local split-screen.
 
+## Verify a deployment
+
+The default route returns `Unknown room route` (HTTP 404). Opening `/room/ABCDEF` in a browser returns `WebSocket required` (HTTP 426). If the Worker returns `Hello world`, the starter deployment is still active. Check that Workers Builds is deploying the `warehouse-online-coop` branch from the `workers/warehouse-relay` directory.
+
 ## Local checks
 
 ```sh
