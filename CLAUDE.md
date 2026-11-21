@@ -278,8 +278,7 @@ explain changes in plain English and say what they'll see.
     they're waiting, it slides across and they walk out with it. A c pick goes in the holding area instead: scan the label
     of any empty OC spot (a full one says so). No score or timer (his say); the Function menu has squat, hint, sound, look
     speed, picks (mixed / C&C / holding / till / kiosk, for practice: changes the picks still to come) and help; "Perfect
-    pick!" when an order needs no hint and has no wrong scan. Landscape first
-    (detailedfoil), a rotate prompt on phones held upright with "Play upright anyway". Phone: left-thumb stick (pushed right out =
+    pick!" when an order needs no hint and has no wrong scan. Any way up (stage 6; it was landscape first with a rotate prompt). Phone: left-thumb stick (pushed right out =
     jog), drag to look, tap to scan. PC: WASD, mouse look (pointer lock), F/click scan, C squat, H hint, Tab menu.
     **Controllers** (Gamepad API, standard layout; detailedfoil, 19 Nov 2026): left stick walks (right out to jog), right
     stick looks, RT scans, A is Enter (his swap), B Back, X squat, Y hint, d-pad up and down the pick list, Start the
@@ -287,13 +286,13 @@ explain changes in plain English and say what they'll see.
     highlight moves between buttons, boxes and rows (tillui.js `pad()`): A presses, a box brings up the on-screen keyboard
     (the highlight moves round its keys), B deletes or leaves, RT Enter, LB/RB tabs, Y Ask again, Start leaves.
     **Two players** (computers only: the Start screen's Two players button, hidden on touch screens and windows under 900
-    px): split screen, one above the other, sharing the day's list, Sam and the tills. Each joins on the join screen with
-    a press (A on a controller, or a key or click for the keyboard and mouse; first to join is the top half). Each player's
+    px): split screen, side by side (stage 6; it was one above the other), sharing the day's list, Sam and the tills. Each joins on the join screen with
+    a press (A on a controller, or a key or click for the keyboard and mouse; first to join is the left half). Each player's
     things are in their own container (`#pv1` in the page, copied for player 2 by `addPlayer2`, elements found by
     `data-el`); `makePlayer` holds everything per player; `drawViews` draws each half with its own glow and aim box;
     keyboard and mouse go to `kbPlayer()`. Two people can share an aisle; they can't walk through each other (`peerStop`)
     or open the same till (`tillAt`). Tested with two fake controllers in headless Chrome; not yet on real ones.
-    Installable: `warehouse-shift.webmanifest` (fullscreen, landscape) and `warehouse-shift-sw.js` (scope "warehouse-shift":
+    Installable: `warehouse-shift.webmanifest` (fullscreen, any way up) and `warehouse-shift-sw.js` (scope "warehouse-shift":
     page site-first with a 4 s fallback, its files and photos kept-first; a copy still registered at the old floor-plan scope
     removes itself). Stats (orders, lines, units) stay on the device (`ws-stats-v1`).
     **The day** (`day.js`, detailedfoil, 19 Nov 2026; tested in `.github/tests/warehouse-shift-day.test.mjs` with whole days
@@ -410,6 +409,125 @@ explain changes in plain English and say what they'll see.
     (LT Fusion, RT CrashFix), LB is Enter. The left side is now BBA at the FRONT to BBJ at the back; pick lists walk AAA to BAG, then
     BBJ down to BBA (`WALK` in world.js; `loc.order` follows it, don't sort by code). The two halves of a shared AAA bay have a
     12 cm gap (`HALFGAP`). The trolley has no handle.
+    **Changes since ChatGPT's multiplayer work began (20 Nov 2026 evening; for its handover, newest last).** Before this
+    point: no morning c picks, a walk-in's till-or-collect is rolled at the first hello (45% till), Stephen login, practice
+    picks always start on mixed. Then, in stages (detailedfoil's list of 20 Nov 23:46):
+    - Stage 1 (21 Nov): ONE shop floor. The wall between the trade counter and Trade+ is gone (the 'Trade+' room, its two
+      counters and tills too); the 'Trade counter' room runs to the right-hand wall. One long counter (x0 13.91 to x1 21.0,
+      a 0.9 m gap at the right-hand end to walk through) with 4 tills; the last, by the gap, is Sam's. Shop gondolas
+      re-laid. game.js: `SPOTS` = one per till (no left-end spot); `QUEUE` = the line to be served, down the left-hand wall
+      end of the counter (your right as you serve), `QX`/`QSIDE`; new customers join it (`comeIn` -> `there`), it moves up
+      when someone leaves (`standAt` -> `shuffleQueue`), a customer called to a till and then left rejoins it (`joinQueue`);
+      `route(from {x,y}, to)` steps out of / into the line sideways; `WAIT` (paid or checked in) is on your left by the gap.
+    - Stage 2 (21 Nov): customer and Sam rules. (a) Bag collections are about HALF of all click and collects: `Day.decide(c)`
+      (runs at the first hello, only when `walkinTill` > 0, so tests with 0 keep customers as sent) rolls till 45%, else
+      bag 50% (takes a free bag from the holding area, `freeCode`) or one product from the warehouse. (b) Customers no longer
+      say the OC number (`Till.holdSay` says the surname only; the OC spot is on the scanner). (c) Surname FIRST, then
+      postcode (tillui.js `begin`, `askAgain`, the bot's `tillOrder`); after the player's first Search (or Sam's) they give a
+      third detail, `cust.third` from `Till.makeCustomer`: first name, email or door number (never the organisation; a
+      customer with a twin at the address never uses the door number). (d) Greet only shows when you're behind the counter
+      within 1.6 m (along it) of a till (`checkTill`); Sam walks to his till before saying hello (`bot.js` greet job).
+      (e) Sam takes a pick after it has sat 4 s (`LATE_PICK`, was 5) and while one is about to be his (`Day.listEarly`,
+      `board().early`) he waits at his till and doesn't start the delivery. (f) STOCK: every place holds a few of its
+      product (`World.stockOf`, `room`); `Day.makeOrder` caps a line at what's there and reserves it; `Day.picked` takes
+      the units off and a pick of the last ones empties the place (`World.vacate`, product goes to `world.out`, hidden by
+      `scene.js stockChange`, game env `stock`). The DELIVERY is out-of-stock products (earlier empties, topped up by taking
+      a few more off the shelves at the start of the day) and each carton goes into an EMPTY place of its own kind in the
+      same row (`World.emptyFor`, never two cartons to one place); `Day.paPut` fills it (`World.place`). (g) Customer flow
+      follows the delivery (`Day.lag()`: picks released minus delivery put away; over 0.15 the wait doubles, over 0.4 no
+      more come until the delivery catches up). Tests: `warehouse-shift-stage2.test.mjs`; day/alex/till tests adjusted.
+      Asked for and still to do: stage 3 also gets the holding area swap (OC 3 to 8 on the GROUND, OC 9 to 14 on the shelf
+      above) and ONE row of shelves in the middle island of the shop (so one side is the queue, the other the paid
+      customers); stage 6 also gets switching between landscape and portrait at any time on a phone (portrait makes typing
+      easier).
+    - Stage 3 (21 Nov): (a) Customers ask by CODE (30%) or by KEY WORDS FROM THE PRODUCT NAME (`describe`, back on; detailedfoil: names are
+      fine) but never by quoting a description sentence (`need`, off: descriptions say things like "suitable for all uses"; the
+      `need` data and code are still there, unused).
+      (b) Holding area: OC-009 to OC-014 are the bottom (ground) row of totes and OC-003 to OC-008 sit above them (detailedfoil said
+      "oc 3 to 8 should be above oc 9 to 14, they should be on the ground": read as 9 to 14 on the ground; if he meant the other way
+      round, swap the `(row ? 3 : 9)` in `holding()` in world.js). (c) The middle of the shop has ONE row of shelves (one gondola,
+      x 12.65 to 13.75, y 17.0 to 20.4) so the queue (left) and the paid customers (right) are easy to tell apart; the other two
+      islands and the small cross shelf are gone. (d) KICK STOOLS: `world.stools`, one red stool at the centre aisle end of every
+      row (one per row, between the two end guards of a back-to-back row: detailedfoil didn't want two side by side), in front of the yellow and black end guards, blocking like any obstacle (`kickstool` in `BLOCKS`; the old
+      decorative stools at the aisle ends are gone, the two by the back wall stay). Look at one and the button says Take stool
+      (also Scan / RT); then a Step button (above Squat; V on a keyboard, LB on a controller) puts you on it (eye +0.42 m,
+      can't walk or squat while on it; walking steps you down). Locations from 1.75 m up (`HIGH` in game.js) can only be
+      scanned, for picks and putaway, while stepped up. Walk out of the pick aisle you took it into and it goes back to
+      where it lives (`dropStool`, `Crew.aisleAt`). Drawn by scene.js `setStool` (it follows you, under your feet when
+      stepped). Sam does not use stools. Tests: `warehouse-shift-stage3.test.mjs`; a few Sam timing tests loosened (the
+      world changed, so their random plans did).
+    - Stage 4 (21 Nov): the CASH DRAWER. A cash customer always hands over more than the total (`Till.tender` is now
+      strictly bigger; `Till.notesFor` = the notes, `Till.DENOMS`, `Till.denomName`). Cash at the checkout slides a till
+      drawer up over the till page (tillui.js `payCash` -> `openDrawer`; markup `.dr` inside `.tl-mon`, placed under the
+      speech bar so the customer stays visible; styles `.dr-*` in till.css): a little display (to pay, what they gave with
+      its notes, change due), a black tray tilted in 3D with four note slots under spring clips (£5 £10 £20 £50, plain
+      colours and values, no artwork) and eight coin cups (£2 to 1p, the right shapes), and "In your hand" below: tap a note
+      or coin to take one (`drTake`), tap one in your hand to put it back (`drBack`), Start over (`drStart`), Give change
+      (`drGive`). Wrong change: the customer says how much they're owed and it counts against a perfect pick (no change at
+      all: "I'm still waiting for my change", no slip). Right change: "Cheers", the drawer slides shut, then Order Complete.
+      Nothing else finishes a cash sale (the old one-tap Change given is gone). Controllers: the highlight moves round only
+      the drawer's buttons while it's open (`padItems`), starting on the notes, or on Give change once your hand is right.
+      Sounds: `coin` added to game.js. Sam's own till is unchanged (he takes his time, no drawer drawn). State is
+      `session.cash` {inc, given, due, hand, done}; leaving the till and coming back keeps the drawer as it was. Tests:
+      `warehouse-shift-stage4.test.mjs`.
+      Same night (detailedfoil): about 1 cash customer in 5 gives the EXACT money (`pay.exact` from `Till.payment`; no drawer,
+      they say "Exact money: £x" and it finishes, the only time a customer can hand over pence); everyone else hands over a
+      whole note (£5 / £10 / £20 / £50 / £100), usually the smallest that covers it, 1 in 4 the next one up (`pay.up`;
+      `Till.tender(inc, pay)`). Kick stools are only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level
+      (`needsStep` in game.js, replacing the 1.75 m rule). The queue to be served stands 1.0 m (was 0.38) in from the wall
+      end of the counter (`QX`).
+    - Stage 5 (21 Nov): CCTV, floor markings, players as people, name badges. (a) The team notice board is gone; in its place
+      on the same wall (warehouse side of the shop's left wall, facing staff) a bigger CCTV monitor (`kind: 'cctv'` in
+      world.js, 1.7 x 1.04 m; scene.js draws the bezel and a canvas screen, `S.cctv()` = { canvas, tex, mesh, obj }).
+      `cctv.js` (window.ShiftCCTV, no three.js, shared and tested) draws it: `create({ canvas, world, zones })` paints the still
+      parts once, `draw({ people, now })` a frame and returns the counts. The map is the shop floor from above with the
+      counter on the LEFT and the front door on the RIGHT (as if standing behind the counter facing the door, so your right
+      hand is DOWN the map): pale red "WAITING TO BE SERVED" (the queue, bottom) and pale green "WAITING FOR ORDERS" (by the
+      gap, top), tills numbered, the door marked; customers are dots in their shirt colour ringed red (queue, "!" over one not
+      yet greeted), amber (at a till), green (waiting for an order) or grey (walking); staff (players and Sam) navy dots with
+      their initial. A panel on the right counts each, "! N to greet" flashing, CAM 01, the date and time, REC. game.js
+      `updateCCTV` redraws it 4 times a second only when something on it changed and a player is within 16 m (`cctvPeople`
+      builds the list from `figs`, `players`, `crew`). (b) `ZONES` in game.js (queue and wait rectangles round `QUEUE` and
+      `WAIT`) are on the CCTV map only: the coloured boxes painted on the real floor were taken off on 21 Nov 2026 (detailedfoil,
+      "customers can wait in a larger area, they are all clumped together"; `S.floorZone` is still in scene.js, unused). The line to
+      be served is now 5 spots 0.9 m apart down the left, and `WAIT` is 8 spots scattered over about 3 m by 2.7 m by the gap. (c) Every player has a figure like Sam's (navy uniform, CrashFix patch, name badge; `P.fig` from
+      `S.makeWorker`, posed each frame by `P.poseFig`: walking, squatting, on a stool, carrying a tote or carton, at a till).
+      `figLayers()` puts each figure on every OTHER player's camera layer (camera layer = 1 + player number) and never their
+      own, so in one-player games it's never drawn; call it again after adding a player. (d) Names: "Name on your badge" on
+      the start screen (`#nameIn`, player 1) and a name box in each slot of the join screen (shown once that slot has joined;
+      typing there doesn't join the keyboard player); up to 12 letters, digits, spaces, ' and - (`cleanName`), kept as
+      `ws-name` / `ws-name2`, default Trainee / Player 2. `P.setName(n)` redraws the badge (`S.setBadge`), the split screen
+      tag and the CCTV initial. Tests: `warehouse-shift-stage5.test.mjs`.
+    - Stage 6 (21 Nov): screen layout. (a) Two players are side by side now: player 1 the LEFT half, player 2 the RIGHT
+      (`layout()` in game.js, `#pv1{right:50%}` / `.p2{left:50%}` in game.css), each with their scanner in their own bottom
+      right corner; join screen says Left / Right (the ids are still `joinTop` / `joinBottom`). `P.layout` counts a view as
+      landscape unless it's under 0.75 wide for its height, so a half on a computer keeps the scanner beside the view.
+      (b) The game fills only the part of the screen you can see (`visualViewport`: the stage's top, left, width and height
+      are set by `layout()`, `stageH` is used by `drawViews`), so when a phone's own keyboard comes up everything shrinks to
+      the space above it; the page also asks for `interactive-widget=resizes-content`. The on-screen keyboard already sat
+      inside the till screen. (c) Any way up at any time: the "Turn your phone sideways" prompt, its CSS and the landscape
+      lock on going full screen are gone, and the manifest says `"orientation": "any"`. (d) The CCTV screen is 2.7 x 1.4 m,
+      most of its 3 m wall (y 17.95 to 20.65; the clock moved up to z 2.42), drawn on a 2048 px canvas; cctv.js scales every
+      size by `K` (canvas width / 1024) and the map marks by `R` (map scale), and each count is as tall as its row allows.
+      Tests: `warehouse-shift-stage6.test.mjs`.
+    - After stage 6 (21 Nov, detailedfoil): (a) the kick stool is bigger: 0.64 m wide and 0.7 m tall (was 0.42 x 0.42; `kickstool` in
+      world.js, `kick` / `kickTop` geometry in scene.js, the aim box in game.js; the two decorative stools by the back wall are
+      unchanged) and Step lifts you 1.05 m (`STEP` in game.js, was 0.42: 2.5 times as high, so the stool model is lower than your
+      feet, his say). (b) The CCTV map is landscape: counter and tills (plain dots now, no numbers) along the BOTTOM, front door at
+      the TOP, right on the screen = small x (your right as you stand behind the counter facing the door), no count panel and no
+      "to greet" line (the "!" over an unGreeted customer stays; `draw()` still returns the counts); the map is as big as the screen
+      allows under a slim CAM 01 / date / REC line (cctv.js `u(x)` / `v(y)`, `map.k`). The screen is taller (z 0.78 to 2.4, the clock
+      at 2.46 to 2.82) so the nearly square shop fills more of it.
+    - Online co-op, compatibility stage (21 Nov, draft PR #3, branch `warehouse-online-coop`). Open the draft game with
+      `?online=1` for Online co-op. The host shares a six-character code with up to three guests. The usual Start and
+      side-by-side Two players options still work. The relay is configured for local tests. Public deployment needs a
+      Cloudflare account with Workers and SQLite Durable Objects and a public relay URL (see `workers/warehouse-relay/README.md`).
+      The host runs the day and Sam. `online-day.js` sends each changed product's stock, reservation and shelf, plus the
+      original pick and destination carton labels. Joining late, reconnecting and starting another day all use the host's
+      shelves. A dropped guest's picked tote restores exactly its units and reservations before the job goes back on the list.
+      Cash goes through the normal drawer. The host checks the basket, payment method and change before listing the order.
+      Tests: `.github/tests/warehouse-online.test.mjs` and `.github/warehouse-shift/test-{online-game,relay}.mjs`.
+      Next stage: shared kick stools, online player badges and CCTV. Physical phone, PC and controller playtesting is pending.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

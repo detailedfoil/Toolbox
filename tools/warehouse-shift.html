@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content">
 <meta name="theme-color" content="#0d1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -12,8 +12,8 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=255d9e7e0d">
-<link rel="stylesheet" href="warehouse-shift/till.css?v=16b209e198">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=45be890b31">
+<link rel="stylesheet" href="warehouse-shift/till.css?v=b66e39ba67">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
 <script src="../analytics.js?v=f5e6d397aa"></script>
@@ -40,6 +40,7 @@
     <span class="ws-order ws-chip-done" id="orderChip" data-el="orderChip"><span>Orders done</span> <b id="doneCount" data-el="doneCount">0</b></span>
     <span class="ws-order" id="toteChip" data-el="toteChip" title="Lines in the tote"><svg viewBox="0 0 24 16" width="20" height="14" aria-hidden="true"><path d="M1 3h22l-2 12H3z" fill="#2e66b5" stroke="#9cc0ff" stroke-width="1.2"/><path d="M5 6h14" stroke="#9cc0ff" stroke-width="1.2"/></svg><b id="toteCount" data-el="toteCount">0</b></span>
   </div>
+  <button class="ws-squat ws-step" id="stepBtn" data-el="stepBtn" type="button" aria-pressed="false" hidden>Step<small>V</small></button>
   <button class="ws-squat" id="squatBtn" data-el="squatBtn" type="button" aria-pressed="false" hidden>Squat<small>C</small></button>
   <button class="ws-tillbtn" id="tillBtn" data-el="tillBtn" type="button" hidden>Use till<small>F</small></button>
   <section class="sc" id="scanner" data-el="scanner" hidden aria-label="Scanner">
@@ -103,6 +104,7 @@
       <h1>Warehouse Shift</h1>
       <p>A day is 20 picks on one list, shared with Sam. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
       <div id="startStats"></div>
+      <label class="ws-name">Name on your badge <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Trainee" enterkeyhint="done"></label>
       <div class="ws-row">
         <button class="ws-go" id="startBtn" type="button">Start shift</button>
         <button class="ws-alt" id="twoBtn" type="button" hidden>Two players</button>
@@ -112,7 +114,7 @@
         <button class="ws-alt" id="updBtn" type="button">Check for updates</button>
       </div>
       <p class="ws-small" id="updMsg" hidden></p>
-      <p class="ws-small">A made-up warehouse with the store's 10,999 nailed products. Best played with your phone sideways.</p>
+      <p class="ws-small">A made-up warehouse with the store's 10,999 nailed products. Play with your phone sideways or upright, and turn it whenever you like.</p>
     </div>
   </div>
 
@@ -132,8 +134,8 @@
   <div class="ws-cover" id="joinCover" hidden>
     <div class="ws-card">
       <h1>Two players</h1>
-      <p>Split screen, one above the other, sharing the same pick list (and Sam). Each player presses something to join: <b>A</b> on a controller, or any key or a click for the keyboard and mouse. The first to join plays in the top half.</p>
-      <div class="ws-join"><div id="joinTop"><b>Top</b><span>Waiting for a player</span></div><div id="joinBottom"><b>Bottom</b><span>Waiting for a player</span></div></div>
+      <p>Split screen, side by side, sharing the same pick list (and Sam). Each player presses something to join: <b>A</b> on a controller, or any key or a click for the keyboard and mouse. The first to join plays on the left.</p>
+      <div class="ws-join"><div id="joinTop"><b>Left</b><span>Waiting for a player</span><input maxlength="12" autocomplete="off" spellcheck="false" placeholder="Name on badge" aria-label="Left player's name" hidden></div><div id="joinBottom"><b>Right</b><span>Waiting for a player</span><input maxlength="12" autocomplete="off" spellcheck="false" placeholder="Name on badge" aria-label="Right player's name" hidden></div></div>
       <div class="ws-row"><button class="ws-go" id="joinGo" type="button" disabled>Start shift</button><button class="ws-alt" id="joinBack" type="button">Back</button></div>
     </div>
   </div>
@@ -158,7 +160,7 @@
             <li>Then take the tote to the <b>trade counter</b> and press Enter: its customer comes over for it.</li>
             <li>A <b>c</b> pick goes in the <b>holding area</b> by goods in: scan the label of any empty OC spot.</li>
             <li>Some click and collects are already bagged in the holding area: the line on the scanner gives the <b>OC location</b> (big green label) and surname. Scan that tote, then take the bag to the counter.</li>
-            <li>Bottom shelves are low: <b>squat</b> to scan them. Stuck? <b>Hint</b> makes the location glow.</li>
+            <li>Bottom shelves are low: <b>squat</b> to scan them. The high ones (AA shelf 13 and up, BA shelf 7 and up, the top BB level): <b>take a red kick stool</b> from the end of a row, carry it into the aisle and <b>Step</b> up. Stuck? <b>Hint</b> makes the location glow.</li>
           </ul>
           <h2>Putaway</h2>
           <ul>
@@ -194,9 +196,9 @@
           <h2>Phone</h2>
           <ul><li>Left thumb: walk (push further to jog)</li><li>Drag the view to look round</li><li>Tap a label to scan it</li><li>Squat button next to the scanner</li></ul>
           <h2>Controller</h2>
-          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
+          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>LB</b> step on the stool, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
           <h2>Computer</h2>
-          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or <kbd>F</kbd> scan, <kbd>Space</kbd> (or <kbd>Enter</kbd>) next, <kbd>C</kbd> squat, <kbd>H</kbd> hint</li><li><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose on the pick list</li><li><kbd>Tab</kbd> opens the scanner's Function menu</li></ul>
+          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or <kbd>F</kbd> scan, <kbd>Space</kbd> (or <kbd>Enter</kbd>) next, <kbd>C</kbd> squat, <kbd>V</kbd> step on the stool, <kbd>H</kbd> hint</li><li><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose on the pick list</li><li><kbd>Tab</kbd> opens the scanner's Function menu</li></ul>
         </div>
       </div>
       <div class="ws-row"><button class="ws-go" id="helpClose" type="button">Got it</button></div>
@@ -220,28 +222,20 @@
     </div>
   </div>
 
-  <div class="ws-rotate" id="rotate">
-    <div>
-      <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="20" y="6" width="24" height="52" rx="4" fill="none" stroke="#ffd34d" stroke-width="4"/><circle cx="32" cy="51" r="2.5" fill="#ffd34d"/></svg>
-      <h2 style="margin:0 0 6px">Turn your phone sideways</h2>
-      <p style="margin:0 0 16px;color:#c3cede">Warehouse Shift is made for landscape.</p>
-      <button class="ws-alt" id="portraitBtn" type="button" style="min-height:44px;padding:0 18px">Play upright anyway</button>
-    </div>
-  </div>
-
   <div class="ws-cover" id="msg" hidden><div class="ws-card"><p id="msgText"></p><div class="ws-row"><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div></div></div>
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
-<script src="warehouse-shift/world.js?v=dc55ad37ad"></script>
-<script src="warehouse-shift/scene.js?v=29e0d1eb2a"></script>
+<script src="warehouse-shift/world.js?v=5c8bb742d3"></script>
+<script src="warehouse-shift/cctv.js?v=34a13a7fec"></script>
+<script src="warehouse-shift/scene.js?v=eea405f05c"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
-<script src="warehouse-shift/till.js?v=a2895eea1c"></script>
-<script src="warehouse-shift/day.js?v=eb3d41579c"></script>
-<script src="warehouse-shift/bot.js?v=8bd16c45f8"></script>
-<script src="warehouse-shift/tillui.js?v=2949ae5d21"></script>
-<script src="warehouse-shift/online-day.js?v=98179e0912"></script>
+<script src="warehouse-shift/till.js?v=66b69820b0"></script>
+<script src="warehouse-shift/day.js?v=55267ae277"></script>
+<script src="warehouse-shift/bot.js?v=e1975d5ece"></script>
+<script src="warehouse-shift/tillui.js?v=86157498d7"></script>
+<script src="warehouse-shift/online-day.js?v=272ab8bc7c"></script>
 <script src="warehouse-shift/online.js?v=836d5b7132"></script>
-<script src="warehouse-shift/online-game.js?v=c2686fb705"></script>
-<script src="warehouse-shift/game.js?v=e35dac3573"></script>
+<script src="warehouse-shift/online-game.js?v=4c2138546c"></script>
+<script src="warehouse-shift/game.js?v=f8fb137d52"></script>
 </body>
 </html>

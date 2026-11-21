@@ -6,7 +6,7 @@
   "start_url": "./warehouse-shift.html",
   "scope": "./warehouse-shift",
   "display": "fullscreen",
-  "orientation": "landscape",
+  "orientation": "any",
   "background_color": "#0d1117",
   "theme_color": "#0d1117",
   "icons": [

@@ -135,8 +135,13 @@ test('nothing overlaps: racking, walls, counters, shop shelving; the building is
   const mid = (world.LX1 + world.RX0) / 2;
   assert.ok(Math.abs(mid - world.W / 2) < 0.6, 'centre aisle at ' + mid.toFixed(2) + ' of ' + world.W.toFixed(2));
   // the shop floor is in the front right corner
-  const shop = world.rooms.find((r) => r.name === 'Trade+');
-  assert.ok(Math.abs(shop.x1 - world.W) < 0.01 && Math.abs(shop.y1 - world.D) < 0.01, 'Trade+ in the corner');
+  const shop = world.rooms.find((r) => r.name === 'Trade counter');
+  assert.ok(Math.abs(shop.x1 - world.W) < 0.01 && Math.abs(shop.y1 - world.D) < 0.01, 'the shop floor reaches the front right corner');
+  assert.ok(!world.rooms.some((r) => r.name === 'Trade+'), 'one shop floor, no wall down the middle (detailedfoil, 20 Nov 2026)');
+  const tills = world.objects.filter((o) => o.kind === 'till');
+  assert.equal(tills.length, 4, '4 tills');
+  assert.ok(tills.every((t) => t.x0 >= world.counter.x0 && t.x1 <= world.counter.x1), 'all on the one counter');
+  assert.ok(world.W - world.counter.x1 > 0.8, 'a gap at the right-hand end to walk through');
 });
 
 test('the walk starts on clear floor, and the counter and every aisle can be reached', () => {

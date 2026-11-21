@@ -14,7 +14,7 @@
    phone sideways: left thumb walks, drag to look. On a computer: WASD, mouse look.
 
    Sam (bot.js) works from the same list, pushing a trolley that blocks the aisle while they pick. On a computer two
-   people can play at once: split screen, one above the other, each with their own scanner, till and controls (a
+   people can play at once: split screen, side by side, each with their own scanner, till and controls (a
    controller each, or one on the keyboard and mouse).
 
    world.js makes the warehouse, day.js the day's orders and customers, scene.js draws it, till.js and tillui.js are
@@ -141,6 +141,7 @@
       talk: () => { tone(540, 0, 0.045, 'triangle', 0.035); tone(690, 0.055, 0.05, 'triangle', 0.03); },
       approved: () => { tone(1568, 0, 0.12, 'sine', 0.07); tone(2093, 0.13, 0.22, 'sine', 0.07); },
       drawer: () => { noise(0, 0.18, 0.3, 500); tone(2400, 0.2, 0.25, 'sine', 0.035); },
+      coin: () => { tone(3300, 0, 0.05, 'triangle', 0.035); tone(4200, 0.035, 0.09, 'sine', 0.028); },
       chime: () => { [880, 1109, 1319].forEach((f, i) => tone(f, i * 0.08, 0.2, 'triangle', 0.06)); },
       dayEnd: () => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.12, 0.3, 'triangle', 0.07)); }
     };
@@ -187,16 +188,34 @@
       bellCust = c; P.toast('Ding! Sam will serve them');
     }
     const CY = counter.y1 + 0.42, MID = counter.y1 + 0.95;
-    // places at the counter: the left end, then across from each till (the last is Sam's)
-    const SPOTS = [{ x: counter.x0 + 0.34, y: CY }].concat(tills.map((t) => ({ x: tillX(t), y: CY, till: t })));
-    // waiting for their order: by the gap at the end of the counter, beside Sam's till (detailedfoil)
-    const WAIT = [{ x: counter.x1 + 0.3, y: counter.y1 + 0.47, wait: true }, { x: counter.x1 - 0.15, y: counter.y1 + 0.85, wait: true }, { x: counter.x1 - 0.25, y: counter.y1 + 1.4, wait: true }];
+    // places at the counter: across from each till (the last is Sam's)
+    const SPOTS = tills.map((t) => ({ x: tillX(t), y: CY, till: t }));
+    // the queue to be served (detailedfoil, 20 Nov 2026): a line down the left-hand wall end of the counter, on your right
+    // as you stand serving. The first in the line is at the counter; the line runs towards the shop front.
+    const QX = counter.x0 + 1.1, QSIDE = QX + 0.7; // off the wall; the line is spread out (detailedfoil, 21 Nov 2026: "a bigger area")
+    const QUEUE = [0, 1, 2, 3, 4].map((i) => ({ x: QX, y: CY + i * 0.9, queue: true }));
+    // paid or checked in, waiting for their order: on your left as you stand serving, by the gap at the end of the counter.
+    // Spread over a wide patch so nobody stands shoulder to shoulder
+    const WAIT = [[0.3, 0], [1.0, 0.8], [1.9, 1.5], [0.5, 1.7], [2.5, 0.7], [1.4, 2.4], [2.4, 2.0], [0.4, 2.7]].map((o) => ({ x: counter.x1 - o[0], y: CY + o[1], wait: true }));
     const IN = [[entX, world.D - 0.5], [LANE - 0.18, world.D - 1.2], [LANE - 0.18, MID]];
     const OUT = [[LANE + 0.22, MID], [LANE + 0.22, world.D - 1.2], [entX, world.D - 0.5], [entX, world.D + 0.6]];
     const taken = new Map(); // spot -> the customer standing there
+    // the two waiting areas, shown on the CCTV map only (detailedfoil, 21 Nov 2026: nothing painted on the real floor)
+    const ZONES = {
+      queue: { x0: counter.x0 + 0.5, x1: QSIDE + 0.55, y0: counter.y1 + 0.05, y1: CY + 4 * 0.9 + 0.55 },
+      wait: { x0: counter.x1 - 3.2, x1: counter.x1 + 0.3, y0: counter.y1 + 0.05, y1: CY + 3.2 }
+    };
     const clampX = (x) => Math.min(x, counter.x1 - 0.25); // keeps clear of the shelving by the gap
     // the way from one place in front of the counter to another, round anyone standing at it
-    const route = (from, to) => [[clampX(from.x), MID], [clampX(to.x), MID], [to.x, to.y]];
+    // (from the queue they step out to the side first; into the queue they come up beside it)
+    const route = (from, to) => {
+      const out = [], inQ = from.x < QX + 0.3;
+      if (inQ) out.push([QSIDE, Math.max(CY + 0.2, Math.min(from.y === undefined ? MID : from.y, MID))]);
+      if (to.queue) { out.push([QSIDE, to.y], [to.x, to.y]); return out; }
+      out.push([clampX(inQ ? QSIDE : from.x), MID], [clampX(to.x), MID], [to.x, to.y]);
+      return out;
+    };
+    const posOf = (c) => ({ x: c.fig.group.position.x, y: c.fig.group.position.z });
 
     /* ---------- the customers: walking in, at the counter, waiting by the gap, going ---------- */
     const OUTFITS = [[0xf07a1a, 0x2f3540, 0xdfe3e8], [0xd9e021, 0x23272e, 0xdfe3e8], [0x7b2d3a, 0x3a3f47], [0x5a5f66, 0x22262c], [0x1d1f22, 0x4a3f33], [0xb3261e, 0x2f3540], [0x2e7d32, 0x3b3328], [0x0f5fa8, 0x23272e], [0xe8590c, 0x1f2328, 0xdfe3e8]];
@@ -233,7 +252,24 @@
     function standAt(c, s) { // c's place: a spot at the counter, a waiting spot, or nowhere
       for (const [k, v] of taken) if (v === c) taken.delete(k);
       if (s) taken.set(s, c);
+      const was = c.spot;
       c.spot = s || null;
+      if (was && was.queue && !(s && s.queue)) later(0.3, shuffleQueue); // someone left the line: the rest move up
+    }
+    function shuffleQueue() { // everyone in the line moves up to fill the gaps, in their order
+      const inQ = QUEUE.map((q) => taken.get(q)).filter(Boolean);
+      inQ.forEach((c, i) => {
+        const q = QUEUE[i];
+        if (c.spot === q) return;
+        standAt(c, q);
+        if (c.state === 'coming' || !c.fig || c.fig.giving) return; // still on the way: they go to their new place when they get there
+        walk(c, posOf(c).x < QX + 0.3 && q.x < QX + 0.3 ? [[q.x, q.y]] : route(posOf(c), q), () => { if (c.fig) c.fig.face = Math.PI; });
+      });
+    }
+    function joinQueue(c, then) { // to the back of the line
+      const s = QUEUE.find((q) => !taken.get(q)) || QUEUE[QUEUE.length - 1];
+      standAt(c, s);
+      walk(c, route(posOf(c), s), () => { if (c.fig) c.fig.face = Math.PI; if (then) then(); });
     }
     function freeSpot(near) { // a free place at the counter (not Sam's), the nearest to near
       let best = null, bd = Infinity;
@@ -243,10 +279,16 @@
     // a new customer walks in to the counter (day.js sends them); at the counter they tell day.js
     function comeIn(c) {
       const f = figFor(c), d = day;
-      const s = freeSpot(SPOTS[2].x) || SPOTS[1];
+      const s = QUEUE.find((q) => !taken.get(q)) || QUEUE[QUEUE.length - 1];
       standAt(c, s);
       f.group.position.set(entX, 0, world.D + 0.6); f.group.rotation.y = Math.PI;
-      walk(c, IN.concat([[s.x, s.y]]), () => { f.face = Math.PI; d.arrived(c); });
+      const there = () => { // into their place in the line (it may have moved up while they walked in)
+        if (!c.fig || !c.spot) { d.arrived(c); return; }
+        const p = posOf(c);
+        if (Math.hypot(p.x - c.spot.x, p.y - c.spot.y) > 0.08) { walk(c, p.x < QX + 0.3 ? [[c.spot.x, c.spot.y]] : [[QSIDE, c.spot.y], [c.spot.x, c.spot.y]], there); return; }
+        f.face = Math.PI; d.arrived(c);
+      };
+      walk(c, IN.concat([[QSIDE, Math.min(MID, CY + 1.24)]]), there);
     }
     // what they do next, when day.js says so
     function onStep(c) {
@@ -255,6 +297,7 @@
       if (c.state === 'greet') { for (const p of players) p.queueChanged(); return; } // at the counter, waiting to be said hello to
       if (c.state === 'counter') { // a till customer, waiting to be served
         if (!c.hello) { c.hello = true; speakFig(c, { text: c.say }); }
+        if (c.spot && c.spot.till && !f.giving && f.mode !== 'walking') joinQueue(c); // called to a till, then left: back in the line
         for (const p of players) p.queueChanged();
         return;
       }
@@ -271,26 +314,27 @@
     function stepAside(c) {
       const s = WAIT.find((w) => !taken.get(w)) || WAIT[WAIT.length - 1];
       standAt(c, s);
-      walk(c, route(c.fig.group.position.x !== undefined ? { x: c.fig.group.position.x } : s, s), () => faceTo(c, counter.x1 - 0.1, counter.y1 - 0.1));
+      walk(c, route(posOf(c), s), () => faceTo(c, counter.x1 - 0.6, counter.y1 - 0.1));
     }
     function goOut(c) {
       const d = day, f = c.fig;
+      const p = posOf(c), first = p.x < QX + 0.3 ? [[QSIDE, Math.max(CY + 0.2, Math.min(p.y, MID))]] : [];
       standAt(c, null);
-      walk(c, [[clampX(f.group.position.x), MID]].concat(OUT), () => { freeFig(f); d.gone(c); });
+      walk(c, first.concat([[clampX(Math.max(p.x, first.length ? QSIDE : 0)), MID]]).concat(OUT), () => { freeFig(f); d.gone(c); });
     }
     // called over to a till (yours or Sam's): anyone standing there swaps places
     function callTo(c, till, then) {
       const s = SPOTS.find((x) => x.till === till);
       const other = taken.get(s);
       if (other && other !== c) {
-        const back = c.spot && !c.spot.wait ? c.spot : freeSpot(s.x);
+        const back = c.spot && !c.spot.wait && !c.spot.queue ? c.spot : freeSpot(s.x);
         standAt(other, back);
-        if (back && other.fig && !other.fig.giving) walk(other, route({ x: other.fig.group.position.x }, back), () => { if (other.fig) other.fig.face = Math.PI; });
+        if (back && other.fig && !other.fig.giving) walk(other, route(posOf(other), back), () => { if (other.fig) other.fig.face = Math.PI; });
       }
       standAt(c, s);
       c.ready = false; c.at = till;
       const f = c.fig, p = f.group.position;
-      const pts = Math.abs(p.z - CY) < 0.12 && Math.abs(p.x - s.x) < 0.05 ? [[s.x, s.y]] : route({ x: p.x }, s);
+      const pts = Math.abs(p.z - CY) < 0.12 && Math.abs(p.x - s.x) < 0.05 ? [[s.x, s.y]] : route({ x: p.x, y: p.z }, s);
       walk(c, pts, () => { f.face = Math.PI; c.ready = true; if (then) then(); });
     }
     // a tote (or a bag) for customer c, put on the counter at x: they come over for it, it slides across, they go
@@ -301,7 +345,7 @@
       tote.visible = true;
       tote.position.set(x, 1.0, counter.y0 + 0.22);
       standAt(c, null);
-      walk(c, route({ x: f.group.position.x }, { x, y: CY }), () => {
+      walk(c, route(posOf(c), { x, y: CY }), () => {
         f.face = Math.PI;
         totes.push({ t: 0, tote, from: tote.position.clone(), to: new T.Vector3(x, 1.0, counter.y1 - 0.2), c });
       });
@@ -390,13 +434,14 @@
     try { localStorage.removeItem('ws-orders'); } catch (e) { /* fine */ }
     let day = null, dayNo = 0;
     const dayEnv = {
-      listed: (o) => { for (const p of players) p.listed(o); },
+      listed: (o) => { if (online?.room()) for (const l of o.lines) online.trackStock(l.item); for (const p of players) p.listed(o); },
       changed: (o) => { for (const p of players) p.changed(o); tidyScreens(); },
       customer: (c) => comeIn(c),
       step: (c) => onStep(c),
       unlocked: () => { for (const p of players) { p.banner('Doors open', 'Customers will be in shortly', 2600); p.queueChanged(); } },
       closing: () => { for (const p of players) { p.banner('All done', 'Lock the front door', 6000); p.queueChanged(); } SFX.order(); },
       locked: () => { SFX.key(); },
+      stock: (it) => { if (online?.room()) online.trackStock(it); if (S.stockChange && it.mesh) S.stockChange(it); dirty = true; },
       holdSet: (code, parcel) => { if (S.hold) S.hold.set(code, parcel); dirty = true; },
       delivery: (d) => { S.delivery.show(d); for (const p of players) p.deliveryChanged(); dirty = true; },
       over: () => dayOver()
@@ -431,11 +476,12 @@
     const cartonGeo = new T.BoxGeometry(0.42, 0.3, 0.32), cartonMat = new T.MeshLambertMaterial({ color: 0xc49a64 });
     const crewEnv = {
       board: () => {
-        if (!(day && active)) return { orders: [], queue: [], bell: [], greet: [], prio: [], delivery: 0 };
+        if (!(day && active)) return { orders: [], queue: [], bell: [], greet: [], prio: [], delivery: 0, early: [] };
         const on = samPrio.filter((j) => j.on).map((j) => j.id);
         // the queue: till customers who've waited a few seconds with nobody coming to serve them
         const q = on.includes('queue') ? day.queue().filter((c) => day.t - (c.greeted || c.here || 0) > 5 && !players.some((p) => p.tillCust === c)) : [];
-        return { orders: day.listLate(), queue: q, bell: bellQueue(), greet: day.ungreeted().filter((c) => day.t - c.here > 10), prio: on, delivery: day.deliveryLeft().length };
+        return { orders: day.listLate(), queue: q, bell: bellQueue(), greet: day.ungreeted().filter((c) => day.t - c.here > 10), prio: on, delivery: day.deliveryLeft().length,
+          early: day.listEarly().filter((o) => on.includes(o.kind === 'c' ? 'hold' : 'cust')) };
       },
       paSources: () => (day ? world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i) : []),
       paTake(b, src) {
@@ -607,6 +653,15 @@
 
     /* ---------- a player: their camera, controls, scanner and till ---------- */
     // D: the player's own elements; root: where their layout's sizes go
+    // names on the badges: up to 12 letters, kept on the device
+    const defaultName = (idx) => (idx ? 'Player 2' : 'Trainee');
+    const cleanName = (n) => String(n || '').replace(/[^A-Za-z0-9 '\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 12);
+    function savedName(idx) { try { return cleanName(localStorage.getItem(idx ? 'ws-name2' : 'ws-name')) || defaultName(idx); } catch (e) { return defaultName(idx); } }
+    // each player's figure is seen by every OTHER player's camera only (camera layer 1 + their number), never their own
+    function figLayers() {
+      for (const p of players) p.fig.group.traverse((o) => { o.layers.disableAll(); for (const q of players) if (q !== p) o.layers.enable(1 + q.idx); });
+      dirty = true;
+    }
     function makePlayer(idx, D) {
       const P = { idx, id: 'p' + (idx + 1), D, kb: idx === 0 };
       const me = { x: world.start.x + idx * 0.7, y: world.start.y, yaw: world.start.yaw, pitch: -0.05, vx: 0, vy: 0, eye: 1.62, squat: false, bob: 0, speed: 0 };
@@ -615,10 +670,33 @@
       cam.layers.enable(1 + idx);
       const view = { x: 0, y: 0, w: 1, h: 1, cx: 0.5, cy: 0.5, landscape: true };
       P.me = me; P.cam = cam; P.view = view;
+      // the name on their badge (detailedfoil, 21 Nov 2026) and the figure the other player sees (navy uniform, like Sam's)
+      P.name = savedName(idx);
+      P.fig = S.makeWorker({ name: P.name, skin: idx ? 0x8d5a3b : 0xe0b394, hair: idx ? 0x1a1a1a : 0x5a3a22 });
+      P.setName = (n) => {
+        P.name = cleanName(n) || defaultName(idx);
+        S.setBadge(P.fig, P.name);
+        if (D.tag) D.tag.textContent = P.name;
+        try { localStorage.setItem(idx ? 'ws-name2' : 'ws-name', P.name); } catch (e) { /* fine */ }
+        dirty = true;
+      };
+      if (D.tag) D.tag.textContent = P.name;
+      const figB = { x: me.x, y: me.y, yaw: 0, speed: 0, turning: 0, lookT: 0, beam: 0 };
+      let lastYaw = me.yaw;
+      P.poseFig = (dt) => {
+        figB.x = me.x; figB.y = me.y; figB.yaw = me.yaw + Math.PI; figB.speed = me.speed;
+        figB.turning = Math.abs(me.yaw - lastYaw) / Math.max(dt, 0.001); lastYaw = me.yaw;
+        figB.kneeling = me.squat; figB.walking = me.speed > 0.15;
+        figB.carry = state === 'deliver' || state === 'hold' ? 'tote' : state === 'pato' || state === 'paqty' ? 'box' : null;
+        figB.atTill = !!(till && till.isOpen()); figB.typing = figB.atTill && Math.random() < 0.5;
+        S.poseWorker(P.fig, figB, dt);
+        P.fig.group.position.y = me.step ? STEP : 0;
+      };
 
       /* ---------- layout: the view's centre is the middle of what the scanner doesn't cover ---------- */
       P.layout = function (rect) {
-        const vw = Math.max(1, rect.w), vh = Math.max(1, rect.h), land = vw >= vh;
+        // landscape unless clearly taller than wide (a split screen half on a computer still counts as landscape)
+        const vw = Math.max(1, rect.w), vh = Math.max(1, rect.h), land = vw >= vh * 0.75;
         let sch, scw;
         if (land) { sch = Math.min(vh - 12, 700); scw = sch * 0.53; if (scw > vw * 0.42) { scw = vw * 0.42; sch = scw / 0.53; } }
         else { sch = Math.min(vh * 0.5, 540); scw = sch * 0.53; if (scw > vw * 0.6) { scw = vw * 0.6; sch = scw / 0.53; } }
@@ -663,7 +741,8 @@
         let len = Math.hypot(f, s);
         if (len > 1) { f /= len; s /= len; len = 1; }
         const jog = running || Math.hypot(stickIn.x, stickIn.y) > 0.93;
-        const top = me.squat ? 0.85 : jog ? 3.1 : 1.75;
+        if (me.step && len > 0.3) toggleStep(); // walking steps you down
+        const top = me.step ? 0 : me.squat ? 0.85 : jog ? 3.1 : 1.75;
         const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);
         const tx = (-sy * f + cy * s) * top, ty = (-cy * f - sy * s) * top;
         const k = Math.min(1, dt * (len ? 9 : 12));
@@ -676,8 +755,12 @@
           me.bob += me.speed * dt * 2.3;
           moved = true;
         } else { me.vx = me.vy = 0; me.speed = 0; }
-        const want = me.squat ? 0.95 : 1.62;
+        const want = (me.squat ? 0.95 : 1.62) + (me.step ? STEP : 0);
         if (Math.abs(me.eye - want) > 0.002) { me.eye += (want - me.eye) * Math.min(1, dt * 11); moved = true; }
+        if (P.stool) { // out of the aisle it came into: it goes back to where it lives
+          if (Crew.aisleAt(world, me.x, me.y)) P.stoolAisle = true; else if (P.stoolAisle && !me.step) dropStool(true);
+          if (P.stool && moved) placeStool();
+        }
         if (moved) applyCam();
         return moved;
       }
@@ -901,6 +984,7 @@
         if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
+        if (needsStep(h.loc) && !me.step) { say('Too high: use a kick stool', 'warn'); toast(P.stool ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
         const tr = S.trayOf(h.loc);
         if (World.sameSpot(h.loc, carton.loc)) {
           if (state === 'paqty') { say('Press Enter', 'warn'); SFX.miss(); return; }
@@ -981,6 +1065,7 @@
         if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
+        if (needsStep(h.loc) && !me.step) { say('Too high: use a kick stool', 'warn'); toast(P.stool ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
         const ln = order.lines[cur], tr = S.trayOf(h.loc);
         S.setBox(S.aimBox, S.locBox(h.loc), 0.012); S.aimBox.visible = true;
         if (World.sameSpot(h.loc, ln.loc)) {
@@ -1213,7 +1298,7 @@
       const flyers = [];
       const flyGeo = new T.BoxGeometry(1, 1, 1);
       function flyToTote(ln) {
-        const it = ln.item, b = it.box, f = it.loc.face;
+        const it = ln.item, b = it.box, f = ln.loc.face;
         const n = Math.min(3, ln.qty);
         for (let k = 0; k < n; k++) {
           const m = new T.Mesh(flyGeo, new T.MeshLambertMaterial({ color: it.colour }));
@@ -1315,7 +1400,7 @@
       /* ---------- the till ---------- */
       let nearTill = null;
       P.tillCust = null;
-      let greetC = null, doorOn = null, bellOn = false, pcOn = false, aimedBox = null;
+      let greetC = null, doorOn = null, bellOn = false, pcOn = false, stoolOn = null, aimedBox = null;
       // what's in the middle of your view that you could use: a till, a customer to greet, the door, the service bell
       // (detailedfoil, 20 Nov 2026: "easy to accidentally do stuff around tills": only what you're looking at, with an outline)
       function aimAt(x, y, z) {
@@ -1325,9 +1410,9 @@
       }
       function checkTill() { // the thing you're looking at: a till behind the counter (the one by the gap is Sam's), the door, a customer to greet, the bell
         if (till && till.isOpen()) return; // at a till: keep it
-        let best = null, g = null, dr = null, br = false, pcx = false, box = null, bestAng = 9;
+        let best = null, g = null, dr = null, br = false, pcx = false, st = null, box = null, bestAng = 9;
         const behind = me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75;
-        const take = (a, lim, fn, b) => { if (a.ang < lim && a.ang < bestAng) { bestAng = a.ang; best = null; g = null; dr = null; br = false; pcx = false; fn(); box = b; } };
+        const take = (a, lim, fn, b) => { if (a.ang < lim && a.ang < bestAng) { bestAng = a.ang; best = null; g = null; dr = null; br = false; pcx = false; st = null; fn(); box = b; } };
         if (active) {
           if (behind) {
             for (const t of tills) {
@@ -1336,7 +1421,8 @@
               if (a.d < 2.4) take(a, 0.16, () => { best = t; }, { x: tillX(t), y: (t.y0 + t.y1) / 2, z0: 1.0, z1: 1.34, w: t.x1 - t.x0, d: t.y1 - t.y0 });
             }
           }
-          if (day && behind && me.x > counter.x0 - 0.4 && me.x < counter.x1 + 0.4) {
+          // Greet only from the till area: within about 1.6 m (along the counter) of one of the tills (detailedfoil, 21 Nov 2026)
+          if (day && behind && tills.some((t) => Math.abs(tillX(t) - me.x) < 1.6)) {
             for (const c of day.ungreeted()) {
               if (!c.fig) continue;
               const px = c.fig.group.position.x, py = c.fig.group.position.z, a = aimAt(px, py, 1.2);
@@ -1352,19 +1438,26 @@
             a.ang *= 0.4; // looking at the bell wins over a till behind it
             if (a.d < 2.8) take(a, 0.14, () => { br = true; }, { x: world.bell.x, y: world.bell.y - 0.02, z0: 0.46, z1: 0.8, w: 0.5, d: 0.1 });
           }
+          if (!P.stool) { // a red kick stool at the end of a row, by its yellow and black guard
+            for (const s of world.stools || []) {
+              if (s.by) continue;
+              const a = aimAt(s.x, s.y, 0.25);
+              if (a.d < 2.0) take(a, 0.3, () => { st = s; }, { x: s.x, y: s.y, z0: 0, z1: 0.72, w: 0.68, d: 0.68 });
+            }
+          }
           { // the manager's PC in the office
             const q = world.pc, a = aimAt(q.x, q.y, 1.05);
             if (!guest() && a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
           }
         }
         aimedBox = box;
-        const key = (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '');
-        const old = (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '');
-        nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx;
+        const key = (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '') + (st ? 's' + st.id : '');
+        const old = (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '') + (stoolOn ? 's' + stoolOn.id : '');
+        nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx; stoolOn = st;
         if (key === old) return;
         dirty = true;
-        D.tillBtn.hidden = !(nearTill || greetC || doorOn || bellOn || pcOn) || !active;
-        D.tillBtn.firstChild.nodeValue = doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : pcOn ? 'Use PC' : 'Ring bell';
+        D.tillBtn.hidden = !(nearTill || greetC || doorOn || bellOn || pcOn || stoolOn) || !active;
+        D.tillBtn.firstChild.nodeValue = doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : pcOn ? 'Use PC' : stoolOn ? 'Take stool' : 'Ring bell';
         renderScanner();
       }
       // the button, or Scan: lock the door, say hello to the customer, or open the till
@@ -1382,10 +1475,40 @@
           greetC = null; checkTill();
           return true;
         }
+        if (stoolOn) { takeStool(); return true; }
         if (bellOn) { if (guest()) remote(() => online.bell()).then(msg => { if (msg) toast(msg); }); else ringBell(P); return true; }
         if (pcOn) { openPc(); return true; }
         return false;
       }
+      /* ---------- kick stools (detailedfoil, 21 Nov 2026) ---------- */
+      // a red stool at the end of every row: Take stool, carry it into an aisle, Step up to reach the high shelves (AA shelf 13 up,
+      // BA 7 up, top BB level), Step down. Walk out of the aisle and it goes back to where it lives. Sam doesn't use them.
+      const STEP = 1.05; // 2.5 times the old 0.42 (detailedfoil, 21 Nov 2026), whatever the stool model's height
+      // a stool is only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level (detailedfoil, 21 Nov 2026)
+      const needsStep = (loc) => { const k = loc.face.kind, n = loc.shelf.no; return k === 'AA' ? n >= 13 : k === 'BA' ? n >= 7 : n >= loc.face.shelves.length; };
+      function placeStool() {
+        const s = P.stool; if (!s) return;
+        const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);
+        if (me.step) S.setStool(s.id, me.x, me.y); else S.setStool(s.id, me.x + cy * 0.75 + sy * 0.1, me.y - sy * 0.75 + cy * 0.1);
+      }
+      function stepBtnSync() { D.stepBtn.hidden = !P.stool || !active; D.stepBtn.setAttribute('aria-pressed', String(!!me.step)); D.stepBtn.firstChild.textContent = me.step ? 'Down' : 'Step'; }
+      function takeStool() {
+        const s = stoolOn; if (!s || s.by || P.stool) return;
+        s.by = P.id; P.stool = s; P.stoolAisle = false; stoolOn = null;
+        SFX.key(); toast('Kick stool: take it into an aisle, Step up for high shelves', 'good'); placeStool(); stepBtnSync(); D.tillBtn.hidden = true; checkTill(); dirty = true;
+      }
+      function dropStool(msg) {
+        const s = P.stool; if (!s) return;
+        me.step = false; s.by = null; P.stool = null; P.stoolAisle = false;
+        S.setStool(s.id, s.home.x, s.home.y); stepBtnSync(); dirty = true;
+        if (msg) toast('Stool put back', 'dim');
+      }
+      function toggleStep() {
+        if (!P.stool) { toast('Take a kick stool first (at the end of a row)', 'warn'); return; }
+        if (me.squat) toggleSquat();
+        me.step = !me.step; me.vx = me.vy = 0; SFX.key(); placeStool(); stepBtnSync(); dirty = true;
+      }
+      P.toggleStep = toggleStep; P.stoolSync = stepBtnSync;
       /* ---------- the manager's PC: what Sam does first (detailedfoil, 20 Nov 2026) ---------- */
       const pc = { open: false, sel: 0, el: null };
       function pcBuild() {
@@ -1509,7 +1632,7 @@
       function tillComplete(info) {
         const c = P.tillCust;
         if (!c || !day) return null;
-        if (guest()) return remote(() => day.tillDone(c, info.lines)).then(o => o ? paid(c, o) : null);
+        if (guest()) return remote(() => day.tillDone(c, info)).then(o => o ? paid(c, o) : null);
         return paid(c, day.tillDone(c, info.lines, { till: c.at || nearTill }));
       }
       function paid(c, o) {
@@ -1551,7 +1674,7 @@
 
       const till = window.ShiftTillUI.create({
         el: D.till, world, Till, touch,
-        sfx: (n) => { const f = { key: SFX.key, beep: SFX.scan, good: SFX.pick, bad: SFX.bad, talk: SFX.talk, approved: SFX.approved, drawer: SFX.drawer, done: SFX.chime }[n]; if (f) f(); },
+        sfx: (n) => { const f = { key: SFX.key, beep: SFX.scan, good: SFX.pick, bad: SFX.bad, talk: SFX.talk, approved: SFX.approved, drawer: SFX.drawer, coin: SFX.coin, done: SFX.chime }[n]; if (f) f(); },
         onClose: () => closeTill(),
         onComplete: (info) => tillComplete(info),
         onSpeech: (line) => speak(line),
@@ -1631,6 +1754,7 @@
 
       /* ---------- squat ---------- */
       function toggleSquat() {
+        if (me.step) return; // you can't squat on the stool
         me.squat = !me.squat;
         D.squatBtn.setAttribute('aria-pressed', String(me.squat));
         D.squatBtn.firstChild.textContent = me.squat ? 'Stand' : 'Squat';
@@ -1657,6 +1781,7 @@
       D.scPad.querySelectorAll('button').forEach((b) => press(b, () => { const k = b.dataset.k; if (k === 'back') back(); else if (k === 'enter') enter(); else digit(k); }));
       D.scRows.addEventListener('pointerdown', (e) => { const li = e.target.closest('li[data-i]'); if (!li) return; e.preventDefault(); e.stopPropagation(); initAudio(); tapRow(+li.dataset.i); });
       press(D.squatBtn, () => toggleSquat());
+      press(D.stepBtn, () => toggleStep());
       D.scanner.addEventListener('pointerdown', (e) => e.stopPropagation());
       D.scScreen.addEventListener('scroll', (e) => { e.target.scrollTop = 0; e.target.scrollLeft = 0; }); // never scrolled (older browsers without overflow: clip)
 
@@ -1724,6 +1849,7 @@
         if (hit(7)) { initAudio(); const c = centreNdc(); scanAt(c[0], c[1]); }
         if (hit(1)) back();
         if (hit(2)) toggleSquat();
+        if (hit(4)) toggleStep();
         if (hit(3)) useHint();
         if (hit(0)) { SFX.key(); enter(); }
         if (hit(9)) { SFX.key(); menu(true); }
@@ -1736,6 +1862,7 @@
       P.playing = () => active && !online?.frozen() && !online?.panel() && $('helpCover').hidden && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen()) && !pc.open;
       P.update = function (dt, now) {
         let changed = false;
+        if (players.length > 1) { P.poseFig(dt); changed = changed || me.speed > 0.01; }
         if (P.playing()) {
           if (stepMove(dt)) changed = true;
           checkCounter();
@@ -1760,7 +1887,7 @@
       };
       P.afterRender = (now) => { placeSay(); placeBubs(now); };
       P.start = () => { if (state === 'idle') state = day && day.over ? 'end' : 'list'; renderScanner(); };
-      P.show = () => { D.scanner.hidden = false; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; };
+      P.show = () => { D.scanner.hidden = false; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; stepBtnSync(); };
       // things the controls and the tests use
       Object.assign(P, { banner, scanAt, enter, back, page, digit, useHint, toggleSquat, openTill, closeTill, countOne, confirmQty, handOver, hitAt, holdHit, scanHold, scanPut, tapRow,
         state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
@@ -1816,14 +1943,25 @@
     const me1 = makePlayer(0, grab($('pv1')));
     const D1 = me1.D;
     players.push(me1);
+    figLayers();
     const me = me1.me;
+    // the game fills what's left of the screen: when a phone's own keyboard comes up, everything shrinks to the space
+    // above it (visualViewport) instead of hiding under it (stage 6, detailedfoil, 21 Nov 2026). Any way up, any time.
+    let stageH = 1;
     function layout() {
-      const vw = Math.max(1, window.innerWidth), vh = Math.max(1, window.innerHeight);
+      const vv = window.visualViewport;
+      const vw = Math.max(1, Math.round(vv ? vv.width : window.innerWidth)), vh = Math.max(1, Math.round(vv ? vv.height : window.innerHeight));
+      stage.style.left = Math.round(vv ? vv.offsetLeft : 0) + 'px'; stage.style.top = Math.round(vv ? vv.offsetTop : 0) + 'px';
+      stage.style.width = vw + 'px'; stage.style.height = vh + 'px';
+      stageH = vh;
       renderer.setSize(vw, vh, false);
-      if (split && players[1]) { const h = Math.floor(vh / 2); players[0].layout({ x: 0, y: 0, w: vw, h }); players[1].layout({ x: 0, y: h, w: vw, h: vh - h }); }
+      // split screen: player 1 on the left, player 2 on the right, each with their scanner in their own bottom right corner
+      if (split && players[1]) { const w = Math.floor(vw / 2); players[0].layout({ x: 0, y: 0, w, h: vh }); players[1].layout({ x: w, y: 0, w: vw - w, h: vh }); }
       else me1.layout({ x: 0, y: 0, w: vw, h: vh });
     }
-    // player 2 (split screen): a copy of player 1's things, in the bottom half
+    let layoutQ = false;
+    const layoutSoon = () => { if (layoutQ) return; layoutQ = true; requestAnimationFrame(() => { layoutQ = false; layout(); }); };
+    // player 2 (split screen): a copy of player 1's things, in the right-hand half
     function addPlayer2() {
       const root = pvCopy.cloneNode(true);
       root.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
@@ -1832,13 +1970,16 @@
       $('pv1').after(root);
       const p2 = makePlayer(1, grab(root));
       players.push(p2);
+      figLayers();
+      root.querySelector('[data-el="tag"]').textContent = p2.name;
       p2.render();
       return p2;
     }
     // who the keyboard and mouse belong to: player 1, or in split screen whoever joined with them
     const kbPlayer = () => (split ? players.find((p) => p.kb) || null : me1);
-    window.addEventListener('resize', layout);
+    window.addEventListener('resize', layoutSoon);
     window.addEventListener('orientationchange', () => setTimeout(layout, 250));
+    if (window.visualViewport) { window.visualViewport.addEventListener('resize', layoutSoon); window.visualViewport.addEventListener('scroll', layoutSoon); }
     layout();
 
     /* ---------- controls: the stick (left thumb), looking (drag), tapping to scan ---------- */
@@ -1917,6 +2058,7 @@
     const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', KeyD: 'r', ArrowLeft: 'tl', ArrowRight: 'tr', KeyQ: 'tl', KeyE: 'tr' };
     window.addEventListener('keydown', (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey || online?.panel()) return;
+      if (joining && e.target && e.target.tagName === 'INPUT') { if (e.key === 'Enter') e.target.blur(); return; } // typing a name
       if (joining) { if (e.key === 'Escape') { leaveJoin(); return; } if (joined.length >= 2 && e.key === 'Enter') { startSplit(); e.preventDefault(); return; } join({ kind: 'kb' }); e.preventDefault(); return; }
       const p = kbPlayer();
       if (!p) return;
@@ -1938,6 +2080,7 @@
       switch (e.code) {
         case 'KeyF': { const c = p.centre(); p.scanAt(c[0], c[1]); e.preventDefault(); break; }
         case 'KeyC': p.toggleSquat(); break;
+        case 'KeyV': p.toggleStep(); break;
         case 'KeyH': case 'F4': p.useHint(); e.preventDefault(); break;
         case 'Enter': case 'NumpadEnter': case 'Space': SFX.key(); p.enter(); e.preventDefault(); break;
         case 'Backspace': p.back(); e.preventDefault(); break;
@@ -1979,7 +2122,7 @@
         box.replaceChildren();
         for (const p of players) {
           const s = day.summary(p.id), st = p.stats, el = document.createElement('div');
-          if (split) { const h = document.createElement('h2'); h.textContent = p.idx ? 'Player 2 (bottom)' : 'Player 1 (top)'; el.appendChild(h); }
+          if (split) { const h = document.createElement('h2'); h.textContent = p.idx ? 'Player 2 (right)' : 'Player 1 (left)'; el.appendChild(h); }
           const rows = document.createElement('div'); el.appendChild(rows);
           statsHtml(rows, [[s.picks, 'of the ' + s.total + ' picks'], [st.tills - (st.tillsAtStart || 0), 'till orders served'], [s.fetched, 'bags from holding'], [s.delivery, 'cartons put away'], [st.lines - (st.linesAtStart || 0), 'lines picked'], [st.perfect - (st.perfectAtStart || 0), 'perfect picks'], [Math.max(1, Math.round(s.minutes)) + ' min', 'the day took']]);
           box.appendChild(el);
@@ -2002,18 +2145,13 @@
       try {
         if (on && !document.fullscreenElement) {
           const p = (de.requestFullscreen || de.webkitRequestFullscreen).call(de, { navigationUI: 'hide' });
-          if (p && p.then) p.then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* fine */ } }).catch(() => {});
+          if (p && p.catch) p.catch(() => {}); // no orientation lock: turn the phone either way at any time (stage 6)
         } else if (!on && document.fullscreenElement) document.exitFullscreen();
       } catch (e) { /* not allowed here */ }
     }
     $('fullBtn').addEventListener('click', () => fullScreen(!document.fullscreenElement));
     const standalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
-    // the rotate prompt (phones held upright)
-    const rot = $('rotate');
-    let upright = false;
-    try { upright = sessionStorage.getItem('ws-upright') === '1'; } catch (e) { /* fine */ }
-    rot.classList.toggle('ask', touch && !upright);
-    $('portraitBtn').addEventListener('click', () => { upright = true; rot.classList.remove('ask'); try { sessionStorage.setItem('ws-upright', '1'); } catch (e) { /* fine */ } });
+    // (the "turn your phone sideways" prompt was taken off in stage 6: upright is easier for typing at the till)
 
     function ensureLocal() {
       if (day) return;
@@ -2043,9 +2181,9 @@
     }
     $('startBtn').addEventListener('click', () => { ensureLocal(); beginShift(); });
 
-    /* ---------- two players (computers only): split screen, one above the other ---------- */
+    /* ---------- two players (computers only): split screen, side by side ---------- */
     // Each joins with a press: A on a controller, or any key or a click for the keyboard and mouse. The first to join
-    // plays in the top half. Both share the day's list, Sam and the tills; each has their own scanner and till screen.
+    // plays on the left. Both share the day's list, Sam and the tills; each has their own scanner and till screen.
     let joining = false;
     const joined = [];
     $('twoBtn').hidden = touch || window.innerWidth < 900; // computers only
@@ -2054,6 +2192,7 @@
         const j = joined[i], el = $(id);
         el.classList.toggle('on', !!j);
         el.querySelector('span').textContent = !j ? 'Waiting for a player' : j.kind === 'kb' ? 'Keyboard and mouse' : 'Controller ' + (j.pad + 1);
+        const nm = el.querySelector('input'); nm.hidden = !j; if (j && !nm.value) nm.value = savedName(i);
       });
       $('joinGo').disabled = joined.length < 2;
       $('joinGo').textContent = joined.length < 2 ? 'Start shift' : 'Start shift (A or Enter)';
@@ -2068,7 +2207,17 @@
     $('twoBtn').addEventListener('click', (e) => { e.stopPropagation(); joining = true; joined.length = 0; joinPrev.clear(); for (const gp of padList()) if (gp) joinPrev.set(gp.index, gp.buttons.map((b) => !!(b && (b.pressed || b.value > 0.5)))); renderJoin(); $('startCover').hidden = true; $('joinCover').hidden = false; });
     $('joinBack').addEventListener('click', (e) => { e.stopPropagation(); leaveJoin(); });
     $('joinGo').addEventListener('click', (e) => { e.stopPropagation(); if (joined.length >= 2) startSplit(); });
-    $('joinCover').addEventListener('pointerdown', (e) => { if (!e.target.closest('button')) join({ kind: 'kb' }); });
+    $('joinCover').addEventListener('pointerdown', (e) => { if (!e.target.closest('button, input')) join({ kind: 'kb' }); });
+    // names: player 1's on the start screen, both on the join screen (Enter or clicking away keeps it)
+    const nameIn = $('nameIn');
+    nameIn.value = me1.name === defaultName(0) ? '' : me1.name;
+    nameIn.addEventListener('input', () => me1.setName(nameIn.value));
+    nameIn.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') nameIn.blur(); });
+    document.querySelectorAll('.ws-join input').forEach((inp, i) => inp.addEventListener('input', () => {
+      const n = cleanName(inp.value) || defaultName(i);
+      if (players[i]) players[i].setName(n); else try { localStorage.setItem(i ? 'ws-name2' : 'ws-name', n); } catch (e) { /* fine */ }
+      if (i === 0) nameIn.value = inp.value;
+    }));
     function startSplit() {
       if (split || joined.length < 2) return;
       ensureLocal(); joining = false; split = true;
@@ -2133,12 +2282,43 @@
       if (updateTotes(dt)) changed = true;
       if (active && !guest() && updateCrew(dt)) changed = true;
       if (online && online.animate(dt)) changed = true;
+      if (updateCCTV(dt)) changed = true;
       return changed;
+    }
+    /* ---------- the CCTV monitor (detailedfoil, 21 Nov 2026; cctv.js draws it) ---------- */
+    const cctvMon = S.cctv();
+    const cctv = cctvMon && window.ShiftCCTV ? window.ShiftCCTV.create({ canvas: cctvMon.canvas, world, zones: ZONES }) : null;
+    let cctvT = 0, cctvSig = '';
+    function cctvPeople() {
+      const out = [];
+      for (const f of figs) {
+        if (f.free || !f.c || !f.group.visible) continue;
+        const c = f.c, sp = c.spot, p = f.group.position;
+        const state = sp && sp.queue ? (c.state === 'greet' ? 'greet' : 'queue') : sp && sp.wait ? 'wait' : sp && sp.till ? (c.state === 'greet' ? 'greet' : 'till') : 'walk';
+        out.push({ x: p.x, y: p.z, state, colour: '#' + f.parts.body.color.getHexString() });
+      }
+      for (const p of players) out.push({ x: p.me.x, y: p.me.y, staff: true, label: p.name });
+      for (const b of crew) if (b.fig && b.fig.group.visible) out.push({ x: b.x, y: b.y, staff: true, label: b.name });
+      return out;
+    }
+    function updateCCTV(dt) {
+      if (!cctv) return false;
+      cctvT -= dt; if (cctvT > 0) return false;
+      cctvT = 0.25;
+      const o = cctvMon.obj, near = players.some((p) => Math.hypot(p.me.x - o.x0, p.me.y - (o.y0 + o.y1) / 2) < 16);
+      if (!near && cctvSig) return false; // nobody close enough to see it: it's drawn again when someone is
+      const people = cctvPeople(), now = new Date();
+      const sig = now.getSeconds() + '|' + people.map((p) => Math.round(p.x * 8) + ',' + Math.round(p.y * 8) + p.state).join(';');
+      if (sig === cctvSig) return false;
+      cctvSig = near ? sig : 'far';
+      cctv.draw({ people, now });
+      cctvMon.tex.needsUpdate = true;
+      return true;
     }
 
     function drawViews() {
       if (!split || players.length < 2) { me1.beforeRender(); renderer.setScissorTest(false); renderer.render(scene, me1.cam); return; }
-      const vh = Math.max(1, window.innerHeight);
+      const vh = stageH;
       renderer.setScissorTest(true);
       for (const p of players) {
         const v = p.view, y = vh - v.y - v.h; // the graphics chip counts from the bottom
@@ -2177,7 +2357,7 @@
     /* ---------- warm up behind the loading bar, then show the start screen ---------- */
     if (onlineFlag && window.ShiftOnlineGame && window.ShiftOnline && window.ShiftOnlineDay) {
       online = window.ShiftOnlineGame.attach({
-        $, world, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
+        $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
         ringBell, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, dirty: () => { dirty = true; },
@@ -2200,7 +2380,7 @@
     $('startCover').hidden = false;
     me1.render();
     requestAnimationFrame(frame);
-    window.__shift = { prio: () => samPrio, bell: () => bellCust, world, S, me, cam: me1.cam, renderer, players, crew, figs, tills, ALEX_TILL, WAIT, SPOTS,
+    window.__shift = { prio: () => samPrio, bell: () => bellCust, world, S, me, cam: me1.cam, renderer, players, crew, figs, tills, ALEX_TILL, WAIT, SPOTS, QUEUE,
       day: () => day, newDay, scanAt: me1.scanAt, state: me1.state, order: me1.order, full: me1.full, sel: me1.sel, applyCam: me1.applyCam, hitAt: me1.hitAt, holdHit: me1.holdHit,
       scanHold: me1.scanHold, scanPut: me1.scanPut, spotBox, countOne: me1.countOne, confirmQty: me1.confirmQty, enter: me1.enter, back: me1.back, page: me1.page, tapRow: me1.tapRow,
       handOver: me1.handOver, useHint: me1.useHint, toggleSquat: me1.toggleSquat, layout, till: me1.till, openTill: me1.openTill, closeTill: me1.closeTill, nearTill: me1.nearTill,

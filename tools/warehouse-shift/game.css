@@ -45,13 +45,13 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-bub.crew{background:#fffdf2f0}.ws-bub.crew::after{border-top-color:#fffdf2f0}
 @media (max-height:480px){.ws-bub{font-size:11.5px;padding:5px 8px;max-width:min(230px,38vw)}}
 
-/* each player's own things (one container each; split screen puts player 1 in the top half, player 2 below) */
+/* each player's own things (one container each; split screen puts player 1 on the left, player 2 on the right) */
 .ws-pv{position:absolute;inset:0;pointer-events:none}
 .ws-pv .sc,.ws-pv .tl,.ws-pv .ws-squat,.ws-pv .ws-tillbtn,.ws-pv .ws-chips{pointer-events:auto}
 .ws-chips{position:absolute;top:max(8px,env(safe-area-inset-top));left:calc(max(8px,env(safe-area-inset-left)) + 164px);display:flex;gap:6px;z-index:5}
 .ws-stage.split .ws-pv{overflow:hidden}
-.ws-stage.split #pv1{bottom:50%}
-.ws-stage.split .ws-pv.p2{top:50%;border-top:3px solid #0d1117}
+.ws-stage.split #pv1{right:50%}
+.ws-stage.split .ws-pv.p2{left:50%;border-left:3px solid #0d1117}
 .ws-stage.split .ws-pv.p2 .ws-chips{left:max(8px,env(safe-area-inset-left))}
 .ws-tag{position:absolute;left:max(8px,env(safe-area-inset-left));top:max(8px,env(safe-area-inset-top));z-index:5;padding:4px 10px;border-radius:10px;background:#0b1022c0;border:1px solid #ffffff30;font:800 13px system-ui,sans-serif;color:#ffd34d;pointer-events:none}
 .ws-stage.split #pv1 .ws-tag{left:auto;right:calc(var(--scw,200px) + 18px)}
@@ -81,6 +81,10 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-squat small{display:block;font-weight:600;font-size:10px;opacity:.75}
 @media (hover:hover) and (pointer:fine){.ws-stickzone{display:none}.ws-squat{width:64px;height:64px}}
 .portrait .ws-squat{right:max(10px,env(safe-area-inset-right));bottom:calc(var(--sch,380px) + 16px)}
+/* Step (the kick stool) sits just above Squat */
+.ws-squat.ws-step{bottom:calc(max(14px,env(safe-area-inset-bottom)) + 82px)}
+@media (hover:hover) and (pointer:fine){.ws-squat.ws-step{bottom:calc(max(14px,env(safe-area-inset-bottom)) + 74px)}}
+.portrait .ws-squat.ws-step{bottom:calc(var(--sch,380px) + 98px)}
 /* use the till: shows when you're behind the counter at a till */
 .ws-tillbtn{position:absolute;z-index:3;right:calc(var(--scw,0px) + 100px);bottom:max(14px,env(safe-area-inset-bottom));min-width:88px;height:72px;padding:0 14px;border-radius:18px;
   border:2px solid #ffd34d;background:#1e3ff0e8;color:#fff;font:800 15px system-ui,sans-serif;cursor:pointer;touch-action:none;box-shadow:0 4px 14px #0008;animation:wsTill 1.6s ease-in-out infinite}
@@ -116,10 +120,6 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 #helpCover,#endCover{background:#0d1117c4;backdrop-filter:blur(3px)}
 #startCover{background:linear-gradient(180deg,#0d1117aa 0%,#0d111766 45%,#0d1117cc 100%);backdrop-filter:blur(2px)}
 #startCover .ws-card{background:#151b26ee}
-.ws-rotate{position:absolute;inset:0;z-index:30;display:none;place-items:center;text-align:center;padding:24px;background:#0d1117f2}
-.ws-rotate svg{width:84px;height:84px;margin-bottom:10px;animation:wsTurn 2.4s ease-in-out infinite}
-@keyframes wsTurn{0%,30%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
-@media (orientation:portrait) and (pointer:coarse){.ws-rotate.ask{display:grid}}
 .ws-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 4px}
 .ws-stats div{padding:10px 6px;border-radius:12px;background:#1f2633;text-align:center}
 .ws-stats b{display:block;font-size:1.35rem;color:#fff}
@@ -225,6 +225,10 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-join div{padding:14px 10px;border-radius:14px;background:#1f2633;border:2px dashed #3a4558;text-align:center;min-height:86px;display:grid;place-items:center}
 .ws-join div.on{border:2px solid #ffd34d;background:#2a2f1f}
 .ws-join b{display:block;font-size:1.05rem;color:#fff}
+.ws-join input,.ws-name input{width:100%;max-width:220px;min-height:38px;margin-top:6px;padding:0 10px;border:1px solid #3a4558;border-radius:10px;background:#0f141c;color:#fff;font:700 1rem system-ui,sans-serif;text-align:center}
+.ws-join input[hidden]{display:none}
+.ws-name{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 0;color:#c3cede;font:700 .9rem system-ui,sans-serif}
+.ws-name input{margin:0;flex:1 1 140px;text-align:left;text-transform:uppercase}
 .ws-join span{font-size:.85rem;color:#c3cede}
 /* the manager's PC: Sam's jobs (detailedfoil, 20 Nov 2026) */
 .ws-pc{position:absolute;inset:0;z-index:40;pointer-events:auto;touch-action:manipulation;display:flex;align-items:center;justify-content:center;background:rgba(6,12,24,.55);padding:12px}

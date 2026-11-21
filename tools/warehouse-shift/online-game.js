@@ -4,6 +4,7 @@
   function attach(g) {
     const { $, world, Day, S, p, tills, crew } = g;
     const wire = root.ShiftOnlineDay, items = new Map(world.items.map(it => [it.code, it]));
+    const stockItems = new Set();
     const peers = new Map(), models = new Map(), locks = new Map(), progress = new Map();
     let net, replica, mirroredSam, epoch, started = false, roomSize = 0;
     let openShelves = new Set();
@@ -11,12 +12,12 @@
       const open = new Set();
       const add = sku => {
         const it = items.get(sku);
-        if (it) open.add(S.trayOf(it.loc) || it);
+        if (it?.loc) open.add(S.trayOf(it.loc) || it);
       };
       for (const peer of peers.values()) add(peer.shelf);
       if (guest() && mirroredSam?.fig.group.visible) add(mirroredSam.openSku);
       const toggle = (shelf, on) => {
-        if (shelf.loc) { shelf.netPull = on ? 0.09 : 0; g.pulling.add(shelf); }
+        if (items.has(shelf.code)) { shelf.netPull = on ? 0.09 : 0; g.pulling.add(shelf); }
         else shelf.netOpen = on;
       };
       for (const shelf of open) if (!openShelves.has(shelf)) toggle(shelf, true);
@@ -34,7 +35,7 @@
     function release(slot) {
       const who = 'p' + slot;
       locks.delete(who); progress.delete(who); peers.delete(slot);
-      g.day()?.release(who);
+      if (g.day()) wire.release(g.day(), who);
     }
     function frame() {
       const b = crew[0];
@@ -55,7 +56,7 @@
       };
     }
     function snapshot() {
-      return { epoch: g.epoch(), day: wire.snapshot(g.day(), tills), locks: [...locks], screens: tills.map(t => g.screenOf(t)?.id || null) };
+      return { epoch: g.epoch(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], screens: tills.map(t => g.screenOf(t)?.id || null) };
     }
     function apply(s, reset) {
       const newDay = epoch !== s.epoch;
@@ -63,7 +64,7 @@
       const before = reset ? null : new Map(replica.orders.map(o => [o.id, o.status]));
       if (reset) {
         p.resetOnline(); g.clearDayView();
-        replica = new wire.DayProxy(world, Day.Day, tills, (op, args) => net.request(op, args));
+        replica = new wire.DayProxy(world, Day.Day, tills, (op, args) => net.request(op, args), g.World, S.stockChange);
         if (newDay && epoch != null) g.resetStats();
       }
       epoch = s.epoch; replica.apply(s.day); g.setDay(replica, epoch);
@@ -146,6 +147,8 @@
       const who = 'p' + slot, pos = peers.get(slot), day = g.day(), till = () => tills[locks.get(who)];
       return wire.command(day, who, op, args, {
         pose: pos, progress, items, screen: g.screen, doorX: g.doorX, till,
+        canGreet: () => pos.y < world.counter.y0 + 0.05 && pos.y > world.counter.y0 - 1.75 &&
+          tills.some(t => Math.abs((t.x0 + t.x1) / 2 - pos.x) < 1.6),
         give(o) { const tote = S.makeTote(o.lines.map(l => l.item.colour)); if (o.cust?.fig) g.give(o.cust, tote, g.handX(pos.x)); else S.dropTote(tote); },
         open: i => Number.isInteger(i) && open(who, i, pos),
         close() { locks.delete(who); const c = day.customers.find(c => c.by === who && c.state === 'serving'); if (c) day.unserve(c); return true; },
@@ -214,7 +217,7 @@
     $('leaveRoom').onclick = () => { if (net && !net.ended) net.leave(); location.reload(); };
     document.addEventListener('visibilitychange', () => net?.visibility());
     return {
-      guest, peers, occupied, room: () => net, animate, sam: () => mirroredSam?.fig.group.visible ? mirroredSam : null,
+      trackStock: item => stockItems.add(item), guest, peers, occupied, room: () => net, animate, sam: () => mirroredSam?.fig.group.visible ? mirroredSam : null,
       frozen: () => !!net && (!net.ready || net.paused), panel: () => !panel.hidden,
       open: t => guest() ? net.request('tillOpen', { till: tills.indexOf(t) }) : open(p.id, tills.indexOf(t), p.me),
       close: () => guest() ? net.request('tillClose', {}) : locks.delete(p.id),

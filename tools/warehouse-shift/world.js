@@ -263,32 +263,31 @@
       [2.15, 17.99, 2.31, 18.15], [2.15, 18.9, 2.31, 19.15], [2.15, 19.95, 2.31, 21.2]
     ].map(function (w) { return [w[0], w[1] + SY, w[2], w[3] + SY]; });
     // the shop: goods in on its left, Trade+ on its right, the office tucked between goods in and the shop
-    walls.push([9.49 + SX, 14.75 + SY, 9.65 + SX, D], [14.75 + SX, 14.9 + SY, 14.87 + SX, 19.65 + SY], [14.75 + SX, 20.45 + SY, 14.87 + SX, D]);
+    // (the wall down the middle of the shop floor, between the trade counter and Trade+, was taken out: detailedfoil, 20 Nov 2026)
+    walls.push([9.49 + SX, 14.75 + SY, 9.65 + SX, D]);
     var OX0 = 9.49 + SX - 1.95, OY0 = D - 3.3;
     walls.push([OX0 - 0.15, OY0 - 0.15, OX0, D], [OX0, OY0 - 0.15, OX0 + 0.45, OY0], [OX0 + 1.2, OY0 - 0.15, 9.49 + SX, OY0]);
     var rooms = [
       staff({ name: 'Staff room', x0: 0, y0: 14.08, x1: 3.15, y1: 17.81, floor: 'vinyl', ceiling: 2.85 }),
       staff({ name: 'WC', x0: 0, y0: 17.99, x1: 2.15, y1: 18.95, floor: 'vinyl', ceiling: 2.85, small: true }),
       staff({ name: 'Accessible WC', x0: 0, y0: 19.13, x1: 2.15, y1: 21.2, floor: 'vinyl', ceiling: 2.85, small: true }),
-      shop({ name: 'Trade counter', x0: 9.65, y0: 15.5, x1: 14.75, y1: 21.2, floor: 'tile', ceiling: 2.85 }),
-      shop({ name: 'Trade+', x0: 14.87, y0: 15.6, x1: 17.64, y1: 21.2, floor: 'tile', ceiling: 2.85 }),
+      // one big shop floor right across to the right-hand wall (detailedfoil, 20 Nov 2026)
+      shop({ name: 'Trade counter', x0: 9.65, y0: 15.5, x1: 17.64, y1: 21.2, floor: 'tile', ceiling: 2.85 }),
       { name: 'Office', x0: OX0, y0: OY0, x1: 9.49 + SX, y1: D, floor: 'vinyl', ceiling: 2.85, small: true }
     ];
     var objects = [
       shop({ kind: 'heater', name: 'Heater', x0: 10.1, y0: 13.73, x1: 17.2, y1: 14.5, z0: 3.5, z1: 3.85 }),
-      shop({ kind: 'counter', name: 'Trade counter', x0: 9.65, y0: 14.95, x1: 13.95, y1: 15.5 }),
-      shop({ kind: 'counter', name: 'Trade+ counter', x0: 14.87, y0: 15.01, x1: 15.89, y1: 15.6 }),
-      shop({ kind: 'counter', name: 'Trade+ counter', x0: 16.68, y0: 15.06, x1: 17.64, y1: 15.65 }),
-      shop({ kind: 'till', x0: 11.29, y0: 15.05, x1: 11.61, y1: 15.3 }),
-      shop({ kind: 'till', x0: 12.24, y0: 15.05, x1: 12.56, y1: 15.3 }), shop({ kind: 'till', x0: 13.19, y0: 15.05, x1: 13.51, y1: 15.3 }),
-      shop({ kind: 'till', x0: 14.99, y0: 15.1, x1: 15.31, y1: 15.35 }), shop({ kind: 'till', x0: 17.19, y0: 15.15, x1: 17.51, y1: 15.4 }),
-      shop({ kind: 'gondola', x0: 9.65, y0: 16.4, x1: 10.25, y1: 20.42, z1: 1.8, along: 'y', edges: [16.4, 16.91, 17.42, 18.41, 19.41, 20.42], open: 'E' }),
-      shop({ kind: 'gondola', x0: 11.69, y0: 17.1, x1: 12.83, y1: 19.15, z1: 1.5, along: 'y', edges: [17.1, 18.1, 19.15], open: 'EW' }),
-      shop({ kind: 'gondola', x0: 11.71, y0: 19.15, x1: 12.81, y1: 19.48, z1: 1.2, along: 'x', edges: [11.71, 12.81], open: 'S' }),
-      shop({ kind: 'gondola', x0: 14.22, y0: 16.42, x1: 14.72, y1: 19.48, z1: 1.8, along: 'y', edges: [16.42, 17.46, 18.46, 19.48], open: 'W' }),
-      shop({ kind: 'gondola', x0: 14.34, y0: 19.52, x1: 14.67, y1: 20.12, z1: 1.0, along: 'y', edges: [19.52, 20.12], open: 'W' }),
-      shop({ kind: 'gondola', x0: 14.9, y0: 16.54, x1: 15.46, y1: 19.62, z1: 1.8, along: 'y', edges: [16.54, 17.6, 18.6, 19.62], open: 'E' }),
-      shop({ kind: 'gondola', x0: 17.05, y0: 16.6, x1: 17.6, y1: 20.62, z1: 1.8, along: 'y', edges: [16.6, 17.6, 18.6, 19.6, 20.62], open: 'W' }),
+      // the one long counter, the left-hand wall to 0.9 m short of the right-hand wall (the gap staff walk through), with
+      // 4 tills (detailedfoil, 20 Nov 2026). From behind it: the queue to be served on your right (the left-hand wall end),
+      // customers who've paid or checked in waiting on your left, by the gap. The last till, by the gap, is Sam's.
+      shop({ kind: 'counter', name: 'Trade counter', x0: 9.65, y0: 14.95, x1: 16.74, y1: 15.5 }),
+      shop({ kind: 'till', x0: 11.18, y0: 15.05, x1: 11.5, y1: 15.3 }), shop({ kind: 'till', x0: 12.48, y0: 15.05, x1: 12.8, y1: 15.3 }),
+      shop({ kind: 'till', x0: 13.78, y0: 15.05, x1: 14.1, y1: 15.3 }), shop({ kind: 'till', x0: 15.08, y0: 15.05, x1: 15.4, y1: 15.3 }),
+      shop({ kind: 'gondola', x0: 9.65, y0: 17.6, x1: 10.25, y1: 20.42, z1: 1.8, along: 'y', edges: [17.6, 18.41, 19.41, 20.42], open: 'E' }),
+      // ONE row of shelves in the middle of the floor (detailedfoil, 21 Nov 2026): the queue to be served stands on one side of
+      // it, customers waiting for orders they've paid for on the other, so it's easy to see which is which
+      shop({ kind: 'gondola', x0: 12.65, y0: 17.0, x1: 13.75, y1: 20.4, z1: 1.5, along: 'y', edges: [17.0, 18.13, 19.27, 20.4], open: 'EW' }),
+      shop({ kind: 'gondola', x0: 17.05, y0: 17.6, x1: 17.6, y1: 20.62, z1: 1.8, along: 'y', edges: [17.6, 18.6, 19.6, 20.62], open: 'W' }),
       // staff room and toilets
       staff({ kind: 'table', x0: 0.3, y0: 15.2, x1: 1.0, y1: 16.4, z1: 0.75 }),
       staff({ kind: 'chair', x0: 1.05, y0: 15.4, x1: 1.45, y1: 15.8, face: 'W' }), staff({ kind: 'chair', x0: 1.05, y0: 15.9, x1: 1.45, y1: 16.3, face: 'W' }),
@@ -318,9 +317,13 @@
     var pc = { x: (desk.x0 + desk.x1) / 2 + 0.25, y: desk.y1 - 0.18, z: 1.0, desk: desk };
     // the everyday bits: kick stools at the end of a few aisles, a pallet truck, a stack of totes by the counter,
     // fire extinguishers on the walls, a mop bucket, a notice board and a clock
-    rk.aisles.filter(function (a) { return a.no === 2 || a.no === 5 || a.no === 8 || a.no === 10; }).forEach(function (a) {
-      var x = a.side === 'R' ? a.x1 - 0.27 : a.x0 + 0.27, y = (a.y0 + a.y1) / 2 + (a.no % 2 ? 0.25 : -0.25);
-      objects.push({ kind: 'stool', x0: x - 0.21, y0: y - 0.21, x1: x + 0.21, y1: y + 0.21, z1: 0.42 });
+    // (the red kick stools live at the centre aisle end of every row, in front of its yellow and black end guard: see `stools`)
+    var stools = [];
+    // one per row end (a back-to-back row has two end guards side by side: one stool between them, detailedfoil 21 Nov 2026)
+    rk.rows.forEach(function (r, i) {
+      var x = r.side === 'R' ? r.x0 - POST / 2 - 0.35 : r.x1 + POST / 2 + 0.35, y = (r.y0 + r.y1) / 2;
+      stools.push({ id: i, area: r.s || r.n, x: x, y: y, home: { x: x, y: y }, by: null });
+      objects.push({ kind: 'kickstool', x0: x - 0.32, y0: y - 0.32, x1: x + 0.32, y1: y + 0.32, z1: 0.7 }); // bigger (detailedfoil, 21 Nov 2026)
     });
     objects.push({ kind: 'stool', x0: 3.9, y0: 0.35, x1: 4.32, y1: 0.77, z1: 0.42 }, { kind: 'stool', x0: 14.3, y0: 0.4, x1: 14.72, y1: 0.82, z1: 0.42 });
     objects.push({ kind: 'pallettruck', x0: 10.35, y0: D - 3.6, x1: 10.9, y1: D - 2.0, z1: 1.2 });
@@ -331,19 +334,21 @@
       objects.push({ kind: 'extinguisher', face: e.f, x0: ax ? e.x - 0.12 : e.x - 0.18, y0: ax ? e.y - 0.18 : e.y - 0.12, x1: ax ? e.x + 0.12 : e.x + 0.06, y1: ax ? e.y + 0.06 : e.y + 0.12, z1: 1.1, wall: true });
     });
     var shopWall = 9.49 + SX;
-    objects.push({ kind: 'board', face: 'W', x0: shopWall - 0.03, y0: 18.6, x1: shopWall, y1: 19.9, z0: 1.05, z1: 1.95, wall: true });
-    objects.push({ kind: 'clock', face: 'W', x0: shopWall - 0.05, y0: 19.05, x1: shopWall, y1: 19.45, z0: 2.15, z1: 2.55, wall: true });
+    // the CCTV monitor (detailedfoil, 21 Nov 2026): it replaces the notice board, bigger, a map of the shop floor (cctv.js)
+    // almost the whole width of its wall, the shop's back wall to the office (detailedfoil, 21 Nov 2026: "bigger, almost the whole width")
+    objects.push({ kind: 'cctv', face: 'W', x0: shopWall - 0.07, y0: 17.95, x1: shopWall, y1: 20.65, z0: 0.78, z1: 2.4, wall: true });
+    objects.push({ kind: 'clock', face: 'W', x0: shopWall - 0.05, y0: 19.05, x1: shopWall, y1: 19.45, z0: 2.46, z1: 2.82, wall: true });
     var zones = [{ name: 'Goods in', x0: 4.7, y0: D - 4.6, x1: 9.9, y1: D - 0.6 }];
     // the holding area, beside goods in against the staff room wall (detailedfoil, 19 Nov 2026): long-span shelving
     // you face from goods in. On your left the bay for big loose items (OC-001 on the floor, OC-002 on the shelf
     // above, labels on the shelf edge), on your right the bay of blue totes, six a shelf on the bottom two shelves
-    // (OC-003 to OC-008 at the bottom, OC-009 to OC-014 above, from the left), each with an order in a yellow bag.
+    // (OC-009 to OC-014 at the bottom, on the ground, OC-003 to OC-008 above them, from the left; detailedfoil, 21 Nov 2026), each with an order in a yellow bag.
     // The shelves higher up stay empty.
     var hold = holding(3.3, D - 5.95);
     objects.push(hold.obj);
     var columns = [[5.0, 0, 5.4, 0.45], [(LX1 + RX0) / 2 - 0.2, 0, (LX1 + RX0) / 2 + 0.2, 0.45], [16.9, 0, 17.3, 0.45]];
     var counter = objects[1];
-    return { b: b, openings: openings, walls: walls, rooms: rooms, objects: objects, zones: zones, columns: columns, counter: counter, D: D, holding: hold, goodsin: goodsin, pc: pc };
+    return { b: b, openings: openings, walls: walls, rooms: rooms, objects: objects, zones: zones, columns: columns, counter: counter, D: D, holding: hold, goodsin: goodsin, pc: pc, stools: stools };
   }
   // x0 = the back of the shelving (against the wall), y0 = its end nearest the back of the building. It faces +x:
   // standing in front of it you look towards the left wall, so your left is towards the shop front (bigger y).
@@ -362,7 +367,7 @@
     [low, decks[0]].forEach(function (z, row) {
       for (var i = 0; i < 6; i++) {
         var yr = tB - i * tw;
-        spots.push({ code: 'OC-0' + pad2(3 + row * 6 + i), kind: 'tote', y0: yr - tw + 0.012, y1: yr - 0.012, z0: z, z1: z + 0.32 });
+        spots.push({ code: 'OC-0' + pad2((row ? 3 : 9) + i), kind: 'tote', y0: yr - tw + 0.012, y1: yr - 0.012, z0: z, z1: z + 0.32 });
       }
     });
     spots.forEach(function (sp) { sp.x0 = x0 + 0.04; sp.x1 = front - 0.02; });
@@ -371,7 +376,7 @@
   }
 
   /* ---------- walking ---------- */
-  var BLOCKS = { holding: 1, counter: 1, cupboard: 1, cage: 1, panel: 1, gondola: 1, table: 1, worktop: 1, desk: 1, wc: 1, rollcage: 1, pallet: 1, stool: 1, pallettruck: 1, totes: 1, bucket: 1 };
+  var BLOCKS = { holding: 1, counter: 1, cupboard: 1, cage: 1, panel: 1, gondola: 1, table: 1, worktop: 1, desk: 1, wc: 1, rollcage: 1, pallet: 1, stool: 1, kickstool: 1, pallettruck: 1, totes: 1, bucket: 1 };
   function obstacles(rk, bl) {
     var out = [];
     rk.rows.forEach(function (r) { out.push(rect(r.x0, r.y0, r.x1, r.y1)); });
@@ -419,15 +424,48 @@
     if (it.size === 'S') return u < 0.72 ? 1 : u < 0.92 ? 2 : 3;
     return u < 0.88 ? 1 : 2;
   }
+  // stock (detailedfoil, 21 Nov 2026): every place holds a few of its product, picks take them off, and a pick that takes
+  // the last of them leaves the place empty (the product goes out of stock until a delivery brings it back, into an EMPTY
+  // place). `it.stock` is how many are there now, `it.reserved` how many are promised to orders on the list.
+  function stockOf(it) {
+    var u = (hash(it.code + 'stock') % 1000) / 1000;
+    return it.size === 'T' ? 3 + Math.floor(u * 22) : it.size === 'B' ? 2 + Math.floor(u * 4) : 2 + Math.floor(u * 8);
+  }
+  function room(it) { if (it.stock === undefined) it.stock = stockOf(it); return it.stock - (it.reserved || 0); }
+  // takes the product off its place (it's out of stock): the place is empty
+  function vacate(world, it) {
+    if (!it.loc) return;
+    it.old = it.loc; it.loc.item = null; it.loc = null; it.stock = 0; it.reserved = 0;
+    (world.out = world.out || []).push(it);
+  }
+  // puts a product into an empty place
+  function place(world, it, loc, n) {
+    it.loc = loc; loc.item = it; it.stock = n; it.reserved = 0;
+    if (world.out) { var k = world.out.indexOf(it); if (k >= 0) world.out.splice(k, 1); }
+  }
+  // an empty place of the product's own kind, in the same row as where it was (so it goes back to its own part of the
+  // store), a different one if there is one; `taken` are places already promised to other cartons
+  function emptyFor(world, it, taken, r) {
+    var old = it.old, cands = [];
+    if (!old) return null;
+    world.locs.list.forEach(function (l) {
+      if (l.item || taken[l.code] || l.face !== old.face || l.cls !== old.cls) return;
+      cands.push(l);
+    });
+    cands.sort(function (a, b) { return Math.abs(a.order - old.order) - Math.abs(b.order - old.order); });
+    var diff = cands.filter(function (l) { return l !== old; });
+    var from = (diff.length ? diff : cands).slice(0, 5);
+    return from.length ? from[Math.floor(r() * from.length)] : null;
+  }
   function order(world, r, n) {
     var items = world.items, lines = [], seen = {};
     if (!n) { var u = r(); n = u < 0.28 ? 1 : u < 0.6 ? 2 : u < 0.82 ? 3 : u < 0.94 ? 4 : 5; }
     var guard = 0;
     while (lines.length < n && guard++ < 1000) {
       var it = items[Math.floor(r() * items.length)];
-      if (seen[it.code]) continue;
+      if (seen[it.code] || !it.loc || room(it) < 1) continue;
       seen[it.code] = 1;
-      lines.push({ item: it, loc: it.loc, qty: quantity(it, r) });
+      lines.push({ item: it, loc: it.loc, qty: Math.min(quantity(it, r), room(it)) });
     }
     lines.sort(function (a, b) { return a.loc.order - b.loc.order; });
     return lines;
@@ -448,7 +486,7 @@
       rows: rk.rows, faces: rk.faces, aisles: rk.aisles, faceOf: rk.byCode,
       locs: locs, items: placed, unplaced: items.length - placed.length,
       building: bl.b, openings: bl.openings, walls: bl.walls, rooms: bl.rooms, objects: bl.objects, zones: bl.zones, columns: bl.columns,
-      counter: counter, holding: bl.holding, goodsin: bl.goodsin, pc: bl.pc,
+      counter: counter, holding: bl.holding, goodsin: bl.goodsin, pc: bl.pc, stools: bl.stools,
       // the service bell: a big red button on the staff side of the counter (your side, not the customers') (detailedfoil, 19 Nov 2026)
       bell: { x: counter.x0 + 0.9, y: counter.y0, z: 0.62 },
       // stand behind the counter (the warehouse side) to hand an order over; the customer waits on the shop side
@@ -462,7 +500,7 @@
     return world;
   }
 
-  var api = { WALK: WALK, build: build, order: order, quantity: quantity, locationAt: locationAt, sameSpot: sameSpot, shelfZ: shelfZ, rng: rng, hash: hash, pad2: pad2,
+  var api = { WALK: WALK, build: build, order: order, stockOf: stockOf, room: room, vacate: vacate, place: place, emptyFor: emptyFor, quantity: quantity, locationAt: locationAt, sameSpot: sameSpot, shelfZ: shelfZ, rng: rng, hash: hash, pad2: pad2,
     AREAS: AREAS, SHELVES: SHELVES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftWorld = api;

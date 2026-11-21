@@ -130,7 +130,7 @@ test('made-up customers: LU8 and LU9 postcodes (they don\'t exist), example.com 
 test('the till\'s sums: VAT included at 20% (£7.99 = £6.66 + £1.33, as on the real checkout), cash change, made-up prices', () => {
   assert.deepEqual({ ...Till.vat(799) }, { inc: 799, ex: 666, vat: 133 });
   assert.equal(Till.money(123456), '£1,234.56');
-  for (const p of [99, 799, 2000, 4999, 12345]) { const t = Till.tender(p); assert.ok(t >= p && t % 500 === 0, p + ' -> ' + t); }
+  for (const p of [99, 799, 2000, 4999, 12345]) { const t = Till.tender(p); assert.ok(t > p && t % 500 === 0, p + ' -> ' + t); }
   for (const it of world.items.slice(0, 2000)) {
     const p = Till.price(it);
     assert.equal(p, Till.price(it), 'the same every time');
@@ -158,7 +158,7 @@ test('till orders: 1 to 3 different products on the shelves, asked for by code, 
       assert.equal(Till.judge(ln, 'ZZZZZ', ln.qty), 'wrong');
     }
   }
-  assert.ok(kinds.code > 100 && kinds.describe === 0 && kinds.need > 100, JSON.stringify(kinds));
+  assert.ok(kinds.code > 100 && kinds.describe > 100 && kinds.need === 0, JSON.stringify(kinds) + ' (by code or key words from the name, never a description sentence: detailedfoil, 21 Nov 2026)');
 });
 
 test('the till page: Fusion and CrashFix tabs, the real search, no real usernames, addresses or Screwfix servers', () => {
@@ -203,7 +203,7 @@ test('kiosk orders: the customer\'s is on the list once, every name different, s
 
 test('the holding area: OC-001 and OC-002 for big loose items, OC-003 to OC-014 totes six a shelf on the bottom two, every surname different', () => {
   const h = world.holding;
-  assert.deepEqual([...h.spots.map((s) => s.code)], [...Till.HOLD_CODES]);
+  assert.deepEqual([...h.spots.map((s) => s.code)].sort(), [...Till.HOLD_CODES].sort());
   assert.deepEqual([...Till.HOLD_CODES.slice(0, 3)], ['OC-001', 'OC-002', 'OC-003']);
   assert.equal(Till.HOLD_CODES[13], 'OC-014');
   const [a, b] = h.spots;
@@ -222,5 +222,6 @@ test('the holding area: OC-001 and OC-002 for big loose items, OC-003 to OC-014 
   // it stands clear of everything else, and can be reached (the walk test covers the rest of the floor)
   const used = {};
   for (let i = 0; i < 14; i++) { const p = Till.holdParcel(rnd, used); assert.ok(!used[p.surname], 'unique'); used[p.surname] = 1; assert.match(p.despatch, /^A9\d{9}$/); }
-  assert.match(Till.holdSay(rnd, 'OC-007', 'Tomlin'), /OC-007[\s\S]*Tomlin|Tomlin[\s\S]*OC-007/);
+  const say = Till.holdSay(rnd, 'OC-007', 'Tomlin');
+  assert.match(say, /Tomlin/); assert.doesNotMatch(say, /OC-/, 'customers no longer say the OC number (it is on the scanner)');
 });

@@ -4,9 +4,9 @@
   const fields = (o, keys) => Object.fromEntries(keys.filter(k => o[k] !== undefined).map(k => [k, o[k]]));
   const parcel = p => p && fields(p, ['surname', 'num', 'collection', 'despatch', 'locs', 'units']);
   const lines = ls => (ls || []).map(l => ({
-    ...fields(l, ['qty', 'kind', 'accept', 'say', 'quote', 'hint', 'clue', 'qtySay', 'next']), sku: l.item.code
+    ...fields(l, ['qty', 'kind', 'accept', 'say', 'quote', 'hint', 'clue', 'qtySay', 'next']), sku: l.item.code, location: l.loc?.code
   }));
-  function snapshot(day, tills) {
+  function snapshot(day, tills, stockItems) {
     return {
       ...fields(day, ['phase', 'total', 'done', 'over', 'mode']),
       hold: Object.fromEntries(Object.entries(day.hold).map(([k, p]) => [k, parcel(p)])), busy: { ...day.busy },
@@ -20,20 +20,44 @@
         orderId: c.order?.id, at: tills.indexOf(c.at), lines: lines(c.lines),
         kiosk: c.kiosk && { ...c.kiosk, list: c.kiosk.list.map(k => ({ ...k, lines: lines(k.lines) })) }
       })),
-      delivery: day.delivery.map(d => ({ ...fields(d, ['id', 'src', 'slot', 'qty', 'by', 'done', 'doneBy']), sku: d.item.code }))
+      stock: Array.from(stockItems, it => [it.code, it.loc?.code || null, it.stock, it.reserved || 0]),
+      delivery: day.delivery.map(d => ({ ...fields(d, ['id', 'src', 'slot', 'qty', 'by', 'done', 'doneBy']), sku: d.item.code, location: d.loc.code }))
     };
   }
 
   class DayProxy {
-    constructor(world, Day, tills, request) {
+    constructor(world, Day, tills, request, World, stockChange) {
       this.items = new Map(world.items.map(it => [it.code, it]));
+      this.world = world;
+      this.World = World;
+      this.stockChange = stockChange;
       this.tills = tills;
       this.request = request;
       this.hold = {}; this.busy = {}; this.orders = []; this.customers = []; this.delivery = []; this.t = 0;
       for (const name of ['list', 'queue', 'label', 'freeSpots', 'ungreeted', 'deliveryLeft', 'summary']) this[name] = Day.prototype[name];
     }
+    applyStock(rows) {
+      const { world, World } = this;
+      const moves = [];
+      // Clear old shelves first. Two relocated products can swap places between snapshots.
+      for (const [sku, code, stock, reserved] of rows) {
+        const item = this.items.get(sku), loc = world.locs.byCode[code] || null;
+        if (item.loc !== loc) {
+          World.vacate(world, item);
+          moves.push({ item, loc, stock, reserved });
+        } else {
+          item.stock = stock; item.reserved = reserved;
+        }
+      }
+      for (const { item, loc, stock, reserved } of moves) {
+        if (loc) World.place(world, item, loc, stock);
+        item.reserved = reserved;
+        this.stockChange(item);
+      }
+    }
     apply(s) {
-      const unpack = ls => ls.map(l => { const item = this.items.get(l.sku); return { ...l, item, loc: item.loc }; });
+      this.applyStock(s.stock);
+      const unpack = ls => ls.map(l => { const item = this.items.get(l.sku); return { ...l, item, loc: this.world.locs.byCode[l.location] || item.loc }; });
       // Scanner, till session and customer figure all keep references across updates.
       const merge = (old, next, decode) => {
         const prev = new Map(old.map(o => [o.id, o]));
@@ -46,7 +70,7 @@
         lines: unpack(row.lines), kiosk: row.kiosk && { ...row.kiosk, list: row.kiosk.list.map(k => ({ ...k, lines: unpack(k.lines) })) }
       }));
       for (const o of this.orders) o.cust = this.customers.find(c => c.id === o.customer) || null;
-      this.delivery = merge(this.delivery, s.delivery, row => { const item = this.items.get(row.sku); return { ...row, item, loc: item.loc }; });
+      this.delivery = merge(this.delivery, s.delivery, row => { const item = this.items.get(row.sku); return { ...row, item, loc: this.world.locs.byCode[row.location] }; });
     }
     take(o) { return this.request('take', { id: o.id }); }
     line(o, index) { return this.request('line', { id: o.id, index }); }
@@ -57,7 +81,23 @@
     paPut(d) { return this.request('paPut', { id: d.id }); }
     greet(c) { return this.request('greet', { id: c.id }); }
     lock() { return this.request('lock', {}); }
-    tillDone(c, ls) { return this.request('tillDone', { id: c.id, lines: lines(ls) }).then(id => this.orders.find(o => o.id === id)); }
+    tillDone(c, info) { return this.request('tillDone', { id: c.id, lines: lines(info.lines), how: info.how, change: info.change }).then(id => this.orders.find(o => o.id === id)); }
+  }
+
+  // A lost connection returns a picked tote to the list. Restore its units and reservations
+  // first, so another picker can scan the same shelves without charging stock twice.
+  function release(day, who) {
+    for (const order of day.orders) {
+      if (order.by !== who || order.status !== 'picked') continue;
+      for (const { item, loc, qty } of order.lines) {
+        if (!item.loc) {
+          day.World.place(day.world, item, loc, qty);
+          day.emit('stock', item);
+        } else item.stock += qty;
+        item.reserved = (item.reserved || 0) + qty;
+      }
+    }
+    day.release(who);
   }
 
   // One dispatcher in the host browser. A connection may act only on its own unfinished work.
@@ -100,7 +140,7 @@
         const d = day.delivery.find(d => d.id === a.id);
         return !!(d && atLoc(d.loc) && day.paPut(d, who));
       }
-      case 'greet': return !!(c?.fig && near(c.fig.group.position.x, c.fig.group.position.z, 3.5) && day.greet(c, who));
+      case 'greet': return !!(c?.fig && ctx.canGreet() && near(c.fig.group.position.x, c.fig.group.position.z, 3.2) && day.greet(c, who));
       case 'tillOpen': return ctx.open(a.till);
       case 'tillClose': return ctx.close();
       case 'call': return ctx.call();
@@ -116,6 +156,11 @@
           if (i < 0 || !item) return false;
           remaining.splice(i, 1); basket.push({ item, qty: line.qty });
         }
+        if (a.how !== c.pay.how) return false;
+        if (a.how === 'cash') {
+          const total = basket.reduce((sum, l) => sum + day.Till.price(l.item) * l.qty, 0);
+          if (a.change !== day.Till.tender(total, c.pay) - total) return false;
+        }
         const result = day.tillDone(c, basket, { till: c.at });
         ctx.screen(c.at, result); return result.id;
       }
@@ -124,7 +169,7 @@
       default: return false;
     }
   }
-  const api = { snapshot, DayProxy, command };
+  const api = { snapshot, DayProxy, command, release };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftOnlineDay = api;
 })(typeof window !== 'undefined' ? window : this);

@@ -2,7 +2,7 @@
    .github/warehouse-shift/make-requests.mjs.
 
    Till customers (detailedfoil, 19 Nov 2026): a customer comes to the trade counter and orders at the till, Fusion
-   (the store's till system). They give their postcode, then their surname; you search, pick them from the results,
+   (the store's till system). They give their surname, then their postcode, then (after a search) a third detail; you search, pick them from the results,
    then they ask for what they want one thing at a time: by product code, by describing it, or by quoting the
    product's description from the website ("I need the one that says ..."). You find it on the CrashFix tab (the
    Product Search page's own search), add it to the basket on the Fusion tab, and the customer says whether it's
@@ -87,6 +87,11 @@
       var nb = person(r, pick(r, SURNAMES.filter(function (s) { return s !== surname; }))); nb.postcode = c.postcode; nb.address = address(r); nb.trade = 'DIY'; nb.org = ''; db.push(nb);
     }
     c.db = db;
+    // after a search they give a third detail so you can tell them apart in the results: first name, email or door
+    // number (never the organisation). Someone with a twin at the address can't use the door number.
+    var kinds = c.twin ? ['first', 'email'] : ['first', 'email', 'door'], kd = pick(r, kinds), door = c.address.split(',')[0].replace(/ .*/, '') === 'Flat' ? c.address.split(',')[0] : c.address.split(' ')[0];
+    c.third = kd === 'first' ? { kind: kd, say: "That's me, " + c.first + '.' } : kd === 'email' ? { kind: kd, say: "My email's " + c.email + '.' } : { kind: kd, say: 'I live at number ' + door + '.' };
+    if (kd === 'door' && /^Flat/.test(c.address)) c.third.say = "I'm in " + door + '.';
     return c;
   }
 
@@ -131,11 +136,26 @@
   function vat(inc) { var ex = Math.round(inc / 1.2); return { inc: inc, ex: ex, vat: inc - ex }; }
   function money(p) { return '£' + (p / 100).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   // what a customer paying cash hands over: the next note up, or enough twenties and fifties
-  function tender(inc) {
-    var notes = [500, 1000, 2000, 3000, 4000, 5000, 6000, 8000, 10000, 15000, 20000, 25000, 30000, 40000, 50000];
-    for (var i = 0; i < notes.length; i++) if (notes[i] >= inc) return notes[i];
-    return Math.ceil(inc / 5000) * 5000;
+  // what a cash customer hands over: always MORE than the total, so there's change to give (detailedfoil, 21 Nov 2026)
+  // `pay` (from payment()): exact = the right money (about 1 in 5, the only time it can have pence); otherwise a note,
+  // usually the smallest that covers it, sometimes the next one up (detailedfoil, 21 Nov 2026)
+  function tender(inc, pay) {
+    if (pay && pay.exact) return inc;
+    var notes = [500, 1000, 2000, 5000, 10000], i = 0;
+    while (i < notes.length - 1 && notes[i] <= inc) i++;
+    if (pay && pay.up && i < notes.length - 1) i++;
+    return notes[i] > inc ? notes[i] : Math.floor(inc / 5000) * 5000 + 5000;
   }
+  // the cash drawer, biggest first: four notes, eight coins (whole pence)
+  var DENOMS = [5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1];
+  // the notes that make up what they hand over (£30 = a £20 and a £10)
+  function notesFor(given) {
+    var out = [], left = given;
+    [5000, 2000, 1000, 500].forEach(function (n) { while (left >= n) { out.push(n); left -= n; } });
+    return out;
+  }
+  // £5 or 50p, the way it's printed on it
+  function denomName(p) { return p >= 100 ? '\u00a3' + p / 100 : p + 'p'; }
   // A9 and nine digits: one digit short of a real order number, so it can never match one (detailedfoil)
   function orderNumber(r) { var s = 'A9'; for (var i = 0; i < 9; i++) s += Math.floor(r() * 10); return s; }
 
@@ -158,7 +178,7 @@
     var desc = (requests && requests.describe) || [], need = (requests && requests.need) || [];
     while (lines.length < n && guard++ < 400) {
       // customers no longer describe a product by its name (detailedfoil, 19 Nov 2026: it didn't work): a code, or a sentence from its description
-      var k = r(), kind = k < 0.3 || !need.length ? 'code' : 'need';
+      var k = r(), kind = k < 0.3 || !desc.length ? 'code' : 'describe'; // by code, or by key words from the product's name; never by a description sentence (detailedfoil, 21 Nov 2026: those say things like "suitable for all uses", which nobody would ask for)
       var it, accept, words = [], quote = '', hint = '', clue = '';
       if (kind === 'code') {
         it = world.items[Math.floor(r() * world.items.length)];
@@ -248,7 +268,11 @@
 
   // how they'll pay: they say which when you get to the checkout (detailedfoil), and put you right if you pick the other
   var PAY_SAY = { card: ["I'll pay by card.", 'Card, please.', 'On card, mate.', "I'll tap my card."], cash: ["I'll pay cash.", 'Cash, please.', "I've got cash.", 'Paying cash today.'] };
-  function payment(r) { var how = r() < 0.6 ? 'card' : 'cash'; return { how: how, say: pick(r, PAY_SAY[how]) }; }
+  function payment(r) {
+    var how = r() < 0.6 ? 'card' : 'cash', p = { how: how, say: pick(r, PAY_SAY[how]) };
+    if (how === 'cash') { p.exact = r() < 0.2; p.up = r() < 0.25; if (p.exact) p.say = pick(r, ['I have the exact money.', "I'll pay cash, I've got it exact.", 'Cash, and I have the right money.']); }
+    return p;
+  }
 
   /* ---------- the holding area: multi-item click and collects, bagged and waiting ---------- */
   // OC-001 (on the floor) and OC-002 (the shelf above) hold big loose items; OC-003 to OC-014 are blue totes, six a
@@ -256,18 +280,18 @@
   // surname; every surname in the holding area is different (detailedfoil: no repeated names for now).
   var HOLD_CODES = [];
   for (var hc = 1; hc <= 14; hc++) HOLD_CODES.push('OC-0' + pad(hc));
-  var HOLD_SAY = ["Click and collect, please. It's in {oc}, surname {s}.", "Hiya, I've got a click and collect. The email says {oc}. Name's {s}.",
-    'Collecting an order for {s}, please. It said {oc}.', "I've come to pick up my order. {s}, location {oc}.", 'Click and collect for {s}. It\'s {oc} on my email.'];
+  var HOLD_SAY = ["Click and collect, please. Surname {s}.", "Hiya, I've got a click and collect. Name's {s}.",
+    'Collecting an order for {s}, please.', "I've come to pick up my order. {s}.", 'Click and collect for {s}, please.'];
   function holdParcel(r, used) {
     var s, guard = 0;
     do { s = pick(r, SURNAMES); } while (used[s] && guard++ < 400);
     var d = ''; for (var i = 0; i < 4; i++) d += Math.floor(r() * 10);
     return { surname: s, num: d, collection: String(100 + Math.floor(r() * 900)), despatch: orderNumber(r) };
   }
-  function holdSay(r, code, surname) { return pick(r, HOLD_SAY).replace('{oc}', code).replace('{s}', surname); }
+  function holdSay(r, code, surname) { return pick(r, HOLD_SAY).replace('{s}', surname); }
 
   var api = { hash: hash, searchItems: searchItems, makeCustomer: makeCustomer, lookup: lookup, matches: matches, postcode: postcode,
-    price: price, avail: avail, vat: vat, money: money, tender: tender, orderNumber: orderNumber, makeOrder: makeOrder, judge: judge,
+    price: price, avail: avail, vat: vat, money: money, tender: tender, DENOMS: DENOMS, notesFor: notesFor, denomName: denomName, orderNumber: orderNumber, makeOrder: makeOrder, judge: judge,
     quantity: quantity, makeKiosk: makeKiosk, payment: payment, HOLD_CODES: HOLD_CODES, holdParcel: holdParcel, holdSay: holdSay, customerNo: customerNo,
     SURNAMES: SURNAMES, MEN: MEN, WOMEN: WOMEN };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

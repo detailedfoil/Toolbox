@@ -81,8 +81,9 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const [phone] = guests;
   assert.equal(phone.$('stickZone').hidden, false);
   assert.equal(host.$('roomBtn').textContent, room + ' · 4/4');
-  const items = ['AAA', 'BBC'].map(area => host.s.world.items.find(it => it.loc.face.area === area && it.loc.z0 < 1.3 && it.loc.z0 > 0.2));
-  const order = day.makeOrder('c', items.map(item => ({ item, qty: 2 })), null, true, { surname: 'Test' });
+  const items = ['AAA', 'BBC'].map(area => host.s.world.items.find(it => it.loc?.face.area === area && it.loc.z0 < 1.3 && it.loc.z0 > 0.2));
+  const lastShelf = items[0].loc.code;
+  const order = day.makeOrder('c', items.map((item, i) => ({ item, qty: i ? 2 : host.w.ShiftWorld.room(item) })), null, true, { surname: 'Test' });
   await until(() => guests.every(g => g.s.day().list().some(o => o.id === order.id)), 'shared scanner list');
   for (const g of guests) g.s.enter(); // Today Picking
   phone.s.enter(); guests[1].s.enter(); // claim the same job before either scanner has the answer
@@ -101,6 +102,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
     await s.confirmQty();
   }
   assert.equal(order.status, 'picked'); assert.equal(s.state(), 'put');
+  await until(() => guests.every(g => !g.s.world.locs.byCode[lastShelf].item), 'the last unit to disappear for every guest');
   const code = s.day().freeSpots()[0], sp = s.world.holding.spots.find(v => v.code === code);
   s.me.x = sp.x1 + 0.65; s.me.y = (sp.y0 + sp.y1) / 2; s.me.yaw = Math.PI / 2;
   s.me.pitch = Math.atan2((sp.z0 + sp.z1) / 2 - s.me.eye, 0.65); s.applyCam(); s.cam.updateMatrixWorld();
@@ -113,6 +115,8 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   picker.sockets.at(-1).terminate();
   await until(() => second.status === 'listed', 'disconnect to release the job');
   await until(() => picker.sockets.length === 2 && s.state() === 'home' && picker.$('onlineCover').hidden, 'phone to rejoin and reset scanner');
+  assert.equal(s.world.locs.byCode[lastShelf].item, null, 'reconnecting keeps the shelf empty');
+  for (const d of s.day().delivery) assert.equal(d.loc.code, day.delivery.find(x => x.id === d.id).loc.code);
   // A guest occupies an existing till, identifies the kiosk customer, and pays through Fusion.
   const cashier = guests[2].s, till = cashier.tills[0];
   cashier.me.x = (till.x0 + till.x1) / 2; cashier.me.y = cashier.world.counter.y0 - 0.7;
@@ -126,10 +130,25 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   host.s.tick(6);
   await until(() => cashier.till.stage() === 'details', 'customer to walk to the guest till');
   const ui = cashier.till.debug, session = cashier.till.session();
+  assert.equal(session.cust.third.say, customer.cust.third.say);
   ui.F.no.value = session.cust.no; ui.search(); ui.select();
   assert.equal(session.stage, 'kiosk');
   ui.openKiosk(); ui.S.ksel = session.kiosk.mine; ui.kioskSelect();
-  ui.goPay(); ui.payCash(); guests[2].w.document.querySelector('[data-act="change"]').click();
+  ui.goPay(); ui.payCash();
+  const cash = session.cash, tillPage = guests[2].w.document;
+  assert.ok(cash.due > 0);
+  const give = tillPage.querySelector('[data-act="drgive"]');
+  give.click();
+  assert.ok(!customer.order, 'the host waits for the drawer');
+  let left = cash.due;
+  for (const amount of guests[2].w.ShiftTill.DENOMS) {
+    while (left >= amount) {
+      tillPage.querySelector('[data-dr="' + amount + '"]').click();
+      left -= amount;
+    }
+  }
+  assert.equal(left, 0);
+  give.click();
   await until(() => customer.order && cashier.till.stage() === 'done', 'host-confirmed cash payment');
   assert.equal(cashier.till.session().orderNo, customer.order.no);
   assert.equal(day.orders.filter(o => o.cust === customer).length, 1);
