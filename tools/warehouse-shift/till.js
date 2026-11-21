@@ -136,11 +136,22 @@
   function vat(inc) { var ex = Math.round(inc / 1.2); return { inc: inc, ex: ex, vat: inc - ex }; }
   function money(p) { return '£' + (p / 100).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   // what a customer paying cash hands over: the next note up, or enough twenties and fifties
+  // what a cash customer hands over: always MORE than the total, so there's change to give (detailedfoil, 21 Nov 2026)
   function tender(inc) {
     var notes = [500, 1000, 2000, 3000, 4000, 5000, 6000, 8000, 10000, 15000, 20000, 25000, 30000, 40000, 50000];
-    for (var i = 0; i < notes.length; i++) if (notes[i] >= inc) return notes[i];
-    return Math.ceil(inc / 5000) * 5000;
+    for (var i = 0; i < notes.length; i++) if (notes[i] > inc) return notes[i];
+    return Math.floor(inc / 5000) * 5000 + 5000;
   }
+  // the cash drawer, biggest first: four notes, eight coins (whole pence)
+  var DENOMS = [5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1];
+  // the notes that make up what they hand over (£30 = a £20 and a £10)
+  function notesFor(given) {
+    var out = [], left = given;
+    [5000, 2000, 1000, 500].forEach(function (n) { while (left >= n) { out.push(n); left -= n; } });
+    return out;
+  }
+  // £5 or 50p, the way it's printed on it
+  function denomName(p) { return p >= 100 ? '\u00a3' + p / 100 : p + 'p'; }
   // A9 and nine digits: one digit short of a real order number, so it can never match one (detailedfoil)
   function orderNumber(r) { var s = 'A9'; for (var i = 0; i < 9; i++) s += Math.floor(r() * 10); return s; }
 
@@ -272,7 +283,7 @@
   function holdSay(r, code, surname) { return pick(r, HOLD_SAY).replace('{s}', surname); }
 
   var api = { hash: hash, searchItems: searchItems, makeCustomer: makeCustomer, lookup: lookup, matches: matches, postcode: postcode,
-    price: price, avail: avail, vat: vat, money: money, tender: tender, orderNumber: orderNumber, makeOrder: makeOrder, judge: judge,
+    price: price, avail: avail, vat: vat, money: money, tender: tender, DENOMS: DENOMS, notesFor: notesFor, denomName: denomName, orderNumber: orderNumber, makeOrder: makeOrder, judge: judge,
     quantity: quantity, makeKiosk: makeKiosk, payment: payment, HOLD_CODES: HOLD_CODES, holdParcel: holdParcel, holdSay: holdSay, customerNo: customerNo,
     SURNAMES: SURNAMES, MEN: MEN, WOMEN: WOMEN };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

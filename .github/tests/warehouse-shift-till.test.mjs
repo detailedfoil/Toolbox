@@ -130,7 +130,7 @@ test('made-up customers: LU8 and LU9 postcodes (they don\'t exist), example.com 
 test('the till\'s sums: VAT included at 20% (£7.99 = £6.66 + £1.33, as on the real checkout), cash change, made-up prices', () => {
   assert.deepEqual({ ...Till.vat(799) }, { inc: 799, ex: 666, vat: 133 });
   assert.equal(Till.money(123456), '£1,234.56');
-  for (const p of [99, 799, 2000, 4999, 12345]) { const t = Till.tender(p); assert.ok(t >= p && t % 500 === 0, p + ' -> ' + t); }
+  for (const p of [99, 799, 2000, 4999, 12345]) { const t = Till.tender(p); assert.ok(t > p && t % 500 === 0, p + ' -> ' + t); }
   for (const it of world.items.slice(0, 2000)) {
     const p = Till.price(it);
     assert.equal(p, Till.price(it), 'the same every time');

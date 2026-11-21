@@ -14,7 +14,8 @@
    typing the new quantity in its own Qty box (or the same part number again).
    Kiosk orders (detailedfoil, 19 Nov 2026): some till customers have already sent their order from the kiosk. After
    the postcode and surname search they say so and give the name they used (usually their first name); open Kiosk
-   Orders, pick theirs and the basket fills itself. The customer says card or cash at the checkout and puts you right
+   Orders, pick theirs and the basket fills itself. The customer says card or cash at the checkout (cash opens the drawer: count the change out, note by note and coin
+   by coin, before the order can finish) and puts you right
    if you press the other one.
 
    Phones use their own keyboard; the keyboard button at the top swaps to an on-screen one (remembered, ws-osk).
@@ -156,6 +157,24 @@
     <div class="tl-kb-bar"><button type="button" class="tl-paste" data-k="paste" hidden></button><span class="tl-kb-field" data-v="kbfield"></span><button type="button" data-k="hide">Hide keyboard &#8964;</button></div>
     <div class="tl-kb-keys">${['1234567890', 'QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map((row, i) => row.split('').map((k) => `<button type="button" data-k="${k}">${k}</button>`).join('') +
       (i === 0 ? '<button type="button" class="w" data-k="back" aria-label="Delete">&#9003;</button>' : i === 1 ? '<button type="button" class="w go" data-k="enter" aria-label="Enter">Enter</button>' : i === 2 ? '<button type="button" data-k="@">@</button><button type="button" data-k=".">.</button>' : '<button type="button" data-k="-">-</button><button type="button" class="sp" data-k=" ">space</button>')).map((r) => `<div class="tl-kb-row">${r}</div>`).join('')}</div>
+  </div>
+  <div class="dr" data-v="drawer" hidden>
+    <div class="dr-box">
+      <div class="dr-disp">
+        <div><span>To pay</span><b data-v="drpay"></b></div>
+        <div><span>They gave you</span><b data-v="drgiven"></b><i class="dr-gnotes" data-v="drnotes"></i></div>
+        <div class="due"><span>Change due</span><b data-v="drdue"></b></div>
+      </div>
+      <div class="dr-3d"><div class="dr-tray">
+        <div class="dr-notes">${[500, 1000, 2000, 5000].map((p) => `<button type="button" class="dr-slot n${p}" data-dr="${p}" aria-label="&pound;${p / 100} note"><span class="dr-stack"><i></i><i></i><i class="top"><b>&pound;${p / 100}</b></i></span><span class="dr-clip"></span></button>`).join('')}</div>
+        <div class="dr-coins">${[200, 100, 50, 20, 10, 5, 2, 1].map((p) => `<button type="button" class="dr-cup c${p}" data-dr="${p}" aria-label="${p >= 100 ? '&pound;' + p / 100 : p + 'p'} coin"><span class="dr-pile"><i></i><i></i><i class="top"><b>${p >= 100 ? '&pound;' + p / 100 : p + 'p'}</b></i></span></button>`).join('')}</div>
+      </div><div class="dr-lip"><span class="dr-key"></span></div></div>
+      <div class="dr-hand">
+        <div class="dr-sum"><span>In your hand</span><b data-v="drsum">&pound;0.00</b></div>
+        <div class="dr-toks" data-v="drtoks"></div>
+        <div class="dr-btns"><button type="button" class="dr-btn" data-act="drstart">Start over</button><button type="button" class="dr-btn go" data-act="drgive">Give change</button></div>
+      </div>
+    </div>
   </div>
   <div class="tl-toast" data-v="toast" role="status"></div>
 </div>`;
@@ -538,14 +557,75 @@
       later(1900, () => { sfx('approved'); pdq('<h2>Card machine</h2><div class="fx-screen ok"><b>APPROVED</b><span>' + esc(amt) + '</span></div><p class="fx-wait">Remove card</p>'); });
       later(3000, () => complete('card'));
     }
+    // cash: the drawer opens and you count the change out of it, note by note and coin by coin; the order can't
+    // finish until it's right (detailedfoil, 21 Nov 2026)
     function payCash() {
-      const s = S.session; if (!s || s.stage !== 'paying' || !V.modal.hidden) return;
+      const s = S.session; if (!s || s.stage !== 'paying' || !V.modal.hidden || s.cash) return;
       if (s.pay.how !== 'cash') { wrongMethod(); return; }
       sfx('key');
       const inc = basketTotal(), given = Till.tender(inc);
-      say(pick(['Here you go.', 'Cash OK?', "There's " + Till.money(given) + '.']));
-      pdq('<h2>Cash</h2><dl class="fx-cash"><dt>To pay</dt><dd>' + Till.money(inc) + '</dd><dt>Customer gives you</dt><dd>' + Till.money(given) + '</dd><dt><b>Change due</b></dt><dd><b>' + Till.money(given - inc) + '</b></dd></dl><button type="button" class="fx-go" data-act="change">' + (given > inc ? 'Change given' : 'Done') + '</button>');
+      s.cash = { inc, given, due: given - inc, hand: [], done: false };
+      say(pick(['Here you go.', "There's " + Till.money(given) + '.', 'Cash OK? ' + Till.money(given) + ' there.']));
+      openDrawer();
+    }
+    const handSum = () => S.session.cash.hand.reduce((a, b) => a + b, 0);
+    function placeDrawer() { V.drawer.style.top = (V.say.offsetTop + V.say.offsetHeight) + 'px'; }
+    if (window.ResizeObserver) new ResizeObserver(() => { if (!V.drawer.hidden) placeDrawer(); }).observe(V.say);
+    function openDrawer() {
+      const c = S.session.cash;
+      V.drpay.textContent = Till.money(c.inc); V.drgiven.textContent = Till.money(c.given); V.drdue.textContent = Till.money(c.due);
+      V.drnotes.innerHTML = Till.notesFor(c.given).map((p) => '<i class="dr-mini n' + p + '">' + Till.denomName(p) + '</i>').join('');
+      renderHand();
+      V.drawer.classList.remove('open', 'shut');
+      V.drawer.hidden = false;
+      placeDrawer();
+      void V.drawer.offsetWidth; // so the slide out plays
+      V.drawer.classList.add('open');
       sfx('drawer');
+      if (S.pad) later(60, () => padMark(padStart(padItems())));
+    }
+    function renderHand() {
+      const c = S.session && S.session.cash; if (!c) return;
+      const sum = handSum();
+      V.drsum.textContent = Till.money(sum);
+      V.drsum.className = sum === c.due ? 'ok' : sum > c.due ? 'over' : '';
+      V.drtoks.innerHTML = c.hand.length ? c.hand.map((p, i) => '<button type="button" class="dr-tok ' + (p >= 500 ? 'n' : 'c') + p + '" data-hand="' + i + '" title="Put it back">' + Till.denomName(p) + '</button>').join('') : '<span class="dr-empty">Tap the notes and coins to take them out</span>';
+    }
+    function drTake(p) {
+      const s = S.session; if (!s || !s.cash || s.cash.done) return;
+      s.cash.hand.push(p); s.cash.hand.sort((a, b) => b - a);
+      sfx(p >= 500 ? 'key' : 'coin');
+      const b = el.querySelector('[data-dr="' + p + '"]'); if (b) { b.classList.remove('tk'); void b.offsetWidth; b.classList.add('tk'); }
+      renderHand();
+    }
+    function drBack(i) {
+      const s = S.session; if (!s || !s.cash || s.cash.done) return;
+      s.cash.hand.splice(i, 1); sfx('key'); renderHand();
+      if (S.pad) later(30, () => { if (!padEl || padItems().indexOf(padEl) < 0) padMark(padStart(padItems())); });
+    }
+    function drStart() {
+      const s = S.session; if (!s || !s.cash || s.cash.done) return;
+      s.cash.hand = []; sfx('key'); renderHand();
+      if (S.pad) padMark(padStart(padItems()));
+    }
+    function drGive() {
+      const s = S.session; if (!s || !s.cash || s.cash.done) return;
+      const c = s.cash, sum = handSum();
+      if (!sum) { sfx('bad'); say(pick(["I'm still waiting for my change.", 'Change, please, mate.', "Where's my change?"])); return; }
+      if (sum !== c.due) {
+        s.slips++; if (o.onSlip) o.onSlip(); sfx('bad');
+        say(sum < c.due ? pick(["That's only " + Till.money(sum) + ', mate. I should get ' + Till.money(c.due) + ' back.', "That's " + Till.money(sum) + ". I'm owed " + Till.money(c.due) + '.'])
+          : pick(["That's too much, mate. I only need " + Till.money(c.due) + ' back.', "You've given me " + Till.money(sum) + ". It's " + Till.money(c.due) + ' change.']));
+        return;
+      }
+      c.done = true;
+      sfx('coin');
+      say(pick(['Cheers.', 'Lovely, thanks.', 'Spot on, ta.', 'Thanks, mate.']));
+      later(500, () => {
+        V.drawer.classList.remove('open'); V.drawer.classList.add('shut');
+        sfx('drawer');
+        later(520, () => { V.drawer.hidden = true; V.drawer.classList.remove('shut'); complete('cash'); });
+      });
     }
     function complete(how) {
       const s = S.session; if (!s || s.stage !== 'paying') return;
@@ -734,6 +814,8 @@
       if (downAt && t !== downAt && !downAt.contains(t)) return;
       const tab = t.closest('.tl-tab'); if (tab) { setTab(tab.dataset.tab); return; }
       const go = t.closest('[data-go]'); if (go) { nav(go.dataset.go); return; }
+      const dr = t.closest('[data-dr]'); if (dr) { drTake(+dr.dataset.dr); return; }
+      const hd = t.closest('[data-hand]'); if (hd) { drBack(+hd.dataset.hand); return; }
       const act = t.closest('[data-act]'); if (act) { action(act.dataset.act); return; }
       const row = t.closest('.fu-tab tbody tr[data-i]'); if (row) { S.sel = +row.dataset.i; sfx('key'); renderResults(); return; }
       const krow = t.closest('.fu-tab tbody tr[data-k]'); if (krow) { S.ksel = +krow.dataset.k; sfx('key'); renderKiosk(); return; }
@@ -810,7 +892,8 @@
         case 'payback': if (s && s.stage === 'paying' && V.modal.hidden) { sfx('key'); s.stage = 'ordering'; show('order'); renderSay(); } break;
         case 'card': payCard(); break;
         case 'cash': payCash(); break;
-        case 'change': sfx('key'); complete('cash'); break;
+        case 'drstart': drStart(); break;
+        case 'drgive': drGive(); break;
         case 'trade': case 'nocredit': if (s && s.stage === 'paying' && V.modal.hidden) wrongMethod(); else sfx('bad'); break;
         case 'kback': sfx('key'); show(s && s.selected ? 'order' : 'who'); break;
         case 'kselect': kioskSelect(); break;
@@ -830,7 +913,7 @@
     let padEl = null;
     function padItems() {
       const kb = !V.kb.hidden;
-      const list = kb ? qa('.tl-kb [data-k]') : qa('button, input, .fu-tab tbody tr[data-i], .fu-tab tbody tr[data-k]').filter((n) => !n.closest('.tl-kb'));
+      const list = !V.drawer.hidden ? qa('.dr button') : kb ? qa('.tl-kb [data-k]') : qa('button, input, .fu-tab tbody tr[data-i], .fu-tab tbody tr[data-k]').filter((n) => !n.closest('.tl-kb'));
       return list.filter((n) => !n.disabled && !n.hidden && n.offsetParent !== null && !n.closest('[hidden]'));
     }
     function padMark(n) {
@@ -858,6 +941,7 @@
     // where the highlight starts: the box you'd type in next, or the first key
     function padStart(items) {
       if (!V.kb.hidden) return el.querySelector('.tl-kb [data-k="' + (S.focus && (S.focus.dataset.f === 'qty' || S.focus.classList.contains('fu-q')) ? '1' : 'Q') + '"]') || items[0];
+      if (!V.drawer.hidden) { const c = S.session && S.session.cash; return (c && c.hand.length && handSum() === c.due ? q('[data-act="drgive"]') : q('.dr [data-dr]')) || items[0]; }
       if (S.last && items.indexOf(S.last) >= 0) return S.last;
       let want = null;
       if (S.tab === 'crashfix') want = F.q.value.trim() ? el.querySelector('.cf-card [data-copy]') : F.q;
@@ -905,6 +989,7 @@
       clearWho(); S.results = []; S.sel = -1; S.ksel = -1;
       F.part.value = ''; F.qty.value = '';
       V.modal.hidden = true;
+      V.drawer.hidden = true; V.drawer.classList.remove('open', 'shut');
       show('who');
       renderBasket();
     }
@@ -960,7 +1045,7 @@
       refresh: renderSay,
       say,
       // tests and playthroughs
-      debug: { S, F, P, search, select, addLine, goPay, payCard, payCash, setTab, doSearch, type, action, openKiosk, kioskSelect }
+      debug: { S, F, P, search, select, addLine, goPay, payCard, payCash, drTake, drBack, drStart, drGive, setTab, doSearch, type, action, openKiosk, kioskSelect }
     };
   }
 

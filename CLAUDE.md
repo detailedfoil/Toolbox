@@ -457,6 +457,20 @@ explain changes in plain English and say what they'll see.
       where it lives (`dropStool`, `Crew.aisleAt`). Drawn by scene.js `setStool` (it follows you, under your feet when
       stepped). Sam does not use stools. Tests: `warehouse-shift-stage3.test.mjs`; a few Sam timing tests loosened (the
       world changed, so their random plans did).
+    - Stage 4 (21 Nov): the CASH DRAWER. A cash customer always hands over more than the total (`Till.tender` is now
+      strictly bigger; `Till.notesFor` = the notes, `Till.DENOMS`, `Till.denomName`). Cash at the checkout slides a till
+      drawer up over the till page (tillui.js `payCash` -> `openDrawer`; markup `.dr` inside `.tl-mon`, placed under the
+      speech bar so the customer stays visible; styles `.dr-*` in till.css): a little display (to pay, what they gave with
+      its notes, change due), a black tray tilted in 3D with four note slots under spring clips (£5 £10 £20 £50, plain
+      colours and values, no artwork) and eight coin cups (£2 to 1p, the right shapes), and "In your hand" below: tap a note
+      or coin to take one (`drTake`), tap one in your hand to put it back (`drBack`), Start over (`drStart`), Give change
+      (`drGive`). Wrong change: the customer says how much they're owed and it counts against a perfect pick (no change at
+      all: "I'm still waiting for my change", no slip). Right change: "Cheers", the drawer slides shut, then Order Complete.
+      Nothing else finishes a cash sale (the old one-tap Change given is gone). Controllers: the highlight moves round only
+      the drawer's buttons while it's open (`padItems`), starting on the notes, or on Give change once your hand is right.
+      Sounds: `coin` added to game.js. Sam's own till is unchanged (he takes his time, no drawer drawn). State is
+      `session.cash` {inc, given, due, hand, done}; leaving the till and coming back keeps the drawer as it was. Tests:
+      `warehouse-shift-stage4.test.mjs`.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

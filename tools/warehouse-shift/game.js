@@ -139,6 +139,7 @@
       talk: () => { tone(540, 0, 0.045, 'triangle', 0.035); tone(690, 0.055, 0.05, 'triangle', 0.03); },
       approved: () => { tone(1568, 0, 0.12, 'sine', 0.07); tone(2093, 0.13, 0.22, 'sine', 0.07); },
       drawer: () => { noise(0, 0.18, 0.3, 500); tone(2400, 0.2, 0.25, 'sine', 0.035); },
+      coin: () => { tone(3300, 0, 0.05, 'triangle', 0.035); tone(4200, 0.035, 0.09, 'sine', 0.028); },
       chime: () => { [880, 1109, 1319].forEach((f, i) => tone(f, i * 0.08, 0.2, 'triangle', 0.06)); },
       dayEnd: () => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.12, 0.3, 'triangle', 0.07)); }
     };
@@ -1589,7 +1590,7 @@
 
       const till = window.ShiftTillUI.create({
         el: D.till, world, Till, touch,
-        sfx: (n) => { const f = { key: SFX.key, beep: SFX.scan, good: SFX.pick, bad: SFX.bad, talk: SFX.talk, approved: SFX.approved, drawer: SFX.drawer, done: SFX.chime }[n]; if (f) f(); },
+        sfx: (n) => { const f = { key: SFX.key, beep: SFX.scan, good: SFX.pick, bad: SFX.bad, talk: SFX.talk, approved: SFX.approved, drawer: SFX.drawer, coin: SFX.coin, done: SFX.chime }[n]; if (f) f(); },
         onClose: () => closeTill(),
         onComplete: (info) => tillComplete(info),
         onSpeech: (line) => speak(line),

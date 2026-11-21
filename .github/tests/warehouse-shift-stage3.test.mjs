@@ -1,5 +1,5 @@
 // Warehouse Shift stage 3 (21 Nov 2026, detailedfoil): OC 9 to 14 on the ground with OC 3 to 8 above them, one row of
-// shelves in the middle of the shop, a red kick stool at every row end, customers ask by code only.
+// shelves in the middle of the shop, a red kick stool at every row end, customers ask by code or by key words from the name.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

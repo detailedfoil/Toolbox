@@ -333,6 +333,98 @@
   .fx-top{grid-template-columns:1fr auto}.fx-top>span:first-child{display:none}
   .tl-tab{flex-basis:150px}
 }
+/* ---------- the cash drawer (detailedfoil, 21 Nov 2026): it slides out under the till, tilted so you look down into it ---------- */
+.dr{position:absolute;left:12px;right:12px;bottom:12px;top:120px;z-index:6;display:flex;align-items:flex-end;justify-content:center;background:#05080e00;transition:background .45s;overflow:hidden}
+.dr[hidden]{display:none}
+.dr.open{background:#05080e99}
+.dr-box{display:flex;flex-direction:column;gap:8px;width:min(860px,100%);max-height:100%;padding:8px 10px 10px;border-radius:12px 12px 6px 6px;
+  background:linear-gradient(#3a3e45,#24272c);box-shadow:0 -10px 40px #000a,inset 0 1px 0 #ffffff26;transform:translateY(105%);transition:transform .45s cubic-bezier(.2,.9,.25,1.05)}
+.dr.open .dr-box{transform:none}
+.dr.shut .dr-box{transform:translateY(105%);transition:transform .45s cubic-bezier(.6,0,.9,.4)}
+/* the till's own little display */
+.dr-disp{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:6px;padding:6px 8px;border-radius:7px;background:#11161b;box-shadow:inset 0 2px 6px #000c;color:#9fe8a6;font:13px/1.15 ui-monospace,Menlo,Consolas,monospace}
+.dr-disp div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dr-disp span{font-size:11px;color:#7fb488;text-transform:uppercase;letter-spacing:.04em}
+.dr-disp b{font-size:20px;color:#e8ffe9}
+.dr-disp .due b{color:#ffe36b}
+.dr-gnotes{display:flex;gap:3px;font-style:normal}
+.dr-mini{display:grid;place-items:center;width:30px;height:15px;border-radius:2px;font:700 9px/1 Arial,sans-serif;color:#fff;font-style:normal}
+/* the drawer: a black plastic tray seen from above, its steel front below */
+.dr-3d{perspective:900px;perspective-origin:50% 0}
+.dr-tray{display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:6px 6px 0 0;background:linear-gradient(#1b1d21,#0e0f11);
+  box-shadow:inset 0 0 0 2px #2c2f35,inset 0 6px 14px #000;transform:rotateX(22deg);transform-origin:50% 100%}
+.dr-lip{position:relative;height:16px;border-radius:0 0 6px 6px;background:linear-gradient(#8d939c,#5f656e 60%,#4a4f57);box-shadow:inset 0 1px 0 #c9cfd6}
+.dr-key{position:absolute;left:50%;top:3px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:radial-gradient(#222 30%,#999 35%,#666 70%)}
+.dr button{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+/* notes: four slots, each a stack under a spring clip */
+.dr-notes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.dr-slot{position:relative;height:74px;padding:6px 6px 4px;border:0;border-radius:4px;background:#050607;box-shadow:inset 0 3px 8px #000,inset 0 0 0 1px #2a2d33}
+.dr-stack{position:relative;display:block;height:100%}
+.dr-stack i{position:absolute;inset:0;border-radius:3px;background:var(--nc);box-shadow:0 1px 2px #0009}
+.dr-stack i:nth-child(1){transform:translate(3px,-3px) rotate(1.2deg);filter:brightness(.7)}
+.dr-stack i:nth-child(2){transform:translate(-2px,-1.5px) rotate(-.8deg);filter:brightness(.85)}
+.dr-stack i.top{display:flex;align-items:flex-end;justify-content:flex-end;padding:3px 6px;overflow:hidden;
+  background:radial-gradient(circle at 26% 46%,#ffffff40 0 22%,transparent 23%),repeating-linear-gradient(115deg,#ffffff10 0 3px,transparent 3px 7px),var(--nc)}
+.dr-stack b{color:#fff;font:900 22px/1 Arial,sans-serif;text-shadow:0 1px 2px #0007}
+.dr-clip{position:absolute;left:18%;right:18%;top:24px;height:9px;border-radius:5px;background:linear-gradient(#d9dde2,#8a9098);box-shadow:0 2px 3px #000a}
+.n500{--nc:#2e8b7e}.n1000{--nc:#d07a1f}.n2000{--nc:#7a4aa6}.n5000{--nc:#c23a3a}
+.dr-mini.n500,.dr-tok.n500{background:#2e8b7e}.dr-mini.n1000,.dr-tok.n1000{background:#d07a1f}.dr-mini.n2000,.dr-tok.n2000{background:#7a4aa6}.dr-mini.n5000,.dr-tok.n5000{background:#c23a3a}
+/* coins: eight round cups */
+.dr-coins{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.dr-cup{position:relative;height:66px;padding:0;border:0;border-radius:0 0 22px 22px;background:#050607;box-shadow:inset 0 4px 9px #000,inset 0 0 0 1px #2a2d33}
+.dr-pile{position:absolute;left:50%;top:50%;width:var(--cs);height:var(--cs);margin:calc(var(--cs) / -2) 0 0 calc(var(--cs) / -2)}
+.dr-pile i{position:absolute;inset:0;background:var(--cc);clip-path:var(--cp,circle(50%));box-shadow:none}
+.dr-pile i:nth-child(1){transform:translate(-5px,4px);filter:brightness(.6)}
+.dr-pile i:nth-child(2){transform:translate(4px,2px);filter:brightness(.78)}
+.dr-pile i.top{display:grid;place-items:center}
+.dr-pile b{font:900 calc(var(--cs) * .34)/1 Arial,sans-serif;color:#0009;text-shadow:0 1px 0 #fff6}
+.c200{--cs:46px;--cc:radial-gradient(#d9dde2 0 52%,#b08a2e 54% 100%)}
+.c100{--cs:40px;--cc:radial-gradient(#f2d36b,#c49a2a);--cp:polygon(50% 0,75% 7%,93% 25%,100% 50%,93% 75%,75% 93%,50% 100%,25% 93%,7% 75%,0 50%,7% 25%,25% 7%)}
+.c50{--cs:46px;--cc:radial-gradient(#eef1f4,#a4abb4);--cp:polygon(50% 0,89% 19%,98% 61%,72% 95%,28% 95%,2% 61%,11% 19%)}
+.c20{--cs:36px;--cc:radial-gradient(#eef1f4,#a4abb4);--cp:polygon(50% 0,89% 19%,98% 61%,72% 95%,28% 95%,2% 61%,11% 19%)}
+.c10{--cs:42px;--cc:radial-gradient(#eef1f4,#a4abb4)}
+.c5{--cs:30px;--cc:radial-gradient(#eef1f4,#a4abb4)}
+.c2{--cs:42px;--cc:radial-gradient(#e7a06b,#a8582c)}
+.c1{--cs:32px;--cc:radial-gradient(#e7a06b,#a8582c)}
+.dr-slot:active,.dr-cup:active{filter:brightness(1.25)}
+.dr .tk .top{animation:drTake .28s ease-out}
+@keyframes drTake{0%{transform:none}45%{transform:translateY(-9px) scale(1.06)}100%{transform:none}}
+/* your hand: what you've taken out, tap one to put it back */
+.dr-hand{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;background:#f3efe6;color:#222}
+.dr-sum{display:flex;flex-direction:column;flex:none;min-width:94px}
+.dr-sum span{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.04em}
+.dr-sum b{font-size:21px}.dr-sum b.ok{color:#1d7a2a}.dr-sum b.over{color:#c62828}
+.dr-toks{display:flex;flex-wrap:wrap;align-items:center;gap:4px;flex:1;min-width:0;max-height:62px;overflow:auto}
+.dr-empty{font-size:13px;color:#777}
+.dr-tok{display:grid;place-items:center;height:26px;padding:0;border:0;color:#fff;font:800 12px/1 Arial,sans-serif;box-shadow:0 1px 2px #0006}
+.dr-tok[class*=" n"]{width:46px;border-radius:3px}
+.dr-tok[class*=" c"]{width:28px;height:28px;background:var(--cc);clip-path:var(--cp,circle(50%));color:#000b;font-size:10px;box-shadow:none}
+.dr-btns{display:flex;gap:6px;flex:none}
+.dr-btn{min-height:44px;padding:0 14px;border:1px solid #9a9488;border-radius:7px;background:#fff;color:#222;font-weight:700;font-size:15px}
+.dr-btn.go{border:0;background:#2e7d32;color:#fff;font-size:16px}
+.dr-btn:active{filter:brightness(1.1)}
+.tl .dr .pad-on{outline-color:#ffb400 !important}
+@media (max-height:520px){
+  .dr{left:6px;right:6px;bottom:6px}
+  .dr-box{gap:5px;padding:5px 7px 7px}
+  .dr-disp{padding:4px 7px}.dr-disp b{font-size:16px}.dr-disp span{font-size:10px}
+  .dr-tray{gap:4px;padding:5px}
+  .dr-slot{height:48px;padding:4px 5px 3px}.dr-clip{top:15px;height:7px}.dr-stack b{font-size:16px}
+  .dr-cup{height:44px;border-radius:0 0 16px 16px}
+  .c200{--cs:34px}.c100{--cs:30px}.c50{--cs:34px}.c20{--cs:27px}.c10{--cs:31px}.c5{--cs:23px}.c2{--cs:31px}.c1{--cs:24px}
+  .dr-lip{height:10px}.dr-key{top:1px;width:8px;height:8px;margin-left:-4px}
+  .dr-hand{padding:4px 6px;gap:7px}.dr-sum{min-width:78px}.dr-sum b{font-size:17px}
+  .dr-toks{max-height:40px}
+  .dr-btn{min-height:36px;padding:0 10px;font-size:13px}.dr-btn.go{font-size:14px}
+}
+@media (max-width:640px){
+  .dr-hand{flex-wrap:wrap}.dr-btns{width:100%}.dr-btn{flex:1}
+  .dr-coins{gap:3px}.dr-notes{gap:4px}
+  .dr-disp{grid-template-columns:1fr 1fr 1fr}.dr-gnotes{display:none}
+  .dr-cup{height:50px;border-radius:0 0 14px 14px}
+  .c200{--cs:36px}.c100{--cs:32px}.c50{--cs:36px}.c20{--cs:29px}.c10{--cs:33px}.c5{--cs:24px}.c2{--cs:33px}.c1{--cs:26px}
+}
+@media (prefers-reduced-motion:reduce){.dr-box,.dr.shut .dr-box{transition:none}.dr .tk .top{animation:none}}
 @media (prefers-reduced-motion:reduce){.fx-wait i{animation:none}.tl-toast{transition:none}.fu-line.qty .fu-q{animation:none}}
 /* a controller's highlight: whatever A will press */
 .tl .pad-on{outline:3px solid #ffb400 !important;outline-offset:2px;box-shadow:0 0 0 6px #ffb40044 !important;position:relative;z-index:2}
