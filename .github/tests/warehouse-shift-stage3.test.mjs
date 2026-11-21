@@ -29,8 +29,9 @@ test('the middle of the shop has one row of shelves, with the queue side and the
 });
 
 test('a red kick stool at the centre aisle end of every row, clear of everything else', () => {
-  assert.ok(world.stools.length >= 14, world.stools.length + ' stools');
-  assert.equal(world.stools.length, world.faces.length, 'one for every yellow and black end guard');
+  assert.ok(world.stools.length >= 10, world.stools.length + ' stools');
+  for (const a of world.stools) for (const b of world.stools) if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.y - b.y) > 0.9, 'no two stools side by side');
+  assert.equal(world.stools.length, world.rows.length, 'one for every row end (a back-to-back row shares one)');
   const ids = new Set(world.stools.map((s) => s.id)); assert.equal(ids.size, world.stools.length);
   for (const s of world.stools) {
     const inCentre = s.x > world.centre.x0 && s.x < world.centre.x1;
@@ -45,10 +46,10 @@ test('a red kick stool at the centre aisle end of every row, clear of everything
   assert.equal(world.objects.filter((o) => o.kind === 'stool').length, 2, 'only the two by the back wall are left');
 });
 
-test('customers only ask by code', () => {
+test('customers ask by code or by key words from the product name, never by a description sentence', () => {
   const rnd = W.rng(5), kinds = {};
-  for (let i = 0; i < 300; i++) for (const ln of Till.makeOrder(world, requests, rnd)) { kinds[ln.kind] = (kinds[ln.kind] || 0) + 1; assert.ok(ln.say.includes(ln.item.code)); assert.equal(ln.quote, ''); }
-  assert.deepEqual(Object.keys(kinds), ['code']);
+  for (let i = 0; i < 300; i++) for (const ln of Till.makeOrder(world, requests, rnd)) { kinds[ln.kind] = (kinds[ln.kind] || 0) + 1; assert.equal(ln.quote, ''); if (ln.kind === 'code') assert.ok(ln.say.includes(ln.item.code)); }
+  assert.deepEqual(Object.keys(kinds).sort(), ['code', 'describe']);
 });
 
 test('the game: stool pick-up, Step, the high shelf rule and the stool going home are wired up', () => {

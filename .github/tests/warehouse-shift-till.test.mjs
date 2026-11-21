@@ -158,7 +158,7 @@ test('till orders: 1 to 3 different products on the shelves, asked for by code, 
       assert.equal(Till.judge(ln, 'ZZZZZ', ln.qty), 'wrong');
     }
   }
-  assert.ok(kinds.code > 100 && kinds.describe === 0 && kinds.need === 0, JSON.stringify(kinds) + ' (customers only ask by code: detailedfoil, 21 Nov 2026)');
+  assert.ok(kinds.code > 100 && kinds.describe > 100 && kinds.need === 0, JSON.stringify(kinds) + ' (by code or key words from the name, never a description sentence: detailedfoil, 21 Nov 2026)');
 });
 
 test('the till page: Fusion and CrashFix tabs, the real search, no real usernames, addresses or Screwfix servers', () => {

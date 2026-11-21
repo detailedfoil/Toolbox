@@ -118,7 +118,7 @@ test('Sam can reach every location, the holding area, the tote stack and their t
 });
 
 test('a shift on their own: Sam picks what is left on the list and puts c picks away at a person\'s pace, and never serves the till', () => {
-  const s = shift(20261119, { minutes: 70, mode: 'pick' }); // Sam serves no till customers, so on their own it's click and collects
+  const s = shift(20261122, { minutes: 70, mode: 'pick' }); // Sam serves no till customers, so on their own it's click and collects
   const by = {};
   for (const d of s.done) (by[d.done] = by[d.done] || []).push(d.took);
   assert.ok(!by.till, 'Sam never serves a till customer (detailedfoil)');

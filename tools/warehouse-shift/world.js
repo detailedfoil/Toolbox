@@ -319,10 +319,10 @@
     // fire extinguishers on the walls, a mop bucket, a notice board and a clock
     // (the red kick stools live at the centre aisle end of every row, in front of its yellow and black end guard: see `stools`)
     var stools = [];
-    rk.faces.forEach(function (f, i) {
-      var r = f.row, ya = Math.min(f.y0, f.y1), yb = Math.max(f.y0, f.y1);
-      var x = r.side === 'R' ? r.x0 - POST / 2 - 0.35 : r.x1 + POST / 2 + 0.35, y = (ya + yb) / 2;
-      stools.push({ id: i, area: f.area, x: x, y: y, home: { x: x, y: y }, by: null });
+    // one per row end (a back-to-back row has two end guards side by side: one stool between them, detailedfoil 21 Nov 2026)
+    rk.rows.forEach(function (r, i) {
+      var x = r.side === 'R' ? r.x0 - POST / 2 - 0.35 : r.x1 + POST / 2 + 0.35, y = (r.y0 + r.y1) / 2;
+      stools.push({ id: i, area: r.s || r.n, x: x, y: y, home: { x: x, y: y }, by: null });
       objects.push({ kind: 'kickstool', x0: x - 0.21, y0: y - 0.21, x1: x + 0.21, y1: y + 0.21, z1: 0.42 });
     });
     objects.push({ kind: 'stool', x0: 3.9, y0: 0.35, x1: 4.32, y1: 0.77, z1: 0.42 }, { kind: 'stool', x0: 14.3, y0: 0.4, x1: 14.72, y1: 0.82, z1: 0.42 });

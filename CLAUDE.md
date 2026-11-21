@@ -441,14 +441,15 @@ explain changes in plain English and say what they'll see.
       above) and ONE row of shelves in the middle island of the shop (so one side is the queue, the other the paid
       customers); stage 6 also gets switching between landscape and portrait at any time on a phone (portrait makes typing
       easier).
-    - Stage 3 (21 Nov): (a) CUSTOMERS ONLY ASK BY CODE (`Till.makeOrder` always `kind: 'code'`; descriptions often say things like
-      "suitable for all uses", which nobody would ask for; the `need` data and `ln.kind === 'need'` code are still there, unused).
+    - Stage 3 (21 Nov): (a) Customers ask by CODE (30%) or by KEY WORDS FROM THE PRODUCT NAME (`describe`, back on; detailedfoil: names are
+      fine) but never by quoting a description sentence (`need`, off: descriptions say things like "suitable for all uses"; the
+      `need` data and code are still there, unused).
       (b) Holding area: OC-009 to OC-014 are the bottom (ground) row of totes and OC-003 to OC-008 sit above them (detailedfoil said
       "oc 3 to 8 should be above oc 9 to 14, they should be on the ground": read as 9 to 14 on the ground; if he meant the other way
       round, swap the `(row ? 3 : 9)` in `holding()` in world.js). (c) The middle of the shop has ONE row of shelves (one gondola,
       x 12.65 to 13.75, y 17.0 to 20.4) so the queue (left) and the paid customers (right) are easy to tell apart; the other two
       islands and the small cross shelf are gone. (d) KICK STOOLS: `world.stools`, one red stool at the centre aisle end of every
-      row (22), in front of its yellow and black end guard, blocking like any obstacle (`kickstool` in `BLOCKS`; the old
+      row (one per row, between the two end guards of a back-to-back row: detailedfoil didn't want two side by side), in front of the yellow and black end guards, blocking like any obstacle (`kickstool` in `BLOCKS`; the old
       decorative stools at the aisle ends are gone, the two by the back wall stay). Look at one and the button says Take stool
       (also Scan / RT); then a Step button (above Squat; V on a keyboard, LB on a controller) puts you on it (eye +0.42 m,
       can't walk or squat while on it; walking steps you down). Locations from 1.75 m up (`HIGH` in game.js) can only be
