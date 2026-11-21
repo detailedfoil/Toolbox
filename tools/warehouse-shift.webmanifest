@@ -3,7 +3,7 @@
   "name": "Warehouse Shift",
   "short_name": "Warehouse Shift",
   "description": "Pick customer orders in a 3D warehouse and hand them over at the trade counter.",
-  "start_url": "./warehouse-shift.html",
+  "start_url": "./warehouse-shift.html?online=1",
   "scope": "./warehouse-shift",
   "display": "fullscreen",
   "orientation": "any",

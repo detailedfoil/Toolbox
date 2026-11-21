@@ -86,7 +86,14 @@
     try { lookPick = Math.max(0, LOOKS.findIndex((l) => l[0] === localStorage.getItem('ws-look'))); } catch (e) { /* fine */ }
     const players = [];
     let active = false, online = null;
-    const onlineFlag = new URLSearchParams(location.search).get('online') === '1';
+    const standalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
+    const launchURL = new URL(location.href);
+    // Existing installations may still launch the original URL from their home screen.
+    if (standalone && !launchURL.searchParams.has('online')) {
+      launchURL.searchParams.set('online', '1');
+      history.replaceState(history.state, '', launchURL);
+    }
+    const onlineFlag = launchURL.searchParams.get('online') === '1';
     const guest = () => online?.guest();
 
     /* ---------- walking: the walls, racking and everything else that blocks ---------- */
@@ -2177,7 +2184,6 @@
       } catch (e) { /* not allowed here */ }
     }
     $('fullBtn').addEventListener('click', () => fullScreen(!document.fullscreenElement));
-    const standalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
     // (the "turn your phone sideways" prompt was taken off in stage 6: upright is easier for typing at the till)
 
     function ensureLocal() {
