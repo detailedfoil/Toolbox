@@ -185,16 +185,28 @@
       bellCust = c; P.toast('Ding! Sam will serve them');
     }
     const CY = counter.y1 + 0.42, MID = counter.y1 + 0.95;
-    // places at the counter: the left end, then across from each till (the last is Sam's)
-    const SPOTS = [{ x: counter.x0 + 0.34, y: CY }].concat(tills.map((t) => ({ x: tillX(t), y: CY, till: t })));
-    // waiting for their order: by the gap at the end of the counter, beside Sam's till (detailedfoil)
-    const WAIT = [{ x: counter.x1 + 0.3, y: counter.y1 + 0.47, wait: true }, { x: counter.x1 - 0.15, y: counter.y1 + 0.85, wait: true }, { x: counter.x1 - 0.25, y: counter.y1 + 1.4, wait: true }];
+    // places at the counter: across from each till (the last is Sam's)
+    const SPOTS = tills.map((t) => ({ x: tillX(t), y: CY, till: t }));
+    // the queue to be served (detailedfoil, 20 Nov 2026): a line down the left-hand wall end of the counter, on your right
+    // as you stand serving. The first in the line is at the counter; the line runs towards the shop front.
+    const QX = counter.x0 + 0.38, QSIDE = QX + 0.65;
+    const QUEUE = [{ x: QX, y: CY, queue: true }, { x: QX, y: CY + 0.62, queue: true }, { x: QX, y: CY + 1.24, queue: true }, { x: QSIDE, y: CY + 1.24, queue: true }];
+    // paid or checked in, waiting for their order: on your left as you stand serving, by the gap at the end of the counter
+    const WAIT = [{ x: counter.x1 - 0.3, y: CY, wait: true }, { x: counter.x1 - 0.9, y: CY + 0.6, wait: true }, { x: counter.x1 - 0.25, y: CY + 0.75, wait: true }, { x: counter.x1 - 0.8, y: CY + 1.25, wait: true }];
     const IN = [[entX, world.D - 0.5], [LANE - 0.18, world.D - 1.2], [LANE - 0.18, MID]];
     const OUT = [[LANE + 0.22, MID], [LANE + 0.22, world.D - 1.2], [entX, world.D - 0.5], [entX, world.D + 0.6]];
     const taken = new Map(); // spot -> the customer standing there
     const clampX = (x) => Math.min(x, counter.x1 - 0.25); // keeps clear of the shelving by the gap
     // the way from one place in front of the counter to another, round anyone standing at it
-    const route = (from, to) => [[clampX(from.x), MID], [clampX(to.x), MID], [to.x, to.y]];
+    // (from the queue they step out to the side first; into the queue they come up beside it)
+    const route = (from, to) => {
+      const out = [], inQ = from.x < QX + 0.3;
+      if (inQ) out.push([QSIDE, Math.max(CY + 0.2, Math.min(from.y === undefined ? MID : from.y, MID))]);
+      if (to.queue) { out.push([QSIDE, to.y], [to.x, to.y]); return out; }
+      out.push([clampX(inQ ? QSIDE : from.x), MID], [clampX(to.x), MID], [to.x, to.y]);
+      return out;
+    };
+    const posOf = (c) => ({ x: c.fig.group.position.x, y: c.fig.group.position.z });
 
     /* ---------- the customers: walking in, at the counter, waiting by the gap, going ---------- */
     const OUTFITS = [[0xf07a1a, 0x2f3540, 0xdfe3e8], [0xd9e021, 0x23272e, 0xdfe3e8], [0x7b2d3a, 0x3a3f47], [0x5a5f66, 0x22262c], [0x1d1f22, 0x4a3f33], [0xb3261e, 0x2f3540], [0x2e7d32, 0x3b3328], [0x0f5fa8, 0x23272e], [0xe8590c, 0x1f2328, 0xdfe3e8]];
@@ -231,7 +243,24 @@
     function standAt(c, s) { // c's place: a spot at the counter, a waiting spot, or nowhere
       for (const [k, v] of taken) if (v === c) taken.delete(k);
       if (s) taken.set(s, c);
+      const was = c.spot;
       c.spot = s || null;
+      if (was && was.queue && !(s && s.queue)) later(0.3, shuffleQueue); // someone left the line: the rest move up
+    }
+    function shuffleQueue() { // everyone in the line moves up to fill the gaps, in their order
+      const inQ = QUEUE.map((q) => taken.get(q)).filter(Boolean);
+      inQ.forEach((c, i) => {
+        const q = QUEUE[i];
+        if (c.spot === q) return;
+        standAt(c, q);
+        if (c.state === 'coming' || !c.fig || c.fig.giving) return; // still on the way: they go to their new place when they get there
+        walk(c, posOf(c).x < QX + 0.3 && q.x < QX + 0.3 ? [[q.x, q.y]] : route(posOf(c), q), () => { if (c.fig) c.fig.face = Math.PI; });
+      });
+    }
+    function joinQueue(c, then) { // to the back of the line
+      const s = QUEUE.find((q) => !taken.get(q)) || QUEUE[QUEUE.length - 1];
+      standAt(c, s);
+      walk(c, route(posOf(c), s), () => { if (c.fig) c.fig.face = Math.PI; if (then) then(); });
     }
     function freeSpot(near) { // a free place at the counter (not Sam's), the nearest to near
       let best = null, bd = Infinity;
@@ -241,10 +270,16 @@
     // a new customer walks in to the counter (day.js sends them); at the counter they tell day.js
     function comeIn(c) {
       const f = figFor(c), d = day;
-      const s = freeSpot(SPOTS[2].x) || SPOTS[1];
+      const s = QUEUE.find((q) => !taken.get(q)) || QUEUE[QUEUE.length - 1];
       standAt(c, s);
       f.group.position.set(entX, 0, world.D + 0.6); f.group.rotation.y = Math.PI;
-      walk(c, IN.concat([[s.x, s.y]]), () => { f.face = Math.PI; d.arrived(c); });
+      const there = () => { // into their place in the line (it may have moved up while they walked in)
+        if (!c.fig || !c.spot) { d.arrived(c); return; }
+        const p = posOf(c);
+        if (Math.hypot(p.x - c.spot.x, p.y - c.spot.y) > 0.08) { walk(c, p.x < QX + 0.3 ? [[c.spot.x, c.spot.y]] : [[QSIDE, c.spot.y], [c.spot.x, c.spot.y]], there); return; }
+        f.face = Math.PI; d.arrived(c);
+      };
+      walk(c, IN.concat([[QSIDE, Math.min(MID, CY + 1.24)]]), there);
     }
     // what they do next, when day.js says so
     function onStep(c) {
@@ -253,6 +288,7 @@
       if (c.state === 'greet') { for (const p of players) p.queueChanged(); return; } // at the counter, waiting to be said hello to
       if (c.state === 'counter') { // a till customer, waiting to be served
         if (!c.hello) { c.hello = true; speakFig(c, { text: c.say }); }
+        if (c.spot && c.spot.till && !f.giving && f.mode !== 'walking') joinQueue(c); // called to a till, then left: back in the line
         for (const p of players) p.queueChanged();
         return;
       }
@@ -269,26 +305,27 @@
     function stepAside(c) {
       const s = WAIT.find((w) => !taken.get(w)) || WAIT[WAIT.length - 1];
       standAt(c, s);
-      walk(c, route(c.fig.group.position.x !== undefined ? { x: c.fig.group.position.x } : s, s), () => faceTo(c, counter.x1 - 0.1, counter.y1 - 0.1));
+      walk(c, route(posOf(c), s), () => faceTo(c, counter.x1 - 0.6, counter.y1 - 0.1));
     }
     function goOut(c) {
       const d = day, f = c.fig;
+      const p = posOf(c), first = p.x < QX + 0.3 ? [[QSIDE, Math.max(CY + 0.2, Math.min(p.y, MID))]] : [];
       standAt(c, null);
-      walk(c, [[clampX(f.group.position.x), MID]].concat(OUT), () => { freeFig(f); d.gone(c); });
+      walk(c, first.concat([[clampX(Math.max(p.x, first.length ? QSIDE : 0)), MID]]).concat(OUT), () => { freeFig(f); d.gone(c); });
     }
     // called over to a till (yours or Sam's): anyone standing there swaps places
     function callTo(c, till, then) {
       const s = SPOTS.find((x) => x.till === till);
       const other = taken.get(s);
       if (other && other !== c) {
-        const back = c.spot && !c.spot.wait ? c.spot : freeSpot(s.x);
+        const back = c.spot && !c.spot.wait && !c.spot.queue ? c.spot : freeSpot(s.x);
         standAt(other, back);
-        if (back && other.fig && !other.fig.giving) walk(other, route({ x: other.fig.group.position.x }, back), () => { if (other.fig) other.fig.face = Math.PI; });
+        if (back && other.fig && !other.fig.giving) walk(other, route(posOf(other), back), () => { if (other.fig) other.fig.face = Math.PI; });
       }
       standAt(c, s);
       c.ready = false; c.at = till;
       const f = c.fig, p = f.group.position;
-      const pts = Math.abs(p.z - CY) < 0.12 && Math.abs(p.x - s.x) < 0.05 ? [[s.x, s.y]] : route({ x: p.x }, s);
+      const pts = Math.abs(p.z - CY) < 0.12 && Math.abs(p.x - s.x) < 0.05 ? [[s.x, s.y]] : route({ x: p.x, y: p.z }, s);
       walk(c, pts, () => { f.face = Math.PI; c.ready = true; if (then) then(); });
     }
     // a tote (or a bag) for customer c, put on the counter at x: they come over for it, it slides across, they go
@@ -299,7 +336,7 @@
       tote.visible = true;
       tote.position.set(x, 1.0, counter.y0 + 0.22);
       standAt(c, null);
-      walk(c, route({ x: f.group.position.x }, { x, y: CY }), () => {
+      walk(c, route(posOf(c), { x, y: CY }), () => {
         f.face = Math.PI;
         totes.push({ t: 0, tote, from: tote.position.clone(), to: new T.Vector3(x, 1.0, counter.y1 - 0.2), c });
       });
@@ -2120,7 +2157,7 @@
     $('startCover').hidden = false;
     me1.render();
     requestAnimationFrame(frame);
-    window.__shift = { prio: () => samPrio, bell: () => bellCust, world, S, me, cam: me1.cam, renderer, players, crew, figs, tills, ALEX_TILL, WAIT, SPOTS,
+    window.__shift = { prio: () => samPrio, bell: () => bellCust, world, S, me, cam: me1.cam, renderer, players, crew, figs, tills, ALEX_TILL, WAIT, SPOTS, QUEUE,
       day: () => day, newDay, scanAt: me1.scanAt, state: me1.state, order: me1.order, full: me1.full, sel: me1.sel, applyCam: me1.applyCam, hitAt: me1.hitAt, holdHit: me1.holdHit,
       scanHold: me1.scanHold, scanPut: me1.scanPut, spotBox, countOne: me1.countOne, confirmQty: me1.confirmQty, enter: me1.enter, back: me1.back, page: me1.page, tapRow: me1.tapRow,
       handOver: me1.handOver, useHint: me1.useHint, toggleSquat: me1.toggleSquat, layout, till: me1.till, openTill: me1.openTill, closeTill: me1.closeTill, nearTill: me1.nearTill,

@@ -263,32 +263,31 @@
       [2.15, 17.99, 2.31, 18.15], [2.15, 18.9, 2.31, 19.15], [2.15, 19.95, 2.31, 21.2]
     ].map(function (w) { return [w[0], w[1] + SY, w[2], w[3] + SY]; });
     // the shop: goods in on its left, Trade+ on its right, the office tucked between goods in and the shop
-    walls.push([9.49 + SX, 14.75 + SY, 9.65 + SX, D], [14.75 + SX, 14.9 + SY, 14.87 + SX, 19.65 + SY], [14.75 + SX, 20.45 + SY, 14.87 + SX, D]);
+    // (the wall down the middle of the shop floor, between the trade counter and Trade+, was taken out: detailedfoil, 20 Nov 2026)
+    walls.push([9.49 + SX, 14.75 + SY, 9.65 + SX, D]);
     var OX0 = 9.49 + SX - 1.95, OY0 = D - 3.3;
     walls.push([OX0 - 0.15, OY0 - 0.15, OX0, D], [OX0, OY0 - 0.15, OX0 + 0.45, OY0], [OX0 + 1.2, OY0 - 0.15, 9.49 + SX, OY0]);
     var rooms = [
       staff({ name: 'Staff room', x0: 0, y0: 14.08, x1: 3.15, y1: 17.81, floor: 'vinyl', ceiling: 2.85 }),
       staff({ name: 'WC', x0: 0, y0: 17.99, x1: 2.15, y1: 18.95, floor: 'vinyl', ceiling: 2.85, small: true }),
       staff({ name: 'Accessible WC', x0: 0, y0: 19.13, x1: 2.15, y1: 21.2, floor: 'vinyl', ceiling: 2.85, small: true }),
-      shop({ name: 'Trade counter', x0: 9.65, y0: 15.5, x1: 14.75, y1: 21.2, floor: 'tile', ceiling: 2.85 }),
-      shop({ name: 'Trade+', x0: 14.87, y0: 15.6, x1: 17.64, y1: 21.2, floor: 'tile', ceiling: 2.85 }),
+      // one big shop floor right across to the right-hand wall (detailedfoil, 20 Nov 2026)
+      shop({ name: 'Trade counter', x0: 9.65, y0: 15.5, x1: 17.64, y1: 21.2, floor: 'tile', ceiling: 2.85 }),
       { name: 'Office', x0: OX0, y0: OY0, x1: 9.49 + SX, y1: D, floor: 'vinyl', ceiling: 2.85, small: true }
     ];
     var objects = [
       shop({ kind: 'heater', name: 'Heater', x0: 10.1, y0: 13.73, x1: 17.2, y1: 14.5, z0: 3.5, z1: 3.85 }),
-      shop({ kind: 'counter', name: 'Trade counter', x0: 9.65, y0: 14.95, x1: 13.95, y1: 15.5 }),
-      shop({ kind: 'counter', name: 'Trade+ counter', x0: 14.87, y0: 15.01, x1: 15.89, y1: 15.6 }),
-      shop({ kind: 'counter', name: 'Trade+ counter', x0: 16.68, y0: 15.06, x1: 17.64, y1: 15.65 }),
-      shop({ kind: 'till', x0: 11.29, y0: 15.05, x1: 11.61, y1: 15.3 }),
-      shop({ kind: 'till', x0: 12.24, y0: 15.05, x1: 12.56, y1: 15.3 }), shop({ kind: 'till', x0: 13.19, y0: 15.05, x1: 13.51, y1: 15.3 }),
-      shop({ kind: 'till', x0: 14.99, y0: 15.1, x1: 15.31, y1: 15.35 }), shop({ kind: 'till', x0: 17.19, y0: 15.15, x1: 17.51, y1: 15.4 }),
-      shop({ kind: 'gondola', x0: 9.65, y0: 16.4, x1: 10.25, y1: 20.42, z1: 1.8, along: 'y', edges: [16.4, 16.91, 17.42, 18.41, 19.41, 20.42], open: 'E' }),
+      // the one long counter, the left-hand wall to 0.9 m short of the right-hand wall (the gap staff walk through), with
+      // 4 tills (detailedfoil, 20 Nov 2026). From behind it: the queue to be served on your right (the left-hand wall end),
+      // customers who've paid or checked in waiting on your left, by the gap. The last till, by the gap, is Sam's.
+      shop({ kind: 'counter', name: 'Trade counter', x0: 9.65, y0: 14.95, x1: 16.74, y1: 15.5 }),
+      shop({ kind: 'till', x0: 11.18, y0: 15.05, x1: 11.5, y1: 15.3 }), shop({ kind: 'till', x0: 12.48, y0: 15.05, x1: 12.8, y1: 15.3 }),
+      shop({ kind: 'till', x0: 13.78, y0: 15.05, x1: 14.1, y1: 15.3 }), shop({ kind: 'till', x0: 15.08, y0: 15.05, x1: 15.4, y1: 15.3 }),
+      shop({ kind: 'gondola', x0: 9.65, y0: 17.6, x1: 10.25, y1: 20.42, z1: 1.8, along: 'y', edges: [17.6, 18.41, 19.41, 20.42], open: 'E' }),
       shop({ kind: 'gondola', x0: 11.69, y0: 17.1, x1: 12.83, y1: 19.15, z1: 1.5, along: 'y', edges: [17.1, 18.1, 19.15], open: 'EW' }),
       shop({ kind: 'gondola', x0: 11.71, y0: 19.15, x1: 12.81, y1: 19.48, z1: 1.2, along: 'x', edges: [11.71, 12.81], open: 'S' }),
-      shop({ kind: 'gondola', x0: 14.22, y0: 16.42, x1: 14.72, y1: 19.48, z1: 1.8, along: 'y', edges: [16.42, 17.46, 18.46, 19.48], open: 'W' }),
-      shop({ kind: 'gondola', x0: 14.34, y0: 19.52, x1: 14.67, y1: 20.12, z1: 1.0, along: 'y', edges: [19.52, 20.12], open: 'W' }),
-      shop({ kind: 'gondola', x0: 14.9, y0: 16.54, x1: 15.46, y1: 19.62, z1: 1.8, along: 'y', edges: [16.54, 17.6, 18.6, 19.62], open: 'E' }),
-      shop({ kind: 'gondola', x0: 17.05, y0: 16.6, x1: 17.6, y1: 20.62, z1: 1.8, along: 'y', edges: [16.6, 17.6, 18.6, 19.6, 20.62], open: 'W' }),
+      shop({ kind: 'gondola', x0: 14.3, y0: 17.6, x1: 15.4, y1: 19.6, z1: 1.5, along: 'y', edges: [17.6, 18.6, 19.6], open: 'EW' }),
+      shop({ kind: 'gondola', x0: 17.05, y0: 17.6, x1: 17.6, y1: 20.62, z1: 1.8, along: 'y', edges: [17.6, 18.6, 19.6, 20.62], open: 'W' }),
       // staff room and toilets
       staff({ kind: 'table', x0: 0.3, y0: 15.2, x1: 1.0, y1: 16.4, z1: 0.75 }),
       staff({ kind: 'chair', x0: 1.05, y0: 15.4, x1: 1.45, y1: 15.8, face: 'W' }), staff({ kind: 'chair', x0: 1.05, y0: 15.9, x1: 1.45, y1: 16.3, face: 'W' }),

@@ -410,6 +410,16 @@ explain changes in plain English and say what they'll see.
     (LT Fusion, RT CrashFix), LB is Enter. The left side is now BBA at the FRONT to BBJ at the back; pick lists walk AAA to BAG, then
     BBJ down to BBA (`WALK` in world.js; `loc.order` follows it, don't sort by code). The two halves of a shared AAA bay have a
     12 cm gap (`HALFGAP`). The trolley has no handle.
+    **Changes since ChatGPT's multiplayer work began (20 Nov 2026 evening; for its handover, newest last).** Before this
+    point: no morning c picks, a walk-in's till-or-collect is rolled at the first hello (45% till), Stephen login, practice
+    picks always start on mixed. Then, in stages (detailedfoil's list of 20 Nov 23:46):
+    - Stage 1 (21 Nov): ONE shop floor. The wall between the trade counter and Trade+ is gone (the 'Trade+' room, its two
+      counters and tills too); the 'Trade counter' room runs to the right-hand wall. One long counter (x0 13.91 to x1 21.0,
+      a 0.9 m gap at the right-hand end to walk through) with 4 tills; the last, by the gap, is Sam's. Shop gondolas
+      re-laid. game.js: `SPOTS` = one per till (no left-end spot); `QUEUE` = the line to be served, down the left-hand wall
+      end of the counter (your right as you serve), `QX`/`QSIDE`; new customers join it (`comeIn` -> `there`), it moves up
+      when someone leaves (`standAt` -> `shuffleQueue`), a customer called to a till and then left rejoins it (`joinQueue`);
+      `route(from {x,y}, to)` steps out of / into the line sideways; `WAIT` (paid or checked in) is on your left by the gap.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

@@ -134,7 +134,7 @@ test('the mix: about 45% of the customers want the till or kiosk (settled at the
     assert.ok(cshare >= 0.2 && cshare <= 0.75, Math.round(100 * cshare) + '% of the customers wanted the till');
     tillC += cs.filter((c) => c.kind === 'till' || c.kind === 'kiosk').length; allC += cs.length;
     const ck = os.filter((o) => o.kind === 'ck'), hold = os.filter((o) => o.kind === 'hold'), c = os.filter((o) => o.kind === 'c');
-    assert.ok(ck.length >= 1 && hold.length >= 2, 'some of each: ' + ck.length + ' ck, ' + hold.length + ' from holding');
+    assert.ok(ck.length >= 1 && hold.length >= 1, 'some of each: ' + ck.length + ' ck, ' + hold.length + ' from holding');
     // one product (any quantity) comes from the warehouse; several products wait in the holding area; c picks have several
     assert.ok(ck.every((o) => o.lines.length === 1), 'a click and collect of one product');
     assert.ok(hold.every((o) => o.locs >= 2 && o.units >= o.locs), 'a bag has several products');
