@@ -15,12 +15,12 @@ async function until(check, what) {
   const limit = Date.now() + 8000;
   while (!check()) { if (Date.now() > limit) assert.fail('Timed out waiting for ' + what); await pause(30); }
 }
-async function game(t, { online = true, phone = false } = {}) {
+async function game(t, { online = true, phone = false, installed = false } = {}) {
   const w = new JSDOM(page, { runScripts: 'outside-only', pretendToBeVisual: true,
     url: origin + '/Toolbox/tools/warehouse-shift.html' + (online ? '?online=1&relay=' + relay : '') }).window;
 
   const $ = id => w.document.getElementById(id);
-  w.matchMedia = q => ({ matches: phone && q === '(pointer: coarse)' });
+  w.matchMedia = q => ({ matches: (phone && q === '(pointer: coarse)') || (installed && q.includes('display-mode: fullscreen')) });
   if (!phone) delete w.ontouchstart;
   w.innerWidth = phone ? 844 : 1280; w.innerHeight = phone ? 390 : 720;
   w.localStorage.setItem('toolbox.signedIn.area20', 'STEPHEN');
@@ -69,6 +69,19 @@ test('the normal game starts solo and local split-screen without opening a socke
     assert.equal(s.split(), split); assert.equal(s.players.length, split ? 2 : 1);
     assert.equal($('startCover').hidden, true); assert.equal(s.state(), 'home'); assert.equal(sockets.length, 0);
   }
+});
+
+test('an installed phone with the old launch URL can host or join from its start screen', async t => {
+  const manifest = JSON.parse(readFileSync(path.join(base, 'warehouse-shift.webmanifest'), 'utf8'));
+  assert.equal(manifest.id, './warehouse-shift.html');
+  assert.equal(manifest.start_url, './warehouse-shift.html?online=1');
+  const { w, $, sockets } = await game(t, { online: false, phone: true, installed: true });
+  assert.equal(w.location.search, '?online=1');
+  assert.equal($('onlineBtn').hidden, false);
+  $('onlineBtn').click();
+  assert.equal($('onlineCover').hidden, false);
+  assert.equal($('roomControls').hidden, false);
+  assert.equal(sockets.length, 0);
 });
 
 test('a phone and two other guests share the host game, pick, reconnect and follow the host into the next day', async t => {
