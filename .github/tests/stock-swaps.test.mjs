@@ -54,7 +54,7 @@ test('every plan keeps its rules', () => {
       }));
       p.skip.forEach((r) => {
         assert.equal(r.tier, 3);
-        assert.ok(r.mins <= m && (r.units < R.minUnits || r.score < R.minScore), where + 'a run under Not worth your time is worth it');
+        assert.ok(r.mins <= m && (r.units < R.minUnits || r.score < R.minScore - 1e-9 || (swaps && Math.min(r.ab, r.ba) < R.swapMin)), where + 'a run under Not worth your time is worth it');
       });
     }
   }

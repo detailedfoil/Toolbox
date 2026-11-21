@@ -176,8 +176,8 @@ def main():
     if missing:
         sys.exit("Not in the files: " + ", ".join(missing))
     extra = [k for k in stock if k not in [s[0] for s in STORES]]
-    if extra:
-        sys.exit("Stores in the stock file that aren't in STORES: " + ", ".join(extra))
+    if extra:   # the exports can cover all of Central or the whole company: only the Area 20 stores in STORES are used
+        print("Leaving out %d stores that aren't in Area 20" % len(extra))
 
     n, ni = len(STORES), len(head)
     STK = np.array([stock[s[0]] for s in STORES])
