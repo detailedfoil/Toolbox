@@ -323,7 +323,7 @@
     rk.rows.forEach(function (r, i) {
       var x = r.side === 'R' ? r.x0 - POST / 2 - 0.35 : r.x1 + POST / 2 + 0.35, y = (r.y0 + r.y1) / 2;
       stools.push({ id: i, area: r.s || r.n, x: x, y: y, home: { x: x, y: y }, by: null });
-      objects.push({ kind: 'kickstool', x0: x - 0.21, y0: y - 0.21, x1: x + 0.21, y1: y + 0.21, z1: 0.42 });
+      objects.push({ kind: 'kickstool', x0: x - 0.32, y0: y - 0.32, x1: x + 0.32, y1: y + 0.32, z1: 0.7 }); // bigger (detailedfoil, 21 Nov 2026)
     });
     objects.push({ kind: 'stool', x0: 3.9, y0: 0.35, x1: 4.32, y1: 0.77, z1: 0.42 }, { kind: 'stool', x0: 14.3, y0: 0.4, x1: 14.72, y1: 0.82, z1: 0.42 });
     objects.push({ kind: 'pallettruck', x0: 10.35, y0: D - 3.6, x1: 10.9, y1: D - 2.0, z1: 1.2 });
@@ -336,8 +336,8 @@
     var shopWall = 9.49 + SX;
     // the CCTV monitor (detailedfoil, 21 Nov 2026): it replaces the notice board, bigger, a map of the shop floor (cctv.js)
     // almost the whole width of its wall, the shop's back wall to the office (detailedfoil, 21 Nov 2026: "bigger, almost the whole width")
-    objects.push({ kind: 'cctv', face: 'W', x0: shopWall - 0.07, y0: 17.95, x1: shopWall, y1: 20.65, z0: 0.92, z1: 2.32, wall: true });
-    objects.push({ kind: 'clock', face: 'W', x0: shopWall - 0.05, y0: 19.05, x1: shopWall, y1: 19.45, z0: 2.42, z1: 2.82, wall: true });
+    objects.push({ kind: 'cctv', face: 'W', x0: shopWall - 0.07, y0: 17.95, x1: shopWall, y1: 20.65, z0: 0.78, z1: 2.4, wall: true });
+    objects.push({ kind: 'clock', face: 'W', x0: shopWall - 0.05, y0: 19.05, x1: shopWall, y1: 19.45, z0: 2.46, z1: 2.82, wall: true });
     var zones = [{ name: 'Goods in', x0: 4.7, y0: D - 4.6, x1: 9.9, y1: D - 0.6 }];
     // the holding area, beside goods in against the staff room wall (detailedfoil, 19 Nov 2026): long-span shelving
     // you face from goods in. On your left the bay for big loose items (OC-001 on the floor, OC-002 on the shelf

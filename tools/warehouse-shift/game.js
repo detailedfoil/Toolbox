@@ -1420,7 +1420,7 @@
             for (const s of world.stools || []) {
               if (s.by) continue;
               const a = aimAt(s.x, s.y, 0.25);
-              if (a.d < 2.0) take(a, 0.3, () => { st = s; }, { x: s.x, y: s.y, z0: 0, z1: 0.44, w: 0.45, d: 0.45 });
+              if (a.d < 2.0) take(a, 0.3, () => { st = s; }, { x: s.x, y: s.y, z0: 0, z1: 0.72, w: 0.68, d: 0.68 });
             }
           }
           { // the manager's PC in the office
@@ -1459,13 +1459,13 @@
       /* ---------- kick stools (detailedfoil, 21 Nov 2026) ---------- */
       // a red stool at the end of every row: Take stool, carry it into an aisle, Step up to reach the high shelves (AA shelf 13 up,
       // BA 7 up, top BB level), Step down. Walk out of the aisle and it goes back to where it lives. Sam doesn't use them.
-      const STEP = 0.42;
+      const STEP = 1.05; // 2.5 times the old 0.42 (detailedfoil, 21 Nov 2026), whatever the stool model's height
       // a stool is only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level (detailedfoil, 21 Nov 2026)
       const needsStep = (loc) => { const k = loc.face.kind, n = loc.shelf.no; return k === 'AA' ? n >= 13 : k === 'BA' ? n >= 7 : n >= loc.face.shelves.length; };
       function placeStool() {
         const s = P.stool; if (!s) return;
         const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);
-        if (me.step) S.setStool(s.id, me.x, me.y); else S.setStool(s.id, me.x + cy * 0.5 + sy * 0.1, me.y - sy * 0.5 + cy * 0.1);
+        if (me.step) S.setStool(s.id, me.x, me.y); else S.setStool(s.id, me.x + cy * 0.75 + sy * 0.1, me.y - sy * 0.75 + cy * 0.1);
       }
       function stepBtnSync() { D.stepBtn.hidden = !P.stool || !active; D.stepBtn.setAttribute('aria-pressed', String(!!me.step)); D.stepBtn.firstChild.textContent = me.step ? 'Down' : 'Step'; }
       function takeStool() {

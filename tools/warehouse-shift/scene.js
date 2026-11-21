@@ -833,6 +833,7 @@
     }
     const geoProp = {
       stool: new T.CylinderGeometry(0.15, 0.21, 0.42, 24), stoolTop: new T.CylinderGeometry(0.155, 0.155, 0.012, 24),
+      kick: new T.CylinderGeometry(0.22, 0.32, 0.7, 28), kickTop: new T.CylinderGeometry(0.235, 0.235, 0.016, 28),
       ext: new T.CylinderGeometry(0.075, 0.075, 0.5, 16), extTop: new T.CylinderGeometry(0.03, 0.05, 0.08, 10)
     };
     Object.assign(M, { carton: lam(0xc49a64), carton2: lam(0xb88d58), stool: lam(0xc3222b), truck: lam(0xf07a1a), toteRim: lam(0x24508f), red: lam(0xc8191f) });
@@ -840,8 +841,8 @@
     const stoolMeshes = new Map();
     for (const st of world.stools || []) {
       const g = new T.Group();
-      const m = new T.Mesh(geoProp.stool, M.stool); m.position.y = 0.21; g.add(m);
-      const t = new T.Mesh(geoProp.stoolTop, M.black); t.position.y = 0.425; g.add(t);
+      const m = new T.Mesh(geoProp.kick, M.stool); m.position.y = 0.35; g.add(m); // a big red elephant's foot (detailedfoil, 21 Nov 2026: bigger)
+      const t = new T.Mesh(geoProp.kickTop, M.black); t.position.y = 0.705; g.add(t);
       g.position.set(st.x, 0, st.y); groups.shop.add(g); stoolMeshes.set(st.id, g);
     }
     function setStool(id, x, y) { const g = stoolMeshes.get(id); if (g) g.position.set(x, 0, y); }

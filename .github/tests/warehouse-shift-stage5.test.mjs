@@ -34,15 +34,16 @@ test('the monitor takes the notice board\'s place on the wall, and is bigger', (
   assert.ok(m.y1 - m.y0 > 1.3 && m.z1 - m.z0 > 0.9, 'wider and taller than the 1.3 x 0.9 m board');
 });
 
-test('the map: counter on the left, door on the right, waiting to be served on your right as you serve, collections on your left', () => {
+test('the map is landscape: tills along the bottom, door at the top, waiting to be served on your right as you serve, collections on your left', () => {
   const C = loadCCTV(), cv = fakeCanvas(1024, 600), counter = world.counter;
   const zones = { queue: { x0: counter.x0 + 0.5, x1: counter.x0 + 2.1, y0: counter.y1, y1: counter.y1 + 2 }, wait: { x0: counter.x1 - 1.35, x1: counter.x1 + 0.3, y0: counter.y1, y1: counter.y1 + 2 } };
   const cam = C.create({ canvas: cv, world, zones }), m = cam.map;
-  assert.ok(m.u(counter.y0) < m.u(world.D), 'the counter is left of the door');
-  // standing behind the counter facing the door (right on the map), your right hand is down the map
-  assert.ok(m.v((zones.queue.x0 + zones.queue.x1) / 2) > m.v((zones.wait.x0 + zones.wait.x1) / 2), 'waiting to be served below collections');
+  assert.ok(m.v(counter.y0) > m.v(world.D), 'the counter is below the door');
+  assert.ok(m.k * (m.X1 - m.X0) > m.k * (m.Y1 - m.Y0) * 0.9, 'as wide as it is deep, filling the screen');
+  // standing behind the counter facing the door (up the map), your right hand is the right of the map
+  assert.ok(m.u((zones.queue.x0 + zones.queue.x1) / 2) > m.u((zones.wait.x0 + zones.wait.x1) / 2), 'waiting to be served right of collections');
   // every spot on the shop floor is on the screen
-  for (const [x, y] of [[counter.x0, counter.y0], [world.W - 0.01, world.D - 0.01]]) { assert.ok(m.u(y) >= 0 && m.u(y) <= 1024 && m.v(x) >= 0 && m.v(x) <= 600); }
+  for (const [x, y] of [[counter.x0, counter.y0], [world.W - 0.01, world.D - 0.01]]) { assert.ok(m.u(x) >= 0 && m.u(x) <= 1024 && m.v(y) >= 0 && m.v(y) <= 600); }
   const people = [
     { x: counter.x0 + 1, y: counter.y1 + 0.5, state: 'queue', colour: '#ff0000' }, { x: counter.x0 + 1, y: counter.y1 + 1.1, state: 'greet' },
     { x: counter.x1 - 0.5, y: counter.y1 + 0.5, state: 'wait' }, { x: counter.x0 + 3, y: counter.y1 + 0.4, state: 'till' },
@@ -52,7 +53,7 @@ test('the map: counter on the left, door on the right, waiting to be served on y
   assert.deepEqual({ ...n }, { queue: 2, till: 1, wait: 1, staff: 1 });
   const texts = cv.g.texts.map((t) => t.t);
   assert.ok(texts.includes('CAM 01  SHOP FLOOR') && texts.includes('21/11  09:05:07'));
-  assert.ok(texts.includes('Waiting to be served') && texts.includes('Waiting for orders') && texts.includes('! 1 to greet'));
+  assert.ok(!texts.some((t) => /Waiting to be served|to greet|Staff on the floor/.test(t)), 'no count panel any more');
   assert.ok(texts.includes('S'), 'staff are shown by their initial');
 });
 

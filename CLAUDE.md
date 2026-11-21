@@ -510,6 +510,14 @@ explain changes in plain English and say what they'll see.
       most of its 3 m wall (y 17.95 to 20.65; the clock moved up to z 2.42), drawn on a 2048 px canvas; cctv.js scales every
       size by `K` (canvas width / 1024) and the map marks by `R` (map scale), and each count is as tall as its row allows.
       Tests: `warehouse-shift-stage6.test.mjs`.
+    - After stage 6 (21 Nov, detailedfoil): (a) the kick stool is bigger: 0.64 m wide and 0.7 m tall (was 0.42 x 0.42; `kickstool` in
+      world.js, `kick` / `kickTop` geometry in scene.js, the aim box in game.js; the two decorative stools by the back wall are
+      unchanged) and Step lifts you 1.05 m (`STEP` in game.js, was 0.42: 2.5 times as high, so the stool model is lower than your
+      feet, his say). (b) The CCTV map is landscape: counter and tills (plain dots now, no numbers) along the BOTTOM, front door at
+      the TOP, right on the screen = small x (your right as you stand behind the counter facing the door), no count panel and no
+      "to greet" line (the "!" over an unGreeted customer stays; `draw()` still returns the counts); the map is as big as the screen
+      allows under a slim CAM 01 / date / REC line (cctv.js `u(x)` / `v(y)`, `map.k`). The screen is taller (z 0.78 to 2.4, the clock
+      at 2.46 to 2.82) so the nearly square shop fills more of it.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.
