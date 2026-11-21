@@ -174,18 +174,34 @@
       if (Array.isArray(sv) && sv.length === PRIO_DEFAULT.length && PRIO_DEFAULT.every((id) => sv.some((j) => j && j.id === id))) samPrio = sv.map((j) => ({ id: j.id, on: !!j.on }));
     } catch (e) { /* fine */ }
     function saveSamPrio() { try { localStorage.setItem('ws-sam-prio', JSON.stringify(samPrio)); } catch (e) { /* fine */ } }
-    // the service bell (detailedfoil, 19 Nov 2026): rung once, Sam serves that one waiting till customer; he never serves any other
-    let bellCust = null;
-    function bellQueue() { if (bellCust && !(day && day.queue().indexOf(bellCust) >= 0)) bellCust = null; return bellCust ? [bellCust] : []; }
-    function ringBell(P) {
-      if (!day || day.phase !== 'open') return;
-      if (!crew.some((x) => x.name === 'Sam')) { P.toast('Sam isn\'t here to answer it'); return; }
-      if (bellCust) { P.toast('Sam is on the way'); return; }
-      let c = day.queue().find((x) => x !== P.tillCust);
-      if (!c) { const g = day.ungreeted()[0]; if (g && day.greet(g, P.id)) c = day.queue().find((x) => x === g); }
-      SFX.order();
-      if (!c) { P.toast('Nobody is waiting at the till'); return; }
-      bellCust = c; P.toast('Ding! Sam will serve them');
+    let bellCust = null, bellCount = 0, nextBellCheck = 0;
+    function bellQueue() { if (bellCust?.state !== 'counter') bellCust = null; return bellCust ? [bellCust] : []; }
+    function showBell() {
+      tone(784, 0, 0.48, 'sine', 0.1);
+      tone(622, 0.28, 0.65, 'sine', 0.1);
+      S.pressBell(true);
+      later(0.22, () => S.pressBell(false));
+      for (const p of players) p.banner('Ding dong', 'Help needed on tills', 3400, 'bell');
+    }
+    function announceBell() { bellCount++; showBell(); }
+    function ringBell(who) {
+      if (day?.phase !== 'open') return false;
+      announceBell();
+      // A manual ring also gives Sam one waiting till customer, even with Queue unticked.
+      if (crew.length && !bellQueue().length) {
+        if (!day.queue().length) day.greet(day.ungreeted()[0], who);
+        bellCust = day.queue()[0] || null;
+      }
+      if (bellCust) bellCust.helpCalled = true;
+      return true;
+    }
+    function checkServiceBell() {
+      if (!crew.length || day.phase !== 'open' || day.t < nextBellCheck) return;
+      nextBellCheck = day.t + 0.2;
+      const waiting = day.customers.filter(c => !c.helpCalled && (c.state === 'greet' || c.state === 'counter') && day.t - c.here >= 6);
+      if (!waiting.length) return;
+      for (const c of waiting) c.helpCalled = true;
+      announceBell();
     }
     const CY = counter.y1 + 0.42, MID = counter.y1 + 0.95;
     // places at the counter: across from each till (the last is Sam's)
@@ -199,6 +215,7 @@
     const WAIT = [[0.3, 0], [1.0, 0.8], [1.9, 1.5], [0.5, 1.7], [2.5, 0.7], [1.4, 2.4], [2.4, 2.0], [0.4, 2.7]].map((o) => ({ x: counter.x1 - o[0], y: CY + o[1], wait: true }));
     const IN = [[entX, world.D - 0.5], [LANE - 0.18, world.D - 1.2], [LANE - 0.18, MID]];
     const OUT = [[LANE + 0.22, MID], [LANE + 0.22, world.D - 1.2], [entX, world.D - 0.5], [entX, world.D + 0.6]];
+    let routePending = false;
     const taken = new Map(); // spot -> the customer standing there
     // the two waiting areas, shown on the CCTV map only (detailedfoil, 21 Nov 2026: nothing painted on the real floor)
     const ZONES = {
@@ -254,6 +271,7 @@
       for (const [k, v] of taken) if (v === c) taken.delete(k);
       if (s) taken.set(s, c);
       const was = c.spot;
+      if (was?.till && was !== s) { c.at = null; routePending = true; }
       c.spot = s || null;
       if (was && was.queue && !(s && s.queue)) later(0.3, shuffleQueue); // someone left the line: the rest move up
     }
@@ -266,11 +284,6 @@
         if (c.state === 'coming' || !c.fig || c.fig.giving) return; // still on the way: they go to their new place when they get there
         walk(c, posOf(c).x < QX + 0.3 && q.x < QX + 0.3 ? [[q.x, q.y]] : route(posOf(c), q), () => { if (c.fig) c.fig.face = Math.PI; });
       });
-    }
-    function joinQueue(c, then) { // to the back of the line
-      const s = QUEUE.find((q) => !taken.get(q)) || QUEUE[QUEUE.length - 1];
-      standAt(c, s);
-      walk(c, route(posOf(c), s), () => { if (c.fig) c.fig.face = Math.PI; if (then) then(); });
     }
     function freeSpot(near) { // a free place at the counter (not Sam's), the nearest to near
       let best = null, bd = Infinity;
@@ -299,7 +312,7 @@
       if (c.state === 'greet') { for (const p of players) p.queueChanged(); return; } // at the counter, waiting to be said hello to
       if (c.state === 'counter') { // a till customer, waiting to be served
         speakFig(c, { text: c.say }, true);
-        if (c.spot && c.spot.till && !f.giving && f.mode !== 'walking') joinQueue(c); // called to a till, then left: back in the line
+        routeWaiting();
         for (const p of players) p.queueChanged();
         return;
       }
@@ -324,20 +337,41 @@
       standAt(c, null);
       walk(c, first.concat([[clampX(Math.max(p.x, first.length ? QSIDE : 0)), MID]]).concat(OUT), () => { freeFig(f); d.gone(c); });
     }
-    // called over to a till (yours or Sam's): anyone standing there swaps places
-    function callTo(c, till, then) {
-      const s = SPOTS.find((x) => x.till === till);
-      const other = taken.get(s);
-      if (other && other !== c) {
-        const back = c.spot && !c.spot.wait && !c.spot.queue ? c.spot : freeSpot(s.x);
-        standAt(other, back);
-        if (back && other.fig && !other.fig.giving) walk(other, route(posOf(other), back), () => { if (other.fig) other.fig.face = Math.PI; });
+    // Reserve the spot before walking. A waiting customer can be served by anyone at that till.
+    function routeWaiting() {
+      for (const c of day.queue()) {
+        if (c.spot?.till && c.spot.till !== ALEX_TILL) continue;
+        const local = players.find(p => p.id === c.greeter);
+        const till = local?.tillAt() || online?.tillFor(c.greeter);
+        const greeter = local?.me || online?.peers.get(Number(c.greeter?.slice(1)));
+        const spot = freeSpot(till ? tillX(till) : greeter?.x ?? QX);
+        if (spot) callTo(c, spot.till);
+        else if (c.spot?.till === ALEX_TILL) {
+          const q = QUEUE.find(s => !taken.has(s));
+          if (q) { standAt(c, q); walk(c, route(posOf(c), q), () => { c.fig.face = Math.PI; }); }
+        }
       }
-      standAt(c, s);
-      c.ready = false; c.at = till;
-      const f = c.fig, p = f.group.position;
-      const pts = Math.abs(p.z - CY) < 0.12 && Math.abs(p.x - s.x) < 0.05 ? [[s.x, s.y]] : route({ x: p.x, y: p.z }, s);
-      walk(c, pts, () => { f.face = Math.PI; c.ready = true; if (then) then(); });
+    }
+    function callTo(c, till, then) {
+      const spot = SPOTS.find(s => s.till === till);
+      if (!spot || (taken.has(spot) && taken.get(spot) !== c)) return false;
+      const same = c.spot === spot;
+      standAt(c, spot);
+      c.at = till;
+      const arrive = () => { c.fig.face = Math.PI; c.ready = true; if (then) then(); };
+      if (same && c.fig.mode === 'walking') c.fig.then = arrive;
+      else if (same) arrive();
+      else {
+        c.ready = false;
+        walk(c, route(posOf(c), spot), arrive);
+      }
+      return true;
+    }
+    function claimAtTill(t, who) {
+      const spot = SPOTS.find(s => s.till === t);
+      if (!taken.has(spot) && day.canGreet(who)) day.greet(day.ungreeted()[0], who);
+      const c = taken.get(spot);
+      return day.serve(c, who) ? c : null;
     }
     // a tote (or a bag) for customer c, put on the counter at x: they come over for it, it slides across, they go
     function giveTote(c, tote, x) {
@@ -440,6 +474,7 @@
       changed: (o) => { for (const p of players) p.changed(o); tidyScreens(); },
       customer: (c) => comeIn(c),
       step: (c) => onStep(c),
+      playerCount: () => online?.room()?.peers.size || players.length,
       unlocked: () => { for (const p of players) { p.banner('Doors open', 'Customers will be in shortly', 2600); p.queueChanged(); } },
       closing: () => { for (const p of players) { p.banner('All done', 'Lock the front door', 6000); p.queueChanged(); } SFX.order(); },
       locked: () => { SFX.key(); },
@@ -452,7 +487,7 @@
       if (guest()) return;
       const old = day;
       day = Day.create({ world, World, Till, requests, mode: MODES[mode][0], env: dayEnv, hold: old ? old.hold : null });
-      dayNo++;
+      dayNo++; bellCust = null; bellCount = 0; nextBellCheck = 0;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
       S.delivery.set(day.delivery);
       for (const p of players) p.newDay();
@@ -476,13 +511,14 @@
     }
     const pulling = new Set(); // boxes moving forward or back
     const cartonGeo = new T.BoxGeometry(0.42, 0.3, 0.32), cartonMat = new T.MeshLambertMaterial({ color: 0xc49a64 });
+    const samTillFree = () => !taken.has(SPOTS[SPOTS.length - 1]);
     const crewEnv = {
       board: () => {
         if (!(day && active)) return { orders: [], queue: [], bell: [], greet: [], prio: [], delivery: 0, early: [] };
         const on = samPrio.filter((j) => j.on).map((j) => j.id);
         // the queue: till customers who've waited a few seconds with nobody coming to serve them
-        const q = on.includes('queue') ? day.queue().filter((c) => day.t - (c.greeted || c.here || 0) > 5 && !players.some((p) => p.tillCust === c)) : [];
-        return { orders: day.listLate(), queue: q, bell: bellQueue(), greet: day.ungreeted().filter((c) => day.t - c.here > 10), prio: on, delivery: day.deliveryLeft().length,
+        const q = on.includes('queue') ? day.queue().filter((c) => c.greeter === 'Sam' || day.t - c.greeted > 5) : [];
+        return { orders: day.listLate(), queue: samTillFree() ? q : [], bell: samTillFree() ? bellQueue() : [], greet: day.ungreeted().filter((c) => day.t - c.here > 2), prio: on, delivery: day.deliveryLeft().length,
           early: day.listEarly().filter((o) => on.includes(o.kind === 'c' ? 'hold' : 'cust')) };
       },
       paSources: () => (day ? world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i) : []),
@@ -496,7 +532,7 @@
       paPut(b, d) { if (b.fig.held) { b.fig.carry.remove(b.fig.held); b.fig.held = null; } day.paPut(d, b.name); dirty = true; },
       greet: (b, c) => { if (day) day.greet(c, b.name); },
       take: (b, o) => !!day && day.take(o, b.name),
-      serve(b, c) { if (!day || !day.serve(c, b.name)) return false; showScreen(b.till, null); callTo(c, b.till); return true; },
+      serve(b, c) { if (!day || !samTillFree() || !day.serve(c, b.name)) return false; showScreen(b.till, null); callTo(c, b.till); return true; },
       picked: (b, o) => day.picked(o),
       holdFree: () => (day ? day.freeSpots() : []),
       reserve: (b, code) => !!day && day.reserve(code, b.name),
@@ -898,7 +934,7 @@
       let toastT = 0;
       function toast(text, kind) { D.toast.textContent = text; D.toast.className = 'ws-toast show' + (kind ? ' ' + kind : ''); clearTimeout(toastT); toastT = setTimeout(() => { D.toast.className = 'ws-toast'; }, 1300); }
       let bannerT = 0;
-      function banner(title, text, ms) { D.bannerTitle.textContent = title; D.bannerText.textContent = text || ''; D.banner.className = 'ws-banner show'; clearTimeout(bannerT); bannerT = setTimeout(() => { D.banner.className = 'ws-banner'; }, ms || 1800); }
+      function banner(title, text, ms, kind) { D.bannerTitle.textContent = title; D.bannerText.textContent = text || ''; D.banner.className = kind === 'bell' ? 'ws-banner show bell' : 'ws-banner show'; clearTimeout(bannerT); bannerT = setTimeout(() => { D.banner.className = 'ws-banner'; }, ms || 1800); }
       P.toast = toast;
 
       /* ---------- the list: choosing an order ---------- */
@@ -1424,6 +1460,10 @@
         const cp = Math.cos(me.pitch), fx = -Math.sin(me.yaw) * cp, fy = Math.sin(me.pitch), fz = -Math.cos(me.yaw) * cp;
         return { ang: Math.acos(Math.max(-1, Math.min(1, (dx * fx + dy * fy + dz * fz) / d))), d };
       }
+      function canUseTill(t) {
+        if (t === ALEX_TILL || (P.tillCust && t !== P.tillCust.at) || online?.occupied(t, P.id)) return false;
+        return !players.some(q => q !== P && (q.tillAt() === t || q.tillCust?.at === t));
+      }
       function checkTill() { // the thing you're looking at: a till behind the counter (the one by the gap is Sam's), the door, a customer to greet, the bell
         if (till && till.isOpen()) return; // at a till: keep it
         let best = null, g = null, dr = null, br = false, pcx = false, st = null, box = null, bestAng = 9;
@@ -1432,13 +1472,13 @@
         if (active) {
           if (behind) {
             for (const t of tills) {
-              if (t === ALEX_TILL || online?.occupied(t, P.id) || players.some((q) => q !== P && q.tillAt() === t)) continue;
+              if (!canUseTill(t)) continue;
               const a = aimAt(tillX(t), (t.y0 + t.y1) / 2, 1.15);
               if (a.d < 2.4) take(a, 0.16, () => { best = t; }, { x: tillX(t), y: (t.y0 + t.y1) / 2, z0: 1.0, z1: 1.34, w: t.x1 - t.x0, d: t.y1 - t.y0 });
             }
           }
           // Greet only from the till area: within about 1.6 m (along the counter) of one of the tills (detailedfoil, 21 Nov 2026)
-          if (day && behind && tills.some((t) => Math.abs(tillX(t) - me.x) < 1.6)) {
+          if (day?.canGreet(P.id) && behind && tills.some((t) => Math.abs(tillX(t) - me.x) < 1.6)) {
             for (const c of day.ungreeted()) {
               if (!c.fig) continue;
               const px = c.fig.group.position.x, py = c.fig.group.position.z, a = aimAt(px, py, 1.2);
@@ -1492,7 +1532,7 @@
           return true;
         }
         if (stoolOn) { takeStool(); return true; }
-        if (bellOn) { if (guest()) remote(() => online.bell()).then(msg => { if (msg) toast(msg); }); else ringBell(P); return true; }
+        if (bellOn) { if (guest()) remote(() => online.bell()); else ringBell(P.id); return true; }
         if (pcOn) { openPc(); return true; }
         return false;
       }
@@ -1593,7 +1633,7 @@
       P.pcOpen = () => pc.open; P.pcKey = pcKey; P.openPc = openPc; P.closePc = closePc;
       P.useAction = useAction;
       async function openTill() {
-        if (!till || till.isOpen() || !nearTill) return;
+        if (!till || till.isOpen() || !nearTill || !canUseTill(nearTill)) return;
         if (online?.room()) {
           const target = nearTill;
           const ok = guest() ? await remote(() => online.open(target)) : online.open(target);
@@ -1615,22 +1655,21 @@
       function callOver() {
         if (!till || !till.isOpen() || !nearTill || !day) return;
         if (guest()) {
-          if (!pending && !P.tillCust && !day.customers.some(c => c.by === P.id) && (day.queue().length || day.ungreeted().length)) remote(() => online.call());
+          const customer = day.customers.find(c => c.at === nearTill);
+          const needsService = customer ? customer.state === 'counter' : day.canGreet(P.id) && day.ungreeted().length;
+          if (needsService && !pending && !P.tillCust && !day.customers.some(c => c.by === P.id)) remote(() => online.call());
           const done = screenOf(nearTill);
           if (done && !till.session()) till.showDone(done.no, 'On the shared pick list.');
           return;
         }
-        const c0 = P.tillCust;
-        if (c0) { if (c0.at !== nearTill && c0.fig) callTo(c0, nearTill, () => talkTo(c0)); return; }
-        let c = day.queue()[0];
-        // you're at the till with nobody to serve: whoever is waiting to be greeted gets their hello from here
-        if (!c) { const g = day.ungreeted()[0]; if (g && day.greet(g, P.id)) { toast('Hello!'); c = day.queue()[0]; } }
+        if (P.tillCust) return;
+        const c = claimAtTill(nearTill, P.id);
+        if (P.tillCust) return; // greeting can wake an open till immediately
         if (!c) {
           const o = screenOf(nearTill);
           if (o && !till.session()) till.showDone(o.no, o.status === 'listed' ? 'Waiting to be picked: it\'s on the pick list.' : 'Being picked now.');
           return;
         }
-        if (!day.serve(c, P.id)) return;
         P.tillCust = c;
         showScreen(nearTill, null);
         callTo(c, nearTill, () => talkTo(c));
@@ -2357,7 +2396,11 @@
       if (updateMoving(dt)) changed = true;
       if (!guest() && updateFigs(dt)) changed = true;
       if (updateTotes(dt)) changed = true;
-      if (active && !guest() && updateCrew(dt)) changed = true;
+      if (active && !guest()) {
+        if (routePending) { routePending = false; routeWaiting(); for (const p of players) p.queueChanged(); }
+        if (updateCrew(dt)) changed = true;
+        checkServiceBell();
+      }
       if (online && online.animate(dt)) changed = true;
       if (day) {
         const cartons = day.delivery;
@@ -2449,7 +2492,7 @@
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
-        ringBell, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, dirty: () => { dirty = true; },
+        ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; },
         resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },
         clearDayView() {

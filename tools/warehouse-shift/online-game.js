@@ -7,7 +7,7 @@
     const stockItems = new Set();
     const peers = new Map(), models = new Map(), locks = new Map(), progress = new Map();
     let net, replica, mirroredSam, epoch, started = false, roomSize = 0;
-    let openShelves = new Set();
+    let openShelves = new Set(), lastBell = 0;
     function shelves() {
       const open = new Set();
       const add = sku => {
@@ -64,7 +64,7 @@
       };
     }
     function snapshot() {
-      return { epoch: g.epoch(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
+      return { epoch: g.epoch(), bell: g.bellCount(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
     }
     function apply(s, reset) {
       const newDay = epoch !== s.epoch;
@@ -92,6 +92,8 @@
         else if (before.get(o.id) !== o.status || p.order() === o) p.changed(o);
       }
       p.render(); p.queueChanged();
+      if (!reset && s.bell !== lastBell) g.showBell();
+      lastBell = s.bell;
       if (!over && replica.over) g.dayOver();
       g.dirty();
     }
@@ -192,6 +194,7 @@
     function occupied(t, who) { return [...locks].some(([id, index]) => id !== who && tills[index] === t); }
     function open(who, index, pos) {
       const t = tills[index];
+      if (g.day().customers.some(c => c.state === 'serving' && c.by === who && c.at !== t)) return false;
       if (!t || t === g.sam.till || occupied(t, who) || Math.hypot(pos.x - (t.x0 + t.x1) / 2, pos.y - t.y0) > 2.7 || pos.y > world.counter.y0 + 0.05) return false;
       locks.set(who, index); return true;
     }
@@ -216,19 +219,15 @@
           tills.some(t => Math.abs((t.x0 + t.x1) / 2 - pos.x) < 1.6),
         give(o) { const tote = orderLoad(o); if (o.cust?.fig) g.give(o.cust, tote, g.handX(pos.x)); else S.dropTote(tote); },
         open(i) {
-          if (!Number.isInteger(i) || !open(who, i, pos)) return false;
-          const c = day.customers.find(c => c.by === who && c.state === 'serving');
-          if (c && c.at !== tills[i]) g.callTo(c, tills[i]);
-          return true;
+          return Number.isInteger(i) && open(who, i, pos);
         },
         close() { locks.delete(who); const c = day.customers.find(c => c.by === who && c.state === 'serving'); if (c) day.unserve(c); return true; },
         call() {
           const t = till(); if (!t || day.customers.some(c => c.by === who)) return false;
-          if (!day.queue().length) { const c = day.ungreeted()[0]; if (c) day.greet(c, who); }
-          const c = day.queue()[0]; if (!day.serve(c, who)) return false;
+          const c = g.claimAtTill(t, who); if (!c) return false;
           g.screen(t, null); g.callTo(c, t); return true;
         },
-        bell() { let msg; g.ringBell({ id: who, toast: text => { msg = text; } }); return msg || false; }
+        bell: () => g.ringBell(who)
       });
     }
     const panel = $('onlineCover'), message = $('roomMessage'), controls = $('roomControls'), roomBtn = $('roomBtn');
@@ -287,7 +286,7 @@
     $('leaveRoom').onclick = () => { if (net && !net.ended) net.leave(); location.reload(); };
     document.addEventListener('visibilitychange', () => net?.visibility());
     return {
-      releaseWork: who => wire.release(g.day(), who), trackStock: item => stockItems.add(item), guest, peers, occupied, room: () => net, animate, sam: () => mirroredSam?.fig.group.visible ? mirroredSam : null,
+      releaseWork: who => wire.release(g.day(), who), trackStock: item => stockItems.add(item), guest, peers, occupied, tillFor: who => tills[locks.get(who)], room: () => net, animate, sam: () => mirroredSam?.fig.group.visible ? mirroredSam : null,
       frozen: () => !!net && (!net.ready || net.paused), panel: () => !panel.hidden,
       open: t => guest() ? net.request('tillOpen', { till: tills.indexOf(t) }) : open(p.id, tills.indexOf(t), p.me),
       close: () => guest() ? net.request('tillClose', {}) : locks.delete(p.id),
