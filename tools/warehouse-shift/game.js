@@ -197,6 +197,14 @@
     const IN = [[entX, world.D - 0.5], [LANE - 0.18, world.D - 1.2], [LANE - 0.18, MID]];
     const OUT = [[LANE + 0.22, MID], [LANE + 0.22, world.D - 1.2], [entX, world.D - 0.5], [entX, world.D + 0.6]];
     const taken = new Map(); // spot -> the customer standing there
+    // the two waiting areas (detailedfoil, 21 Nov 2026): pale red where customers wait to be served, pale green where they
+    // wait for orders they've paid for; marked on the floor and on the CCTV
+    const ZONES = {
+      queue: { x0: QX - 0.5, x1: QSIDE + 0.45, y0: counter.y1 + 0.05, y1: CY + 1.74 },
+      wait: { x0: counter.x1 - 1.35, x1: counter.x1 + 0.3, y0: counter.y1 + 0.05, y1: CY + 1.7 }
+    };
+    S.floorZone(ZONES.queue, 'rgba(255,150,150,.55)', '#c43a3a', 'WAITING TO\nBE SERVED');
+    S.floorZone(ZONES.wait, 'rgba(150,235,170,.55)', '#1f8a3f', 'WAITING FOR\nORDERS');
     const clampX = (x) => Math.min(x, counter.x1 - 0.25); // keeps clear of the shelving by the gap
     // the way from one place in front of the counter to another, round anyone standing at it
     // (from the queue they step out to the side first; into the queue they come up beside it)
@@ -639,6 +647,15 @@
 
     /* ---------- a player: their camera, controls, scanner and till ---------- */
     // D: the player's own elements; root: where their layout's sizes go
+    // names on the badges: up to 12 letters, kept on the device
+    const defaultName = (idx) => (idx ? 'Player 2' : 'Trainee');
+    const cleanName = (n) => String(n || '').replace(/[^A-Za-z0-9 '\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 12);
+    function savedName(idx) { try { return cleanName(localStorage.getItem(idx ? 'ws-name2' : 'ws-name')) || defaultName(idx); } catch (e) { return defaultName(idx); } }
+    // each player's figure is seen by every OTHER player's camera only (camera layer 1 + their number), never their own
+    function figLayers() {
+      for (const p of players) p.fig.group.traverse((o) => { o.layers.disableAll(); for (const q of players) if (q !== p) o.layers.enable(1 + q.idx); });
+      dirty = true;
+    }
     function makePlayer(idx, D) {
       const P = { idx, id: 'p' + (idx + 1), D, kb: idx === 0 };
       const me = { x: world.start.x + idx * 0.7, y: world.start.y, yaw: world.start.yaw, pitch: -0.05, vx: 0, vy: 0, eye: 1.62, squat: false, bob: 0, speed: 0 };
@@ -647,6 +664,28 @@
       cam.layers.enable(1 + idx);
       const view = { x: 0, y: 0, w: 1, h: 1, cx: 0.5, cy: 0.5, landscape: true };
       P.me = me; P.cam = cam; P.view = view;
+      // the name on their badge (detailedfoil, 21 Nov 2026) and the figure the other player sees (navy uniform, like Sam's)
+      P.name = savedName(idx);
+      P.fig = S.makeWorker({ name: P.name, skin: idx ? 0x8d5a3b : 0xe0b394, hair: idx ? 0x1a1a1a : 0x5a3a22 });
+      P.setName = (n) => {
+        P.name = cleanName(n) || defaultName(idx);
+        S.setBadge(P.fig, P.name);
+        if (D.tag) D.tag.textContent = P.name;
+        try { localStorage.setItem(idx ? 'ws-name2' : 'ws-name', P.name); } catch (e) { /* fine */ }
+        dirty = true;
+      };
+      if (D.tag) D.tag.textContent = P.name;
+      const figB = { x: me.x, y: me.y, yaw: 0, speed: 0, turning: 0, lookT: 0, beam: 0 };
+      let lastYaw = me.yaw;
+      P.poseFig = (dt) => {
+        figB.x = me.x; figB.y = me.y; figB.yaw = me.yaw + Math.PI; figB.speed = me.speed;
+        figB.turning = Math.abs(me.yaw - lastYaw) / Math.max(dt, 0.001); lastYaw = me.yaw;
+        figB.kneeling = me.squat; figB.walking = me.speed > 0.15;
+        figB.carry = state === 'deliver' || state === 'hold' ? 'tote' : state === 'pato' || state === 'paqty' ? 'box' : null;
+        figB.atTill = !!(till && till.isOpen()); figB.typing = figB.atTill && Math.random() < 0.5;
+        S.poseWorker(P.fig, figB, dt);
+        P.fig.group.position.y = me.step ? STEP : 0;
+      };
 
       /* ---------- layout: the view's centre is the middle of what the scanner doesn't cover ---------- */
       P.layout = function (rect) {
@@ -1769,6 +1808,7 @@
       P.playing = () => active && $('helpCover').hidden && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen()) && !pc.open;
       P.update = function (dt, now) {
         let changed = false;
+        if (players.length > 1) { P.poseFig(dt); changed = changed || me.speed > 0.01; }
         if (P.playing()) {
           if (stepMove(dt)) changed = true;
           checkCounter();
@@ -1849,6 +1889,7 @@
     const me1 = makePlayer(0, grab($('pv1')));
     const D1 = me1.D;
     players.push(me1);
+    figLayers();
     const me = me1.me;
     function layout() {
       const vw = Math.max(1, window.innerWidth), vh = Math.max(1, window.innerHeight);
@@ -1865,6 +1906,8 @@
       $('pv1').after(root);
       const p2 = makePlayer(1, grab(root));
       players.push(p2);
+      figLayers();
+      root.querySelector('[data-el="tag"]').textContent = p2.name;
       p2.render();
       return p2;
     }
@@ -1950,6 +1993,7 @@
     const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', KeyD: 'r', ArrowLeft: 'tl', ArrowRight: 'tr', KeyQ: 'tl', KeyE: 'tr' };
     window.addEventListener('keydown', (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (joining && e.target && e.target.tagName === 'INPUT') { if (e.key === 'Enter') e.target.blur(); return; } // typing a name
       if (joining) { if (e.key === 'Escape') { leaveJoin(); return; } if (joined.length >= 2 && e.key === 'Enter') { startSplit(); e.preventDefault(); return; } join({ kind: 'kb' }); e.preventDefault(); return; }
       const p = kbPlayer();
       if (!p) return;
@@ -2081,6 +2125,7 @@
         const j = joined[i], el = $(id);
         el.classList.toggle('on', !!j);
         el.querySelector('span').textContent = !j ? 'Waiting for a player' : j.kind === 'kb' ? 'Keyboard and mouse' : 'Controller ' + (j.pad + 1);
+        const nm = el.querySelector('input'); nm.hidden = !j; if (j && !nm.value) nm.value = savedName(i);
       });
       $('joinGo').disabled = joined.length < 2;
       $('joinGo').textContent = joined.length < 2 ? 'Start shift' : 'Start shift (A or Enter)';
@@ -2095,7 +2140,17 @@
     $('twoBtn').addEventListener('click', (e) => { e.stopPropagation(); joining = true; joined.length = 0; joinPrev.clear(); for (const gp of padList()) if (gp) joinPrev.set(gp.index, gp.buttons.map((b) => !!(b && (b.pressed || b.value > 0.5)))); renderJoin(); $('startCover').hidden = true; $('joinCover').hidden = false; });
     $('joinBack').addEventListener('click', (e) => { e.stopPropagation(); leaveJoin(); });
     $('joinGo').addEventListener('click', (e) => { e.stopPropagation(); if (joined.length >= 2) startSplit(); });
-    $('joinCover').addEventListener('pointerdown', (e) => { if (!e.target.closest('button')) join({ kind: 'kb' }); });
+    $('joinCover').addEventListener('pointerdown', (e) => { if (!e.target.closest('button, input')) join({ kind: 'kb' }); });
+    // names: player 1's on the start screen, both on the join screen (Enter or clicking away keeps it)
+    const nameIn = $('nameIn');
+    nameIn.value = me1.name === defaultName(0) ? '' : me1.name;
+    nameIn.addEventListener('input', () => me1.setName(nameIn.value));
+    nameIn.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') nameIn.blur(); });
+    document.querySelectorAll('.ws-join input').forEach((inp, i) => inp.addEventListener('input', () => {
+      const n = cleanName(inp.value) || defaultName(i);
+      if (players[i]) players[i].setName(n); else try { localStorage.setItem(i ? 'ws-name2' : 'ws-name', n); } catch (e) { /* fine */ }
+      if (i === 0) nameIn.value = inp.value;
+    }));
     function startSplit() {
       if (split || joined.length < 2) return;
       joining = false; split = true;
@@ -2158,7 +2213,38 @@
       if (updateFigs(dt)) changed = true;
       if (updateTotes(dt)) changed = true;
       if (active && updateCrew(dt)) changed = true;
+      if (updateCCTV(dt)) changed = true;
       return changed;
+    }
+    /* ---------- the CCTV monitor (detailedfoil, 21 Nov 2026; cctv.js draws it) ---------- */
+    const cctvMon = S.cctv();
+    const cctv = cctvMon && window.ShiftCCTV ? window.ShiftCCTV.create({ canvas: cctvMon.canvas, world, zones: ZONES }) : null;
+    let cctvT = 0, cctvSig = '';
+    function cctvPeople() {
+      const out = [];
+      for (const f of figs) {
+        if (f.free || !f.c || !f.group.visible) continue;
+        const c = f.c, sp = c.spot, p = f.group.position;
+        const state = sp && sp.queue ? (c.state === 'greet' ? 'greet' : 'queue') : sp && sp.wait ? 'wait' : sp && sp.till ? (c.state === 'greet' ? 'greet' : 'till') : 'walk';
+        out.push({ x: p.x, y: p.z, state, colour: '#' + f.parts.body.color.getHexString() });
+      }
+      for (const p of players) out.push({ x: p.me.x, y: p.me.y, staff: true, label: p.name });
+      for (const b of crew) if (b.fig && b.fig.group.visible) out.push({ x: b.x, y: b.y, staff: true, label: b.name });
+      return out;
+    }
+    function updateCCTV(dt) {
+      if (!cctv) return false;
+      cctvT -= dt; if (cctvT > 0) return false;
+      cctvT = 0.25;
+      const o = cctvMon.obj, near = players.some((p) => Math.hypot(p.me.x - o.x0, p.me.y - (o.y0 + o.y1) / 2) < 16);
+      if (!near && cctvSig) return false; // nobody close enough to see it: it's drawn again when someone is
+      const people = cctvPeople(), now = new Date();
+      const sig = now.getSeconds() + '|' + people.map((p) => Math.round(p.x * 8) + ',' + Math.round(p.y * 8) + p.state).join(';');
+      if (sig === cctvSig) return false;
+      cctvSig = near ? sig : 'far';
+      cctv.draw({ people, now });
+      cctvMon.tex.needsUpdate = true;
+      return true;
     }
 
     function drawViews() {

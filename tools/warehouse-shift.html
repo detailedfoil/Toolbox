@@ -12,7 +12,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=09adb41a6c">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=86dd57576c">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=b66e39ba67">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -103,6 +103,7 @@
       <h1>Warehouse Shift</h1>
       <p>A day is 20 picks on one list, shared with Sam. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
       <div id="startStats"></div>
+      <label class="ws-name">Name on your badge <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Trainee" enterkeyhint="done"></label>
       <div class="ws-row">
         <button class="ws-go" id="startBtn" type="button">Start shift</button>
         <button class="ws-alt" id="twoBtn" type="button" hidden>Two players</button>
@@ -119,7 +120,7 @@
     <div class="ws-card">
       <h1>Two players</h1>
       <p>Split screen, one above the other, sharing the same pick list (and Sam). Each player presses something to join: <b>A</b> on a controller, or any key or a click for the keyboard and mouse. The first to join plays in the top half.</p>
-      <div class="ws-join"><div id="joinTop"><b>Top</b><span>Waiting for a player</span></div><div id="joinBottom"><b>Bottom</b><span>Waiting for a player</span></div></div>
+      <div class="ws-join"><div id="joinTop"><b>Top</b><span>Waiting for a player</span><input maxlength="12" autocomplete="off" spellcheck="false" placeholder="Name on badge" aria-label="Top player's name" hidden></div><div id="joinBottom"><b>Bottom</b><span>Waiting for a player</span><input maxlength="12" autocomplete="off" spellcheck="false" placeholder="Name on badge" aria-label="Bottom player's name" hidden></div></div>
       <div class="ws-row"><button class="ws-go" id="joinGo" type="button" disabled>Start shift</button><button class="ws-alt" id="joinBack" type="button">Back</button></div>
     </div>
   </div>
@@ -218,13 +219,14 @@
   <div class="ws-cover" id="msg" hidden><div class="ws-card"><p id="msgText"></p><div class="ws-row"><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div></div></div>
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
-<script src="warehouse-shift/world.js?v=5e9c12046d"></script>
-<script src="warehouse-shift/scene.js?v=042f60f976"></script>
+<script src="warehouse-shift/world.js?v=186ba3b7d0"></script>
+<script src="warehouse-shift/cctv.js?v=d4d70645ea"></script>
+<script src="warehouse-shift/scene.js?v=a31be201d1"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=66b69820b0"></script>
 <script src="warehouse-shift/day.js?v=55267ae277"></script>
 <script src="warehouse-shift/bot.js?v=e1975d5ece"></script>
 <script src="warehouse-shift/tillui.js?v=7dcf096cdb"></script>
-<script src="warehouse-shift/game.js?v=a6ffbe0971"></script>
+<script src="warehouse-shift/game.js?v=d5d6525dca"></script>
 </body>
 </html>

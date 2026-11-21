@@ -477,6 +477,27 @@ explain changes in plain English and say what they'll see.
       `Till.tender(inc, pay)`). Kick stools are only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level
       (`needsStep` in game.js, replacing the 1.75 m rule). The queue to be served stands 1.0 m (was 0.38) in from the wall
       end of the counter (`QX`).
+    - Stage 5 (21 Nov): CCTV, floor markings, players as people, name badges. (a) The team notice board is gone; in its place
+      on the same wall (warehouse side of the shop's left wall, facing staff) a bigger CCTV monitor (`kind: 'cctv'` in
+      world.js, 1.7 x 1.04 m; scene.js draws the bezel and a canvas screen, `S.cctv()` = { canvas, tex, mesh, obj }).
+      `cctv.js` (window.ShiftCCTV, no three.js, shared and tested) draws it: `create({ canvas, world, zones })` paints the still
+      parts once, `draw({ people, now })` a frame and returns the counts. The map is the shop floor from above with the
+      counter on the LEFT and the front door on the RIGHT (as if standing behind the counter facing the door, so your right
+      hand is DOWN the map): pale red "WAITING TO BE SERVED" (the queue, bottom) and pale green "WAITING FOR ORDERS" (by the
+      gap, top), tills numbered, the door marked; customers are dots in their shirt colour ringed red (queue, "!" over one not
+      yet greeted), amber (at a till), green (waiting for an order) or grey (walking); staff (players and Sam) navy dots with
+      their initial. A panel on the right counts each, "! N to greet" flashing, CAM 01, the date and time, REC. game.js
+      `updateCCTV` redraws it 4 times a second only when something on it changed and a player is within 16 m (`cctvPeople`
+      builds the list from `figs`, `players`, `crew`). (b) `ZONES` in game.js (queue and wait rectangles round `QUEUE` and
+      `WAIT`) are also painted on the shop floor (scene.js `floorZone`, pale, dashed edge, words reading as you walk up to the
+      counter). (c) Every player has a figure like Sam's (navy uniform, CrashFix patch, name badge; `P.fig` from
+      `S.makeWorker`, posed each frame by `P.poseFig`: walking, squatting, on a stool, carrying a tote or carton, at a till).
+      `figLayers()` puts each figure on every OTHER player's camera layer (camera layer = 1 + player number) and never their
+      own, so in one-player games it's never drawn; call it again after adding a player. (d) Names: "Name on your badge" on
+      the start screen (`#nameIn`, player 1) and a name box in each slot of the join screen (shown once that slot has joined;
+      typing there doesn't join the keyboard player); up to 12 letters, digits, spaces, ' and - (`cleanName`), kept as
+      `ws-name` / `ws-name2`, default Trainee / Player 2. `P.setName(n)` redraws the badge (`S.setBadge`), the split screen
+      tag and the CCTV initial. Tests: `warehouse-shift-stage5.test.mjs`.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

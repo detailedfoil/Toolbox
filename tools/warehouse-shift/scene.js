@@ -846,18 +846,22 @@
     }
     function setStool(id, x, y) { const g = stoolMeshes.get(id); if (g) g.position.set(x, 0, y); }
     const firePoint = wallSign('FIRE POINT', '#c3222b', '#ffffff', 300, 200);
-    const noticeTex = signTex(520, 360, (g, w, h) => {
-      g.fillStyle = '#b58a5a'; g.fillRect(0, 0, w, h); speckle(g, w, h, 1500, 0.15);
-      const sheet = (x, y, sw, sh, col, title, rot) => {
-        g.save(); g.translate(x + sw / 2, y + sh / 2); g.rotate(rot); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(-sw / 2 + 3, -sh / 2 + 4, sw, sh);
-        g.fillStyle = col; g.fillRect(-sw / 2, -sh / 2, sw, sh);
-        g.fillStyle = '#1d232c'; g.font = '800 ' + Math.round(sw / 7) + 'px ' + FONT; g.textAlign = 'center'; g.fillText(title, 0, -sh / 2 + sw / 5);
-        g.fillStyle = 'rgba(29,35,44,.45)'; for (let k = 0; k < 5; k++) g.fillRect(-sw / 2 + 12, -sh / 2 + sw / 4 + k * (sh / 8), sw - 24 - (k % 2) * 30, 4);
-        g.fillStyle = '#c3222b'; g.beginPath(); g.arc(0, -sh / 2 + 8, 5, 0, Math.PI * 2); g.fill(); g.restore();
-      };
-      sheet(26, 26, 140, 190, '#ffffff', 'ROTA', -0.03); sheet(190, 30, 130, 170, '#ffe98a', 'NPS', 0.04); sheet(345, 22, 150, 120, '#ffffff', 'SAFETY', -0.02);
-      sheet(350, 170, 140, 160, '#d7ecff', 'PICK ACC.', 0.03); sheet(60, 230, 160, 110, '#ffd6d6', 'CHALLENGE 25', 0.02); sheet(240, 225, 90, 110, '#e3ffd6', 'TOP TIPS', -0.05);
-    });
+    let cctv = null;
+    // a pale floor graphic in front of the counter, labelled, the words read walking up to the counter (detailedfoil, 21 Nov 2026)
+    function floorZone(r, fill, edge, text) {
+      const w = r.x1 - r.x0, d = r.y1 - r.y0, px = 220;
+      const t = signTex(Math.round(w * px), Math.round(d * px), (g, cw, ch) => {
+        g.fillStyle = fill; g.fillRect(0, 0, cw, ch);
+        g.strokeStyle = edge; g.lineWidth = 14; g.setLineDash([46, 26]); g.strokeRect(10, 10, cw - 20, ch - 20); g.setLineDash([]);
+        g.fillStyle = edge; g.textAlign = 'center'; g.textBaseline = 'middle';
+        const lines = text.split('\n'), s = fit(g, lines.reduce((a, b) => (a.length > b.length ? a : b)), 900, Math.round(ch / 7), cw - 70);
+        lines.forEach((ln, k) => g.fillText(ln, cw / 2, ch / 2 + (k - (lines.length - 1) / 2) * s * 1.15));
+      });
+      const m = new T.Mesh(new T.PlaneGeometry(w, d), new T.MeshLambertMaterial({ map: t, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+      m.rotation.x = -Math.PI / 2; m.position.copy(V((r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2, 0.006)); m.renderOrder = 1;
+      groups.shop.add(m);
+      return m;
+    }
     const clockCanvas = canvas(256, 256), clockTex = new T.CanvasTexture(clockCanvas); clockTex.colorSpace = T.SRGBColorSpace;
     let clockMesh = null;
     function clockTick() {
@@ -938,11 +942,15 @@
           flat(firePoint, wx + off[0] * 0.13, wy + off[1] * 0.13, 1.42, 0.3, 0.2, TURN[f], 'shop');
           break;
         }
-        case 'board': { // the team notice board
-          const tw = o.y1 - o.y0, th = o.z1 - o.z0;
-          flat(noticeTex, o.x0 - 0.002, (o.y0 + o.y1) / 2, (o.z0 + o.z1) / 2, tw, th, -Math.PI / 2, 'shop');
-          box(M.frame, o.x0, o.y0 - 0.03, o.z0 - 0.03, o.x1, o.y1 + 0.03, o.z0, 'shop'); box(M.frame, o.x0, o.y0 - 0.03, o.z1, o.x1, o.y1 + 0.03, o.z1 + 0.03, 'shop');
-          box(M.frame, o.x0, o.y0 - 0.03, o.z0, o.x1, o.y0, o.z1, 'shop'); box(M.frame, o.x0, o.y1, o.z0, o.x1, o.y1 + 0.03, o.z1, 'shop');
+        case 'cctv': { // the CCTV monitor: a black screen in a thin bezel on the wall, the map drawn by cctv.js
+          const B = 0.035, tw = o.y1 - o.y0 - 2 * B, th = o.z1 - o.z0 - 2 * B;
+          box(M.black, o.x0 + 0.01, o.y0, o.z0, o.x1, o.y1, o.z1, 'shop');
+          box(M.frame, o.x1 - 0.01, (o.y0 + o.y1) / 2 - 0.12, o.z0 + 0.3, o.x1, (o.y0 + o.y1) / 2 + 0.12, o.z1 - 0.3, 'shop'); // the wall bracket
+          const cv = canvas(1024, Math.round(1024 * th / tw));
+          const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = maxAniso;
+          const m = new T.Mesh(new T.PlaneGeometry(tw, th), new T.MeshBasicMaterial({ map: tex, toneMapped: false }));
+          m.position.copy(V(o.x0 + 0.008, (o.y0 + o.y1) / 2, (o.z0 + o.z1) / 2)); m.rotation.y = -Math.PI / 2; groups.shop.add(m);
+          cctv = { canvas: cv, tex, mesh: m, obj: o };
           break;
         }
         case 'clock': {
@@ -1279,10 +1287,8 @@
       add(geoW.collar, M_UNI, 0, 0.52, 0, P.torso);
       add(geoC.neck, skin, 0, 0.55, 0, P.torso);
       const plate = (map, x, y, w, h) => { const m = new T.Mesh(geoW.plate, new T.MeshBasicMaterial({ map })); m.position.set(x, y, 0.117); m.scale.set(w, h, 1); P.torso.add(m); return m; };
-      plate(signTex(256, 128, (g, w, h) => { // the name badge
-        g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.fillStyle = '#15396b'; g.fillRect(0, 0, w, 26);
-        g.fillStyle = '#15396b'; g.textAlign = 'center'; g.textBaseline = 'middle'; fit(g, o.name || 'Sam', 900, 74, w - 24); g.fillText((o.name || 'Sam').toUpperCase(), w / 2, 80);
-      }), 0.075, 0.36, 0.085, 0.043);
+      const badge = signTex(256, 128, (g, w, h) => drawBadge(g, w, h, o.name || 'Sam'));
+      plate(badge, 0.075, 0.36, 0.085, 0.043);
       plate(signTex(256, 128, (g, w, h) => { // the logo patch
         g.fillStyle = '#f2c400'; g.fillRect(0, 0, w, h); g.fillStyle = '#15396b'; g.textAlign = 'center'; g.textBaseline = 'middle';
         fit(g, 'CrashFix', 900, 70, w - 20); g.fillText('CrashFix', w / 2, h / 2 + 3);
@@ -1305,8 +1311,15 @@
       const carry = joint(0, 0.95, 0.42, group); // what they're carrying hangs off this
       const beam = new T.Mesh(unitBox, beamMat); beam.visible = false; beam.renderOrder = 4; scene.add(beam);
       scene.add(group);
-      return { group, parts: P, carry, beam, phase: 0, t: 0, held: null };
+      return { group, parts: P, carry, beam, phase: 0, t: 0, held: null, badge };
     }
+    // the white name badge: navy strip along the top, the name in capitals
+    function drawBadge(g, w, h, name) {
+      const n = String(name || '').toUpperCase().slice(0, 14) || 'TRAINEE';
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.fillStyle = '#15396b'; g.fillRect(0, 0, w, 26);
+      g.textAlign = 'center'; g.textBaseline = 'middle'; fit(g, n, 900, 74, w - 24); g.fillText(n, w / 2, 80);
+    }
+    function setBadge(w, name) { const c = w.badge.image; drawBadge(c.getContext('2d'), c.width, c.height, name); w.badge.needsUpdate = true; }
     // Sam's pose from what the worker (bot.js) is doing: walking, kneeling, carrying, typing, scanning, handing over
     const _wq = new T.Quaternion(), _we = new T.Euler(), _wv = new T.Vector3(), _wv2 = new T.Vector3(), DOWN = new T.Vector3(0, -1, 0);
     function poseWorker(w, b, dt) {
@@ -1426,6 +1439,7 @@
       labelMesh, labelMat, trays, trayOf, placeTray, placeItem, stockChange, setStool, locBox, setBox, aimBox, glow, glowMat, signGlow, endSigns, customer, makeCustomer, makeTote, dropTote, toteBox, makeWorker, poseWorker, lamps, M,
       makeTrolley, poseTrolley, trolleyTop, trolleyTake, tillScreen, delivery: { set: deliverySet, show: deliveryShow, box: slotBox },
       hold: hold ? { spots: hold.spots, set: setParcel, carry: carryParcel } : null,
+      cctv: () => cctv, setBadge, floorZone,
       clockTick, counts: { tags: tags.length, trays: trays.size, items: world.items.length }
     };
   }

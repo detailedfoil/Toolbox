@@ -229,6 +229,10 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-join div{padding:14px 10px;border-radius:14px;background:#1f2633;border:2px dashed #3a4558;text-align:center;min-height:86px;display:grid;place-items:center}
 .ws-join div.on{border:2px solid #ffd34d;background:#2a2f1f}
 .ws-join b{display:block;font-size:1.05rem;color:#fff}
+.ws-join input,.ws-name input{width:100%;max-width:220px;min-height:38px;margin-top:6px;padding:0 10px;border:1px solid #3a4558;border-radius:10px;background:#0f141c;color:#fff;font:700 1rem system-ui,sans-serif;text-align:center}
+.ws-join input[hidden]{display:none}
+.ws-name{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 0;color:#c3cede;font:700 .9rem system-ui,sans-serif}
+.ws-name input{margin:0;flex:1 1 140px;text-align:left;text-transform:uppercase}
 .ws-join span{font-size:.85rem;color:#c3cede}
 /* the manager's PC: Sam's jobs (detailedfoil, 20 Nov 2026) */
 .ws-pc{position:absolute;inset:0;z-index:40;pointer-events:auto;touch-action:manipulation;display:flex;align-items:center;justify-content:center;background:rgba(6,12,24,.55);padding:12px}

@@ -334,7 +334,8 @@
       objects.push({ kind: 'extinguisher', face: e.f, x0: ax ? e.x - 0.12 : e.x - 0.18, y0: ax ? e.y - 0.18 : e.y - 0.12, x1: ax ? e.x + 0.12 : e.x + 0.06, y1: ax ? e.y + 0.06 : e.y + 0.12, z1: 1.1, wall: true });
     });
     var shopWall = 9.49 + SX;
-    objects.push({ kind: 'board', face: 'W', x0: shopWall - 0.03, y0: 18.6, x1: shopWall, y1: 19.9, z0: 1.05, z1: 1.95, wall: true });
+    // the CCTV monitor (detailedfoil, 21 Nov 2026): it replaces the notice board, bigger, a map of the shop floor (cctv.js)
+    objects.push({ kind: 'cctv', face: 'W', x0: shopWall - 0.07, y0: 18.5, x1: shopWall, y1: 20.2, z0: 1.04, z1: 2.08, wall: true });
     objects.push({ kind: 'clock', face: 'W', x0: shopWall - 0.05, y0: 19.05, x1: shopWall, y1: 19.45, z0: 2.15, z1: 2.55, wall: true });
     var zones = [{ name: 'Goods in', x0: 4.7, y0: D - 4.6, x1: 9.9, y1: D - 0.6 }];
     // the holding area, beside goods in against the staff room wall (detailedfoil, 19 Nov 2026): long-span shelving
