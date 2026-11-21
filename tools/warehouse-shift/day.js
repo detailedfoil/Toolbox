@@ -182,7 +182,10 @@
   };
 
   /* ---------- the list ---------- */
-  Day.prototype.list = function () { return this.orders.filter(function (o) { return o.status === 'listed'; }); };
+  Day.prototype.list = function () {
+    return this.orders.filter(function (o) { return o.status === 'listed'; })
+      .sort(function (a, b) { return Number(a.kind === 'c') - Number(b.kind === 'c'); });
+  };
   Day.prototype.label = function (o) { return o.no + ' ' + o.locs + ':' + o.units + (o.kind === 'c' ? ' c' : o.kind === 'till' ? '' : ' CK'); };
   // what's coming onto the list: what's on it, customers walking in who'll put a line on it, till customers not paid yet
   Day.prototype.projected = function () {

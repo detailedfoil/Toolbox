@@ -15,7 +15,7 @@ async function until(check, what) {
   const limit = Date.now() + 8000;
   while (!check()) { if (Date.now() > limit) assert.fail('Timed out waiting for ' + what); await pause(30); }
 }
-async function game(t, { online = true, phone = false, installed = false } = {}) {
+async function game(t, { online = true, phone = false, installed = false, loadPhotos = false } = {}) {
   const w = new JSDOM(page, { runScripts: 'outside-only', pretendToBeVisual: true,
     url: origin + '/Toolbox/tools/warehouse-shift.html' + (online ? '?relay=' + relay : '') }).window;
 
@@ -34,6 +34,11 @@ async function game(t, { online = true, phone = false, installed = false } = {})
     for (const ws of sockets) { ws.onclose = null; ws.onmessage = null; ws.terminate(); }
     w.close();
   });
+  if (loadPhotos) w.Image = class {
+    set src(url) {
+      if (url.includes('/photos/')) w.setTimeout(() => this.onload(), 0);
+    }
+  };
   const blank = () => {}, gradient = () => ({ addColorStop: blank });
   w.HTMLCanvasElement.prototype.getContext = () => new Proxy({ measureText: s => ({ width: String(s).length * 8 }),
     createRadialGradient: gradient, createLinearGradient: gradient }, { get: (o, k) => o[k] || blank });
@@ -53,6 +58,7 @@ async function game(t, { online = true, phone = false, installed = false } = {})
         capabilities = { getMaxAnisotropy: () => 1, maxTextureSize: 1024 };
         setPixelRatio() {} setSize() {} compile() {} setScissorTest() {} setScissor() {} setViewport() {}
         render(scene, cam) { cam.updateMatrixWorld(); }
+        copyTextureToTexture() {}
       } };
     }
   }
@@ -68,6 +74,82 @@ test('the normal game starts solo and local split-screen without opening a socke
     else $('startBtn').click();
     assert.equal(s.split(), split); assert.equal(s.players.length, split ? 2 : 1);
     assert.equal($('startCover').hidden, true); assert.equal(s.state(), 'home'); assert.equal(sockets.length, 0);
+  }
+});
+
+test('Quick Pick confirms the top customer pick only when doing putaway empty-handed', async t => {
+  const { $, s } = await game(t, { online: false, phone: true });
+  $('startBtn').click();
+  for (const job of s.prio()) job.on = false;
+  const day = s.day(), button = $('scQuickPick'), confirm = $('scConfirm').querySelector('button');
+  for (const o of day.list()) day.take(o, 'test');
+  s.players[0].page(-1);
+  s.enter();
+  assert.equal(s.state(), 'pa');
+  assert.equal(button.hidden, true);
+
+  const stock = day.makeOrder('c', []);
+  const collect = day.makeOrder('ck', []);
+  const till = day.makeOrder('till', []);
+  assert.deepEqual(Array.from(day.list()), [collect, till, stock]);
+  assert.equal(button.hidden, false);
+  assert.doesNotMatch($('scText').textContent, /Picks waiting/);
+  button.click();
+  assert.equal($('scConfirm').hidden, false);
+  assert.equal(confirm.textContent, 'Quick Pick');
+  assert.equal(collect.status, 'listed');
+  s.back();
+  assert.equal($('scConfirm').hidden, true);
+
+  $('scHint').click();
+  assert.equal(s.players[0].stats.hints, 0);
+  confirm.click();
+  assert.equal(s.players[0].stats.hints, 1);
+
+  const carton = day.deliveryLeft()[0], goods = s.world.goodsin[carton.src].obj;
+  s.me.x = (goods.x0 + goods.x1) / 2; s.me.y = goods.y1 + 0.7;
+  s.me.yaw = 0; s.me.pitch = Math.atan2(goods.z1 / 2 - s.me.eye, s.me.y - (goods.y0 + goods.y1) / 2);
+  s.applyCam(); s.cam.updateMatrixWorld();
+  s.scanAt(...s.players[0].centre());
+  assert.equal(s.state(), 'pato');
+  assert.equal(button.hidden, true);
+
+  // Reopen the shift in another test page for the claim, using a real line item.
+  const second = await game(t, { online: false, phone: true });
+  second.$('startBtn').click();
+  for (const job of second.s.prio()) job.on = false;
+  const pickDay = second.s.day();
+  const item = second.s.world.items.find(it => it.loc && second.w.ShiftWorld.room(it) > 0);
+  const urgent = pickDay.makeOrder('till', [{ item, qty: 1 }]);
+  second.s.players[0].page(-1);
+  second.s.enter();
+  second.$('scQuickPick').click();
+  assert.equal(urgent.status, 'listed');
+  second.$('scConfirm').querySelector('button').click();
+  assert.equal(second.s.order(), urgent);
+  assert.equal(urgent.by, 'p1');
+  assert.equal(second.$('scQuickPick').hidden, true);
+});
+
+test('both split-screen cameras retain their shelf photos across frame refreshes', async t => {
+  const { $, s } = await game(t, { online: false, loadPhotos: true });
+  $('twoBtn').click(); s.join({ kind: 'kb' }); s.join({ kind: 'pad', pad: 0 }); $('joinGo').click();
+  const faces = s.world.faces.filter(f => f.kind === 'BB');
+  for (const [idx, f] of [faces[0], faces.at(-1)].entries()) {
+    const p = s.players[idx];
+    p.me.x = (f.x0 + f.x1) / 2; p.me.y = f.front + 0.8 * f.out;
+    p.me.yaw = f.out > 0 ? 0 : Math.PI; p.me.pitch = 0;
+    p.applyCam();
+  }
+  const mesh = s.S.groups.main.children.find(o => o.geometry?.getAttribute('aUv'));
+  const occupied = () => {
+    const ys = Array.from({ length: mesh.count }, (_, i) => mesh.instanceMatrix.array[i * 16 + 14]);
+    return [faces[0], faces.at(-1)].every(f => ys.some(y => Math.abs(y - f.front) < 0.8));
+  };
+  await until(occupied, 'photos on shelves in both halves');
+  for (let i = 0; i < 5; i++) {
+    await pause(100);
+    assert.ok(occupied(), 'both views keep their photos after refresh');
   }
 });
 

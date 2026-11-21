@@ -768,11 +768,11 @@
     const _frustum = new T.Frustum(), _pm = new T.Matrix4(), _pv = new T.Vector3();
     const PHOTO_NEAR = big ? 14 : 9;
     let extra = []; // products that must have their photo (an open tray)
-    function updatePhotos(cam) {
+    function photosInView(cam) {
       cam.updateMatrixWorld(); _pm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); _frustum.setFromProjectionMatrix(_pm);
       const ex = cam.position.x, ey = cam.position.z, ez = cam.position.y, R = PHOTO_NEAR, cand = [];
       for (const it of world.items) {
-        if (!it.loc) continue; // out of stock: nothing on the shelf
+        if (!it.loc || !it.photo) continue; // nothing to show for this product
         if (it.loc.tray >= 0 && !(it.trayRef && it.trayRef.slide > 0.05)) continue; // tray contents only show when it's out
         const b = it.box, f = it.loc.face, dx = b.x - ex, dy = b.y - ey;
         if (dx > R || dx < -R || dy > R || dy < -R) continue;
@@ -783,7 +783,19 @@
         cand.push([d2, it]);
       }
       cand.sort((a, b) => a[0] - b[0]);
-      near = extra.concat(cand.slice(0, PHOTO_MAX - extra.length).map((c) => c[1]));
+      return cand.slice(0, PHOTO_MAX).map(([, item]) => item);
+    }
+    function updatePhotos(...cameras) {
+      // Both views draw the same photo mesh. Share its budget between their closest products.
+      const views = cameras.map(photosInView);
+      const selected = new Set(extra);
+      for (let rank = 0; rank < PHOTO_MAX && selected.size < PHOTO_MAX; rank++) {
+        for (const view of views) {
+          if (view[rank]) selected.add(view[rank]);
+          if (selected.size >= PHOTO_MAX) break;
+        }
+      }
+      near = [...selected].slice(0, PHOTO_MAX);
       queue = near.filter((it) => it.photo && !photos.has(it.code)).map((it) => it.code);
       loadPhotos();
       fillPhotos();

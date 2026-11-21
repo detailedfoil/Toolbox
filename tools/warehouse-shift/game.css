@@ -157,6 +157,7 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .sc-hint{position:absolute;left:2.5%;width:71%;top:50.5%;height:5.4%;padding:0 .5em;border:.13em solid #fff;background:#1e3ff0;color:#fff;
   font:500 1.42em/1 system-ui,sans-serif;text-align:left;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:.9em}
 .sc-hint:active,.sc-hint.flash{background:#4f6bff}
+.sc-quick-pick{top:57%;justify-content:center}
 .sc-hint.used{background:#ffb000;color:#1a1d22;border-color:#ffd34d}
 .sc-picked{position:absolute;left:3%;top:62%;font-size:1.5em;white-space:nowrap}
 .sc-picked .val{display:inline-block;min-width:.6em}
@@ -211,6 +212,8 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .sc-pad .pb{background:#5a6478}
 /* the function menu */
 .sc-menu{position:absolute;left:0;right:0;top:4.6%;bottom:30.5%;padding:3% 4%;background:#0b1022f7;z-index:3;display:flex;flex-direction:column;justify-content:space-evenly;gap:1.5%;border-bottom:.12em solid #3a4560;overflow:hidden}
+.sc-confirm{position:absolute;inset:4.6% 0 30.5%;z-index:4;background:#0b1022f7;padding:8%;display:grid}
+.sc-confirm .sc-k{font-size:2.5em;white-space:normal}
 .sc-menu h3{margin:0;font-size:1.4em;font-weight:700;color:#ffd34d;text-align:center}
 .sc-menu button{display:flex;gap:.7em;align-items:center;width:100%;flex:1 1 0;max-height:2.6em;min-height:0;padding:0 .6em;border:0;border-radius:.3em;background:#18213a;color:#f4f6fb;font:500 1.3em/1 inherit;text-align:left;cursor:pointer;font-family:inherit;white-space:nowrap;overflow:hidden}
 .sc-menu button b{color:#ffd34d;width:1em}

@@ -110,10 +110,10 @@
         }
         const st = p.state || 'walk';
         if (st === 'queue' || st === 'greet') counts.queue++; else if (st === 'till') counts.till++; else if (st === 'wait') counts.wait++;
-        g.fillStyle = RING[st] || RING.walk; g.globalAlpha = 0.28; g.beginPath(); g.arc(x, y, 17 * R, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
-        g.strokeStyle = RING[st] || RING.walk; g.lineWidth = 3 * R; g.beginPath(); g.arc(x, y, 11 * R, 0, Math.PI * 2); g.stroke();
-        g.fillStyle = p.colour || '#f07a1a'; g.beginPath(); g.arc(x, y, 8.5 * R, 0, Math.PI * 2); g.fill();
-        if (st === 'greet') { g.fillStyle = '#ffffff'; g.font = '900 ' + Math.round(20 * R) + 'px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', x, y - 24 * R); }
+        g.fillStyle = RING[st] || RING.walk; g.globalAlpha = 0.28; g.beginPath(); g.arc(x, y, 22 * R, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+        g.strokeStyle = RING[st] || RING.walk; g.lineWidth = 3 * R; g.beginPath(); g.arc(x, y, 15 * R, 0, Math.PI * 2); g.stroke();
+        g.fillStyle = p.colour || '#f07a1a'; g.beginPath(); g.arc(x, y, 12 * R, 0, Math.PI * 2); g.fill();
+        if (st === 'greet') { g.fillStyle = '#ffffff'; g.font = '900 ' + Math.round(20 * R) + 'px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', x, y - 29 * R); }
       });
       return counts;
     }
