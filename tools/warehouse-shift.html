@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content">
 <meta name="theme-color" content="#0d1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -12,7 +12,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=86dd57576c">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=e86096bb39">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=b66e39ba67">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -112,15 +112,15 @@
         <button class="ws-alt" id="updBtn" type="button">Check for updates</button>
       </div>
       <p class="ws-small" id="updMsg" hidden></p>
-      <p class="ws-small">A made-up warehouse with the store's 10,999 nailed products. Best played with your phone sideways.</p>
+      <p class="ws-small">A made-up warehouse with the store's 10,999 nailed products. Play with your phone sideways or upright, and turn it whenever you like.</p>
     </div>
   </div>
 
   <div class="ws-cover" id="joinCover" hidden>
     <div class="ws-card">
       <h1>Two players</h1>
-      <p>Split screen, one above the other, sharing the same pick list (and Sam). Each player presses something to join: <b>A</b> on a controller, or any key or a click for the keyboard and mouse. The first to join plays in the top half.</p>
-      <div class="ws-join"><div id="joinTop"><b>Top</b><span>Waiting for a player</span><input maxlength="12" autocomplete="off" spellcheck="false" placeholder="Name on badge" aria-label="Top player's name" hidden></div><div id="joinBottom"><b>Bottom</b><span>Waiting for a player</span><input maxlength="12" autocomplete="off" spellcheck="false" placeholder="Name on badge" aria-label="Bottom player's name" hidden></div></div>
+      <p>Split screen, side by side, sharing the same pick list (and Sam). Each player presses something to join: <b>A</b> on a controller, or any key or a click for the keyboard and mouse. The first to join plays on the left.</p>
+      <div class="ws-join"><div id="joinTop"><b>Left</b><span>Waiting for a player</span><input maxlength="12" autocomplete="off" spellcheck="false" placeholder="Name on badge" aria-label="Left player's name" hidden></div><div id="joinBottom"><b>Right</b><span>Waiting for a player</span><input maxlength="12" autocomplete="off" spellcheck="false" placeholder="Name on badge" aria-label="Right player's name" hidden></div></div>
       <div class="ws-row"><button class="ws-go" id="joinGo" type="button" disabled>Start shift</button><button class="ws-alt" id="joinBack" type="button">Back</button></div>
     </div>
   </div>
@@ -207,26 +207,17 @@
     </div>
   </div>
 
-  <div class="ws-rotate" id="rotate">
-    <div>
-      <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="20" y="6" width="24" height="52" rx="4" fill="none" stroke="#ffd34d" stroke-width="4"/><circle cx="32" cy="51" r="2.5" fill="#ffd34d"/></svg>
-      <h2 style="margin:0 0 6px">Turn your phone sideways</h2>
-      <p style="margin:0 0 16px;color:#c3cede">Warehouse Shift is made for landscape.</p>
-      <button class="ws-alt" id="portraitBtn" type="button" style="min-height:44px;padding:0 18px">Play upright anyway</button>
-    </div>
-  </div>
-
   <div class="ws-cover" id="msg" hidden><div class="ws-card"><p id="msgText"></p><div class="ws-row"><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div></div></div>
 </main>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
-<script src="warehouse-shift/world.js?v=186ba3b7d0"></script>
-<script src="warehouse-shift/cctv.js?v=d4d70645ea"></script>
-<script src="warehouse-shift/scene.js?v=a31be201d1"></script>
+<script src="warehouse-shift/world.js?v=8721b0013a"></script>
+<script src="warehouse-shift/cctv.js?v=0304875dc3"></script>
+<script src="warehouse-shift/scene.js?v=a440eae715"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=66b69820b0"></script>
 <script src="warehouse-shift/day.js?v=55267ae277"></script>
 <script src="warehouse-shift/bot.js?v=e1975d5ece"></script>
 <script src="warehouse-shift/tillui.js?v=7dcf096cdb"></script>
-<script src="warehouse-shift/game.js?v=8fe80bc6ad"></script>
+<script src="warehouse-shift/game.js?v=8c07daa5ae"></script>
 </body>
 </html>

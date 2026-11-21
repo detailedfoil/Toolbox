@@ -14,7 +14,7 @@
    phone sideways: left thumb walks, drag to look. On a computer: WASD, mouse look.
 
    Sam (bot.js) works from the same list, pushing a trolley that blocks the aisle while they pick. On a computer two
-   people can play at once: split screen, one above the other, each with their own scanner, till and controls (a
+   people can play at once: split screen, side by side, each with their own scanner, till and controls (a
    controller each, or one on the keyboard and mouse).
 
    world.js makes the warehouse, day.js the day's orders and customers, scene.js draws it, till.js and tillui.js are
@@ -687,7 +687,8 @@
 
       /* ---------- layout: the view's centre is the middle of what the scanner doesn't cover ---------- */
       P.layout = function (rect) {
-        const vw = Math.max(1, rect.w), vh = Math.max(1, rect.h), land = vw >= vh;
+        // landscape unless clearly taller than wide (a split screen half on a computer still counts as landscape)
+        const vw = Math.max(1, rect.w), vh = Math.max(1, rect.h), land = vw >= vh * 0.75;
         let sch, scw;
         if (land) { sch = Math.min(vh - 12, 700); scw = sch * 0.53; if (scw > vw * 0.42) { scw = vw * 0.42; sch = scw / 0.53; } }
         else { sch = Math.min(vh * 0.5, 540); scw = sch * 0.53; if (scw > vw * 0.6) { scw = vw * 0.6; sch = scw / 0.53; } }
@@ -1889,13 +1890,23 @@
     players.push(me1);
     figLayers();
     const me = me1.me;
+    // the game fills what's left of the screen: when a phone's own keyboard comes up, everything shrinks to the space
+    // above it (visualViewport) instead of hiding under it (stage 6, detailedfoil, 21 Nov 2026). Any way up, any time.
+    let stageH = 1;
     function layout() {
-      const vw = Math.max(1, window.innerWidth), vh = Math.max(1, window.innerHeight);
+      const vv = window.visualViewport;
+      const vw = Math.max(1, Math.round(vv ? vv.width : window.innerWidth)), vh = Math.max(1, Math.round(vv ? vv.height : window.innerHeight));
+      stage.style.left = Math.round(vv ? vv.offsetLeft : 0) + 'px'; stage.style.top = Math.round(vv ? vv.offsetTop : 0) + 'px';
+      stage.style.width = vw + 'px'; stage.style.height = vh + 'px';
+      stageH = vh;
       renderer.setSize(vw, vh, false);
-      if (split && players[1]) { const h = Math.floor(vh / 2); players[0].layout({ x: 0, y: 0, w: vw, h }); players[1].layout({ x: 0, y: h, w: vw, h: vh - h }); }
+      // split screen: player 1 on the left, player 2 on the right, each with their scanner in their own bottom right corner
+      if (split && players[1]) { const w = Math.floor(vw / 2); players[0].layout({ x: 0, y: 0, w, h: vh }); players[1].layout({ x: w, y: 0, w: vw - w, h: vh }); }
       else me1.layout({ x: 0, y: 0, w: vw, h: vh });
     }
-    // player 2 (split screen): a copy of player 1's things, in the bottom half
+    let layoutQ = false;
+    const layoutSoon = () => { if (layoutQ) return; layoutQ = true; requestAnimationFrame(() => { layoutQ = false; layout(); }); };
+    // player 2 (split screen): a copy of player 1's things, in the right-hand half
     function addPlayer2() {
       const root = pvCopy.cloneNode(true);
       root.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
@@ -1911,8 +1922,9 @@
     }
     // who the keyboard and mouse belong to: player 1, or in split screen whoever joined with them
     const kbPlayer = () => (split ? players.find((p) => p.kb) || null : me1);
-    window.addEventListener('resize', layout);
+    window.addEventListener('resize', layoutSoon);
     window.addEventListener('orientationchange', () => setTimeout(layout, 250));
+    if (window.visualViewport) { window.visualViewport.addEventListener('resize', layoutSoon); window.visualViewport.addEventListener('scroll', layoutSoon); }
     layout();
 
     /* ---------- controls: the stick (left thumb), looking (drag), tapping to scan ---------- */
@@ -2055,7 +2067,7 @@
         box.replaceChildren();
         for (const p of players) {
           const s = day.summary(p.id), st = p.stats, el = document.createElement('div');
-          if (split) { const h = document.createElement('h2'); h.textContent = p.idx ? 'Player 2 (bottom)' : 'Player 1 (top)'; el.appendChild(h); }
+          if (split) { const h = document.createElement('h2'); h.textContent = p.idx ? 'Player 2 (right)' : 'Player 1 (left)'; el.appendChild(h); }
           const rows = document.createElement('div'); el.appendChild(rows);
           statsHtml(rows, [[s.picks, 'of the ' + s.total + ' picks'], [st.tills - (st.tillsAtStart || 0), 'till orders served'], [s.fetched, 'bags from holding'], [s.delivery, 'cartons put away'], [st.lines - (st.linesAtStart || 0), 'lines picked'], [st.perfect - (st.perfectAtStart || 0), 'perfect picks'], [Math.max(1, Math.round(s.minutes)) + ' min', 'the day took']]);
           box.appendChild(el);
@@ -2076,18 +2088,13 @@
       try {
         if (on && !document.fullscreenElement) {
           const p = (de.requestFullscreen || de.webkitRequestFullscreen).call(de, { navigationUI: 'hide' });
-          if (p && p.then) p.then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* fine */ } }).catch(() => {});
+          if (p && p.catch) p.catch(() => {}); // no orientation lock: turn the phone either way at any time (stage 6)
         } else if (!on && document.fullscreenElement) document.exitFullscreen();
       } catch (e) { /* not allowed here */ }
     }
     $('fullBtn').addEventListener('click', () => fullScreen(!document.fullscreenElement));
     const standalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
-    // the rotate prompt (phones held upright)
-    const rot = $('rotate');
-    let upright = false;
-    try { upright = sessionStorage.getItem('ws-upright') === '1'; } catch (e) { /* fine */ }
-    rot.classList.toggle('ask', touch && !upright);
-    $('portraitBtn').addEventListener('click', () => { upright = true; rot.classList.remove('ask'); try { sessionStorage.setItem('ws-upright', '1'); } catch (e) { /* fine */ } });
+    // (the "turn your phone sideways" prompt was taken off in stage 6: upright is easier for typing at the till)
 
     newDay(); // the holding area is stocked behind the start screen; the day's picks start with the shift
     statsHtml($('startStats'), [[me1.life.orders, 'orders done'], [me1.life.lines, 'lines picked'], [world.items.length.toLocaleString('en-GB'), 'products']]);
@@ -2112,9 +2119,9 @@
     }
     $('startBtn').addEventListener('click', beginShift);
 
-    /* ---------- two players (computers only): split screen, one above the other ---------- */
+    /* ---------- two players (computers only): split screen, side by side ---------- */
     // Each joins with a press: A on a controller, or any key or a click for the keyboard and mouse. The first to join
-    // plays in the top half. Both share the day's list, Sam and the tills; each has their own scanner and till screen.
+    // plays on the left. Both share the day's list, Sam and the tills; each has their own scanner and till screen.
     let joining = false;
     const joined = [];
     $('twoBtn').hidden = touch || window.innerWidth < 900; // computers only
@@ -2247,7 +2254,7 @@
 
     function drawViews() {
       if (!split || players.length < 2) { me1.beforeRender(); renderer.setScissorTest(false); renderer.render(scene, me1.cam); return; }
-      const vh = Math.max(1, window.innerHeight);
+      const vh = stageH;
       renderer.setScissorTest(true);
       for (const p of players) {
         const v = p.view, y = vh - v.y - v.h; // the graphics chip counts from the bottom

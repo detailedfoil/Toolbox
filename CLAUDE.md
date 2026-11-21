@@ -278,8 +278,7 @@ explain changes in plain English and say what they'll see.
     they're waiting, it slides across and they walk out with it. A c pick goes in the holding area instead: scan the label
     of any empty OC spot (a full one says so). No score or timer (his say); the Function menu has squat, hint, sound, look
     speed, picks (mixed / C&C / holding / till / kiosk, for practice: changes the picks still to come) and help; "Perfect
-    pick!" when an order needs no hint and has no wrong scan. Landscape first
-    (detailedfoil), a rotate prompt on phones held upright with "Play upright anyway". Phone: left-thumb stick (pushed right out =
+    pick!" when an order needs no hint and has no wrong scan. Any way up (stage 6; it was landscape first with a rotate prompt). Phone: left-thumb stick (pushed right out =
     jog), drag to look, tap to scan. PC: WASD, mouse look (pointer lock), F/click scan, C squat, H hint, Tab menu.
     **Controllers** (Gamepad API, standard layout; detailedfoil, 19 Nov 2026): left stick walks (right out to jog), right
     stick looks, RT scans, A is Enter (his swap), B Back, X squat, Y hint, d-pad up and down the pick list, Start the
@@ -287,13 +286,13 @@ explain changes in plain English and say what they'll see.
     highlight moves between buttons, boxes and rows (tillui.js `pad()`): A presses, a box brings up the on-screen keyboard
     (the highlight moves round its keys), B deletes or leaves, RT Enter, LB/RB tabs, Y Ask again, Start leaves.
     **Two players** (computers only: the Start screen's Two players button, hidden on touch screens and windows under 900
-    px): split screen, one above the other, sharing the day's list, Sam and the tills. Each joins on the join screen with
-    a press (A on a controller, or a key or click for the keyboard and mouse; first to join is the top half). Each player's
+    px): split screen, side by side (stage 6; it was one above the other), sharing the day's list, Sam and the tills. Each joins on the join screen with
+    a press (A on a controller, or a key or click for the keyboard and mouse; first to join is the left half). Each player's
     things are in their own container (`#pv1` in the page, copied for player 2 by `addPlayer2`, elements found by
     `data-el`); `makePlayer` holds everything per player; `drawViews` draws each half with its own glow and aim box;
     keyboard and mouse go to `kbPlayer()`. Two people can share an aisle; they can't walk through each other (`peerStop`)
     or open the same till (`tillAt`). Tested with two fake controllers in headless Chrome; not yet on real ones.
-    Installable: `warehouse-shift.webmanifest` (fullscreen, landscape) and `warehouse-shift-sw.js` (scope "warehouse-shift":
+    Installable: `warehouse-shift.webmanifest` (fullscreen, any way up) and `warehouse-shift-sw.js` (scope "warehouse-shift":
     page site-first with a 4 s fallback, its files and photos kept-first; a copy still registered at the old floor-plan scope
     removes itself). Stats (orders, lines, units) stay on the device (`ws-stats-v1`).
     **The day** (`day.js`, detailedfoil, 19 Nov 2026; tested in `.github/tests/warehouse-shift-day.test.mjs` with whole days
@@ -499,6 +498,18 @@ explain changes in plain English and say what they'll see.
       typing there doesn't join the keyboard player); up to 12 letters, digits, spaces, ' and - (`cleanName`), kept as
       `ws-name` / `ws-name2`, default Trainee / Player 2. `P.setName(n)` redraws the badge (`S.setBadge`), the split screen
       tag and the CCTV initial. Tests: `warehouse-shift-stage5.test.mjs`.
+    - Stage 6 (21 Nov): screen layout. (a) Two players are side by side now: player 1 the LEFT half, player 2 the RIGHT
+      (`layout()` in game.js, `#pv1{right:50%}` / `.p2{left:50%}` in game.css), each with their scanner in their own bottom
+      right corner; join screen says Left / Right (the ids are still `joinTop` / `joinBottom`). `P.layout` counts a view as
+      landscape unless it's under 0.75 wide for its height, so a half on a computer keeps the scanner beside the view.
+      (b) The game fills only the part of the screen you can see (`visualViewport`: the stage's top, left, width and height
+      are set by `layout()`, `stageH` is used by `drawViews`), so when a phone's own keyboard comes up everything shrinks to
+      the space above it; the page also asks for `interactive-widget=resizes-content`. The on-screen keyboard already sat
+      inside the till screen. (c) Any way up at any time: the "Turn your phone sideways" prompt, its CSS and the landscape
+      lock on going full screen are gone, and the manifest says `"orientation": "any"`. (d) The CCTV screen is 2.7 x 1.4 m,
+      most of its 3 m wall (y 17.95 to 20.65; the clock moved up to z 2.42), drawn on a 2048 px canvas; cctv.js scales every
+      size by `K` (canvas width / 1024) and the map marks by `R` (map scale), and each count is as tall as its row allows.
+      Tests: `warehouse-shift-stage6.test.mjs`.
 - `.github/workflows/shelf-check.yml` (Mondays) and `counter-trial.yml` (every night) run
   `.github/shelf-check/check.mjs` and `.github/counter-trial/check.mjs` on GitHub. Both read prices with the
   shared `.github/lib/price-check.mjs` and commit the results to `tools/<tool>/data/prices.json`.

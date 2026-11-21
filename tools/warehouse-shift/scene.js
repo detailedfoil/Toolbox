@@ -946,7 +946,7 @@
           const B = 0.035, tw = o.y1 - o.y0 - 2 * B, th = o.z1 - o.z0 - 2 * B;
           box(M.black, o.x0 + 0.01, o.y0, o.z0, o.x1, o.y1, o.z1, 'shop');
           box(M.frame, o.x1 - 0.01, (o.y0 + o.y1) / 2 - 0.12, o.z0 + 0.3, o.x1, (o.y0 + o.y1) / 2 + 0.12, o.z1 - 0.3, 'shop'); // the wall bracket
-          const cv = canvas(1024, Math.round(1024 * th / tw));
+          const cv = canvas(2048, Math.round(2048 * th / tw)); // big on purpose: the screen is most of the wall
           const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = maxAniso;
           const m = new T.Mesh(new T.PlaneGeometry(tw, th), new T.MeshBasicMaterial({ map: tex, toneMapped: false }));
           m.position.copy(V(o.x0 + 0.008, (o.y0 + o.y1) / 2, (o.z0 + o.z1) / 2)); m.rotation.y = -Math.PI / 2; groups.shop.add(m);
