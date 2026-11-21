@@ -293,8 +293,8 @@ test('an installed phone with the ordinary launch URL can host or join from its 
   assert.equal(sockets.length, 0);
 });
 
-test('a phone and two other guests share the host game, pick, reconnect and follow the host into the next day', async t => {
-  const host = await game(t), guests = [];
+test('a phone host and three guests share picks, resume their work and start the next day', async t => {
+  const host = await game(t, { phone: true }), guests = [];
   host.$('onlineBtn').click(); host.$('hostRoom').click();
   await until(() => !host.$('roomBtn').hidden, 'host admission');
   // Schedule just the jobs this test exercises while Sam continues to run in the host.
@@ -415,6 +415,20 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const cash = session.cash, tillPage = guests[2].w.document;
   assert.ok(cash.due > 0);
   ui.drTake(1);
+  // The phone host drops its connection with a guest holding a carton and another counting change.
+  const carrier = guests[0].s, depot = carrier.world.goodsin[carrier.day().deliveryLeft()[0].src];
+  Object.assign(carrier.me, depot.stand); carrier.applyCam();
+  const carton = await carrier.day().paTake(depot.i);
+  assert.ok(carton);
+  const beforeMinute = day.clockMinute(), hostConnections = host.sockets.length;
+  host.sockets.at(-1).terminate();
+  await until(() => guests.every(g => !g.$('onlineCover').hidden), 'guests to pause after losing the phone host');
+  await until(() => host.sockets.length === hostConnections + 1 && guests.every(g => g.$('onlineCover').hidden),
+    'guests to resume with the original phone host');
+  assert.equal(day.delivery.find(d => d.id === carton.id).by, carrier.players[0].id, 'the connected guest retains the carton');
+  assert.equal(cashier.till.session(), session, 'the connected cashier retains their sale');
+  assert.deepEqual([...session.cash.hand], [1]);
+  assert.equal(day.clockMinute(), beforeMinute);
   cashier.closeTill();
   await cashier.openTill();
   assert.equal(cashier.till.session(), session, 'returning to the till resumes the same sale');
@@ -476,7 +490,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   await until(() => guests.every(g => g.s.day().clockMinute() === cancelled.clockMinute() && g.s.day().done === 1),
     'customer handover to advance the shared wall clock');
   host.sockets.at(-1).terminate();
-  await until(() => host.sockets.length === 2 && guests.every(g => g.$('onlineCover').hidden), 'original host to reconnect');
+  await until(() => host.sockets.length === hostConnections + 2 && guests.every(g => g.$('onlineCover').hidden), 'original host to reconnect');
   assert.equal(host.s.crew.length, 1);
   assert.ok(guests.every(g => g.s.day().event === 'failedDelivery'));
   host.sockets.at(-1).send(JSON.stringify({ type: 'leave' }));
