@@ -34,31 +34,31 @@ from scipy.sparse import coo_matrix
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.normpath(os.path.join(HERE, '..', '..', 'tools', 'stock-swaps', 'data', 'plans.json'))
 
-# name in the exports, name on the page, transactions (Area Overview to 19.11.2026), lat, lng
+# name in the exports, name on the page, transactions (Black Friday incentive report to 20.11.2026), lat, lng
 # (places from the Area Map's stores.json; Royston's is from its postcode, SG8 5PF, as the map's is approximate)
 STORES = [
-    ("AMERSHAM", "Amersham", 1282, 51.67133, -0.58722),
-    ("BERKHAMSTED", "Berkhamsted", 1453, 51.76831, -0.58138),
-    ("BIGGLESWADE", "Biggleswade", 1397, 52.07483, -0.24107),
-    ("BISHOPS STORTFORD", "Bishops Stortford", 1499, 51.87269, 0.17574),
-    ("CHESHAM", "Chesham", 943, 51.69872, -0.6098),
-    ("DUNSTABLE", "Dunstable", 1314, 51.8867, -0.50739),
-    ("EPPING - THORNWOOD", "Epping", 1380, 51.7201, 0.12886),
-    ("FLITWICK", "Flitwick", 1559, 52.01016, -0.48516),
-    ("HARLOW", "Harlow", 2043, 51.78708, 0.12209),
-    ("HEMEL HEMPSTEAD", "Hemel Hempstead", 2539, 51.76663, -0.44198),
-    ("HERTFORD", "Hertford", 1161, 51.80292, -0.06274),
-    ("HODDESDON", "Hoddesdon", 1888, 51.76234, 0.00358),
-    ("HOUGHTON REGIS", "Houghton Regis", 1065, 51.90146, -0.5254),
-    ("LEIGHTON BUZZARD", "Leighton Buzzard", 1913, 51.91034, -0.65632),
-    ("LETCHWORTH", "Letchworth", 1752, 51.98446, -0.20678),
-    ("LUTON - BILTON WAY", "Luton Bilton Way", 1383, 51.88581, -0.45067),
-    ("LUTON - WINDMILL TRADING EST", "Luton Windmill", 1921, 51.87715, -0.40466),
-    ("ROYSTON", "Royston", 1589, 52.057788, -0.036401),
-    ("SAFFRON WALDEN", "Saffron Walden", 842, 52.02107, 0.2538),
-    ("ST ALBANS - HATFIELD ROAD", "St Albans", 1990, 51.75197, -0.27765),
-    ("STEVENAGE", "Stevenage", 2280, 51.90591, -0.21419),
-    ("WELWYN GARDEN CITY", "Welwyn Garden City", 1742, 51.80709, -0.18925),
+    ("AMERSHAM", "Amersham", 1572, 51.67133, -0.58722),
+    ("BERKHAMSTED", "Berkhamsted", 1795, 51.76831, -0.58138),
+    ("BIGGLESWADE", "Biggleswade", 1737, 52.07483, -0.24107),
+    ("BISHOPS STORTFORD", "Bishops Stortford", 1818, 51.87269, 0.17574),
+    ("CHESHAM", "Chesham", 1174, 51.69872, -0.6098),
+    ("DUNSTABLE", "Dunstable", 1629, 51.8867, -0.50739),
+    ("EPPING - THORNWOOD", "Epping", 1726, 51.7201, 0.12886),
+    ("FLITWICK", "Flitwick", 1923, 52.01016, -0.48516),
+    ("HARLOW", "Harlow", 2553, 51.78708, 0.12209),
+    ("HEMEL HEMPSTEAD", "Hemel Hempstead", 3122, 51.76663, -0.44198),
+    ("HERTFORD", "Hertford", 1453, 51.80292, -0.06274),
+    ("HODDESDON", "Hoddesdon", 2288, 51.76234, 0.00358),
+    ("HOUGHTON REGIS", "Houghton Regis", 1345, 51.90146, -0.5254),
+    ("LEIGHTON BUZZARD", "Leighton Buzzard", 2360, 51.91034, -0.65632),
+    ("LETCHWORTH", "Letchworth", 2131, 51.98446, -0.20678),
+    ("LUTON - BILTON WAY", "Luton Bilton Way", 1690, 51.88581, -0.45067),
+    ("LUTON - WINDMILL TRADING EST", "Luton Windmill", 2383, 51.87715, -0.40466),
+    ("ROYSTON", "Royston", 1948, 52.057788, -0.036401),
+    ("SAFFRON WALDEN", "Saffron Walden", 1051, 52.02107, 0.2538),
+    ("ST ALBANS - HATFIELD ROAD", "St Albans", 2438, 51.75197, -0.27765),
+    ("STEVENAGE", "Stevenage", 2818, 51.90591, -0.21419),
+    ("WELWYN GARDEN CITY", "Welwyn Garden City", 2152, 51.80709, -0.18925),
 ]
 
 SHORT = {
