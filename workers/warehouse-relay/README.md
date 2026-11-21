@@ -1,6 +1,6 @@
 # Warehouse Shift online co-op
 
-Open `tools/warehouse-shift.html?online=1` on each device using the same game build and the existing game login. Choose **Online co-op → Host a shift** on one device. The host sees a six-character code in the top bar. Up to three other players choose **Join shift** and enter that code. A PC kept awake with its game tab visible is the best host. Each online device has one local player. Solo and local split-screen use their original controls.
+Open `tools/warehouse-shift.html` on each device using the same game build and the existing game login. Choose **Online co-op → Host a shift** on one device. The host sees a six-character code in the top bar. Up to three other players choose **Join shift** and enter that code. A PC kept awake with its game tab visible is the best host. Each online device has one local player. Solo and local split-screen use their original controls.
 
 ## Configure Cloudflare
 
@@ -16,7 +16,7 @@ npx wrangler@4.166.0 deploy --config workers/warehouse-relay/wrangler.toml
 
 The configuration creates the `ROOMS` binding and the SQLite-backed `WarehouseRoom` class. `GAME_ORIGIN` is the exact origin of the web page, currently `https://detailedfoil.github.io`. For a different game host, set that value before deployment. A GitHub Pages repository path such as `/Toolbox` belongs in the page URL only.
 
-Put the deployed HTTPS origin in the `RELAY` constant in `tools/warehouse-shift/online.js`, run `node .github/stamp.mjs`, and publish the game build. To test a staging build before setting its default, append `&relay=https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev` to its flagged game URL on every device. The normal game URL continues to open solo or local split-screen.
+Put the deployed HTTPS origin in the `RELAY` constant in `tools/warehouse-shift/online.js`, run `node .github/stamp.mjs`, and publish the game build. To test a staging build before setting its default, append `?relay=https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev` to the game URL on every device. Solo, local split-screen and online co-op share the same start screen.
 
 ## Verify a deployment
 
@@ -38,7 +38,7 @@ In a second terminal at the repo root:
 node --test .github/warehouse-shift/test-relay.mjs .github/warehouse-shift/test-online-game.mjs
 ```
 
-The tests connect to loopback port 8787 (override with `RELAY_PORT`). Keep the configured GitHub Pages origin for these tests. They open four WebSocket connections to the local Durable Object and exercise the game DOM, including a touch layout. The game test uses the real scene graph, scanners and till with canvas drawing stubbed. For a manual local browser run, serve the Toolbox checkout over HTTP and start Wrangler with `--var GAME_ORIGIN:http://localhost:8000` if the game is served on that origin. Open the game with `?online=1&relay=http://127.0.0.1:8787`.
+The tests connect to loopback port 8787 (override with `RELAY_PORT`). Keep the configured GitHub Pages origin for these tests. They open four WebSocket connections to the local Durable Object and exercise the game DOM, including a touch layout. The game test uses the real scene graph, scanners and till with canvas drawing stubbed. For a manual local browser run, serve the Toolbox checkout over HTTP and start Wrangler with `--var GAME_ORIGIN:http://localhost:8000` if the game is served on that origin. Open the game with `?relay=http://127.0.0.1:8787`.
 
 For the rendered browser check, install Python Playwright (the workflow pins the version) and use Chrome with SwiftShader. Start a static server from the repo root on port 8000 and run local Wrangler with `--var GAME_ORIGIN:http://127.0.0.1:8000`. Set `CHROME_BIN` to the Chrome executable and run `python3 .github/warehouse-shift/browser-online.py`. It checks a desktop host, a touch guest, shelf relocation, rotation and two simulated controllers. Set `WAREHOUSE_SCREENSHOT` to a PNG path to capture the guest's view.
 

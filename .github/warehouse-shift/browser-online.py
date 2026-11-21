@@ -24,7 +24,7 @@ def open_game(browser, errors, *, phone=False, online=True):
         context.add_init_script(PADS)
     page = context.new_page()
     page.on("pageerror", lambda error: errors.append(error.stack or str(error)))
-    page.goto(GAME + ("?online=1&relay=" + RELAY if online else ""), wait_until="domcontentloaded")
+    page.goto(GAME + ("?relay=" + RELAY if online else ""), wait_until="domcontentloaded")
     page.wait_for_function("!!window.__shift || !!document.getElementById('msgText').textContent", timeout=100_000)
     assert page.evaluate("!!window.__shift"), page.locator("#msgText").text_content()
     return page
@@ -104,7 +104,7 @@ def shared_shift(browser, errors):
 
 def split_shift(browser, errors):
     page = open_game(browser, errors, online=False)
-    assert page.locator("#onlineBtn").is_hidden()
+    assert page.locator("#onlineBtn").is_visible()
     page.locator("#twoBtn").click()
     page.evaluate("""() => {
       for (const gp of testPads) {
