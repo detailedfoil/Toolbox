@@ -49,8 +49,8 @@
     if (!window.THREE || !window.ShiftWorld || !window.ShiftScene || !window.ShiftTill || !window.ShiftTillUI || !window.ShiftBot || !window.ShiftDay) { fail("The game didn't load. Check your signal and reload the page."); return; }
     progress(0.1, 'Loading the products…');
     // what till customers ask for: without it every till customer has a kiosk order
-    const asks = fetch('warehouse-shift/data/requests.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    fetch('warehouse-shift/data/catalogue.json')
+    const asks = fetch($('requestData').getAttribute('href')).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    fetch($('catalogueData').getAttribute('href'))
       .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(async (cat) => {
         progress(0.35, 'Stocking the shelves…'); await breathe();
@@ -295,9 +295,10 @@
     function onStep(c) {
       const f = c.fig;
       if (!f) return;
+      if (speeches.get(f)?.waiting) speeches.delete(f);
       if (c.state === 'greet') { for (const p of players) p.queueChanged(); return; } // at the counter, waiting to be said hello to
       if (c.state === 'counter') { // a till customer, waiting to be served
-        if (!c.hello) { c.hello = true; speakFig(c, { text: c.say }); }
+        speakFig(c, { text: c.say }, true);
         if (c.spot && c.spot.till && !f.giving && f.mode !== 'walking') joinQueue(c); // called to a till, then left: back in the line
         for (const p of players) p.queueChanged();
         return;
@@ -417,11 +418,11 @@
     /* ---------- what people say: a bubble over their head, drawn by each player who can see them ---------- */
     const speeches = new Map(); // who -> {at(v), line, until, cls, name}
     const lasts = (line) => Math.min(9000, 2600 + ((line.text || '').length + (line.quote || '').length) * 50);
-    function speakFig(c, line) {
+    function speakFig(c, line, waiting = false) {
       const f = c && c.fig;
       if (!f || !line || !line.text) return;
       for (const p of players) if (p.tillCust === c && p.tillOpen()) return; // the one at your till talks on the till's screen
-      speeches.set(f, { at: (v) => v.set(f.group.position.x, 1.98 * f.group.scale.y, f.group.position.z), line, until: performance.now() + lasts(line), cls: 'crewcust', fig: f });
+      speeches.set(f, { at: (v) => v.set(f.group.position.x, 1.98 * f.group.scale.y, f.group.position.z), line, waiting, until: performance.now() + lasts(line), cls: 'crewcust', fig: f });
     }
     function speakCrew(b, line) {
       speeches.set(b, { at: (v) => b.fig.parts.head.getWorldPosition(v).setY(v.y + 0.25), line, until: performance.now() + lasts(line), cls: 'crew', name: b.name });
@@ -663,7 +664,7 @@
       for (const p of players) p.fig.group.traverse((o) => { o.layers.disableAll(); for (const q of players) if (q !== p) o.layers.enable(1 + q.idx); });
       dirty = true;
     }
-    const STEP = 1.05; // 2.5 times the old 0.42 (detailedfoil, 21 Nov 2026), whatever the stool model's height
+    const STEP = 3 * 0.42; // lift above standing height
     // a stool is only needed for AA shelf 13 and up, BA shelf 7 and up and the top BB level (detailedfoil, 21 Nov 2026)
     const needsStep = (loc) => { const k = loc.face.kind, n = loc.shelf.no; return k === 'AA' ? n >= 13 : k === 'BA' ? n >= 7 : n >= loc.face.shelves.length; };
     function poseStool(stool, x, y, yaw, stepped) {
@@ -706,17 +707,20 @@
       /* ---------- layout: the view's centre is the middle of what the scanner doesn't cover ---------- */
       P.layout = function (rect) {
         // landscape unless clearly taller than wide (a split screen half on a computer still counts as landscape)
-        const vw = Math.max(1, rect.w), vh = Math.max(1, rect.h), land = vw >= vh * 0.75;
+        const vw = Math.max(1, rect.w), vh = Math.max(1, rect.h), land = touch && !split ? vw >= vh : vw >= vh * 0.75;
         let sch, scw;
         if (land) { sch = Math.min(vh - 12, 700); scw = sch * 0.53; if (scw > vw * 0.42) { scw = vw * 0.42; sch = scw / 0.53; } }
-        else { sch = Math.min(vh * 0.5, 540); scw = sch * 0.53; if (scw > vw * 0.6) { scw = vw * 0.6; sch = scw / 0.53; } }
+        else { sch = Math.min(vh * (touch ? 0.39 : 0.5), touch ? 390 : 540); scw = sch * 0.53; if (scw > vw * 0.6) { scw = vw * 0.6; sch = scw / 0.53; } }
         D.root.style.setProperty('--sch', Math.round(sch) + 'px'); D.root.style.setProperty('--scw', Math.round(scw) + 'px');
         D.root.classList.toggle('portrait', !land);
+        D.root.classList.toggle('phone-portrait', touch && !land);
         view.x = rect.x; view.y = rect.y; view.w = vw; view.h = vh; view.landscape = land;
         if (land) {
           const cx = Math.max(vw * 0.3, (vw - scw - 12) / 2), FW = 2 * vw - 2 * cx;
           cam.fov = 60; cam.aspect = FW / vh; cam.setViewOffset(FW, vh, vw - 2 * cx, 0, vw, vh);
           view.cx = cx; view.cy = vh / 2;
+        } else if (touch) {
+          cam.clearViewOffset(); cam.fov = 82; cam.aspect = vw / vh; view.cx = vw / 2; view.cy = vh / 2;
         } else {
           const cy = Math.max(vh * 0.28, (vh - sch - 12) / 2), FH = 2 * vh - 2 * cy;
           cam.fov = 82; cam.aspect = vw / FH; cam.setViewOffset(vw, FH, 0, vh - 2 * cy, vw, vh);
@@ -1599,7 +1603,7 @@
         if (P.onTill) P.onTill();
         me.vx = me.vy = 0;
         SFX.key();
-        till.open();
+        till.open(tills.indexOf(nearTill) + 1);
         callOver();
         D.say.hidden = true;
         dirty = true;
@@ -1755,7 +1759,7 @@
         if (!D.say.hidden) { const r = D.say.getBoundingClientRect(), o = D.root.getBoundingClientRect(); used.push({ x: r.left - o.left, y: r.top - o.top, w: r.width, h: r.height }); }
         for (const [key, b] of bubs) if (!speeches.has(key)) { b.el.hidden = true; }
         for (const [key, sp] of speeches) {
-          if (now > sp.until) { speeches.delete(key); const b0 = bubs.get(key); if (b0) b0.el.hidden = true; continue; }
+          if (!sp.waiting && now > sp.until) { speeches.delete(key); const b0 = bubs.get(key); if (b0) b0.el.hidden = true; continue; }
           const b = bubFor(key, sp.cls);
           let show = !open && active;
           if (show) {
@@ -2260,28 +2264,44 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden) { stayAwake(); last = performance.now(); } else for (const p of players) p.keysClear(); });
 
     /* ---------- install (a home screen app that works offline once loaded) ---------- */
-    // Check for updates (detailedfoil, 20 Nov 2026): looks at the site's copy of the page; if any script or style has a newer
-    // version stamp than the ones this page loaded, the kept offline copy is cleared and the page reloads fresh
     const updBtn = $('updBtn'), updMsg = $('updMsg');
-    const say = (t) => { updMsg.textContent = t; updMsg.hidden = false; };
+    let available = false;
+    const say = text => { updMsg.textContent = text; updMsg.hidden = false; };
     updBtn.addEventListener('click', async () => {
       if (updBtn.disabled) return;
-      updBtn.disabled = true; say('Checking...');
+      updBtn.disabled = true;
       try {
-        const r = await fetch('warehouse-shift.html?t=' + Date.now(), { cache: 'no-store', credentials: 'omit' });
-        if (!r.ok) throw new Error('bad');
-        const h = await r.text();
-        const stamp = (a) => a.slice(a.indexOf('"') + 1, -1);
-        const site = (h.match(/(?:src|href)="[^"]*\?v=[^"]*"/g) || []).map(stamp);
-        const mine = Array.from(document.querySelectorAll('[src*="?v="],[href*="?v="]')).map((el) => el.getAttribute('src') || el.getAttribute('href'));
-        const newer = site.filter((x) => mine.indexOf(x) < 0);
-        if (!site.length) throw new Error('empty');
-        if (!newer.length) { say('You have the latest version.'); updBtn.disabled = false; return; }
-        say('New version found, updating...');
-        try { if (window.caches) for (const k of await caches.keys()) if (k.startsWith('warehouse-shift-') || k.startsWith('toolbox-warehouse-shift-')) await caches.delete(k); } catch (e) { /* fine */ }
-        try { if (navigator.serviceWorker) for (const g of await navigator.serviceWorker.getRegistrations()) if (g.scope.indexOf('warehouse-shift') >= 0) await g.unregister(); } catch (e) { /* fine */ }
-        location.reload();
-      } catch (e) { say('Could not check (no signal?). Try again.'); updBtn.disabled = false; }
+        if (available) {
+          say('Installing update…');
+          const worker = navigator.serviceWorker?.controller;
+          if (worker) {
+            const installed = await new Promise(resolve => {
+              const channel = new MessageChannel();
+              const finish = ok => { clearTimeout(timer); channel.port1.close(); resolve(ok); };
+              const timer = setTimeout(() => finish(false), 90000);
+              channel.port1.onmessage = event => finish(event.data === true);
+              worker.postMessage('install-update', [channel.port2]);
+            });
+            if (!installed) throw new Error('Install failed');
+          }
+          location.reload();
+          return;
+        }
+        say('Checking for updates…');
+        const response = await fetch('warehouse-shift.html', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Page unavailable');
+        const latestSource = await response.text();
+        const latest = new DOMParser().parseFromString(latestSource, 'text/html');
+        const assets = doc => Array.from(doc.querySelectorAll('script[src*="?v="],link[href*="?v="]'),
+          el => el.getAttribute('src') || el.getAttribute('href')).join(' ');
+        if (!latest.getElementById('catalogueData')) throw new Error('Incomplete release');
+        const kept = navigator.serviceWorker?.controller && await window.caches.match('warehouse-shift.html', { cacheName: 'warehouse-shift-v2' });
+        available = assets(latest) !== assets(document) || (!!kept && (await kept.text()) !== latestSource);
+        say(available ? 'A new version is ready to install.' : 'You have the latest version.');
+        if (available) updBtn.textContent = 'Install update';
+      } catch {
+        say(available ? 'Update could not finish. Reconnect and tap Install update to retry.' : 'Could not check for updates. Check your connection and try again.');
+      } finally { updBtn.disabled = false; }
     });
     const installBtn = $('installBtn');
     let promptEvent = null;

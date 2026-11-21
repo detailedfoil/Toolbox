@@ -1,10 +1,5 @@
-/* Warehouse Shift: lets the installed game open with no signal once it's been played with signal.
-   Registered by warehouse-shift/game.js with scope "warehouse-shift", so it only looks after that page (never the
-   other tools). The page itself comes from the site first (a 4 s wait, then the kept copy); its scripts, styles,
-   product list and photos come from the kept copy first (their addresses change with every new version). The till's
-   CrashFix tab uses Product Search's lists, which the GitHub check updates most nights: the kept copy answers at
-   once and a fresh one is fetched for next time. The game used to live at floor-plan.html?shift=1; a copy of this
-   worker still registered there just removes itself. */
+/* Warehouse Shift keeps a complete start page and its versioned assets for offline play.
+   catalogue.json and requests.json carry content hashes in the page, just like the scripts. */
 const CACHE = 'warehouse-shift-v2';
 const PAGE = new URL('warehouse-shift.html', self.location.href).href;
 
@@ -17,21 +12,29 @@ if (self.registration.scope.endsWith('floor-plan.html')) {
     })());
   });
 } else {
-  self.addEventListener('install', (event) => {
-    event.waitUntil((async () => {
-      try {
-        const cache = await caches.open(CACHE);
-        const page = await fetch(PAGE, { cache: 'reload' });
-        if (page.ok) {
-          const html = await page.clone().text();
-          const files = Array.from(html.matchAll(/(?:src|href)="([^"]+\.(?:js|css|png|webmanifest)(?:\?v=[^"]*)?)"/g), (m) => m[1]);
-          files.push('warehouse-shift/data/catalogue.json', 'warehouse-shift/data/requests.json');
-          await Promise.all(files.map((f) => cache.add(new Request(new URL(f, PAGE), { cache: 'reload' })).catch(() => {})));
-          await cache.put(PAGE, page);
-        }
-      } catch (e) { /* offline while installing: kept as the game is played instead */ }
-      await self.skipWaiting();
-    })());
+  // Publish the page last. A failed download leaves the previous playable bundle in place.
+  async function installBundle() {
+    const page = await fetch(PAGE, { cache: 'no-store' });
+    if (!page.ok) throw new Error('Page unavailable');
+    const html = await page.clone().text();
+    const files = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css|json|png|webmanifest)(?:\?v=[^"]*)?)"/g)].map(match => match[1]);
+    if (!files.some(file => file.startsWith('warehouse-shift/data/requests.json?v=')) ||
+        !files.some(file => file.startsWith('warehouse-shift/data/catalogue.json?v='))) throw new Error('Incomplete release');
+    const cache = await caches.open(CACHE);
+    await cache.addAll([...new Set(files)].map(file => new Request(new URL(file, PAGE), { cache: 'reload' })));
+    await cache.put(PAGE, page);
+  }
+  let pending;
+  function installOnce() {
+    if (!pending) pending = installBundle().finally(() => { pending = null; });
+    return pending;
+  }
+  self.addEventListener('install', event => {
+    event.waitUntil(installOnce().then(() => self.skipWaiting()));
+  });
+  self.addEventListener('message', event => {
+    if (event.data !== 'install-update' || !event.ports[0]) return;
+    event.waitUntil(installOnce().then(() => event.ports[0].postMessage(true), () => event.ports[0].postMessage(false)));
   });
   self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
@@ -46,13 +49,8 @@ if (self.registration.scope.endsWith('floor-plan.html')) {
       if (url.pathname !== new URL(PAGE).pathname) return;
       event.respondWith((async () => {
         const cache = await caches.open(CACHE);
-        const net = fetch(req).then((r) => { if (r.ok) cache.put(PAGE, r.clone()); return r; });
-        const timer = new Promise((r) => setTimeout(r, 4000));
-        try {
-          const first = await Promise.race([net, timer]);
-          if (first) return first;
-          return (await cache.match(PAGE)) || (await net);
-        } catch (e) { return (await cache.match(PAGE)) || Response.error(); }
+        return (await cache.match(PAGE)) || fetch(req);
+
       })());
       return;
     }

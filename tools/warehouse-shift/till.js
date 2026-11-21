@@ -3,8 +3,7 @@
 
    Till customers (detailedfoil, 19 Nov 2026): a customer comes to the trade counter and orders at the till, Fusion
    (the store's till system). They give their surname, then their postcode, then (after a search) a third detail; you search, pick them from the results,
-   then they ask for what they want one thing at a time: by product code, by describing it, or by quoting the
-   product's description from the website ("I need the one that says ..."). You find it on the CrashFix tab (the
+   then they ask for what they want one thing at a time: by product code or by name. You find it on the CrashFix tab (the
    Product Search page's own search), add it to the basket on the Fusion tab, and the customer says whether it's
    right. Any product that fits counts (data/requests.json lists them). Then they pay by card or cash and the pick
    list goes to the scanner.
@@ -165,30 +164,27 @@
   // from anything on the shelves.
   var ASK_CODE = ['Can I get {c}?', 'Have you got {c} in stock?', 'I need {c}, please.', 'Product code {c}.', 'It\'s {c} off the website.', 'Can I order {c}?'];
   var ASK_DESC = ['Have you got {x}?', 'I\'m after {x}.', 'Can I get {x}, please?', 'Do you do {x}?', 'I need {x}.', 'Looking for {x}.'];
-  var ASK_NEED = ['I need the one that says:', 'I saw it on your website. It says:', 'I\'m after something, the description says:', 'I need an item that... hang on, it says:', 'It\'s this one off the website:'];
   var ASK_QTY = ['I\'ll take {n}.', '{n} of them, please.', 'I need {n} of those.', 'Make it {n}.', 'Can I have {n}?'];
   var NEXT = ['Next one...', 'And...', 'Also...', 'What else... right.', 'And one more thing...'];
 
-  // a till customer's order: 1 to 3 lines, each its own product, each asked for by code, description or need
+  // a till customer's order: 1 to 3 lines, each its own product, each asked for by code, spoken name
   function makeOrder(world, requests, r, n) {
     var byCode = world.byCode || (world.byCode = (function () { var m = {}; world.items.forEach(function (it) { m[it.code] = it; }); return m; })());
     var placed = function (code) { return !!(byCode[code] && byCode[code].loc); };
     if (!n) { var u = r(); n = u < 0.45 ? 1 : u < 0.8 ? 2 : 3; }
     var lines = [], used = {}, guard = 0;
-    var desc = (requests && requests.describe) || [], need = (requests && requests.need) || [];
+    var desc = (requests && requests.describe) || [];
     while (lines.length < n && guard++ < 400) {
-      // customers no longer describe a product by its name (detailedfoil, 19 Nov 2026: it didn't work): a code, or a sentence from its description
-      var k = r(), kind = k < 0.3 || !desc.length ? 'code' : 'describe'; // by code, or by key words from the product's name; never by a description sentence (detailedfoil, 21 Nov 2026: those say things like "suitable for all uses", which nobody would ask for)
-      var it, accept, words = [], quote = '', hint = '', clue = '';
+      var kind = r() < 0.3 || !desc.length ? 'code' : 'describe';
+      var it, accept, phrase;
       if (kind === 'code') {
         it = world.items[Math.floor(r() * world.items.length)];
         accept = [it.code];
       } else {
-        var e = kind === 'describe' ? desc[Math.floor(r() * desc.length)] : need[Math.floor(r() * need.length)];
-        it = byCode[e[0]];
-        accept = kind === 'describe' ? e.slice(2) : e.slice(3);
-        accept = [e[0]].concat(accept);
-        if (kind === 'describe') words = [e[1]]; else { quote = e[1]; hint = e[2] || ''; }
+        var request = desc[Math.floor(r() * desc.length)];
+        it = byCode[request[0]];
+        phrase = request[1];
+        accept = [request[0]].concat(request.slice(2));
       }
       if (!it || !placed(it.code) || used[it.code]) continue;
       accept = accept.filter(placed);
@@ -198,10 +194,9 @@
       qty = Math.min(qty, avail(it));
       var say;
       if (kind === 'code') say = pick(r, ASK_CODE).replace('{c}', it.code);
-      else if (kind === 'describe') say = pick(r, ASK_DESC).replace('{x}', words[0]);
-      else say = pick(r, ASK_NEED);
-      clue = kind === 'code' ? 'That\'s ' + it.code.split('').join(' ') + '.' : 'I think the code starts with ' + it.code.slice(0, 3) + '.';
-      lines.push({ kind: kind, item: it, qty: qty, accept: accept, say: say, quote: quote, hint: hint, clue: clue,
+      else say = pick(r, ASK_DESC).replace('{x}', phrase);
+      var clue = kind === 'code' ? 'That\'s ' + it.code.split('').join(' ') + '.' : 'I think the code starts with ' + it.code.slice(0, 3) + '.';
+      lines.push({ kind: kind, item: it, qty: qty, accept: accept, say: say, quote: '', hint: '', clue: clue,
         qtySay: qty > 1 ? pick(r, ASK_QTY).replace('{n}', qty) : '', next: lines.length ? pick(r, NEXT) : '' });
     }
     return lines;

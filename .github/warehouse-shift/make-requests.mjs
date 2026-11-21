@@ -138,12 +138,23 @@ function describe(code) {
   const pk = PACK.exec(text);
   let pack = '';
   if (pk) { pack = pk[1] || pk[2]; text = text.replace(PACK, ' ').replace(/\s+/g, ' ').trim(); }
-  const dropBrand = brand && Till.hash(code + 'brand') % 2 === 0;
+  // Keep a recognisable product type. Omit catalogue jargon and use one useful
+  // size, colour or brand when it helps distinguish the products on the shelf.
+  const type = /\b(?:multi[- ]tools?|(?:combi|hammer|impact) drills?|impact drivers?|(?:circular|reciprocating|jig) saws?|drill bits?|(?:wood|decking|drywall|machine) screws?|back box(?:es)?|door (?:handles?|hinges?|closers?)|ball valves?|pipe clips?|cable ties?|work gloves?|safety boots?|paint brushes?|roller sleeves?|extension leads?|socket outlets?|junction box(?:es)?|angle grinders?|tap connectors?|compression (?:elbows?|tees?|couplers?))\b/i.exec(text);
+  const omit = /\b(?:brushless|li-ion|lithium-ion|XR|professional|heavy[- ]duty|trade|premium)\b/ig;
   let body = text;
-  if (dropBrand && body.startsWith(brand + ' ')) body = body.slice(brand.length + 1);
-  const keep = new Set(brand && !dropBrand ? brand.split(' ') : []);
-  body = body.split(' ').map((w) => caseWord(w, keep.has(w))).join(' ').replace(/\s+([,.])/g, '$1').replace(/[,.]$/, '');
-  if (body.split(' ').length < 2) return null;
+  if (brand && body.startsWith(brand + ' ')) body = body.slice(brand.length + 1);
+  if (type) {
+    const detail = /\b(?:cordless|[0-9]+(?:\.[0-9]+)?(?:mm|ml|ltr|v)|white|black|chrome|brass)\b/i.exec(body);
+    body = [detail && !type[0].toLowerCase().includes(detail[0].toLowerCase()) ? detail[0] : '', type[0]].filter(Boolean).join(' ');
+    if (brand && Till.hash(code) % 2 === 0) body = brand + ' ' + body;
+  } else {
+    body = body.replace(omit, ' ').split(/\s+(?:with|including|supplied with|c\/w)\s+/i)[0]
+      .replace(/\b\d+\s*x\s*\d+(?:\.\d+)?Ah\b/ig, '').replace(/\s+/g, ' ').trim();
+  }
+  const keep = new Set(brand ? brand.split(' ') : []);
+  body = body.split(' ').map(w => caseWord(w, keep.has(w))).join(' ').replace(/[,.]$/, '');
+  if (!body || (!type && (body.split(' ').length > 4 || /\d{5,}|\s[x&]\s|^\W|\b\d+tpi\b/i.test(body))) || /(?:\b(?:and|with|for|x)|[&/-])$/i.test(body) || norm(body) === norm(name)) return null;
   let phrase;
   if (pack && Number(pack) > 1) phrase = 'a pack of ' + pack + ' ' + body;
   else if (/\bpair\b/i.test(name)) phrase = 'a pair of ' + body.replace(/\bpair\b/i, '').replace(/\s+/g, ' ').trim();

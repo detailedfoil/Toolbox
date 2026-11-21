@@ -13,7 +13,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ASSET = /(<(?:script|link)\b[^>]*?\b(?:src|href)=")([^"?#:]+\.(?:js|css))(?:\?v=([^"]*))?"/g;
+const ASSET = /(<(?:script|link)\b[^>]*?\b(?:src|href)=")([^"?#:]+\.(?:js|css)|warehouse-shift\/data\/(?:catalogue|requests)\.json)(?:\?v=([^"]*))?"/g;
 
 export function pages() {
   return ['index.html', ...fs.readdirSync(path.join(ROOT, 'tools')).filter((f) => f.endsWith('.html')).sort().map((f) => 'tools/' + f)];

@@ -9,10 +9,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Warehouse Shift">
 <title>Warehouse Shift</title>
+<link id="catalogueData" rel="preload" as="fetch" crossorigin href="warehouse-shift/data/catalogue.json?v=1a68fece40">
+<link id="requestData" rel="preload" as="fetch" crossorigin href="warehouse-shift/data/requests.json?v=587ec99e03">
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=f600af223e">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=3d2f6231af">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=b66e39ba67">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -102,7 +104,7 @@
   <div class="ws-cover" id="startCover" hidden>
     <div class="ws-card">
       <h1>Warehouse Shift</h1>
-      <p>A day is 20 picks on one list, shared with Sam. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
+      <p>A day is 15 to 25 picks on one list, shared with Sam. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
       <div id="startStats"></div>
       <label class="ws-name">Name on your badge <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Trainee" enterkeyhint="done"></label>
       <div class="ws-row">
@@ -151,7 +153,7 @@
             <li>The scanner opens on its <b>Main Menu</b>: <b>Putaway</b> or <b>Today Picking</b>. Back goes back to it.</li>
             <li>The scanner lists today's picks: <b>A4821 2:3 CK</b> is order A4821, 2 locations, 3 items. <b>CK</b>: a click and collect customer is at the counter. <b>c</b>: nobody's here yet, it goes in the holding area. Nothing after it: bought at the till, the customer's waiting.</li>
             <li>Up and down choose an order, <b>Enter</b> (or <b>Space</b>) starts it. Once started it's yours: Back says <b>Finish task</b>.</li>
-            <li>A day is about <b>20 picks</b>, plus the <b>delivery</b>. It ends when they're all done, the delivery's away and nobody's waiting: then lock the front door.</li>
+            <li>A day is <b>15 to 25 picks</b>, plus the <b>delivery</b>. It ends when they're all done, the delivery's away and nobody's waiting: then lock the front door.</li>
           </ul>
           <h2>Picking</h2>
           <ul>
@@ -176,12 +178,13 @@
           </ul>
           <h2>At the till</h2>
           <ul>
-            <li>Some customers order at the till. Walk behind the counter to a till and press <b>Use till</b> (or Scan): the next one comes over. The till by the gap is Sam's.</li>
-            <li>They give their <b>postcode</b>, then their <b>surname</b>: type them in Fusion's Identify Customer, Search, pick them, Select.</li>
+            <li>Face a waiting customer and press <b>Greet</b> to hear what they need. Some customers order at the till. Walk behind the counter to a till and press <b>Use till</b> (or Scan): the next one comes over. The till by the gap is Sam's.</li>
+            <li>Enter their <b>surname</b>, then their <b>postcode</b> in Fusion’s Identify Customer. Press <b>Search</b>, listen for their third detail, then select the matching record.</li>
             <li>Sent it from the <b>kiosk</b>? They tell you the name they used: open <b>Kiosk Orders</b>, pick theirs, Select, and the basket fills itself.</li>
-            <li>They ask for one thing at a time: a <b>code</b>, or a quote from the website. Find it on the <b>CrashFix</b> tab (tap a result to read its description) and tap its code to copy it: the customer says straight away if it's the one. Any product that fits counts.</li>
+            <li>They ask for one thing at a time: a <b>code</b>, or the product’s name with a detail such as its size or brand. Find it on the <b>CrashFix</b> tab (tap a result to read its description) and tap its code to copy it: the customer says straight away if it's the one. Any product that fits counts.</li>
             <li>Back on the <b>Fusion</b> tab, type the part number and quantity, Enter. Wrong quantity? Type the right one in that line's Qty box. <b>Ask again</b> repeats what they want, twice gives a clue.</li>
             <li>When they've got everything: <b>Pay &amp; Go</b>, then <b>Card</b> or <b>Cash</b>, whichever they say. The order goes on the pick list (its number stays on the till's screen) and the customer waits by the gap at the end of the counter.</li>
+            <li>For cash, check the change due. Tap the notes and coins in the drawer, then <b>Give change</b>. Exact money completes the sale automatically.</li>
             <li>On a phone, Fusion uses the phone's keyboard; the keyboard button at the top swaps to an on-screen one.</li>
           </ul>
           <h2>Reading a location</h2>
@@ -194,7 +197,7 @@
         </div>
         <div>
           <h2>Phone</h2>
-          <ul><li>Left thumb: walk (push further to jog)</li><li>Drag the view to look round</li><li>Tap a label to scan it</li><li>Squat button next to the scanner</li></ul>
+          <ul><li>Left thumb: walk (push further to jog)</li><li>Drag the view to look round</li><li>Tap a label to scan it</li><li>Tap <b>Squat</b> for low shelves. For high shelves, face a red kick stool and tap <b>Take stool</b>. Carry it to the shelf and tap <b>Step</b></li></ul>
           <h2>Controller</h2>
           <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>LB</b> step on the stool, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
           <h2>Computer</h2>
@@ -229,13 +232,13 @@
 <script src="warehouse-shift/cctv.js?v=34a13a7fec"></script>
 <script src="warehouse-shift/scene.js?v=622ff19601"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
-<script src="warehouse-shift/till.js?v=66b69820b0"></script>
+<script src="warehouse-shift/till.js?v=ad9ad407b9"></script>
 <script src="warehouse-shift/day.js?v=55267ae277"></script>
 <script src="warehouse-shift/bot.js?v=e1975d5ece"></script>
-<script src="warehouse-shift/tillui.js?v=86157498d7"></script>
+<script src="warehouse-shift/tillui.js?v=b855e77b8f"></script>
 <script src="warehouse-shift/online-day.js?v=b5eb3dacca"></script>
 <script src="warehouse-shift/online.js?v=5f89bd9eee"></script>
-<script src="warehouse-shift/online-game.js?v=2ac550f812"></script>
-<script src="warehouse-shift/game.js?v=3eecc0c31a"></script>
+<script src="warehouse-shift/online-game.js?v=9e695e3246"></script>
+<script src="warehouse-shift/game.js?v=3f0d4b0f44"></script>
 </body>
 </html>
