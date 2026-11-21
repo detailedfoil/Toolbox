@@ -107,7 +107,7 @@ test('Quick Pick confirms the top customer pick only when doing putaway empty-ha
   assert.equal(s.players[0].stats.hints, 1);
 
   const carton = day.deliveryLeft()[0], goods = s.world.goodsin[carton.src].obj;
-  s.me.x = (goods.x0 + goods.x1) / 2; s.me.y = goods.y1 + 0.7;
+  s.me.x = (goods.x0 + goods.x1) / 2; s.me.y = goods.y1 + 0.35;
   s.me.yaw = 0; s.me.pitch = Math.atan2(goods.z1 / 2 - s.me.eye, s.me.y - (goods.y0 + goods.y1) / 2);
   s.applyCam(); s.cam.updateMatrixWorld();
   s.scanAt(...s.players[0].centre());
