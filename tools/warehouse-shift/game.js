@@ -718,6 +718,11 @@
       players.find(p => p.id === who)?.syncScanner(true);
     }
     const returns = ["Sorry, I thought that one was mine!", "Oh, that's yours! Hmm, I wonder where mine went.", "Sorry about that. Picked up the wrong scanner again."];
+    const labelledReturns = [
+      "Oh, that isn't my name in the gun!",
+      "They even put names in these guns and I still grabbed yours.",
+      "Your name's right there on the scanner. How did I miss that?"
+    ];
     function returnScanners(b) {
       for (const who of missingScanners) {
         const local = players.find(p => p.id === who);
@@ -727,7 +732,8 @@
         const atEntrance = samAisle && Math.hypot(pos.x - samAisle.mouth, pos.y - samAisle.cy) < 1;
         if (!atEntrance && Crew.aisleAt(world, pos.x, pos.y) !== samAisle) continue;
         missingScanners.delete(who);
-        b.say(b.pick(returns));
+        const labelled = local ? kit.label.owned : pos.label;
+        b.say(b.pick(labelled ? labelledReturns : returns));
         local?.syncScanner(false);
       }
     }
