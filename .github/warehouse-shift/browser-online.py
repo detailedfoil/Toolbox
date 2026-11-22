@@ -70,6 +70,7 @@ def shared_shift(browser, errors):
     offline.get_by_text("Server connection issue", exact=True).wait_for()
     offline.get_by_text("Swap at the charging dock in the office.", exact=True).wait_for()
     assert not guest.locator(".sc-offline").is_visible()
+    original_pose = host.evaluate("({x:__shift.me.x,y:__shift.me.y,yaw:__shift.me.yaw,pitch:__shift.me.pitch})")
     host.evaluate("""() => {
       const s=__shift, q=s.world.scannerDock;
       Object.assign(s.me,{x:q.x,y:q.y-0.85,yaw:Math.PI,pitch:Math.atan2(q.z-s.me.eye,0.85)});
@@ -77,6 +78,7 @@ def shared_shift(browser, errors):
     }""")
     host.get_by_role("button", name="Swap scanner").click()
     offline.wait_for(state="hidden")
+    host.evaluate("pose => {Object.assign(__shift.me,pose); __shift.applyCam();}", original_pose)
     host.evaluate("id => {const d=__shift.day(); d.paPut(d.delivery.find(c=>c.id===id),'p1');}", carton["id"])
     guest.wait_for_function("""d => {
       const item=__shift.world.locs.byCode[d.dest].item;
