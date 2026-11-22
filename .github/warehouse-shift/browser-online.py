@@ -103,6 +103,59 @@ def shared_shift(browser, errors):
     guest.context.close()
 
 
+def phone_host_reconnect(browser, errors):
+    host = open_game(browser, errors, phone=True)
+    host.set_viewport_size({"width": 390, "height": 780})
+    host.evaluate("""() => {
+      const create = ShiftDay.create, connect = ShiftOnline.Session.prototype.connect;
+      ShiftDay.create = options => create({...options, rand: ShiftWorld.rng(37)});
+      ShiftOnline.Session.prototype.connect = function (...args) {
+        connect.apply(this, args); window.hostSocket = this.ws;
+      };
+    }""")
+    host.locator("#onlineBtn").tap()
+    host.locator("#hostRoom").tap()
+    host.locator("#roomBtn").wait_for()
+    code = host.locator("#roomBtn").text_content()[:6]
+    assert host.evaluate("__shift.day().clockMinute()") == 420
+    host.evaluate("for (const job of __shift.prio()) job.on = false")
+    guest = open_game(browser, errors)
+    guest.locator("#onlineBtn").click()
+    guest.locator("#roomCode").fill(code)
+    guest.locator("#joinRoom").click()
+    guest.wait_for_function("!roomBtn.hidden && roomBtn.textContent.includes('2/4')")
+    # Claim a carton through the guest's network action at goods in. Select a
+    # source with a low top carton so this reconnect test doesn't need a stool.
+    carton = guest.evaluate("""async () => {
+      const s = __shift, day = s.day();
+      for (const g of s.world.goodsin) {
+        const cartons = day.deliveryLeft(g.i).sort((a,b) => g.slots[b.slot].z0 - g.slots[a.slot].z0);
+        if (!cartons.length || cartons[0].loc.z0 > 1.2) continue;
+        Object.assign(s.me, g.stand); s.applyCam();
+        const held = await day.paTake(g.i);
+        if (held) return held.id;
+      }
+      throw Error('No accessible low carton at goods in');
+    }""")
+    host.evaluate("hostSocket.close()")
+    guest.wait_for_function("!onlineCover.hidden && roomMessage.textContent.includes('reconnect')", polling=50)
+    guest.wait_for_function("onlineCover.hidden && roomBtn.textContent.includes('2/4')")
+    assert guest.evaluate("""async id => {
+      const s = __shift, day = s.day(), carton = day.delivery.find(d => d.id === id && d.by === 'p2');
+      if (!carton) return false;
+      const l = carton.loc;
+      s.me.x = (l.x0 + l.x1) / 2; s.me.y = l.face.front + l.face.out * 0.65;
+      s.me.squat = l.z0 < 0.45; s.applyCam();
+      return await day.paPut(carton);
+    }""", carton)
+    host.wait_for_function("id => __shift.day().delivery.find(d => d.id === id)?.doneBy === 'p2'", arg=carton)
+    minute = host.evaluate("__shift.day().clockMinute()")
+    assert minute > 420
+    guest.wait_for_function("minute => __shift.day().clockMinute() === minute", arg=minute)
+    host.context.close()
+    guest.context.close()
+
+
 def split_shift(browser, errors):
     page = open_game(browser, errors, online=False)
     assert page.locator("#onlineBtn").is_visible()
@@ -130,8 +183,9 @@ if __name__ == "__main__":
         errors = []
         try:
             shared_shift(browser, errors)
+            phone_host_reconnect(browser, errors)
             split_shift(browser, errors)
             assert not errors, errors
-            print("Rendered host and touch guest, shelf relocation, phone rotation and two-controller split screen passed.")
+            print("Rendered desktop and phone hosts, interrupted delivery, shared clock, phone rotation and split screen passed.")
         finally:
             browser.close()

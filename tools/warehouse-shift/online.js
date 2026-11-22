@@ -10,6 +10,7 @@
     constructor(endpoint, build, hooks) {
       this.endpoint = endpoint; this.build = build; this.hooks = hooks;
       this.pending = new Map(); this.peers = new Set(); this.lastAction = new Map();
+      this.resumeEpoch = null; this.resumeSlots = new Set();
       this.seq = 0; this.ready = false; this.hostPresent = false; this.time = 0; this.stateTime = 0;
     }
     connect(mode, room) {
@@ -32,7 +33,8 @@
       ws.onclose = e => {
         clearTimeout(deadline);
         if (ws !== this.ws || this.ended) return;
-        this.ready = false; this.hostPresent = false; this.cancel();
+        if (this.host) this.resumeSlots = new Set(this.peers);
+        this.ready = false; this.hostPresent = false; this.resumeEpoch = null; this.cancel();
         if (e.code >= 4000 || !this.token) return this.stop(e.reason || 'Could not reach the relay. Check the relay address and your connection.');
         this.retryUntil ||= Date.now() + 30000;
         if (Date.now() >= this.retryUntil) return this.stop('Connection lost. Rejoin with the room code.');
@@ -91,21 +93,29 @@
       if (m.type === 'roster') {
         const previous = this.peers;
         this.peers = new Set(m.slots);
-        if (this.host) for (const slot of previous) if (slot !== 1 && !this.peers.has(slot)) this.hooks.release(slot);
+        if (this.host) for (const slot of previous) if (slot !== 1 && !this.peers.has(slot)) {
+          this.resumeSlots.delete(slot); this.hooks.release(slot);
+        }
         this.hooks.roster(m.slots);
         const present = this.peers.has(1);
         if (!this.host && present && !this.hostPresent) {
-          this.ready = false; this.hooks.status('Joining the shared shift…'); this.send({ type: 'sync', freshSeat: this.epoch == null });
+          this.ready = false; this.hooks.status('Joining the shared shift…'); this.send({ type: 'sync', freshSeat: this.epoch == null, resumeEpoch: this.resumeEpoch });
         }
-        if (!present) { this.ready = false; this.cancel(); this.hooks.status('Waiting for the host to reconnect…'); }
+        if (!present) {
+          // An uninterrupted guest can keep a confirmed job and the contents of its cash drawer.
+          // If an action was still awaiting acknowledgement, resynchronise it like a guest reconnect.
+          if (this.hostPresent) this.resumeEpoch = this.ready && !this.pending.size ? this.epoch : null;
+          this.ready = false; this.cancel(); this.hooks.status('Waiting for the host to reconnect…');
+        }
         this.hostPresent = present;
         return;
       }
       if (this.host) {
         if (!this.peers.has(m.from) || m.from === 1) return;
         if (m.type === 'sync') {
-          this.hooks.release(m.from, m.freshSeat === true); this.lastAction.delete(m.from);
-          this.send({ type: 'init', to: m.from, state: this.hooks.snapshot(), frame: this.hooks.frame(), paused: document.hidden });
+          const resume = this.resumeSlots.delete(m.from) && !m.freshSeat && m.resumeEpoch === this.hooks.epoch();
+          if (!resume) { this.hooks.release(m.from, m.freshSeat === true); this.lastAction.delete(m.from); }
+          this.send({ type: 'init', to: m.from, resume, state: this.hooks.snapshot(), frame: this.hooks.frame(), paused: document.hidden });
         } else if (m.type === 'pose') this.hooks.peerPose(m.from, m.pose);
         else if (m.type === 'act' && Number.isSafeInteger(m.id) && m.id > (this.lastAction.get(m.from) || 0)) {
           this.lastAction.set(m.from, m.id);
@@ -120,11 +130,11 @@
         return;
       }
       if (m.type === 'init' || (m.type === 'state' && this.ready)) {
-        const reset = m.type === 'init' || this.epoch !== m.state.epoch;
+        const reset = this.epoch !== m.state.epoch || (m.type === 'init' && !(m.resume && this.resumeEpoch === this.epoch));
         this.epoch = m.state.epoch;
         this.hooks.apply(m.state, reset);
         this.ready = true;
-        if (m.type === 'init') { this.hooks.draw(m.frame); this.setPaused(m.paused); this.hooks.started(); }
+        if (m.type === 'init') { this.resumeEpoch = null; this.hooks.draw(m.frame); this.setPaused(m.paused); this.hooks.started(); }
       } else if (m.type === 'frame' && this.ready) { this.hooks.draw(m.frame); this.setPaused(m.paused); }
       else if (m.type === 'ack') {
         const p = this.pending.get(m.id);
