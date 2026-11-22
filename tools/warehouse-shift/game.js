@@ -555,8 +555,11 @@
     }
     const dayEnv = {
       scannerHolders() {
-        const ids = players.map(p => p.id);
-        if (online) for (const slot of online.peers.keys()) ids.push('p' + slot);
+        const ids = players.filter(p => !p.tillOpen() && !p.pcOpen()).map(p => p.id);
+        if (online) for (const slot of online.peers.keys()) {
+          const who = 'p' + slot;
+          if (!online.tillFor(who)) ids.push(who);
+        }
         return ids.filter(id => !missingScanners.has(id));
       },
       scannerFault(who) { players.find(p => p.id === who)?.syncScanner(false, true); },
@@ -1084,18 +1087,42 @@
         bannerT = setTimeout(() => { D.banner.className = 'ws-banner'; }, ms || 1800);
       }
       P.toast = toast;
+      let faultTimer = 0;
+      function showScannerCrash() {
+        const columnChars = '0123456789ABCDEF.:';
+        const columns = Array.from({ length: 12 }, (_, index) => {
+          const column = document.createElement('span');
+          column.textContent = Array.from({ length: 36 }, () => columnChars[Math.floor(Math.random() * columnChars.length)]).join('\n');
+          column.style.animationDuration = (0.5 + index % 5 * 0.13) + 's';
+          column.style.animationDelay = '-' + (index * 0.21) + 's';
+          return column;
+        });
+        D.scCodeRain.replaceChildren(...columns);
+        D.scCodeRain.hidden = false;
+        D.scConnectionIssue.hidden = true;
+        D.scSwapHelp.hidden = true;
+        faultTimer = setTimeout(() => {
+          D.scCodeRain.hidden = true;
+          D.scConnectionIssue.hidden = false;
+          faultTimer = setTimeout(() => {
+            D.scSwapHelp.hidden = false;
+            banner('Scanner disconnected', 'Swap it at the charging dock in the office.', 5500, 'bell');
+          }, 750);
+        }, 900);
+      }
       P.scannerMissing = false;
       P.scannerFault = false;
       P.syncScanner = (taken, offline = false) => {
         const missing = taken || offline, wasOffline = P.scannerFault;
         if (P.scannerMissing === missing && wasOffline === offline) return;
+        clearTimeout(faultTimer);
         P.scannerMissing = missing; P.scannerFault = offline;
         D.scannerFault.hidden = !offline; D.scScreen.hidden = offline;
         D.scanner.hidden = taken || !active;
         if (missing) {
           cancelBlueAction(); D.scMenu.hidden = true; hint.until = 0;
-          if (offline) { banner('Scanner disconnected', 'Swap it at the charging dock in the office.', 5500, 'bell'); return; }
-          banner('Sam has your scanner', 'Find Sam to get it back.', 5500, 'bell');
+          if (offline) showScannerCrash();
+          else banner('Sam has your scanner', 'Find Sam to get it back.', 5500, 'bell');
         } else banner(wasOffline ? 'Replacement scanner ready' : 'Scanner returned', 'Your scanner is ready to use.', 2500);
       };
 
@@ -2500,7 +2527,7 @@
         btn.dataset.reliability = scannerTier;
         btn.disabled = !cost || availableXP() < cost;
         btn.textContent = cost ? 'Upgrade to tier ' + (scannerTier + 1) + ' · ' + cost + ' XP' : 'Fully upgraded';
-        root.querySelector('[data-status="reliability"]').textContent = 'Tier ' + scannerTier + '/5 · ' + (6 - scannerTier) +
+        root.querySelector('[data-status="reliability"]').textContent = 'Tier ' + scannerTier + '/5 · Up to ' + (6 - scannerTier) +
           (scannerTier === 5 ? ' disconnect' : ' disconnects') + ' per shift';
       }
       for (const btn of root.querySelectorAll('[data-digital]')) {
