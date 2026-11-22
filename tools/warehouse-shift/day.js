@@ -132,6 +132,7 @@
     const who = this.pick(working);
     this.offlineScanners.add(who);
     this.emit('scannerFault', who);
+    this.emit('playtest', 'scanner.crash', { who });
   };
   Day.prototype.atScannerDock = function (pos) {
     const dock = this.world.scannerDock, desk = this.world.pc.desk;
@@ -139,7 +140,9 @@
       Math.hypot(pos.x - dock.x, pos.y - dock.y) <= 1.45;
   };
   Day.prototype.swapScanner = function (who, pos) {
-    return this.atScannerDock(pos) && this.offlineScanners.delete(who);
+    const swapped = this.atScannerDock(pos) && this.offlineScanners.delete(who);
+    if (swapped) this.emit('playtest', 'scanner.swap', { who });
+    return swapped;
   };
 
   /* ---------- the plan ---------- */
@@ -240,12 +243,14 @@
     if (!left.length) return null;
     var gi = this.world.goodsin, top = left.reduce(function (a, b) { return gi[b.src].slots[b.slot].z0 > gi[a.src].slots[a.slot].z0 ? b : a; });
     top.by = who; top.takenAt = this.t;
+    this.emit('playtest', 'carton.start', { who, carton: top.id, units: top.qty });
     this.emit('delivery', top);
     return top;
   };
   Day.prototype.paPut = function (d, who) {
     if (!d || d.done || d.by !== who) return false;
     d.done = true; d.doneBy = who; d.finishedAt = this.t;
+    this.emit('playtest', 'carton.finish', { who, carton: d.id });
     this.credit(who, 'carton-' + d.id, 10);
     this.World.place(this.world, d.item, d.loc, d.qty); this.emit('stock', d.item);
     this.log.push({ t: this.t, kind: 'putaway', by: who, took: this.t - d.takenAt });
@@ -317,6 +322,7 @@
       status: 'listed', by: null, cust: cust || null, counts: counts !== false, t: this.t, surname: cust ? cust.surname : null, code: null, hold: null };
     if (extra) for (var k in extra) if (k !== 'no') o[k] = extra[k];
     this.orders.push(o);
+    this.emit('playtest', 'pick.listed', { order: o.id, kind: o.kind, customer: cust?.id });
     this.emit('listed', o);
     return o;
   };
@@ -326,6 +332,7 @@
   Day.prototype.take = function (o, who) {
     if (!o || o.status !== 'listed' || (who === 'Sam' && !this.samCanPick(o))) return false;
     o.status = 'taken'; o.by = who; o.takenAt = this.t;
+    this.emit('playtest', 'pick.start', { who, order: o.id, kind: o.kind, lines: o.lines.length, units: o.units });
     this.emit('changed', o);
     if (this.phase === 'closed') this.check(); // Sam on the last morning pick: customers can start coming in
     return true;
@@ -335,6 +342,7 @@
     var self = this;
     if (o.status === 'taken') {
       o.status = 'picked';
+      this.emit('playtest', 'pick.collected', { who: o.by, order: o.id });
       (o.lines || []).forEach(function (l) {
         var it = l.item;
         it.stock = (it.stock === undefined ? self.World.stockOf(it) : it.stock) - l.qty; it.reserved = Math.max(0, (it.reserved || 0) - l.qty);
@@ -352,6 +360,7 @@
     this.emit('holdSet', code, null);
     o.status = 'picked';
     this.emit('changed', o);
+    this.emit('playtest', 'pick.collected', { who: o.by, order: o.id });
     return p;
   };
   // empty OC spots nobody is on their way to fill
@@ -386,6 +395,7 @@
   };
   Day.prototype.finish = function (o) {
     o.finishedAt = this.t;
+    this.emit('playtest', 'pick.finish', { who: o.doneBy, order: o.id, kind: o.kind, customer: o.cust?.id });
     this.credit(o.doneBy, 'finished-' + o.id, 10);
     if (o.counts) this.done++;
     this.log.push({ t: this.t, no: o.no, kind: o.kind, by: o.doneBy, took: this.t - (o.takenAt || o.t) });
@@ -402,18 +412,21 @@
     if (!this.tillsOpen() || !c || c.state !== 'counter' || c.by) return false;
     if (this.customers.some(function (other) { return other.state === 'serving' && other.by === who; })) return false;
     c.state = 'serving'; c.by = who; c.greeter = who; c.ready = false;
+    this.emit('playtest', 'sale.start', { who, customer: c.id, kind: c.kind });
     this.emit('step', c);
     return true;
   };
   // they'd been called over but nobody had started on them: back to waiting for whoever's free
   Day.prototype.unserve = function (c) {
     if (!c || c.state !== 'serving') return;
+    this.emit('playtest', 'sale.requeue', { who: c.by, customer: c.id });
     c.state = 'counter'; c.by = null; c.ready = false;
     this.emit('step', c);
   };
   // paid for: the order goes on the list and the customer stands to one side
   Day.prototype.tillDone = function (c, lines, extra) {
     if (c.order) return c.order;
+    this.emit('playtest', 'sale.paid', { who: c.by, customer: c.id, kind: c.kind });
     this.credit(c.by, 'sale-' + c.id, 15);
     var o = this.makeOrder('till', lines, c, true, extra);
     c.order = o; c.state = 'waiting'; c.by = null; c.ready = false;
@@ -495,6 +508,7 @@
   Day.prototype.arrived = function (c) {
     if (c.state !== 'coming') return;
     c.here = this.t; c.state = 'greet';
+    this.emit('playtest', 'customer.arrived', { customer: c.id });
     this.emit('step', c);
   };
   Day.prototype.canGreet = function (who) {
@@ -508,6 +522,7 @@
     c.greeter = who; c.greeted = this.t;
     this.credit(who, 'greet-' + c.id, 5);
     this.decide(c);
+    this.emit('playtest', 'customer.greeted', { who, customer: c.id, kind: c.kind });
     if (c.kind === 'till' || c.kind === 'kiosk') { c.state = 'counter'; this.emit('step', c); return true; }
     if (c.code && this.hold[c.code]) { // a bag in the holding area (several products): a line to fetch it
       var p = this.hold[c.code];
@@ -588,6 +603,7 @@
       for (var staff of cover) if (/^p[1-4]$/.test(staff)) this.contributors.add(staff);
     }
     this.emit('xpChanged');
+    this.emit('playtest', 'xp.earned', { who, source: key.split('-')[0], amount, covered: cover.length > 0 });
   };
   Day.prototype.confirmLine = function (order, index, who) {
     this.credit(who, 'line-' + order.id + '-' + index, 10);

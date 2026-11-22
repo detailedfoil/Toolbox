@@ -1,4 +1,5 @@
 """Play a shift across two Chromium contexts using the local game and Wrangler."""
+import json
 import os
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -169,6 +170,60 @@ def split_shift(browser, errors):
     page.context.close()
 
 
+def recorded_solo_shift(browser, errors):
+    page = open_game(browser, errors, phone=True, online=False)
+    assert not page.locator("#recordPlaytest").is_checked()
+    page.locator("#recordPlaytest").tap()
+    page.locator("#startBtn").tap()
+    page.locator("#helpBtn").tap()
+    page.wait_for_timeout(200)
+    page.locator("#helpClose").tap()
+    page.evaluate("""() => {
+      const s = __shift, day = s.day(), carton = day.paTake(undefined, 'p1');
+      day.faultSchedule = [0.1]; s.tick(0.2);
+      const q = s.world.scannerDock;
+      Object.assign(s.me, {x:q.x, y:q.y - 0.85, yaw:Math.PI, pitch:Math.atan2(q.z - s.me.eye, 0.85)});
+      s.applyCam();
+      window.playtestCarton = carton.id;
+    }""")
+    page.get_by_role("button", name="Swap scanner", exact=True).tap()
+    page.evaluate("""() => {
+      const s = __shift, day = s.day();
+      day.paPut(day.delivery.find(c => c.id === window.playtestCarton), 'p1');
+      const carton = day.paTake(undefined, 'Sam'); day.paPut(carton, 'Sam');
+      const pick = day.makeOrder('ck', [], null, true);
+      day.take(pick, 'p1'); day.picked(pick); day.handOver(pick, 'p1');
+      day.phase = 'lock';
+      const door = s.world.openings.find(o => o.type === 'entrance');
+      Object.assign(s.me, {x:(door.from + door.to) / 2, y:s.world.D - 1.5, yaw:Math.PI, pitch:0});
+      s.applyCam();
+    }""")
+    page.get_by_role("button", name="Lock door", exact=False).tap()
+    page.evaluate("""Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      writeText: text => { window.copiedPlaytest = text; return Promise.resolve(); }
+    }})""")
+    page.locator("#copyPlaytest").tap()
+    page.get_by_text("Copied. Paste the summary into your chat.").wait_for()
+    summary = json.loads(page.evaluate("window.copiedPlaytest"))
+    assert summary["start"]["day"] == 1 and summary["start"]["touchControls"]
+    assert summary["timing"]["menuBreakSeconds"] >= 0.2
+    assert summary["result"]["xpEarned"] >= 20 and summary["result"]["sam"]["delivery"] >= 1
+    kinds = [event["event"] for event in summary["events"]]
+    expected = ["carton.start", "scanner.crash", "scanner.swap", "carton.finish",
+                "pick.start", "pick.collected", "pick.finish", "lock-up"]
+    positions = [kinds.index(kind) for kind in expected]
+    assert positions == sorted(positions), kinds
+    page.evaluate("navigator.clipboard.writeText = () => Promise.reject(new Error('denied'))")
+    page.locator("#copyPlaytest").tap()
+    page.get_by_text("Select and copy the summary below.").wait_for()
+    assert json.loads(page.locator("#playtestReport").input_value()) == summary
+    page.locator("#nextDayBtn").tap()
+    page.evaluate("__shift.day().phase = 'lock'; __shift.day().lock()")
+    page.locator("#copyPlaytest").tap()
+    assert json.loads(page.locator("#playtestReport").input_value())["start"]["day"] == 2
+    page.context.close()
+
+
 if __name__ == "__main__":
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(executable_path=os.environ.get("CHROME_BIN"),
@@ -178,7 +233,8 @@ if __name__ == "__main__":
         try:
             shared_shift(browser, errors)
             split_shift(browser, errors)
+            recorded_solo_shift(browser, errors)
             assert not errors, errors
-            print("Rendered host and touch guest, shelf relocation, phone rotation and two-controller split screen passed.")
+            print("Rendered host and touch guest, shelf relocation, phone rotation, two-controller split screen and solo playtest export passed.")
         finally:
             browser.close()
