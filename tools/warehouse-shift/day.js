@@ -84,7 +84,8 @@
     this.faultSchedule = [];
     const faults = 6 - (o.scannerTier || 1);
     const faultRandom = this.World.rng(this.World.hash(this.shiftId || 'scanner dock'));
-    for (let i = 0; i < faults; i++) this.faultSchedule.push((i + 0.5 + faultRandom() * 0.24) / faults);
+    const intervalScale = (this.firstDay ? 0.6 : 1) * 5 / faults;
+    for (let i = 0; i < faults; i++) this.faultSchedule.push((20 + faultRandom() * 30) * intervalScale);
     this.done = 0; this.released = 0; this.over = false;
     // the holding area: what's in each OC spot, and who's on their way to it (fetching it, or filling it)
     this.hold = {}; this.busy = {};
@@ -117,14 +118,18 @@
     return 7 * 60 + Math.floor(Math.min(1, progress) * 13 * 60);
   };
 
-  Day.prototype.checkScannerFault = function () {
+  Day.prototype.checkScannerFault = function (dt) {
     if (this.phase !== 'open' || !this.faultSchedule.length) return;
-    const work = this.done + this.delivery.filter(carton => carton.done).length;
-    if (work / (this.total + this.delivery.length) < this.faultSchedule[0]) return;
-    this.faultSchedule.shift();
     const holders = (this.emit('scannerHolders') || []).filter(who => !this.offlineScanners.has(who));
-    if (!holders.length) return;
-    const who = this.pick(holders);
+    const working = holders.filter(who =>
+      this.orders.some(order => order.by === who && (order.status === 'taken' || order.status === 'picked')) ||
+      this.delivery.some(carton => carton.by === who && !carton.done));
+    if (!working.length) return;
+    // Count shift time with a scanner job underway. Idle, missing and failed scanners pause the countdown.
+    this.faultSchedule[0] -= dt;
+    if (this.faultSchedule[0] > 0) return;
+    this.faultSchedule.shift();
+    const who = this.pick(working);
     this.offlineScanners.add(who);
     this.emit('scannerFault', who);
   };
@@ -245,7 +250,6 @@
     this.World.place(this.world, d.item, d.loc, d.qty); this.emit('stock', d.item);
     this.log.push({ t: this.t, kind: 'putaway', by: who, took: this.t - d.takenAt });
     this.emit('delivery', d);
-    this.checkScannerFault();
     this.check();
     return true;
   };
@@ -383,7 +387,7 @@
   Day.prototype.finish = function (o) {
     o.finishedAt = this.t;
     this.credit(o.doneBy, 'finished-' + o.id, 10);
-    if (o.counts) { this.done++; this.checkScannerFault(); }
+    if (o.counts) this.done++;
     this.log.push({ t: this.t, no: o.no, kind: o.kind, by: o.doneBy, took: this.t - (o.takenAt || o.t) });
     this.check();
   };
@@ -630,6 +634,7 @@
     if (this.over) return;
     this.t += dt;
     if (this.phase === 'lock') return;
+    this.checkScannerFault(dt);
     var left = this.released < this.plan.length;
     if (this.phase === 'closed' && this.released >= this.first) { this.check(); return; } // the c picks are out: waiting for them to be put away
     // the next pick

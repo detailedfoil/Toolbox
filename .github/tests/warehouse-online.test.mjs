@@ -196,20 +196,35 @@ test('Fusion checks scanner mix-ups once and halves the chance for a named scann
   }
 });
 
-test('the office dock restores one scanner and each reliability tier schedules the right number of shift faults', () => {
+test('scanner faults interrupt a held order after random working time and respect each tier', () => {
   const dock = world.scannerDock, front = { x: dock.x, y: dock.y - 0.8 };
   for (let tier = 1; tier <= 5; tier++) {
     const faults = [];
     const d = Day.create({ world, World: W, Till, requests, rand: W.rng(123 + tier), scannerTier: tier,
       event: 'failedDelivery', env: { scannerHolders: () => ['p1', 'p2'], scannerFault: id => faults.push(id) } });
-    for (let done = 0; done <= d.total; done++) {
-      d.done = done; d.checkScannerFault();
-      for (const id of d.offlineScanners) {
-        assert.equal(d.swapScanner(id, world.start), false);
-        assert.equal(d.swapScanner(id, front), true);
-        assert.equal(d.swapScanner(id, front), false);
-      }
+    d.wait = 100_000;
+    const originalSchedule = Array.from(d.faultSchedule);
+    assert.equal(originalSchedule.length, 6 - tier);
+    d.tick(600);
+    assert.deepEqual(Array.from(d.faultSchedule), originalSchedule, 'idle time consumes no fault budget');
+    const order = d.makeOrder('c', [], null, false);
+    assert.equal(d.take(order, 'p2'), true);
+    for (const delay of originalSchedule) {
+      const before = faults.length;
+      d.tick(delay / 2);
+      assert.equal(faults.length, before);
+      d.tick(delay);
+      assert.equal(faults.length, before + 1);
+      assert.equal(faults.at(-1), 'p2', 'only the player with an active job can lose their scanner');
+      assert.equal(order.status, 'taken');
+      const next = d.faultSchedule[0];
+      d.tick(600);
+      assert.equal(d.faultSchedule[0], next, 'an offline scanner pauses the countdown');
+      assert.equal(d.swapScanner('p2', world.start), false);
+      assert.equal(d.swapScanner('p2', front), true);
+      assert.equal(d.swapScanner('p2', front), false);
     }
+    d.tick(600);
     assert.equal(faults.length, 6 - tier);
   }
 });

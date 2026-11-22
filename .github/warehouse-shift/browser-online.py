@@ -56,6 +56,26 @@ def shared_shift(browser, errors):
       const c = __shift.day().delivery.find(v => v.id === d.id);
       return c.by === 'p1' && c.loc.code === d.dest && c.item.loc === null;
     }""", arg=carton)
+    host.evaluate("""() => {
+      __shift.day().faultSchedule = [0.15]; __shift.tick(0.2);
+    }""")
+    rain = host.locator(".sc-code-rain")
+    rain.wait_for(state="visible")
+    colours = rain.locator("span").first.evaluate("""el => [
+      getComputedStyle(el).color, getComputedStyle(el.closest('.sc-offline')).backgroundColor,
+      getComputedStyle(el).animationName
+    ]""")
+    assert colours == ["rgb(255, 255, 255)", "rgb(0, 0, 0)", "sc-code-fall"]
+    host.get_by_text("Server connection issue", exact=True).wait_for()
+    host.get_by_text("Swap at the charging dock in the office.", exact=True).wait_for()
+    assert not guest.locator(".sc-offline").is_visible()
+    host.evaluate("""() => {
+      const s=__shift, q=s.world.scannerDock;
+      Object.assign(s.me,{x:q.x,y:q.y-0.85,yaw:Math.PI,pitch:Math.atan2(q.z-s.me.eye,0.85)});
+      s.applyCam();
+    }""")
+    host.get_by_role("button", name="Swap scanner").click()
+    host.locator(".sc-offline").wait_for(state="hidden")
     host.evaluate("id => {const d=__shift.day(); d.paPut(d.delivery.find(c=>c.id===id),'p1');}", carton["id"])
     guest.wait_for_function("""d => {
       const item=__shift.world.locs.byCode[d.dest].item;

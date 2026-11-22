@@ -379,13 +379,10 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const picker = guests.find(g => g.s.state() === 'scan');
   assert.equal(guests.filter(g => g.s.state() === 'scan').length, 1);
   const s = picker.s, local = s.order();
-  // Force the next progress checkpoint onto the connected picker while they hold a real order.
-  day.faultSchedule = [0];
-  const holders = day.env.scannerHolders;
-  day.env.scannerHolders = () => [picker.s.players[0].id];
-  day.checkScannerFault();
-  day.env.scannerHolders = holders;
-  await until(() => !s.players[0].D.scannerFault.hidden, 'guest scanner offline');
+  // The host's shift clock crashes the scanner of the guest currently on a pick.
+  day.faultSchedule = [0.25];
+  host.s.tick(0.3);
+  await until(() => !s.players[0].D.scCodeRain.hidden, 'guest scanner to show falling text');
   assert.ok(host.s.players[0].D.scannerFault.hidden);
   assert.ok(!await s.day().request('swapScanner', {}), 'the counter is too far from the office');
   assert.ok(!await s.day().line(local, 0));
@@ -674,7 +671,7 @@ test('a phone buys scanner reliability, swaps at the office and keeps its delive
   const pc = openShop(initial);
   const upgrade = pc.querySelector('[data-reliability]');
   upgrade.click(); upgrade.click();
-  assert.match(pc.querySelector('[data-status="reliability"]').textContent, /Tier 3\/5 · 3 disconnects/);
+  assert.match(pc.querySelector('[data-status="reliability"]').textContent, /Tier 3\/5 · Up to 3 disconnects/);
   assert.ok(upgrade.disabled);
   const { s, $, w } = await game(t, { phone: true, online: false, storage: Object.fromEntries(Object.entries(initial.w.localStorage)) });
   $('startBtn').click();
@@ -687,10 +684,15 @@ test('a phone buys scanner reliability, swaps at the office and keeps its delive
   s.applyCam(); s.cam.updateMatrixWorld(); s.scanAt(...p.centre());
   const held = day.delivery.find(d => d.by === 'p1');
   assert.ok(held);
-  day.faultSchedule = [0];
-  const samCarton = day.paTake(null, 'Sam');
-  day.paPut(samCarton, 'Sam');
-  assert.ok(!p.D.scannerFault.hidden && p.D.scScreen.hidden);
+  day.faultSchedule = [0.25];
+  s.tick(0.3);
+  assert.ok(!p.D.scannerFault.hidden && p.D.scScreen.hidden && !p.D.scCodeRain.hidden);
+  assert.ok(p.D.scConnectionIssue.hidden && p.D.scSwapHelp.hidden);
+  await until(() => !p.D.scConnectionIssue.hidden, 'connection error to follow the falling text');
+  assert.equal(p.D.scConnectionIssue.textContent, 'Server connection issue');
+  assert.ok(p.D.scCodeRain.hidden && p.D.scSwapHelp.hidden);
+  await until(() => !p.D.scSwapHelp.hidden, 'the office swap message to follow the connection error');
+  assert.match(p.D.scSwapHelp.textContent, /charging dock in the office/);
   s.enter(); assert.equal(s.state(), 'pato');
   const q = s.world.scannerDock;
   Object.assign(s.me, { x: q.x, y: q.y - 0.85, yaw: Math.PI, pitch: Math.atan2(q.z - s.me.eye, 0.85) });
