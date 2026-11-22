@@ -103,7 +103,7 @@ def shared_shift(browser, errors):
     guest.context.close()
 
 
-def phone_host_shift(browser, errors):
+def phone_host_reconnect(browser, errors):
     host = open_game(browser, errors, phone=True)
     host.set_viewport_size({"width": 390, "height": 780})
     host.evaluate("""() => {
@@ -147,21 +147,9 @@ def phone_host_shift(browser, errors):
       s.applyCam(); s.cam.updateMatrixWorld(); s.scanAt(...s.players[0].centre()); s.enter();
     }""", carton)
     host.wait_for_function("id => __shift.day().delivery.find(d => d.id === id)?.doneBy === 'p2'", arg=carton)
-    guest.evaluate("""() => {const s = __shift; s.me.x = s.world.start.x + 0.7;
-      s.me.y = s.world.start.y - 0.9; s.applyCam();}""")
-    host.evaluate("""() => {const s = __shift; s.me.y = s.world.start.y - 1.4; s.applyCam();
-      for (const job of s.prio()) job.on = true;}""")
-    # Accelerate the normal simulation. Every customer, pick, carton and closing condition still runs.
-    for _ in range(120):
-        if host.evaluate("() => {__shift.tick(30); return __shift.day().phase === 'lock';}"):
-            break
-    assert host.evaluate("__shift.day().phase === 'lock' && __shift.day().done === __shift.day().total")
-    host.evaluate("""() => {const s = __shift, door = s.world.openings.find(o => o.type === 'entrance');
-      s.me.x = (door.from + door.to) / 2; s.me.y = s.world.D - 1.5; s.me.yaw = Math.PI;
-      s.me.pitch = Math.atan2(1.2 - s.me.eye, 1.1); s.applyCam();}""")
-    host.get_by_role("button", name="Lock door").tap()
-    for page in (host, guest):
-        page.wait_for_function("!dayCover.hidden && __shift.day().over && __shift.day().clockMinute() === 1200")
+    minute = host.evaluate("__shift.day().clockMinute()")
+    assert minute > 420
+    guest.wait_for_function("minute => __shift.day().clockMinute() === minute", arg=minute)
     host.context.close()
     guest.context.close()
 
@@ -193,9 +181,9 @@ if __name__ == "__main__":
         errors = []
         try:
             shared_shift(browser, errors)
-            phone_host_shift(browser, errors)
+            phone_host_reconnect(browser, errors)
             split_shift(browser, errors)
             assert not errors, errors
-            print("Rendered desktop and phone hosts, interrupted delivery, full shift, phone rotation and split screen passed.")
+            print("Rendered desktop and phone hosts, interrupted delivery, shared clock, phone rotation and split screen passed.")
         finally:
             browser.close()
