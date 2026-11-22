@@ -122,6 +122,8 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 #helpCover,#endCover{background:#0d1117c4;backdrop-filter:blur(3px)}
 #startCover{background:linear-gradient(180deg,#0d1117aa 0%,#0d111766 45%,#0d1117cc 100%);backdrop-filter:blur(2px)}
 #startCover .ws-card{background:#151b26ee}
+.ws-reset-dialog{width:min(420px,calc(100% - 32px));color:#fff}
+.ws-reset-dialog::backdrop{background:#080c14c4;backdrop-filter:blur(3px)}
 .ws-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 4px}
 .ws-stats div{padding:10px 6px;border-radius:12px;background:#1f2633;text-align:center}
 .ws-stats b{display:block;font-size:1.35rem;color:#fff}

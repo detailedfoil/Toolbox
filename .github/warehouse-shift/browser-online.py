@@ -16,11 +16,17 @@ PADS = """window.testPads = [0,1].map(index => ({index, connected:true, mapping:
 Object.defineProperty(navigator,'getGamepads',{value:() => testPads});"""
 
 
-def open_game(browser, errors, *, phone=False, online=True):
+def open_game(browser, errors, *, phone=False, online=True, saved_career=None):
     context = browser.new_context(viewport={"width": 880 if phone else 1000, "height": 470},
                                   has_touch=phone, is_mobile=phone, device_scale_factor=1, service_workers="block")
     context.route("**/*", lambda route: route.continue_() if urlsplit(route.request.url).hostname == "127.0.0.1" else route.abort())
     context.add_init_script(LOGIN)
+    if saved_career:
+        context.add_init_script("""(() => {
+          if (sessionStorage.getItem('playtest-fixture')) return;
+          for (const [key, value] of Object.entries(%s)) localStorage.setItem(key, value);
+          sessionStorage.setItem('playtest-fixture', '1');
+        })();""" % json.dumps(saved_career))
     if not online:
         context.add_init_script(PADS)
     page = context.new_page()
@@ -171,9 +177,21 @@ def split_shift(browser, errors):
 
 
 def recorded_solo_shift(browser, errors):
-    page = open_game(browser, errors, phone=True, online=False)
+    saved_career = {
+        "ws-shift-xp/regular": "442", "ws-scanner-reliability": "2", "ws-digital-first": "2",
+        "ws-kit-label": "1", "ws-sam": "off", "ws-sam-job-slots": "2",
+        "ws-sam-preset-0": "[]",
+        "ws-sam-training": json.dumps({"delivery": "included", "cust": "paid"}),
+        "ws-sam-prio": json.dumps([{"id": job, "on": job == "cust"}
+                                  for job in ["cust", "queue", "hold", "delivery"]]),
+        "ws-stats-v1": json.dumps({"orders": 12, "lines": 24, "units": 48})
+    }
+    page = open_game(browser, errors, phone=True, online=False, saved_career=saved_career)
+    assert "442 career XP" in page.locator("#careerXP").inner_text()
+    assert page.locator("#startBtn").inner_text() == "Continue"
     assert not page.locator("#recordPlaytest").is_checked()
     page.locator("#recordPlaytest").tap()
+    assert "Day 1 · 0 XP" in page.locator("#careerXP").inner_text()
     page.locator("#startBtn").tap()
     page.locator("#helpBtn").tap()
     page.wait_for_timeout(200)
@@ -193,7 +211,16 @@ def recorded_solo_shift(browser, errors):
       const carton = day.paTake(undefined, 'Sam'); day.paPut(carton, 'Sam');
       const pick = day.makeOrder('ck', [], null, true);
       day.take(pick, 'p1'); day.picked(pick); day.handOver(pick, 'p1');
-      day.phase = 'lock';
+      for (let i = 0; i < 10; i++) day.credit('p1', 'line-playtest-' + i, 10);
+      s.players[0].openPc();
+    }""")
+    page.locator('[data-pc="shop"]').tap()
+    page.locator('[data-training="queue"]').tap()
+    assert page.locator('[data-training="queue"]').inner_text() == "Trained"
+    page.locator(".ws-pc-x").tap()
+    page.evaluate("""() => {
+      const s = __shift;
+      s.day().phase = 'lock';
       const door = s.world.openings.find(o => o.type === 'entrance');
       Object.assign(s.me, {x:(door.from + door.to) / 2, y:s.world.D - 1.5, yaw:Math.PI, pitch:0});
       s.applyCam();
@@ -206,6 +233,10 @@ def recorded_solo_shift(browser, errors):
     page.get_by_text("Copied. Paste the summary into your chat.").wait_for()
     summary = json.loads(page.evaluate("window.copiedPlaytest"))
     assert summary["start"]["day"] == 1 and summary["start"]["touchControls"]
+    assert summary["start"]["progression"] == {
+        "xpAvailable": 0, "xpCareer": 0, "scannerTier": 1, "digitalTier": 1, "equipment": [],
+        "sam": {"enabled": True, "skills": ["delivery"], "jobs": ["delivery"]}
+    }
     assert summary["timing"]["menuBreakSeconds"] >= 0.2
     assert summary["result"]["xpEarned"] >= 20 and summary["result"]["sam"]["delivery"] >= 1
     kinds = [event["event"] for event in summary["events"] if event.get("who") != "Sam"]
@@ -221,7 +252,35 @@ def recorded_solo_shift(browser, errors):
     page.evaluate("__shift.day().phase = 'lock'; __shift.day().lock()")
     page.locator("#copyPlaytest").tap()
     page.locator("#playtestReport").wait_for(state="visible")
-    assert json.loads(page.locator("#playtestReport").input_value())["start"]["day"] == 2
+    day_two = json.loads(page.locator("#playtestReport").input_value())["start"]
+    assert day_two["day"] == 2
+    assert day_two["progression"] == summary["result"]["progression"]
+    assert day_two["progression"]["sam"]["skills"] == ["delivery", "queue"]
+    assert page.evaluate("""keys => Object.fromEntries(Object.keys(localStorage)
+      .filter(key => keys.includes(key) || key.startsWith('ws-shift-xp/'))
+      .map(key => [key, localStorage.getItem(key)]))""", list(saved_career)) == saved_career
+    # Reopening after a playtest restores the regular career and offers a confirmed reset.
+    page.reload(wait_until="domcontentloaded")
+    page.wait_for_function("!!window.__shift", timeout=100_000)
+    assert "442 career XP" in page.locator("#careerXP").inner_text()
+    page.get_by_role("button", name="New game", exact=True).tap()
+    dialog = page.get_by_role("dialog")
+    assert dialog.get_by_text("This will delete all progress and start completely fresh.").is_visible()
+    dialog.get_by_role("button", name="Back", exact=True).tap()
+    assert not dialog.is_visible()
+    assert page.evaluate("localStorage.getItem('ws-shift-xp/regular')") == "442"
+    page.get_by_role("button", name="New game", exact=True).tap()
+    dialog.get_by_role("button", name="Continue", exact=True).tap()
+    assert not dialog.is_visible()
+    assert page.evaluate("""keys => {
+      const s = __shift, d = s.day();
+      return d.firstDay && s.crew.length === 1 &&
+        s.players[0].D.xpBalance.textContent === '0 XP' &&
+        keys.every(key => localStorage.getItem(key) === null) &&
+        localStorage.getItem('ws-sound') === 'off';
+    }""", list(saved_career))
+    page.evaluate("__shift.day().credit('p1', 'fresh-work', 10)")
+    assert page.evaluate("localStorage.getItem('ws-shift-xp/' + __shift.day().shiftId)") is not None
     page.context.close()
 
 

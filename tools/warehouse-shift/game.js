@@ -85,7 +85,14 @@
     let lookPick = 0;
     try { lookPick = Math.max(0, LOOKS.findIndex((l) => l[0] === localStorage.getItem('ws-look'))); } catch (e) { /* fine */ }
     const players = [];
-    let active = false, online = null;
+    let active = false, online = null, recordSolo = false;
+    const careerRevisionKey = 'ws-career-reset';
+    let careerRevision;
+    try { careerRevision = localStorage.getItem(careerRevisionKey); } catch (e) { /* fine */ }
+    function canSaveCareer() {
+      if (recordSolo) return false;
+      try { return localStorage.getItem(careerRevisionKey) === careerRevision; } catch (e) { return false; }
+    }
     const standalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
     const guest = () => online?.guest();
 
@@ -172,7 +179,9 @@
     const PRIO_NAMES = { cust: ['Customer picks', 'Click & collect, till orders, bag collections'], queue: ['Till service', 'Greeting and serving customers'],
       hold: ['Holding area picks', 'c picks for the holding area'], delivery: ['Delivery', 'Putting the delivery away'] };
     const PRIO_DEFAULT = ['cust', 'queue', 'hold', 'delivery'];
-    function loadPriority(key, defaults, enabled = defaults) {
+    const PRESET_DEFAULTS = [['queue', 'cust', 'hold', 'delivery'], ['delivery', 'cust', 'queue', 'hold']];
+    const defaultPriority = (order, enabled = order) => order.map(id => ({ id, on: enabled.includes(id) }));
+    function loadPriority(key, defaults, enabled) {
       try {
         const saved = JSON.parse(localStorage.getItem(key));
         if (Array.isArray(saved) && saved.length === PRIO_DEFAULT.length &&
@@ -180,7 +189,7 @@
           return saved.map(job => ({ id: job.id, on: !!job.on }));
         }
       } catch (e) { /* use the defaults */ }
-      return defaults.map(id => ({ id, on: enabled.includes(id) }));
+      return defaultPriority(defaults, enabled);
     }
     const trainingPrice = 100;
     const trainingKey = 'ws-sam-training';
@@ -200,7 +209,7 @@
         return prices.slice(0, slots - 1).reduce((sum, cost) => sum + cost, 0);
       } catch (e) { return 0; }
     }
-    const legacyTrainingSpend = migrateTraining();
+    let legacyTrainingSpend = migrateTraining();
     const kit = {
       shoes: { title: 'Kickstool shoes', price: 350, owned: false },
       label: { title: 'Scanner name label', price: 150, owned: false }
@@ -211,6 +220,7 @@
     const digitalKey = 'ws-digital-first';
     let scannerTier = 1, digitalTier = 1;
     function readUpgrades() {
+      if (!canSaveCareer()) return;
       try {
         for (const [id, item] of Object.entries(kit)) {
           if (localStorage.getItem('ws-kit-' + id) === '1') item.owned = true;
@@ -234,11 +244,9 @@
     if (hadJobsOn && !samPrio.some(job => job.on)) samPrio.find(job => job.id === 'delivery').on = true;
     const tillAssigned = () => !!trained.queue && samPrio.some(job => job.id === 'queue' && job.on);
     const presetNames = ['Cover tills', 'Clear delivery'];
-    const presets = [
-      loadPriority('ws-sam-preset-0', ['queue', 'cust', 'hold', 'delivery']),
-      loadPriority('ws-sam-preset-1', ['delivery', 'cust', 'queue', 'hold'])
-    ];
+    const presets = PRESET_DEFAULTS.map((order, i) => loadPriority('ws-sam-preset-' + i, order));
     function savePriority(key, jobs) {
+      if (!canSaveCareer()) return;
       try { localStorage.setItem(key, JSON.stringify(jobs)); } catch (e) { /* keep the session settings */ }
     }
     function saveSamPrio() {
@@ -545,7 +553,7 @@
     // always starts on mixed: the practice setting used to be remembered, and one stray tap left every customer a click and collect (detailedfoil, 20 Nov 2026)
     try { localStorage.removeItem('ws-orders'); } catch (e) { /* fine */ }
     let day = null, dayNo = 0;
-    let recordSolo = false, playtest = null, playtestSummary = '';
+    let playtest = null, playtestSummary = '';
     function recordPlaytest(kind, detail) { playtest?.record(kind, detail, day.t); }
     function playtestActivity() {
       if (!playtest) return;
@@ -732,14 +740,18 @@
       speeches.delete(b);
       b.fig.group.visible = false; b.fig.trolley.group.visible = false;
       samSaved = b; samOff = true; dirty = true;
-      try { localStorage.setItem('ws-sam', 'off'); } catch (e) { /* fine */ }
+      if (canSaveCareer()) {
+        try { localStorage.setItem('ws-sam', 'off'); } catch (e) { /* fine */ }
+      }
     }
     function bringSam() {
       if (crew.some((x) => x.name === 'Sam')) return;
       if (samSaved) { samSaved.fig.group.visible = false; samSaved.fig.trolley.group.visible = false; samSaved = null; }
       hire(SAM);
       samOff = false; dirty = true;
-      try { localStorage.removeItem('ws-sam'); } catch (e) { /* fine */ }
+      if (canSaveCareer()) {
+        try { localStorage.removeItem('ws-sam'); } catch (e) { /* fine */ }
+      }
     }
 
     // Sam and their trolley are in your way like anything else (you can step away from them, never into them)
@@ -978,10 +990,12 @@
       ];
       const idleState = () => state === 'list' || state === 'end' || state === 'home' || state === 'pa';
       const stats = { putaway: 0, orders: 0, picks: 0, lines: 0, units: 0, wrong: 0, hints: 0, tills: 0, perfect: 0, since: Date.now() };
-      let life = { orders: 0, lines: 0, units: 0 };
+      const freshStats = () => ({ orders: 0, lines: 0, units: 0 });
+      let life = freshStats();
       try { life = Object.assign(life, JSON.parse(localStorage.getItem('ws-stats-v1') || '{}')); } catch (e) { /* fine */ }
       P.stats = stats; P.life = life;
-      function saveLife() { if (idx) return; try { localStorage.setItem('ws-stats-v1', JSON.stringify(life)); } catch (e) { /* fine */ } } // player 1's, kept on the device
+      P.resetLife = () => { P.life = life = freshStats(); };
+      function saveLife() { if (idx || !canSaveCareer()) return; try { localStorage.setItem('ws-stats-v1', JSON.stringify(life)); } catch (e) { /* fine */ } } // player 1's, kept on the device
       function lineHtml(text, cls) { const s = document.createElement('span'); s.className = 'sc-line' + (cls ? ' ' + cls : ''); s.textContent = text; return s; }
       function say(text, cls, ms) { msg = { text, cls }; msgUntil = performance.now() + (ms || 1700); renderScanner(); }
       function renderTote() {
@@ -2210,7 +2224,17 @@
           return null;
         };
         const still = () => { if (padWalk) { stickIn.x = stickIn.y = 0; padWalk = false; } lookIn.x = lookIn.y = 0; };
-        // a cover (start, help, end of shift, end of the day): A goes on, B closes help
+        if ($('newGameDialog').open) {
+          still();
+          if (hit(1)) $('backNewGame').click();
+          else if (hit(0) && $('newGameDialog').contains(document.activeElement)) document.activeElement.click();
+          else if (dpad === 'left' || dpad === 'right') {
+            const target = document.activeElement.id === 'backNewGame' ? 'confirmNewGame' : 'backNewGame';
+            if (steer(false)) $(target).focus();
+          }
+          return;
+        }
+        // A goes on, B closes help.
         const cover = ['startCover', 'helpCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
         if (cover) {
           still();
@@ -2571,7 +2595,7 @@
       }
     }
     function careerView() {
-      $('careerXP').textContent = careerXP() + ' career XP · ' + trainingStatus() + ' at the Manager PC';
+      renderStartCareer();
       $('dayTraining').textContent = availableXP() + ' XP available at the Manager PC';
       for (const p of players) {
         p.D.xpBalance.textContent = availableXP() + ' XP';
@@ -2597,7 +2621,9 @@
           kit[id].owned = true; key = 'ws-kit-' + id; value = '1';
         }
         if (key) {
-          try { localStorage.setItem(key, value); } catch (e) { /* keep session progress */ }
+          if (canSaveCareer()) {
+            try { localStorage.setItem(key, value); } catch (e) { /* keep session progress */ }
+          }
           if (playtest) {
             const upgrade = id === 'training' ? 'training.' + expected : id;
             const tier = id === 'reliability' ? scannerTier : id === 'digital' ? digitalTier : undefined;
@@ -2606,10 +2632,13 @@
         }
         careerView();
       }
-      if (navigator.locks) return navigator.locks.request('ws-career-purchase', applyPurchase);
+      if (!recordSolo && navigator.locks) return navigator.locks.request('ws-career-purchase', applyPurchase);
       applyPurchase();
     }
     window.addEventListener('storage', e => {
+      if (recordSolo) return;
+      if (e.key === careerRevisionKey && !active && !day && e.newValue !== careerRevision) { location.reload(); return; }
+      if (!canSaveCareer()) return;
       if (e.key === trainingKey || e.key === reliabilityKey || e.key === digitalKey || e.key?.startsWith('ws-kit-')) readUpgrades();
       else if (e.key?.startsWith(receiptPrefix) && e.newValue) {
         const known = career.get(e.key) || 0, incoming = Number(e.newValue);
@@ -2628,10 +2657,12 @@
       const key = receiptPrefix + id, prior = career.get(key) || 0;
       if (earned <= prior) return;
       let total = earned;
-      try {
-        total = Math.max(earned, Number(localStorage.getItem(key)) || 0);
-        localStorage.setItem(key, String(total));
-      } catch (e) { /* still available for this session */ }
+      if (canSaveCareer()) {
+        try {
+          total = Math.max(earned, Number(localStorage.getItem(key)) || 0);
+          localStorage.setItem(key, String(total));
+        } catch (e) { /* still available for this session */ }
+      }
       career.set(key, total);
       careerView();
     }
@@ -2754,7 +2785,29 @@
       if (!samOff) hire(SAM);
       newDay();
     }
-    statsHtml($('startStats'), [[me1.life.orders, 'orders done'], [me1.life.lines, 'lines picked'], [world.items.length.toLocaleString('en-GB'), 'products']]);
+    function renderStartCareer() {
+      if (active) return;
+      const testing = $('recordPlaytest').checked;
+      $('startBtn').textContent = testing ? 'Start playtest' : 'Continue';
+      $('careerXP').textContent = testing
+        ? 'Day 1 · 0 XP · Fresh solo career for this playtest'
+        : careerXP() + ' career XP · ' + trainingStatus() + ' at the Manager PC';
+      statsHtml($('startStats'), [[testing ? 0 : me1.life.orders, 'orders done'],
+        [testing ? 0 : me1.life.lines, 'lines picked'], [world.items.length.toLocaleString('en-GB'), 'products']]);
+    }
+    $('recordPlaytest').addEventListener('change', renderStartCareer);
+    function resetCareer() {
+      career.clear();
+      legacyTrainingSpend = 0;
+      scannerTier = digitalTier = 1;
+      for (const item of Object.values(kit)) item.owned = false;
+      for (const id of Object.keys(trained)) if (id !== 'delivery') delete trained[id];
+      samPrio = defaultPriority(PRIO_DEFAULT, ['delivery']);
+      PRESET_DEFAULTS.forEach((order, i) => { presets[i] = defaultPriority(order); });
+      samOff = false;
+      me1.resetLife();
+      careerView();
+    }
     function beginShift() {
       initAudio();
       if (touch && !standalone) fullScreen(true);
@@ -2775,11 +2828,45 @@
       canvas.focus({ preventScroll: true });
       dirty = true;
     }
-    $('startBtn').addEventListener('click', () => {
-      recordSolo = $('recordPlaytest').checked;
+    function startSolo() {
       ensureLocal();
       startPlaytest();
       beginShift();
+    }
+    $('startBtn').addEventListener('click', () => {
+      recordSolo = $('recordPlaytest').checked && !!window.ShiftPlaytest;
+      if (recordSolo) resetCareer();
+      startSolo();
+    });
+    const newGameDialog = $('newGameDialog');
+    $('newGameBtn').addEventListener('click', () => {
+      $('newGameError').hidden = true;
+      newGameDialog.showModal();
+    });
+    $('backNewGame').addEventListener('click', () => newGameDialog.close());
+    $('confirmNewGame').addEventListener('click', () => {
+      const savedProgress = new Set([trainingKey, reliabilityKey, digitalKey,
+        'ws-sam', 'ws-sam-prio', 'ws-sam-job-slots', 'ws-stats-v1', 'ws-helped']);
+      try {
+        const revision = globalThis.crypto?.randomUUID?.() || Date.now().toString(36);
+        // Invalidate writes from open tabs before deleting the shared career.
+        localStorage.setItem(careerRevisionKey, revision);
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (savedProgress.has(key) || key?.startsWith(receiptPrefix) ||
+              key?.startsWith('ws-sam-preset-') || key?.startsWith('ws-kit-')) localStorage.removeItem(key);
+        }
+        careerRevision = revision;
+      } catch (e) {
+        const error = $('newGameError');
+        error.textContent = 'Could not clear your saved progress. Check that browser storage is available and try again.';
+        error.hidden = false;
+        return;
+      }
+      newGameDialog.close();
+      $('recordPlaytest').checked = false;
+      resetCareer();
+      startSolo();
     });
 
     /* ---------- two players (computers only): split screen, side by side ---------- */
