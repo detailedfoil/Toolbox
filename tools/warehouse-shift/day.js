@@ -574,6 +574,7 @@
       this.coveredXP += amount;
       for (var staff of cover) if (/^p[1-4]$/.test(staff)) this.contributors.add(staff);
     }
+    this.emit('xpChanged');
   };
   Day.prototype.confirmLine = function (order, index, who) {
     this.credit(who, 'line-' + order.id + '-' + index, 10);

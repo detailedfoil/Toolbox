@@ -275,12 +275,16 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-presets>div{display:flex;align-items:center;gap:6px}
 .ws-presets>div b{min-width:90px}
 .ws-presets small,.ws-presets output{flex-basis:100%}
-.ws-training{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 14px}
-.ws-training button{min-height:36px}
 .ws-cover-bonus{position:absolute;top:100%;left:0;margin-top:3px;max-width:100%;white-space:normal;border-radius:5px;padding:2px 6px;background:#11271eeb;color:#a6edbd;font:700 11px system-ui,sans-serif;pointer-events:none}
-.ws-upgrades{margin:12px 0}
-.ws-upgrades summary{cursor:pointer;font-weight:700;padding:6px 0}
 .sc-name-label{position:absolute;top:5%;left:50%;transform:translateX(-50%) rotate(-2deg);max-width:58%;overflow:hidden;white-space:nowrap;padding:0 .4em;background:#ede5bd;color:#24251e;font:bold 1.15em/1.3 system-ui,sans-serif}
 .sc-offline{position:absolute;inset:10.8% 6.5% 3.6%;display:flex;flex-direction:column;justify-content:center;gap:1em;padding:8%;background:#171d26;color:#c4cbd4;font:600 1.3em/1.4 system-ui,sans-serif}
 .sc-offline b{color:#ffc680;font-size:1.25em}
-.ws-reliability{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.ws-pc-tabs{display:flex;gap:6px;padding:8px 12px;background:#dce4ee}
+.ws-pc-tabs button,.ws-shop button{border:1px solid #b9c7d5;border-radius:6px;padding:8px 12px;background:#fff;color:#143559;font:700 14px system-ui;cursor:pointer}
+.ws-pc-tabs button[aria-pressed=true],.ws-shop button:enabled{background:#184d80;color:white}
+.ws-shop{padding:0 12px}
+.ws-shop-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(75px,35%);gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #c7d2df}
+.ws-shop-row small,.ws-shop-row span{display:block;margin-top:3px;line-height:1.35;color:#445567}
+.ws-shop-row span{font-weight:700}
+.ws-shop-row.on{outline:2px solid #c78a13;outline-offset:-2px}
+.ws-shop button:disabled{color:#4a5967;background:#e2e8ed}

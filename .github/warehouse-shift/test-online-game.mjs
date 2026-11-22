@@ -68,6 +68,15 @@ async function game(t, { online = true, phone = false, installed = false, loadPh
   return { w, $, s: w.__shift, sockets, cctv: () => lastCCTV };
 }
 
+function openShop(device) {
+  const p = device.s.players[0];
+  p.openPc();
+  const pc = p.D.root.querySelector('.ws-pc');
+  pc.querySelector('[data-pc="shop"]').click();
+  assert.equal(pc.querySelector('.ws-shop').hidden, false);
+  return pc;
+}
+
 test('the normal game starts solo and local split-screen without opening a socket', async t => {
   for (const split of [false, true]) {
     const { $, s, sockets } = await game(t, { online: false });
@@ -408,11 +417,15 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const second = day.start('c');
   await until(() => s.day().list().some(o => o.id === second.id), 'second pick');
   s.enter(); await until(() => second.by === s.players[0].id, 'second claim');
+  const liveCredit = 'ws-shift-xp/' + day.shiftId;
+  const liveTotal = String(day.baseXP + Math.round(day.coveredXP * 0.05));
+  await until(() => picker.w.localStorage.getItem(liveCredit) === liveTotal, 'guest to receive XP before disconnect');
   const connections = picker.sockets.length;
   picker.sockets.at(-1).terminate();
   await until(() => second.status === 'listed', 'disconnect to release the job');
   await until(() => picker.sockets.length === connections + 1 && s.state() === 'home' && picker.$('onlineCover').hidden, 'phone to rejoin and reset scanner');
   assert.equal(s.world.locs.byCode[lastShelf].item, null, 'reconnecting keeps the shelf empty');
+  assert.equal(picker.w.localStorage.getItem(liveCredit), liveTotal, 'replaying the snapshot preserves earned XP');
   for (const d of s.day().delivery) assert.equal(d.loc.code, day.delivery.find(x => x.id === d.id).loc.code);
   // A guest occupies an existing till, identifies the kiosk customer, and pays through Fusion.
   const cashier = guests[2].s, till = cashier.tills[0];
@@ -479,6 +492,10 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   assert.ok(await runnerDay.handOver(job));
   assert.ok(day.freeSpots().includes(code));
   await until(() => guests.every(g => g.s.figs.some(f => f.c?.id === collect.id && f.counterTote)), 'the same parcel on every counter');
+  await until(() => Number(picker.w.localStorage.getItem(liveCredit)) === day.baseXP + Math.round(day.coveredXP * 0.05), 'guest to bank live team XP');
+  const guestShop = openShop(picker);
+  assert.equal(guestShop.querySelector('[data-pc="jobs"]').disabled, true);
+  picker.s.players[0].closePc();
   day.phase = 'lock'; assert.equal(day.lock(), true);
   await until(() => !host.$('dayCover').hidden && guests.every(g => !g.$('dayCover').hidden), 'end of day screens');
   const receipt = 'ws-shift-xp/' + day.shiftId;
@@ -546,7 +563,7 @@ test('split-screen earns till cover, shares one payout and buys permanent job sl
   assert.equal(p.D.coverBonus.textContent, 'Service Champ bonus +5% XP');
   assert.deepEqual(Array.from(s.prio().filter(j => j.on), j => j.id), ['queue']);
   p.openPc();
-  const panel = w.document.querySelector('.ws-presets'), pc = panel.parentElement;
+  const panel = w.document.querySelector('.ws-presets'), pc = panel.closest('.ws-pc');
   assert.ok(panel.hidden);
   const tick = i => pc.querySelector('[data-pc="tick"][data-i="' + i + '"]').click();
   tick(1);
@@ -561,6 +578,13 @@ test('split-screen earns till cover, shares one payout and buys permanent job sl
   p.me.speed = 2;
   d.credit('p2', 'test-uncovered', 10);
   assert.equal(d.coveredXP, 900);
+  assert.equal(Number(w.localStorage.getItem('ws-shift-xp/' + d.shiftId)), 955);
+  p.openPc();
+  pc.querySelector('[data-pc="shop"]').click();
+  pc.querySelector('[data-pc="train"]').click();
+  assert.equal(w.localStorage.getItem('ws-sam-job-slots'), '2');
+  assert.equal(p.D.xpBalance.textContent, '855 XP');
+  p.closePc();
   d.phase = 'lock'; d.lock();
   const key = 'ws-shift-xp/' + d.shiftId, total = d.report.xp;
   assert.equal(Number(w.localStorage.getItem(key)), total);
@@ -570,7 +594,6 @@ test('split-screen earns till cover, shares one payout and buys permanent job sl
   d.emit('over');
   assert.match($('careerXP').textContent, new RegExp('^' + total + ' career XP'));
   assert.equal([...Array(w.localStorage.length).keys()].filter(i => w.localStorage.key(i).startsWith('ws-shift-xp/')).length, 1);
-  $('dayTrain').click();
   assert.equal(w.localStorage.getItem('ws-sam-job-slots'), '2');
   p.openPc();
   const train = pc.querySelector('[data-pc="train"]');
@@ -582,23 +605,24 @@ test('split-screen earns till cover, shares one payout and buys permanent job sl
   assert.equal(JSON.parse(w.localStorage.getItem('ws-sam-preset-0'))[0].id, 'delivery');
   train.click(); train.click();
   assert.equal(w.localStorage.getItem('ws-sam-job-slots'), '4');
-  assert.ok(train.hidden);
+  assert.ok(train.disabled);
   assert.match($('careerXP').textContent, new RegExp((total - 850) + ' XP available'));
   preset('load', 1);
   assert.equal(s.prio().filter(j => j.on).length, 4);
   const storage = Object.fromEntries(Object.entries(w.localStorage));
   const reopened = await game(t, { online: false, storage });
   assert.match(reopened.$('careerXP').textContent, /4\/4 job slots/);
-  assert.ok(reopened.$('trainBtn').hidden);
+  assert.equal(reopened.$('trainBtn'), null);
   assert.equal(reopened.s.prio().filter(j => j.on).length, 4);
 });
 
 test('kickstool shoes and a named scanner spend earned XP once and work on a phone after relaunch', async t => {
   const first = await game(t, { online: false, phone: true, storage: { 'ws-shift-xp/previous': '500' } });
+  first.$('startBtn').click(); openShop(first);
   const buy = id => first.w.document.querySelector('[data-kit="' + id + '"]').click();
   buy('label'); buy('shoes'); buy('shoes');
   assert.match(first.$('careerXP').textContent, /0 XP available/);
-  assert.ok(first.$('trainBtn').disabled);
+  assert.ok(first.w.document.querySelector('[data-pc="train"]').disabled);
   const { $, s, w } = await game(t, { online: false, phone: true, storage: Object.fromEntries(Object.entries(first.w.localStorage)) });
   $('nameIn').value = 'JO'; $('nameIn').dispatchEvent(new w.Event('input'));
   $('startBtn').click();
@@ -614,9 +638,11 @@ test('kickstool shoes and a named scanner spend earned XP once and work on a pho
 
 test('a phone buys scanner reliability, swaps at the office and keeps its delivery carton', async t => {
   const initial = await game(t, { phone: true, online: false, storage: { 'ws-shift-xp/prior': '350' } });
-  const upgrade = initial.w.document.querySelector('[data-reliability]');
+  initial.$('startBtn').click();
+  const pc = openShop(initial);
+  const upgrade = pc.querySelector('[data-reliability]');
   upgrade.click(); upgrade.click();
-  assert.match(upgrade.previousElementSibling.textContent, /Tier 3\/5 · 3 disconnects/);
+  assert.match(pc.querySelector('[data-status="reliability"]').textContent, /Tier 3\/5 · 3 disconnects/);
   assert.ok(upgrade.disabled);
   const { s, $, w } = await game(t, { phone: true, online: false, storage: Object.fromEntries(Object.entries(initial.w.localStorage)) });
   $('startBtn').click();
@@ -644,18 +670,20 @@ test('a phone buys scanner reliability, swaps at the office and keeps its delive
 
 test('Digital First upgrades spend shared XP, persist, and apply when the next shift starts', async t => {
   const initial = await game(t, { online: false, phone: true, storage: { 'ws-shift-xp/prior': '350' } });
-  const upgrade = initial.w.document.querySelector('[data-digital]');
-  assert.match(upgrade.previousElementSibling.textContent, /Tier 1\/5 · 20% click & collect/);
+  initial.$('startBtn').click();
+  const pc = openShop(initial);
+  const upgrade = pc.querySelector('[data-digital]');
+  assert.match(pc.querySelector('[data-status="digital"]').textContent, /Tier 1\/5 · 20% click & collect/);
   upgrade.click();
   upgrade.click();
   assert.equal(initial.w.localStorage.getItem('ws-digital-first'), '3');
   assert.ok(upgrade.disabled, 'the remaining 50 XP cannot buy another tier');
-  assert.ok(initial.$('trainBtn').disabled, 'Digital First spends the same XP as Sam training');
+  assert.ok(pc.querySelector('[data-pc="train"]').disabled, 'Digital First spends the same XP as Sam training');
 
   const saved = Object.fromEntries(Object.entries(initial.w.localStorage));
   const reopened = await game(t, { online: false, phone: true, storage: saved });
   reopened.$('startBtn').click();
   assert.equal(reopened.s.day().walkinTill, 0.5);
-  const afterLockup = reopened.$('dayCover').querySelector('[data-digital]');
-  assert.match(afterLockup.previousElementSibling.textContent, /Tier 3\/5 · 50% click & collect/);
+  assert.equal(reopened.$('dayCover').querySelector('[data-digital]'), null);
+  assert.match(openShop(reopened).querySelector('[data-status="digital"]').textContent, /Tier 3\/5 · 50% click & collect/);
 });

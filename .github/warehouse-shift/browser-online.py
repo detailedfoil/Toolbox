@@ -100,6 +100,22 @@ def shared_shift(browser, errors):
             enlarged.tap()
             assert guest.locator("#scMenu").is_visible()
             guest.locator("#scBack").tap()
+            guest.evaluate("""() => {
+              const s=__shift, q=s.world.pc;
+              Object.assign(s.me,{x:q.x,y:q.y-0.9,yaw:Math.PI,pitch:Math.atan2(1.05-s.me.eye,0.9)});
+              s.applyCam();
+            }""")
+            guest.get_by_role("button", name="Use PC").tap()
+            shop = guest.locator(".ws-shop")
+            assert shop.is_visible() and shop.locator(".ws-shop-row").count() == 5
+            bounds = shop.bounding_box()
+            assert bounds["x"] >= 0 and bounds["x"] + bounds["width"] <= w
+            shop.get_by_text("Kickstool shoes").scroll_into_view_if_needed()
+            assert shop.get_by_text("Kickstool shoes").is_visible()
+            guest.locator(".ws-pc-x").tap()
+            guest.evaluate("""() => {const s=__shift;
+              Object.assign(s.me,{x:s.world.start.x,y:s.world.start.y,yaw:0,pitch:-0.07}); s.applyCam();
+            }""")
     # Wait for the other browser's worker figure to reach the host's new spot.
     host_xy = host.evaluate("[__shift.me.x,__shift.me.y]")
     guest.wait_for_function("""([x,y]) => __shift.S.scene.children.some(o => o.visible &&
