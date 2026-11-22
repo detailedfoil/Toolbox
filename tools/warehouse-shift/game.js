@@ -241,7 +241,10 @@
     function savePriority(key, jobs) {
       try { localStorage.setItem(key, JSON.stringify(jobs)); } catch (e) { /* keep the session settings */ }
     }
-    function saveSamPrio() { savePriority('ws-sam-prio', samPrio); }
+    function saveSamPrio() {
+      savePriority('ws-sam-prio', samPrio);
+      if (playtest) recordPlaytest('sam.jobs', { jobs: samJobs() });
+    }
     let bellCust = null, bellCount = 0, nextBellCheck = 0, bellTillTrained = false;
     function bellQueue() { if (bellCust?.state !== 'counter') bellCust = null; return bellCust ? [bellCust] : []; }
     function showBell(tillTrained) {
@@ -542,6 +545,14 @@
     // always starts on mixed: the practice setting used to be remembered, and one stray tap left every customer a click and collect (detailedfoil, 20 Nov 2026)
     try { localStorage.removeItem('ws-orders'); } catch (e) { /* fine */ }
     let day = null, dayNo = 0;
+    let recordSolo = false, playtest = null, playtestSummary = '';
+    function recordPlaytest(kind, detail) { playtest?.record(kind, detail, day.t); }
+    function playtestActivity() {
+      if (!playtest) return;
+      const overlay = !$('helpCover').hidden || !$('endCover').hidden;
+      playtest.setActivity(document.hidden ? 'background' : overlay ? 'overlay' : 'playing', day.t);
+    }
+    function samJobs() { return samPrio.filter(job => trained[job.id] && job.on).map(job => job.id); }
     function tillCover() {
       function standing(pos) {
         const atCounter = (pos.y >= counter.y1 && pos.y <= counter.y1 + 1.25) ||
@@ -563,7 +574,7 @@
         return ids.filter(id => !missingScanners.has(id));
       },
       scannerFault(who) { players.find(p => p.id === who)?.syncScanner(false, true); },
-      tillCover, xpChanged: syncShiftXP,
+      tillCover, xpChanged: syncShiftXP, playtest: recordPlaytest,
       listed: (o) => { if (online?.room()) for (const l of o.lines) online.trackStock(l.item); for (const p of players) p.listed(o); },
       changed: (o) => { for (const p of players) p.changed(o); tidyScreens(); },
       customer: (c) => comeIn(c),
@@ -1115,6 +1126,9 @@
       P.syncScanner = (taken, offline = false) => {
         const missing = taken || offline, wasOffline = P.scannerFault;
         if (P.scannerMissing === missing && wasOffline === offline) return;
+        if (taken || (P.scannerMissing && !wasOffline && !offline)) {
+          recordPlaytest(taken ? 'scanner.taken-by-sam' : 'scanner.returned-by-sam', { who: P.id });
+        }
         clearTimeout(faultTimer);
         P.scannerMissing = missing; P.scannerFault = offline;
         D.scannerFault.hidden = !offline; D.scScreen.hidden = offline;
@@ -1314,6 +1328,7 @@
           if (state === 'qty' && full) { say('All ' + ln.qty + ' picked: press Enter', 'warn'); SFX.miss(); return; }
           // every scan of the right location is one item picked (detailedfoil: tap it as many times as the gun says)
           if (state === 'qty') { countOne(); return; }
+          recordPlaytest('pick.scan', { who: P.id, order: order.id, line: cur + 1 });
           SFX.scan(); flash(false);
           state = 'qty'; typed = ''; full = false; viewLine = -1;
           openTimer = 0;
@@ -1350,6 +1365,7 @@
         if (guest() && !await remote(() => day.line(order, cur))) { say('Confirm at the scanned shelf', 'warn'); return; }
         SFX.pick(); flash(false);
         if (!guest()) day.confirmLine(order, cur, P.id);
+        recordPlaytest('pick.line-confirmed', { who: P.id, order: order.id, line: cur + 1, units: ln.qty });
         stats.lines++; stats.units += ln.qty; life.lines++; life.units += ln.qty; saveLife();
         flyToTote(ln);
         setTimeout(() => { D.toteChip.classList.remove('bump'); void D.toteChip.offsetWidth; D.toteChip.classList.add('bump'); }, 480);
@@ -1871,10 +1887,11 @@
         pc.el.querySelector('output').textContent = '';
         if (idx === 0 && locked()) document.exitPointerLock();
         keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; me.vx = me.vy = 0;
+        recordPlaytest('manager-pc.open', { who: P.id });
         pc.open = true; pc.sel = 0; pc.el.hidden = false; SFX.key(); pcTab(!!guest());
         D.tillBtn.hidden = true;
       }
-      function closePc() { if (!pc.open) return; pc.open = false; pc.el.hidden = true; SFX.key(); if (idx === 0) canvas.focus({ preventScroll: true }); pcOn = false; checkTill(); renderScanner(); }
+      function closePc() { if (!pc.open) return; recordPlaytest('manager-pc.close', { who: P.id }); pc.open = false; pc.el.hidden = true; SFX.key(); if (idx === 0) canvas.focus({ preventScroll: true }); pcOn = false; checkTill(); renderScanner(); }
       function pcMove(d) { pc.sel = (pc.sel + d + samPrio.length) % samPrio.length; SFX.key(); pcRender(); }
       function pcToggle() {
         const job = samPrio[pc.sel];
@@ -1926,6 +1943,7 @@
         SFX.key();
         cancelBlueAction();
         till.open(tills.indexOf(nearTill) + 1);
+        recordPlaytest('till.open', { who: P.id });
         callOver();
         D.say.hidden = true;
         dirty = true;
@@ -1957,6 +1975,7 @@
         if (P.tillCust !== c || !c.fig) return;
         const s = till.session();
         if (s && s.dayCust === c) return; // already talking
+        recordPlaytest('sale.ready', { who: P.id, customer: c.id });
         if (!guest()) checkScannerMixup(c, P.id);
         speeches.delete(c.fig);
         till.serve(c.cust, c.lines, '#' + c.fig.parts.body.color.getHexString(), { kind: c.kind, kiosk: c.kiosk, pay: c.pay, hello: c.say, dayCust: c });
@@ -1964,6 +1983,7 @@
       function closeTill() {
         if (!till || !till.isOpen()) return;
         till.close();
+        recordPlaytest('till.close', { who: P.id });
         // not talking yet: back in the queue for whoever's free
         const c = P.tillCust;
         const serving = c && till.session() && till.stage() !== 'arrived';
@@ -2487,7 +2507,11 @@
     window.addEventListener('blur', () => { for (const p of players) p.keysClear(); stickId = null; stickHome(); });
 
     /* ---------- screens: start, help, end of shift, end of the day ---------- */
-    function showHelp(on) { $('helpCover').hidden = !on; if (on && locked()) document.exitPointerLock(); }
+    function showHelp(on) {
+      $('helpCover').hidden = !on;
+      playtestActivity();
+      if (on && locked()) document.exitPointerLock();
+    }
     $('helpBtn').addEventListener('click', () => showHelp(true));
     $('howBtn').addEventListener('click', () => showHelp(true));
     $('helpClose').addEventListener('click', () => showHelp(false));
@@ -2558,6 +2582,7 @@
     function purchase(id, expected) {
       function applyPurchase() {
         readUpgrades();
+        const previousXP = playtest ? availableXP() : 0;
         let key, value;
         if (id === 'training' && PRIO_DEFAULT.includes(expected) && !trained[expected] && availableXP() >= trainingPrice) {
           trained[expected] = 'paid';
@@ -2571,7 +2596,14 @@
         } else if (kit[id] && !kit[id].owned && availableXP() >= kit[id].price) {
           kit[id].owned = true; key = 'ws-kit-' + id; value = '1';
         }
-        if (key) try { localStorage.setItem(key, value); } catch (e) { /* keep session progress */ }
+        if (key) {
+          try { localStorage.setItem(key, value); } catch (e) { /* keep session progress */ }
+          if (playtest) {
+            const upgrade = id === 'training' ? 'training.' + expected : id;
+            const tier = id === 'reliability' ? scannerTier : id === 'digital' ? digitalTier : undefined;
+            recordPlaytest('upgrade.bought', { upgrade, tier, cost: previousXP - availableXP(), xpAvailable: availableXP() });
+          }
+        }
         careerView();
       }
       if (navigator.locks) return navigator.locks.request('ws-career-purchase', applyPurchase);
@@ -2624,14 +2656,57 @@
       const st = me1.stats, mins = Math.max(1, Math.round((Date.now() - st.since) / 60000));
       statsHtml($('endStats'), [[st.orders, 'orders'], [st.lines, 'lines picked'], [st.units, 'units'], [st.perfect, 'perfect picks'], [st.wrong, 'wrong scans'], [mins + ' min', 'on shift']]);
       $('endCover').hidden = false;
+      playtestActivity();
     }
-    $('keepBtn').addEventListener('click', () => { $('endCover').hidden = true; });
+    $('keepBtn').addEventListener('click', () => { $('endCover').hidden = true; playtestActivity(); });
+    function playtestProgress() {
+      return {
+        xpAvailable: availableXP(), xpCareer: careerXP(),
+        scannerTier, digitalTier, equipment: Object.keys(kit).filter(id => kit[id].owned),
+        sam: { enabled: !!crew.length, skills: Object.keys(trained), jobs: samJobs() }
+      };
+    }
+    function startPlaytest() {
+      playtestSummary = '';
+      $('playtestResult').hidden = true;
+      $('playtestStatus').hidden = true;
+      $('playtestReport').hidden = true;
+      $('playtestReport').value = '';
+      if (!recordSolo || !window.ShiftPlaytest) return;
+      playtest = window.ShiftPlaytest.create({
+        day: dayNo, mode: day.mode, event: day.event, touchControls: touch,
+        picksPlanned: day.total, cartonsPlanned: day.delivery.length,
+        progression: playtestProgress()
+      });
+      playtestActivity();
+    }
+    $('copyPlaytest').addEventListener('click', async () => {
+      const summary = playtestSummary;
+      if (!summary) return;
+      const status = $('playtestStatus'), field = $('playtestReport');
+      let copied = false;
+      try { await navigator.clipboard.writeText(summary); copied = true; } catch (e) { /* allow manual copying */ }
+      if (summary !== playtestSummary) return;
+      status.hidden = false;
+      status.textContent = copied ? 'Copied. Paste the summary into your chat.' : 'Select and copy the summary below.';
+      field.hidden = copied;
+      if (!copied) { field.value = summary; field.focus(); field.select(); }
+    });
     // all 20 picks done and nobody waiting: your own day, nothing about Sam's (detailedfoil)
     function dayOver() {
       const report = day.report;
       if (report) {
         const eligible = day.eligible || Array.from(day.contributors);
-        showShiftScore(report, players.some(p => eligible.includes(p.id)));
+        const credited = players.some(p => eligible.includes(p.id));
+        showShiftScore(report, credited);
+        if (playtest) {
+          playtestSummary = playtest.finish({
+            score: report.score, xpEarned: credited ? report.xp : 0,
+            xpWork: report.baseXP, xpShiftBonus: report.bonus, xpServiceChamp: report.coverBonus,
+            player: day.summary('p1'), sam: day.summary('Sam'), progression: playtestProgress()
+          }, day.t);
+          playtest = null;
+        }
       }
       SFX.dayEnd();
       for (const p of players) p.dayOver();
@@ -2646,6 +2721,7 @@
           statsHtml(rows, [[s.picks, 'of the ' + s.total + ' picks'], [st.tills - (st.tillsAtStart || 0), 'till orders served'], [s.fetched, 'bags from holding'], [s.delivery, 'cartons put away'], [st.lines - (st.linesAtStart || 0), 'lines picked'], [st.perfect - (st.perfectAtStart || 0), 'perfect picks'], [Math.max(1, Math.round(s.minutes)) + ' min', 'the day took']]);
           box.appendChild(el);
         }
+        $('playtestResult').hidden = !playtestSummary;
         $('nextDayBtn').hidden = !!guest();
         $('dayTitle').textContent = guest() ? 'All picks clear · waiting for the host' : 'All picks clear';
         $('dayCover').hidden = false;
@@ -2656,6 +2732,7 @@
       $('dayCover').hidden = true;
       for (const p of players) { const st = p.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; }
       newDay();
+      startPlaytest();
       for (const p of players) p.start();
       announceDayEvent();
     });
@@ -2698,7 +2775,12 @@
       canvas.focus({ preventScroll: true });
       dirty = true;
     }
-    $('startBtn').addEventListener('click', () => { ensureLocal(); beginShift(); });
+    $('startBtn').addEventListener('click', () => {
+      recordSolo = $('recordPlaytest').checked;
+      ensureLocal();
+      startPlaytest();
+      beginShift();
+    });
 
     /* ---------- two players (computers only): split screen, side by side ---------- */
     // Each joins with a press: A on a controller, or any key or a click for the keyboard and mouse. The first to join
@@ -2753,7 +2835,11 @@
     async function stayAwake() {
       try { if (navigator.wakeLock && !wake && !document.hidden && active) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } } catch (e) { wake = null; }
     }
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) { stayAwake(); last = performance.now(); } else for (const p of players) p.keysClear(); });
+    document.addEventListener('visibilitychange', () => {
+      playtestActivity();
+      if (!document.hidden) { stayAwake(); last = performance.now(); }
+      else for (const p of players) p.keysClear();
+    });
 
     /* ---------- install (a home screen app that works offline once loaded) ---------- */
     const updBtn = $('updBtn'), updMsg = $('updMsg');
