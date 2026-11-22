@@ -1021,6 +1021,38 @@
       }), pc.x, pc.y - 0.025, 1.05, 0.5, 0.3, Math.PI, 'shop');
       box(M.till, pc.x - 0.3, pc.y - 0.3, 0.75, pc.x + 0.05, pc.y - 0.17, 0.765, 'shop'); // keyboard
     }
+    // Five linked charging cups on the left end of the office desk, with two empty bays.
+    {
+      const { x, y } = world.scannerDock, z = world.pc.desk.z1;
+      const green = lam(0xa6cc36);
+      const screen = signTex(128, 192, (g, w, h) => {
+        g.fillStyle = '#e7edf0'; g.fillRect(0, 0, w, h);
+        g.fillStyle = '#173965'; g.fillRect(0, 0, w, 36);
+        g.fillStyle = '#fff'; g.font = 'bold 18px ' + FONT; g.fillText('SCANNER', 12, 25);
+        g.fillStyle = '#203550'; g.font = 'bold 20px ' + FONT; g.fillText('Ready', 16, 94);
+        for (let row = 0; row < 3; row++) for (let col = 0; col < 8; col++)
+          g.fillRect(5 + col * 15, 137 + row * 15, 12, 11);
+      });
+      box(M.black, x - 0.34, y - 0.09, z, x + 0.34, y + 0.09, z + 0.045, 'shop');
+      for (let i = 0; i < 5; i++) {
+        const cx = x + (i - 2) * 0.13;
+        box(M.frame, cx - 0.059, y - 0.064, z + 0.044, cx + 0.059, y - 0.038, z + 0.085, 'shop');
+        for (const side of [-1, 1]) {
+          const edge = cx + side * 0.052;
+          box(M.black, edge - 0.009, y - 0.044, z + 0.04, edge + 0.009, y + 0.064, z + 0.108, 'shop');
+        }
+        box(M.frame, cx - 0.055, y + 0.046, z + 0.044, cx + 0.055, y + 0.066, z + 0.103, 'shop');
+        if (i === 2 || i === 3) {
+          box(M.chrome, cx - 0.025, y, z + 0.045, cx + 0.025, y + 0.015, z + 0.05, 'shop');
+          continue;
+        }
+        box(M.till, cx - 0.046, y - 0.023, z + 0.05, cx + 0.046, y + 0.022, z + 0.234, 'shop');
+        box(green, cx + 0.044, y - 0.019, z + 0.134, cx + 0.049, y + 0.012, z + 0.161, 'shop');
+        if (i !== 0) flat(screen, cx, y - 0.024, z + 0.157, 0.077, 0.13, Math.PI, 'shop');
+        else box(M.screen, cx - 0.038, y - 0.025, z + 0.09, cx + 0.038, y - 0.023, z + 0.222, 'shop');
+      }
+      flat(wallSign('SCANNER DOCK', '#23272e', '#ffffff', 512, 84), x, y - 0.091, z + 0.024, 0.24, 0.036, Math.PI, 'shop');
+    }
     // door plates on the walls
     const plate = (text, x, y, z, turn) => flat(wallSign(text, '#ffffff', '#1d232c', 512, 128), x, y, z, 0.42, 0.105, turn, 'shop');
     const staffRoom = world.rooms.find((r) => r.name === 'Staff room'), office = world.rooms.find((r) => r.name === 'Office');

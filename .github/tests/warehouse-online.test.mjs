@@ -195,3 +195,21 @@ test('Fusion checks scanner mix-ups once and halves the chance for a named scann
     assert.equal(rolls, 1);
   }
 });
+
+test('the office dock restores one scanner and each reliability tier schedules the right number of shift faults', () => {
+  const dock = world.scannerDock, front = { x: dock.x, y: dock.y - 0.8 };
+  for (let tier = 1; tier <= 5; tier++) {
+    const faults = [];
+    const d = Day.create({ world, World: W, Till, requests, rand: W.rng(123 + tier), scannerTier: tier,
+      event: 'failedDelivery', env: { scannerHolders: () => ['p1', 'p2'], scannerFault: id => faults.push(id) } });
+    for (let done = 0; done <= d.total; done++) {
+      d.done = done; d.checkScannerFault();
+      for (const id of d.offlineScanners) {
+        assert.equal(d.swapScanner(id, world.start), false);
+        assert.equal(d.swapScanner(id, front), true);
+        assert.equal(d.swapScanner(id, front), false);
+      }
+    }
+    assert.equal(faults.length, 6 - tier);
+  }
+});

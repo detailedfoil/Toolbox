@@ -72,6 +72,11 @@
     this.contributors = new Set();
     this.baseXP = 0;
     this.coveredXP = 0;
+    this.offlineScanners = new Set();
+    this.faultSchedule = [];
+    const faults = 6 - (o.scannerTier || 1);
+    const faultRandom = this.World.rng(this.World.hash(this.shiftId || 'scanner dock'));
+    for (let i = 0; i < faults; i++) this.faultSchedule.push((i + 0.5 + faultRandom() * 0.24) / faults);
     this.done = 0; this.released = 0; this.over = false;
     // the holding area: what's in each OC spot, and who's on their way to it (fetching it, or filling it)
     this.hold = {}; this.busy = {};
@@ -102,6 +107,26 @@
       progress = delivery.length ? delivery.reduce(function (done, d) { return done + Number(d.done); }, 0) / delivery.length : 1;
     }
     return 7 * 60 + Math.floor(Math.min(1, progress) * 13 * 60);
+  };
+
+  Day.prototype.checkScannerFault = function () {
+    if (this.phase !== 'open' || !this.faultSchedule.length) return;
+    const work = this.done + this.delivery.filter(carton => carton.done).length;
+    if (work / (this.total + this.delivery.length) < this.faultSchedule[0]) return;
+    this.faultSchedule.shift();
+    const holders = (this.emit('scannerHolders') || []).filter(who => !this.offlineScanners.has(who));
+    if (!holders.length) return;
+    const who = this.pick(holders);
+    this.offlineScanners.add(who);
+    this.emit('scannerFault', who);
+  };
+  Day.prototype.atScannerDock = function (pos) {
+    const dock = this.world.scannerDock, desk = this.world.pc.desk;
+    return pos.x >= desk.x0 - 0.08 && pos.x <= desk.x1 + 0.08 && pos.y <= desk.y0 &&
+      Math.hypot(pos.x - dock.x, pos.y - dock.y) <= 1.45;
+  };
+  Day.prototype.swapScanner = function (who, pos) {
+    return this.atScannerDock(pos) && this.offlineScanners.delete(who);
   };
 
   /* ---------- the plan ---------- */
@@ -204,6 +229,7 @@
     this.World.place(this.world, d.item, d.loc, d.qty); this.emit('stock', d.item);
     this.log.push({ t: this.t, kind: 'putaway', by: who, took: this.t - d.takenAt });
     this.emit('delivery', d);
+    this.checkScannerFault();
     this.check();
     return true;
   };
@@ -341,7 +367,7 @@
   Day.prototype.finish = function (o) {
     o.finishedAt = this.t;
     this.credit(o.doneBy, 'finished-' + o.id, 10);
-    if (o.counts) this.done++;
+    if (o.counts) { this.done++; this.checkScannerFault(); }
     this.log.push({ t: this.t, no: o.no, kind: o.kind, by: o.doneBy, took: this.t - (o.takenAt || o.t) });
     this.check();
   };
