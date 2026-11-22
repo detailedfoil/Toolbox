@@ -216,7 +216,7 @@
   }
 
   /* ---------- kiosk orders ---------- */
-  // About half the till customers have already put their order through on the kiosk (detailedfoil). After the usual
+  // Some till customers have already put their order through on the kiosk (detailedfoil). After the usual
   // postcode and surname search they say so and give the name they typed on it, usually their first name; the
   // Kiosk Orders screen lists today's kiosk orders, every name different, and picking theirs fills the basket.
   var KIOSK_SAY = ["I've sent an order over on the kiosk.", 'I put an order through on the screen over there.', "I've done it on the iPad already.",

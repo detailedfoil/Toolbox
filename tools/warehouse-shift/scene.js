@@ -978,7 +978,19 @@
         }
         case 'panel': box(M.grey, o.x0, o.y0, 0, o.x1, o.y1, z1, 'shop'); break;
         case 'holding': break; // drawn below
-        case 'gondola': gondola(o); break;
+        case 'gondola': {
+          gondola(o);
+          if (o.kiosks) {
+            const screen = wallSign('ORDER HERE', '#15396b', '#ffffff', 256, 160);
+            for (const offset of [0.29, 0.81]) {
+              const x = o.x0 + offset;
+              box(M.frame, x - 0.035, o.y1, 1.12, x + 0.035, o.y1 + 0.075, 1.26, 'shop');
+              box(M.black, x - 0.16, o.y1 + 0.06, 1.21, x + 0.16, o.y1 + 0.09, 1.43, 'shop');
+              flat(screen, x, o.y1 + 0.092, 1.32, 0.285, 0.18, 0, 'shop');
+            }
+          }
+          break;
+        }
         case 'table': case 'desk': box(M.wood, o.x0, o.y0, z1 - 0.04, o.x1, o.y1, z1, 'shop'); legs(M.frame, o, z1 - 0.04, 0.05); break;
         case 'chair': chair(o); break;
         case 'worktop': box(M.white, o.x0, o.y0, 0, o.x1, o.y1 - 0.02, z1 - 0.04, 'shop'); box(M.wood, o.x0, o.y0, z1 - 0.04, o.x1, o.y1, z1, 'shop'); break;

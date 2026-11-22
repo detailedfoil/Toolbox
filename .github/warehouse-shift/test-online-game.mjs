@@ -295,11 +295,12 @@ test('an installed phone with the ordinary launch URL can host or join from its 
 });
 
 test('a phone and two other guests share the host game, pick, reconnect and follow the host into the next day', async t => {
-  const host = await game(t), guests = [];
+  const host = await game(t, { storage: { 'ws-digital-first': '4' } }), guests = [];
   host.$('onlineBtn').click(); host.$('hostRoom').click();
   await until(() => !host.$('roomBtn').hidden, 'host admission');
   // Schedule just the jobs this test exercises while Sam continues to run in the host.
   const day = host.s.day(); day.plan.length = 0;
+  assert.equal(day.walkinTill, 0.35, "the host sets the mix for the entire room");
   for (const job of host.s.prio()) job.on = false;
   const room = host.$('roomBtn').textContent.slice(0, 6);
   for (let i = 0; i < 3; i++) {
@@ -501,6 +502,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   await until(() => s.day() !== previous && guests.every(g => g.s.day().event === 'failedDelivery' &&
     g.s.day().clockMinute() === 7 * 60 && g.$('bannerTitle').textContent === 'Delivery cancelled'), 'host event to start on all devices');
   const cancelled = host.s.day();
+  assert.equal(cancelled.walkinTill, 0.35, 'the host tier also applies on the next day');
   assert.equal(cancelled.delivery.length, 0);
   cancelled.walkinTill = 0;
   const visitor = cancelled.start('ck');
@@ -627,4 +629,22 @@ test('a phone buys scanner reliability, swaps at the office and keeps its delive
   p.D.tillBtn.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
   assert.ok(p.D.scannerFault.hidden && !p.D.scScreen.hidden);
   assert.equal(s.state(), 'pato'); assert.equal(held.by, 'p1');
+});
+
+test('Digital First upgrades spend shared XP, persist, and apply when the next shift starts', async t => {
+  const initial = await game(t, { online: false, phone: true, storage: { 'ws-shift-xp/prior': '350' } });
+  const upgrade = initial.w.document.querySelector('[data-digital]');
+  assert.match(upgrade.previousElementSibling.textContent, /Tier 1\/5 · 20% click & collect/);
+  upgrade.click();
+  upgrade.click();
+  assert.equal(initial.w.localStorage.getItem('ws-digital-first'), '3');
+  assert.ok(upgrade.disabled, 'the remaining 50 XP cannot buy another tier');
+  assert.ok(initial.$('trainBtn').disabled, 'Digital First spends the same XP as Sam training');
+
+  const saved = Object.fromEntries(Object.entries(initial.w.localStorage));
+  const reopened = await game(t, { online: false, phone: true, storage: saved });
+  reopened.$('startBtn').click();
+  assert.equal(reopened.s.day().walkinTill, 0.5);
+  const afterLockup = reopened.$('dayCover').querySelector('[data-digital]');
+  assert.match(afterLockup.previousElementSibling.textContent, /Tier 3\/5 · 50% click & collect/);
 });

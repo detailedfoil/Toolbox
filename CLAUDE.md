@@ -417,7 +417,7 @@ explain changes in plain English and say what they'll see.
       when someone leaves (`standAt` -> `shuffleQueue`), a customer called to a till and then left rejoins it (`joinQueue`);
       `route(from {x,y}, to)` steps out of / into the line sideways; `WAIT` (paid or checked in) is on your left by the gap.
     - Stage 2 (21 Nov): customer and Sam rules. (a) Bag collections are about HALF of all click and collects: `Day.decide(c)`
-      (runs at the first hello, only when `walkinTill` > 0, so tests with 0 keep customers as sent) rolls till 45%, else
+      (runs at the first hello, only when `walkinTill` > 0, so tests with 0 keep customers as sent) rolls according to the Digital First tier, else
       bag 50% (takes a free bag from the holding area, `freeCode`) or one product from the warehouse. (b) Customers no longer
       say the OC number (`Till.holdSay` says the surname only; the OC spot is on the scanner). (c) Surname FIRST, then
       postcode (tillui.js `begin`, `askAgain`, the bot's `tillOrder`); after the player's first Search (or Sam's) they give a
@@ -517,6 +517,7 @@ explain changes in plain English and say what they'll see.
       at 2.46 to 2.82) so the nearly square shop fills more of it.
     - Unused kick stools have half-width walking collision bounds. Sam parks the tote trolley across an occupied aisle entrance. Each Fusion customer has one 40% chance of a scanner mix-up for the cashier, reduced to 20% by a scanner name label. Walk up to Sam to recover it.
     - The office scanner dock sits beside the manager PC. Five fleet reliability tiers allow 5/4/3/2/1 faults over a shift, with the host's tier used online. Swap a failed handset at the dock to resume its existing task. Sam’s accidental scanner mix-up is separate.
+    - Digital First starts at tier 1 with two tablet kiosks and 20% click and collect. The four paid tiers raise the mix to 35%, 50%, 65% and 80% from the next shift. In co-op the host sets the branch tier.
     - Lock-up scores the branch out of 1,000 and pays team XP once per contributing device. Work completed with till cover earns 5% extra XP. The host’s Sam training sets the active job limit in co-op. Personal kit includes named scanners and kickstool shoes that use the existing Step control.
     - Online co-op: choose Online co-op from the normal start screen in a browser or the installed game.
       The host shares a six-character code with up to three guests. Solo and local split-screen use the same page.

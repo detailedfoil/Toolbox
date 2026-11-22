@@ -15,13 +15,13 @@ const world = W.build(read('tools/warehouse-shift/data/catalogue.json'));
 const requests = read('tools/warehouse-shift/data/requests.json');
 
 test('walk-ins who want click and collect: about half collect a bag from the holding area, half are one product from the warehouse', () => {
-  let bag = 0, one = 0, till = 0;
+  let bag = 0, one = 0;
   for (let s = 1; s <= 60; s++) {
-    const day = Day.create({ world: W.build(read('tools/warehouse-shift/data/catalogue.json'), 5), World: W, Till, requests, rand: W.rng(s), env: {} });
+    const day = Day.create({ world: W.build(read('tools/warehouse-shift/data/catalogue.json'), 5), World: W, Till, requests, rand: W.rng(s), env: {}, digitalTier: 3 });
     day.phase = 'open';
     for (let i = 0; i < 6; i++) {
       const c = day.send('ck'); day.arrived(c); assert.ok(day.greet(c, 'p1'));
-      if (c.kind === 'collect') { bag++; assert.ok(c.order && c.order.kind === 'hold'); } else if (c.kind === 'ck') one++; else till++;
+      if (c.kind === 'collect') { bag++; assert.ok(c.order && c.order.kind === 'hold'); } else if (c.kind === 'ck') one++;
       if (c.state === 'counter') {
         assert.ok(day.serve(c, 'p1'));
         day.tillDone(c, c.kind === 'kiosk' ? c.kiosk.list[c.kiosk.mine].lines : c.lines);
@@ -31,7 +31,6 @@ test('walk-ins who want click and collect: about half collect a bag from the hol
   }
   const share = bag / (bag + one);
   assert.ok(share > 0.4 && share < 0.6, 'bags are about half of the click and collects: ' + bag + ' of ' + (bag + one));
-  assert.ok(till / (bag + one + till) > 0.35 && till / (bag + one + till) < 0.55, 'and about 45% of walk-ins still want the till');
 });
 
 test('stock: a pick of every unit leaves the place empty, and the product is out of stock until a delivery', () => {

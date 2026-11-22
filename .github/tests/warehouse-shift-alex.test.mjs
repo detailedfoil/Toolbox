@@ -35,7 +35,7 @@ function shift(seed, opts = {}) {
   };
   const arrived = new Map();
   dayEnv.customer = (c) => { arrived.set(c, T + 9); later(9, () => day.arrived(c)); };
-  day = Day.create({ walkinTill: 0, world, World: W, Till, requests, rand: rng, env: dayEnv, mode: opts.mode });
+  day = Day.create({ walkinTill: 0, world, World: W, Till, requests, rand: rng, env: dayEnv, mode: opts.mode, digitalTier: opts.digitalTier });
   const env = {
     board: () => ({ orders: day.listLate(), queue: [], prio: ['cust', 'hold', 'delivery'], delivery: day.deliveryLeft().length, greet: day.ungreeted().filter((c) => T - (arrived.get(c) || 0) > 10) }),
     paSources: () => world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i),
@@ -139,7 +139,7 @@ test('a shift on their own: Sam picks what is left on the list and puts c picks 
 
 test('the holding area: Sam fetches the bag on the line they took, kept for that customer', () => {
   let takes = [];
-  for (const seed of [77, 78, 79]) takes = takes.concat(shift(seed, { minutes: 25 }).events.filter((e) => e.take));
+  for (const seed of [77, 78, 79]) takes = takes.concat(shift(seed, { minutes: 25, mode: 'hold' }).events.filter((e) => e.take));
   assert.ok(takes.length >= 2, takes.length + ' bags fetched');
   for (const t of takes) assert.ok(t.kept, t.take + ' was kept for the customer whose line Sam took');
 });
@@ -175,18 +175,19 @@ test('one person to a pick aisle (detailedfoil): Sam waits by the end of an aisl
 
 test('Sam walks round you: standing on their spot, in the centre aisle, or walking up and down it', () => {
   const mid = (world.LX1 + world.RX0) / 2;
+  const paceX = mid + 0.35; // walk slightly to one side so Sam has room to pass
   const cases = {
     post: (you, bot) => { you.x = bot.post.x; you.y = bot.post.y; },      // on Sam's spot at the till, all shift
     centre: (you) => { you.x = mid; you.y = 8; },                           // in the middle of the centre aisle
     pacing: (() => { let dir = 1; return (you, bot) => {                    // up and down it, stopping for Sam
       const ny = you.y + dir * 1.5 * 0.05;
-      if (you.y < 2 || you.y > 17) { you.x = mid + 0.2; you.y = Math.max(2.5, Math.min(16.5, you.y)); }
-      if (Math.hypot(mid + 0.2 - bot.x, ny - bot.y) >= 2 * YOU) { you.y = ny; you.x = mid + 0.2; you.moving = true; } else you.moving = false;
+      if (you.y < 2 || you.y > 17) { you.x = paceX; you.y = Math.max(2.5, Math.min(16.5, you.y)); }
+      if (Math.hypot(paceX - bot.x, ny - bot.y) >= 2 * YOU) { you.y = ny; you.x = paceX; you.moving = true; } else you.moving = false;
       if (you.y < 2.5) dir = 1; if (you.y > 16.5) dir = -1;
     }; })()
   };
   for (const [name, fn] of Object.entries(cases)) {
-    const s = shift(8, { minutes: 15, you: fn });
+    const s = shift(8, { minutes: 15, digitalTier: 4, you: fn });
     assert.ok(s.done.length >= 1, name + ': ' + s.done.length + ' jobs done');
     assert.ok(s.closestYou >= 2 * YOU - 0.005, name + ': came within ' + s.closestYou.toFixed(3) + ' m of you');
   }
