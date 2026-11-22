@@ -2786,12 +2786,12 @@
       newDay();
     }
     function renderStartCareer() {
-      if (active) return;
-      const testing = $('recordPlaytest').checked;
-      $('startBtn').textContent = testing ? 'Start playtest' : 'Continue';
+      const testing = !active && $('recordPlaytest').checked;
       $('careerXP').textContent = testing
         ? 'Day 1 · 0 XP · Fresh solo career for this playtest'
         : careerXP() + ' career XP · ' + trainingStatus() + ' at the Manager PC';
+      if (active) return;
+      $('startBtn').textContent = testing ? 'Start playtest' : 'Continue';
       statsHtml($('startStats'), [[testing ? 0 : me1.life.orders, 'orders done'],
         [testing ? 0 : me1.life.lines, 'lines picked'], [world.items.length.toLocaleString('en-GB'), 'products']]);
     }
