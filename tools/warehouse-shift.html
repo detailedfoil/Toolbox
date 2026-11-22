@@ -14,7 +14,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=b84f16d526">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=4c08558acf">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=b66e39ba67">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -36,7 +36,7 @@
   <div class="ws-tag" data-el="tag" hidden>Player 1</div>
   <div class="ws-cross" id="cross" data-el="cross" hidden></div>
   <div class="ws-toast" id="toast" data-el="toast" role="status"></div>
-  <div class="ws-banner" id="banner" data-el="banner" role="status"><b id="bannerTitle" data-el="bannerTitle"></b><span id="bannerText" data-el="bannerText"></span></div>
+  <div class="ws-banner" id="banner" data-el="banner" role="status"><b id="bannerTitle" data-el="bannerTitle"></b><span id="bannerText" data-el="bannerText"></span><small data-el="bannerDetail" hidden></small></div>
   <div class="ws-say" id="say" data-el="say" hidden aria-live="polite"><p id="sayText" data-el="sayText"></p></div>
   <div class="ws-chips" id="chips" data-el="chips" hidden>
     <span class="ws-order" data-el="xpBalance" title="Available XP"></span>
@@ -113,7 +113,7 @@
   <div class="ws-cover" id="startCover" hidden>
     <div class="ws-card">
       <h1>Warehouse Shift</h1>
-      <p>A day is 15 to 25 picks on one list, shared with Sam. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
+      <p>Day one has about a third of the usual delivery and customers. A full day has 15 to 25 picks on one list, shared with Sam. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
       <div id="startStats"></div>
       <p class="ws-small" id="careerXP"></p>
       <label class="ws-name">Name on your badge <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Trainee" enterkeyhint="done"></label>
@@ -154,7 +154,9 @@
 
   <template id="upgradeShop">
     <section class="ws-shop" hidden aria-label="Upgrades">
-      <div class="ws-shop-row"><div><strong>Sam training</strong><small>Give Sam another active job. Online shifts use the host’s training.</small></div><button type="button" data-pc="train"></button></div>
+      <div class="ws-shop-row"><div><strong>Sam training · Till service</strong><small>Sam can greet customers and serve them at the tills.</small></div><button type="button" data-training="queue"></button></div>
+      <div class="ws-shop-row"><div><strong>Sam training · Customer picks</strong><small>Sam can pick waiting customers’ orders and fetch their click &amp; collect bags.</small></div><button type="button" data-training="cust"></button></div>
+      <div class="ws-shop-row"><div><strong>Sam training · Holding area picks</strong><small>Sam can pick orders to store in the holding area for later collection.</small></div><button type="button" data-training="hold"></button></div>
       <div class="ws-shop-row"><div><strong>Scanner reliability</strong><small>Reduce scanner disconnects from your next hosted or solo shift.</small><span data-status="reliability"></span></div><button type="button" data-reliability></button></div>
       <div class="ws-shop-row"><div><strong>Digital First Upgrades</strong><small>Bring in more click &amp; collects from your next hosted or solo shift. Tier 1 includes kiosk tablets.</small><span data-status="digital"></span></div><button type="button" data-digital></button></div>
       <div class="ws-shop-row"><div><strong>Scanner name label</strong><small>Put your name on your scanner to halve the chance of Sam taking it.</small></div><button type="button" data-kit="label"></button></div>
@@ -167,7 +169,7 @@
       <h1>How to play</h1>
       <p>Lock up to earn a team score out of 1,000. Quick greetings, short customer waits, prompt picks and speedy putaway all count. The timers use playing time. A missed delivery puts more weight on customer waits.</p>
       <p>Human teammates share 5 XP per greeting, 15 per sale, 10 per confirmed pick line, 10 per finished order and 10 per shelved carton. Once you contribute, team work XP is saved as you play. Spend it at the office Manager PC under Upgrades. Lock-up adds a shift bonus of up to 25%. Work done while a teammate or Sam stands at a till earns 5% extra XP, including its share of the shift bonus. Standing cover counts as contributing. Service Champ XP is rounded across the shift and saved on this device.</p>
-      <p>Sam starts with one active job. Swap jobs freely on the manager PC. Buy permanent second, third and fourth job slots for 100, 250 and 500 XP. Online shifts use the host’s training. Two saved job lists unlock at 350 lifetime XP.</p>
+      <p>Sam starts on delivery. Train him for till service, customer picks or holding area picks under Upgrades on the Manager PC. Each skill costs 100 XP and can be assigned alongside his other skills. Online shifts use the host’s training. Two saved job lists unlock at 350 lifetime XP.</p>
       <div class="ws-cols2">
         <div>
           <h2>The pick list</h2>
@@ -176,7 +178,7 @@
             <li>The scanner opens on its <b>Main Menu</b>: <b>Putaway</b> or <b>Today Picking</b>. Back goes back to it.</li>
             <li>The scanner lists today's picks: <b>A4821 2:3 CK</b> is order A4821, 2 locations, 3 items. <b>CK</b>: a click and collect customer is at the counter. <b>c</b>: nobody's here yet, it goes in the holding area. Nothing after it: bought at the till, the customer's waiting.</li>
             <li>Up and down choose an order, <b>Enter</b> (or <b>Space</b>) starts it. Once started it's yours: Back says <b>Finish task</b>.</li>
-            <li>A day is <b>15 to 25 picks</b>, plus the <b>delivery</b>. It ends when they're all done, the delivery's away and nobody's waiting: then lock the front door.</li>
+            <li>A full day is <b>15 to 25 picks</b>, plus the <b>delivery</b>. Day one has about a third of the usual delivery and customers. It ends when they're all done, the delivery's away and nobody's waiting: then lock the front door.</li>
           </ul>
           <h2>Picking</h2>
           <ul>
@@ -261,12 +263,12 @@
 <script src="warehouse-shift/scene.js?v=2d0914744c"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=248e08346a"></script>
-<script src="warehouse-shift/day.js?v=dc9fcdd5e3"></script>
+<script src="warehouse-shift/day.js?v=5877e0721b"></script>
 <script src="warehouse-shift/bot.js?v=7a7b89c1ec"></script>
 <script src="warehouse-shift/tillui.js?v=b855e77b8f"></script>
 <script src="warehouse-shift/online-day.js?v=9f82f60a9d"></script>
 <script src="warehouse-shift/online.js?v=cdcf8996c8"></script>
-<script src="warehouse-shift/online-game.js?v=083e13c48f"></script>
-<script src="warehouse-shift/game.js?v=9c6b7ac838"></script>
+<script src="warehouse-shift/online-game.js?v=6c07607ded"></script>
+<script src="warehouse-shift/game.js?v=85ec04dd5b"></script>
 </body>
 </html>

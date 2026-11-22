@@ -123,6 +123,23 @@ test('a day is 15 to 25 picks, the shop is open from the start (no morning c pic
   }
 });
 
+test('day one schedules about a third of each workload, including on event days', () => {
+  const makeDay = (firstDay, event, delivery = 0) => Day.create({
+    world, World: W, Till, requests, firstDay, event, total: 21, delivery, rand: W.rng(8376)
+  });
+  for (const event of [null, ...Object.keys(Day.EVENTS)]) {
+    const full = makeDay(false, event);
+    const first = makeDay(true, event);
+    const count = (day, holding) => day.plan.filter(kind => (kind === 'c') === holding).length;
+    for (const holding of [false, true]) {
+      assert.equal(count(first, holding), Math.round(count(full, holding) / 3), event);
+    }
+    assert.equal(first.total, first.plan.length);
+  }
+  assert.equal(makeDay(true, null, 14).delivery.length, 5);
+  assert.equal(makeDay(true, 'failedDelivery', 14).delivery.length, 0);
+});
+
 test('mixed shifts include both one-product click and collects and bag collections', () => {
   for (const d of days) {
     const os = d.day.orders.filter((o) => o.counts);

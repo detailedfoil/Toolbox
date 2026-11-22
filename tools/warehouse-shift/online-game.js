@@ -79,7 +79,7 @@
       };
     }
     function snapshot() {
-      return { epoch: g.epoch(), offlineScanners: [...g.day().offlineScanners], missingScanners: [...g.missingScanners], bell: g.bellCount(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
+      return { epoch: g.epoch(), offlineScanners: [...g.day().offlineScanners], missingScanners: [...g.missingScanners], bell: g.bellCount(), bellTillTrained: g.bellTillTrained(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
     }
     function apply(s, reset) {
       const newDay = epoch !== s.epoch;
@@ -107,7 +107,7 @@
         else if (before.get(o.id) !== o.status || p.order() === o) p.changed(o);
       }
       p.render(); p.queueChanged();
-      if (!reset && s.bell !== lastBell) g.showBell();
+      if (!reset && s.bell !== lastBell) g.showBell(s.bellTillTrained);
       lastBell = s.bell;
       p.syncScanner(s.missingScanners.includes(p.id), s.offlineScanners.includes(p.id));
       if (newDay && started) g.announceDayEvent();
