@@ -1,7 +1,7 @@
 // Warehouse Shift: the day's work (tools/warehouse-shift/day.js). One pick list shared by everyone (detailedfoil, 19
 // Nov 2026): orders are A and four numbers, locations:items, then CK (customer waiting), c (for the holding area) or
 // nothing (bought at the till). A day is 15 to 25 picks, the first 3 to 6 of them c (several products, before the door
-// is unlocked); about 40% till or kiosk; one product click and collects come from the warehouse, several product ones
+// is unlocked); one product click and collects come from the warehouse, several product ones
 // from the holding area; customers are greeted before they say what they want; the door is unlocked to start and locked
 // to finish. At most 5 on the list and 3 customers in at once; whoever starts an order has it, with no backing out; Sam
 // takes customer picks first, then the next customer at the till, then c picks. Each day is simulated with Sam and a
@@ -40,7 +40,7 @@ function runDay(seed, opts = {}) {
     closing: () => { ev.closing = T; later(8, () => day.lock()); },
     over: () => { ev.over = T; }
   };
-  day = Day.create({ world, World: W, Till, requests, rand: rng, env, mode: opts.mode, total: opts.total });
+  day = Day.create({ world, World: W, Till, requests, rand: rng, env, mode: opts.mode, total: opts.total, digitalTier: opts.digitalTier });
   const choices = [];
   const crewEnv = {
     board: () => ({ orders: day.listLate(), queue: [], prio: ['cust', 'hold', 'delivery'], delivery: day.deliveryLeft().length, greet: day.ungreeted().filter((c) => T - ev.arrivedAt(c) > 10) }),
@@ -99,7 +99,7 @@ function runDay(seed, opts = {}) {
   return out;
 }
 
-const days = [14, 31, 43].map((s) => runDay(s));
+const days = [14, 31, 43].map((s) => runDay(s, { digitalTier: 3 }));
 const alone = runDay(5, { you: false, mode: 'pick' }); // Sam never serves a till customer, so on their own the day has click and collects only
 
 test('a day is 15 to 25 picks, the shop is open from the start (no morning c picks) and you lock the door to finish', () => {
@@ -123,16 +123,9 @@ test('a day is 15 to 25 picks, the shop is open from the start (no morning c pic
   }
 });
 
-test('the mix: about 45% of the customers want the till or kiosk (settled at the first hello), the rest one product click and collects and bag collections, both always there', () => {
-  let tillish = 0, all = 0, tillC = 0, allC = 0;
+test('mixed shifts include both one-product click and collects and bag collections', () => {
   for (const d of days) {
     const os = d.day.orders.filter((o) => o.counts);
-    const till = os.filter((o) => o.kind === 'till').length;
-    tillish += till; all += os.length;
-    const cs = d.day.customers.filter((c) => c.order || c.kind === 'till' || c.kind === 'kiosk');
-    const cshare = cs.filter((c) => c.kind === 'till' || c.kind === 'kiosk').length / cs.length;
-    assert.ok(cshare >= 0.2 && cshare <= 0.75, Math.round(100 * cshare) + '% of the customers wanted the till');
-    tillC += cs.filter((c) => c.kind === 'till' || c.kind === 'kiosk').length; allC += cs.length;
     const ck = os.filter((o) => o.kind === 'ck'), hold = os.filter((o) => o.kind === 'hold'), c = os.filter((o) => o.kind === 'c');
     assert.ok(ck.length >= 1 && hold.length >= 1, 'some of each: ' + ck.length + ' ck, ' + hold.length + ' from holding');
     // one product (any quantity) comes from the warehouse; several products wait in the holding area; c picks have several
@@ -140,8 +133,25 @@ test('the mix: about 45% of the customers want the till or kiosk (settled at the
     assert.ok(hold.every((o) => o.locs >= 2 && o.units >= o.locs), 'a bag has several products');
     assert.ok(c.every((o) => o.lines.length >= 2 && !o.cust), 'a c pick has more than one product and no customer');
   }
-  assert.ok(tillC / allC > 0.3 && tillC / allC < 0.6, 'around 45% of the walk-ins over the days: ' + Math.round(100 * tillC / allC));
   assert.ok(days.some((d) => d.day.total !== 20), 'the length changes from day to day');
+});
+
+test('Digital First tiers shift both the daily plan and greeted visits toward click and collect', () => {
+  const paysAtTill = kind => kind === 'till' || kind === 'kiosk';
+  for (const [i, percentage] of [20, 35, 50, 65, 80].entries()) {
+    const day = Day.create({ world, World: W, Till, requests, rand: W.rng(27), digitalTier: i + 1, total: 25 });
+    const visits = day.plan.filter(kind => kind !== 'c');
+    assert.equal(visits.filter(paysAtTill).length, Math.round(visits.length * (100 - percentage) / 100));
+    assert.ok(visits.includes('kiosk'));
+    let collections = 0;
+    for (let sample = 0; sample < 100; sample++) {
+      const c = day.send(visits[sample % visits.length]);
+      day.arrived(c);
+      day.greet(c, 'Sam');
+      if (!paysAtTill(c.kind)) collections++;
+    }
+    assert.ok(Math.abs(collections - percentage) < 12, 'tier ' + (i + 1) + ' produced ' + collections + '% collections');
+  }
 });
 
 test('a customer waits to be greeted: nothing is said until someone says hello, then they say what they want', () => {

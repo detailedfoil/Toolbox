@@ -13,10 +13,9 @@
    instead of the holding area); one whose order is already in the holding area gets it fetched from there (a CK line
    too, A and the number on its despatch note, but not one of the day's picks).
 
-   A day is 15 to 25 picks, 20 or so (detailedfoil, 19 Nov 2026). Before opening 3 to 6 of them are c picks (two or more different
-   products, no customer): pick them, put them in the holding area, and the shop opens by itself ("Doors open").
-   Around 40% (35 to 45) are till or kiosk orders, the rest an even-ish split of click and collect customers with one
-   product (picked from the warehouse) and customers who collect a bag already in the holding area (several products;
+   A day is 15 to 25 picks and starts with the shop open. Holding-area picks (c) arrive throughout the day.
+   Digital First sets the share of customers coming to order or pay at a till. The rest are split between
+   click and collect customers with one product (picked from the warehouse) and customers who collect a bag already in the holding area (several products;
    no warehouse walk, bags may have been there since before opening). A customer who walks up is greeted first (an
    input from you or Sam), then tells you what they're here for. When all 20 are done and nobody is waiting, the door
    is locked, and only then does the end of day screen come. The list stays steady: at most 5 at once, now and then
@@ -32,8 +31,14 @@
   var MAX_LIST = 5;        // on the pick list at once
   var MAX_IN = 3;          // customers in at once
   var MID_C = [4, 7];      // c picks that come in during the day (there are none before opening: detailedfoil, 20 Nov 2026)
-  var WALKIN_TILL = 0.45;    // the chance a customer turns out to want the till when somebody first says hello (detailedfoil, 20 Nov 2026)
-  var TILLS = [0.55, 0.65];  // of the customers after that, the share who order at the till or the kiosk
+  var DIGITAL_FIRST = [
+    { collection: 20, cost: 0 },
+    { collection: 35, cost: 100 },
+    { collection: 50, cost: 200 },
+    { collection: 65, cost: 350 },
+    { collection: 80, cost: 500 }
+  ];
+  var KIOSK_SHARE = 1 / 3; // of the customers who still need to pay
   // which kinds of pick come after the opening c picks (the scanner's Function menu can narrow it, for practice)
   var MODES = { mixed: ['ck', 'collect', 'till', 'kiosk'], pick: ['ck'], hold: ['collect'], till: ['till'], kiosk: ['kiosk'] };
   var EVENTS = {
@@ -62,7 +67,9 @@
     this.total = o.total || (15 + Math.floor(this.r() * 11)); // 15 to 25 picks (detailedfoil: it needn't be exactly 20)
     this.mode = MODES[o.mode] ? o.mode : 'mixed';
     this.event = this.mode === 'mixed' && EVENT_IDS.indexOf(o.event) >= 0 ? o.event : null;
-    this.walkinTill = o.walkinTill === undefined ? WALKIN_TILL : o.walkinTill;
+    var digital = DIGITAL_FIRST[o.digitalTier - 1] || DIGITAL_FIRST[0];
+    this.tillShare = (100 - digital.collection) / 100;
+    this.walkinTill = o.walkinTill === undefined ? this.tillShare : o.walkinTill;
     this.canTill = !!(this.requests && this.requests.need && this.requests.need.length);
     this.t = 0; this.nextId = 1; this.used = {};
     this.orders = []; this.customers = []; this.owners = []; this.log = [];
@@ -131,28 +138,25 @@
 
   /* ---------- the plan ---------- */
   function shuffle(a, r) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-  // after the opening c picks: 8 of the 20 (40%) are till or kiosk orders, the rest click and collect, split about evenly
-  // between one-product customers and bag collections, a little different each day
+  // Keep background holding-area picks separate from the customer mix.
   Day.prototype.fillPlan = function (initial) {
-    var self = this, from = Math.max(this.first, this.released), n = this.plan.length - from, rest, i;
+    var from = Math.max(this.first, this.released), n = this.plan.length - from, rest, i;
     if (initial && this.mode === 'mixed') {
-      // balanced so one person on their own spends about as long on each kind of job (detailedfoil, 20 Nov 2026: the
-      // till queue, customer picks, holding area picks and the delivery): 2 to 4 more c picks come in during the day,
-      // about half the rest are till or kiosk orders
       var nc = Math.min(n - 4, MID_C[0] + Math.floor(this.r() * (MID_C[1] - MID_C[0] + 1)));
       n -= nc;
-      var nt = Math.min(n - 2, Math.round((TILLS[0] + (TILLS[1] - TILLS[0]) * this.r()) * n)), tl = Math.max(1, Math.min(nt - 1, Math.round(nt / 2 + (this.r() - 0.5) * 2)));
-      var R = n - nt, C = Math.max(Math.min(1, R - 1), Math.min(R - 1, Math.round(R / 2 + (this.r() - 0.5) * 2)));
+      var nt = Math.max(0, Math.round(this.tillShare * n));
+      var kiosks = Math.max(Number(nt >= 2), Math.round(nt * KIOSK_SHARE));
+      var collections = n - nt, bags = Math.floor(collections / 2);
       rest = [];
       for (i = 0; i < nc; i++) rest.push('c');
-      for (i = 0; i < nt; i++) rest.push(i < tl ? 'till' : 'kiosk');
-      for (i = 0; i < R; i++) rest.push(i < C ? 'collect' : 'ck');
+      for (i = 0; i < nt; i++) rest.push(i < kiosks ? 'kiosk' : 'till');
+      for (i = 0; i < collections; i++) rest.push(i < bags ? 'collect' : 'ck');
       if (this.event) rest = this.eventPlan(rest, nc);
       shuffle(rest, this.r);
     } else {
       var kinds = MODES[this.mode];
       rest = [];
-      for (i = 0; i < n; i++) rest.push(this.pick(kinds));
+      for (i = 0; i < n; i++) rest.push(this.mode === 'mixed' ? this.walkInKind() : this.pick(kinds));
     }
     // never three the same in a row
     var prev = this.plan.slice(0, from);
@@ -161,7 +165,10 @@
       if (a === rest[i] && b === rest[i]) { for (var j = i + 1; j < rest.length; j++) if (rest[j] !== rest[i]) { var t = rest[i]; rest[i] = rest[j]; rest[j] = t; break; } }
     }
     for (i = 0; i < rest.length; i++) this.plan[from + i] = (rest[i] === 'till' && !this.canTill) ? 'kiosk' : rest[i];
-    void self;
+  };
+  Day.prototype.walkInKind = function () {
+    if (this.r() < this.tillShare) return this.r() < KIOSK_SHARE ? 'kiosk' : 'till';
+    return this.r() < 0.5 ? 'collect' : 'ck';
   };
   Day.prototype.eventPlan = function (plan, holdingPicks) {
     var customers = plan.slice(holdingPicks);
@@ -169,7 +176,7 @@
       plan = customers;
     } else if (this.event === 'sale') {
       var extra = Math.ceil(this.total * 0.4);
-      for (var i = 0; i < extra; i++) plan.push(this.pick(MODES.mixed));
+      for (var i = 0; i < extra; i++) plan.push(this.walkInKind());
     } else if (!this.tillsOpen()) {
       // Existing click & collect orders can still be picked and collected during either outage.
       var size = this.event === 'website' ? Math.ceil(customers.length * 0.7) : customers.length;
@@ -445,15 +452,14 @@
     c.surname = c.cust.surname;
     c.say = this.pick(HELLO[kind]);
   };
-  // what a walk-in turns out to want is settled when somebody first says hello: WALKIN_TILL of them want the till, the
-  // rest are click and collects (detailedfoil, 20 Nov 2026: so it can't be Sam who gets the till customers)
+  // The customer reveals what they need only after a greeting, using the branch's Digital First mix.
   Day.prototype.decide = function (c) {
     if (!this.tillsOpen() || this.mode !== 'mixed' || !this.canTill || !this.walkinTill) return;
     var want = this.r() < this.walkinTill, isTill = c.kind === 'till' || c.kind === 'kiosk';
     if (want) {
       if (isTill) return;
       this.freeCode(c);
-      this.tillCust(c, this.r() < 0.5 ? 'till' : 'kiosk');
+      this.tillCust(c, this.r() < KIOSK_SHARE ? 'kiosk' : 'till');
       return;
     }
     // a click and collect: about half of them are a bag from the holding area, half one product from the warehouse
@@ -681,7 +687,7 @@
   };
 
   function create(o) { var d = new Day(o); return d; }
-  var api = { create: create, Day: Day, DELIVERY: DELIVERY, TOTAL: TOTAL, MAX_LIST: MAX_LIST, MAX_IN: MAX_IN, MODES: MODES, EVENTS: EVENTS, rollEvent: rollEvent };
+  var api = { create: create, Day: Day, DELIVERY: DELIVERY, TOTAL: TOTAL, MAX_LIST: MAX_LIST, MAX_IN: MAX_IN, MODES: MODES, EVENTS: EVENTS, DIGITAL_FIRST: DIGITAL_FIRST, rollEvent: rollEvent };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftDay = api;
 })(typeof window !== 'undefined' ? window : this);

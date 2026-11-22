@@ -191,7 +191,9 @@
     };
     const reliabilityPrices = [125, 225, 350, 500];
     const reliabilityKey = 'ws-scanner-reliability';
-    let scannerTier = 1, jobSlots = 1;
+    const digitalTiers = Day.DIGITAL_FIRST;
+    const digitalKey = 'ws-digital-first';
+    let scannerTier = 1, jobSlots = 1, digitalTier = 1;
     function readSlots() {
       try {
         for (const [id, item] of Object.entries(kit)) {
@@ -199,6 +201,8 @@
         }
         const savedTier = Number(localStorage.getItem(reliabilityKey));
         if (Number.isInteger(savedTier) && savedTier > scannerTier && savedTier <= 5) scannerTier = savedTier;
+        const savedDigital = Number(localStorage.getItem(digitalKey));
+        if (Number.isInteger(savedDigital) && savedDigital > digitalTier && savedDigital <= digitalTiers.length) digitalTier = savedDigital;
         const n = Number(localStorage.getItem(slotKey));
         if (Number.isInteger(n) && n > jobSlots && n <= 4) jobSlots = n;
       } catch (e) { /* keep the session's training */ }
@@ -549,7 +553,7 @@
       const old = day;
       const event = mode === 0 ? Day.rollEvent(Math.random) : null;
       const shiftId = globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
-      day = Day.create({ world, World, Till, requests, shiftId, scannerTier, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null });
+      day = Day.create({ world, World, Till, requests, shiftId, scannerTier, digitalTier, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null });
       if (old?.offlineScanners) day.offlineScanners = new Set(old.offlineScanners);
       dayNo++; bellCust = null; bellCount = 0; nextBellCheck = 0;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
@@ -2393,7 +2397,8 @@
     const presetXP = 350;
     const kitSpend = () => Object.values(kit).reduce((sum, item) => sum + (item.owned ? item.price : 0), 0);
     const spentOnReliability = () => reliabilityPrices.slice(0, scannerTier - 1).reduce((sum, cost) => sum + cost, 0);
-    const availableXP = () => careerXP() - spentOnReliability() - kitSpend() - slotPrices.slice(0, jobSlots - 1).reduce((sum, price) => sum + price, 0);
+    const spentOnDigital = () => digitalTiers.slice(0, digitalTier).reduce((sum, tier) => sum + tier.cost, 0);
+    const availableXP = () => careerXP() - spentOnDigital() - spentOnReliability() - kitSpend() - slotPrices.slice(0, jobSlots - 1).reduce((sum, price) => sum + price, 0);
     const trainingStatus = () => 'Sam · ' + jobSlots + '/4 job slots · ' + availableXP() + ' XP available';
     function renderPurchase(btn) {
       const price = slotPrices[jobSlots - 1];
@@ -2414,6 +2419,16 @@
         btn.previousElementSibling.textContent = 'Scanner reliability · Tier ' + scannerTier + '/5 · ' + (6 - scannerTier) +
           (scannerTier === 5 ? ' disconnect' : ' disconnects') + ' per shift';
       }
+      for (const btn of document.querySelectorAll('[data-digital]')) {
+        const current = digitalTiers[digitalTier - 1], next = digitalTiers[digitalTier];
+        btn.dataset.digital = digitalTier;
+        btn.disabled = !next || availableXP() < next.cost;
+        btn.textContent = next
+          ? 'Tier ' + (digitalTier + 1) + ' · ' + next.collection + '% click & collect · ' + next.cost + ' XP'
+          : 'Fully upgraded';
+        btn.previousElementSibling.textContent = 'Tier ' + digitalTier + '/' + digitalTiers.length + ' · ' +
+          current.collection + '% click & collect';
+      }
       for (const btn of document.querySelectorAll('[data-kit]')) {
         const item = kit[btn.dataset.kit];
         btn.disabled = item.owned || availableXP() < item.price;
@@ -2429,6 +2444,8 @@
           key = slotKey; value = String(++jobSlots);
         } else if (id === 'reliability' && expected === scannerTier && scannerTier < 5 && availableXP() >= reliabilityPrices[scannerTier - 1]) {
           key = reliabilityKey; value = String(++scannerTier);
+        } else if (id === 'digital' && expected === digitalTier && digitalTiers[digitalTier] && availableXP() >= digitalTiers[digitalTier].cost) {
+          key = digitalKey; value = String(++digitalTier);
         } else if (kit[id] && !kit[id].owned && availableXP() >= kit[id].price) {
           kit[id].owned = true; key = 'ws-kit-' + id; value = '1';
         }
@@ -2442,9 +2459,10 @@
     function buySlot(expected) { return purchase('slot', expected); }
     for (const btn of [$('trainBtn'), $('dayTrain')]) btn.onclick = () => buySlot(Number(btn.dataset.slots));
     for (const btn of document.querySelectorAll('[data-reliability]')) btn.onclick = () => purchase('reliability', Number(btn.dataset.reliability));
+    for (const btn of document.querySelectorAll('[data-digital]')) btn.onclick = () => purchase('digital', Number(btn.dataset.digital));
     for (const btn of document.querySelectorAll('[data-kit]')) btn.onclick = () => purchase(btn.dataset.kit);
     window.addEventListener('storage', e => {
-      if (e.key === slotKey || e.key === reliabilityKey || e.key?.startsWith('ws-kit-')) readSlots();
+      if (e.key === slotKey || e.key === reliabilityKey || e.key === digitalKey || e.key?.startsWith('ws-kit-')) readSlots();
       else if (e.key?.startsWith(receiptPrefix) && e.newValue) career.set(e.key, Number(e.newValue) || 0);
       else return;
       careerView();

@@ -286,7 +286,7 @@
       shop({ kind: 'gondola', x0: 9.65, y0: 17.6, x1: 10.25, y1: 20.42, z1: 1.8, along: 'y', edges: [17.6, 18.41, 19.41, 20.42], open: 'E' }),
       // ONE row of shelves in the middle of the floor (detailedfoil, 21 Nov 2026): the queue to be served stands on one side of
       // it, customers waiting for orders they've paid for on the other, so it's easy to see which is which
-      shop({ kind: 'gondola', x0: 12.65, y0: 17.0, x1: 13.75, y1: 20.4, z1: 1.5, along: 'y', edges: [17.0, 18.13, 19.27, 20.4], open: 'EW' }),
+      shop({ kind: 'gondola', x0: 12.65, y0: 17.0, x1: 13.75, y1: 20.4, z1: 1.5, along: 'y', edges: [17.0, 18.13, 19.27, 20.4], open: 'EW', kiosks: true }),
       shop({ kind: 'gondola', x0: 17.05, y0: 17.6, x1: 17.6, y1: 20.62, z1: 1.8, along: 'y', edges: [17.6, 18.6, 19.6, 20.62], open: 'W' }),
       // staff room and toilets
       staff({ kind: 'table', x0: 0.3, y0: 15.2, x1: 1.0, y1: 16.4, z1: 0.75 }),
