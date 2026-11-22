@@ -36,7 +36,7 @@
       this.tills = tills;
       this.request = request;
       this.hold = {}; this.busy = {}; this.orders = []; this.customers = []; this.delivery = []; this.t = 0;
-      for (const name of ['list', 'queue', 'label', 'freeSpots', 'ungreeted', 'canGreet', 'deliveryLeft', 'summary', 'tillsOpen', 'clockMinute']) this[name] = Day.prototype[name];
+      for (const name of ['list', 'queue', 'label', 'freeSpots', 'ungreeted', 'canGreet', 'deliveryLeft', 'summary', 'tillsOpen', 'clockMinute', 'atScannerDock']) this[name] = Day.prototype[name];
     }
     applyStock(rows) {
       const { world, World } = this;

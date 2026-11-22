@@ -516,6 +516,7 @@ explain changes in plain English and say what they'll see.
       allows under a slim CAM 01 / date / REC line (cctv.js `u(x)` / `v(y)`, `map.k`). The screen is taller (z 0.78 to 2.4, the clock
       at 2.46 to 2.82) so the nearly square shop fills more of it.
     - Unused kick stools have half-width walking collision bounds. Sam parks the tote trolley across an occupied aisle entrance. Each Fusion customer has one 40% chance of a scanner mix-up for the cashier, reduced to 20% by a scanner name label. Walk up to Sam to recover it.
+    - The office scanner dock sits beside the manager PC. Five fleet reliability tiers allow 5/4/3/2/1 faults over a shift, with the host's tier used online. Swap a failed handset at the dock to resume its existing task. Sam’s accidental scanner mix-up is separate.
     - Lock-up scores the branch out of 1,000 and pays team XP once per contributing device. Work completed with till cover earns 5% extra XP. The host’s Sam training sets the active job limit in co-op. Personal kit includes named scanners and kickstool shoes that use the existing Step control.
     - Online co-op: choose Online co-op from the normal start screen in a browser or the installed game.
       The host shares a six-character code with up to three guests. Solo and local split-screen use the same page.

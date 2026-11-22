@@ -365,6 +365,24 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const picker = guests.find(g => g.s.state() === 'scan');
   assert.equal(guests.filter(g => g.s.state() === 'scan').length, 1);
   const s = picker.s, local = s.order();
+  // Force the next progress checkpoint onto the connected picker while they hold a real order.
+  day.faultSchedule = [0];
+  const holders = day.env.scannerHolders;
+  day.env.scannerHolders = () => [picker.s.players[0].id];
+  day.checkScannerFault();
+  day.env.scannerHolders = holders;
+  await until(() => !s.players[0].D.scannerFault.hidden, 'guest scanner offline');
+  assert.ok(host.s.players[0].D.scannerFault.hidden);
+  assert.ok(!await s.day().request('swapScanner', {}), 'the counter is too far from the office');
+  assert.ok(!await s.day().line(local, 0));
+  const dock = s.world.scannerDock;
+  Object.assign(s.me, { x: dock.x, y: dock.y - 0.85, yaw: Math.PI, pitch: Math.atan2(dock.z - s.me.eye, 0.85) });
+  s.applyCam();
+  assert.match(s.players[0].D.tillBtn.textContent, /Swap scanner/);
+  s.players[0].D.tillBtn.dispatchEvent(new picker.w.Event('pointerdown', { bubbles: true }));
+  await until(() => s.players[0].D.scannerFault.hidden, 'replacement to restore the guest scanner');
+  assert.equal(s.order(), local);
+
   for (const ln of local.lines) {
     const l = ln.loc;
     s.me.x = (l.x0 + l.x1) / 2; s.me.y = l.face.front + l.face.out * 0.65;
@@ -579,4 +597,34 @@ test('kickstool shoes and a named scanner spend earned XP once and work on a pho
   assert.equal(p.me.step, true); assert.ok(s.world.stools.every(stool => !stool.by));
   p.D.stepBtn.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
   assert.equal(p.me.step, false);
+});
+
+test('a phone buys scanner reliability, swaps at the office and keeps its delivery carton', async t => {
+  const initial = await game(t, { phone: true, online: false, storage: { 'ws-shift-xp/prior': '350' } });
+  const upgrade = initial.w.document.querySelector('[data-reliability]');
+  upgrade.click(); upgrade.click();
+  assert.match(upgrade.previousElementSibling.textContent, /Tier 3\/5 · 3 disconnects/);
+  assert.ok(upgrade.disabled);
+  const { s, $, w } = await game(t, { phone: true, online: false, storage: Object.fromEntries(Object.entries(initial.w.localStorage)) });
+  $('startBtn').click();
+  const day = s.day(), p = s.players[0];
+  assert.equal(day.faultSchedule.length, 3);
+  p.page(-1); s.enter();
+  const first = day.deliveryLeft()[0], cage = s.world.goodsin[first.src].obj;
+  Object.assign(s.me, { x: (cage.x0 + cage.x1) / 2, y: cage.y1 + 0.35, yaw: 0 });
+  s.me.pitch = Math.atan2(cage.z1 / 2 - s.me.eye, s.me.y - (cage.y0 + cage.y1) / 2);
+  s.applyCam(); s.cam.updateMatrixWorld(); s.scanAt(...p.centre());
+  const held = day.delivery.find(d => d.by === 'p1');
+  assert.ok(held);
+  day.faultSchedule = [0];
+  const samCarton = day.paTake(null, 'Sam');
+  day.paPut(samCarton, 'Sam');
+  assert.ok(!p.D.scannerFault.hidden && p.D.scScreen.hidden);
+  s.enter(); assert.equal(s.state(), 'pato');
+  const q = s.world.scannerDock;
+  Object.assign(s.me, { x: q.x, y: q.y - 0.85, yaw: Math.PI, pitch: Math.atan2(q.z - s.me.eye, 0.85) });
+  s.applyCam(); assert.match(p.D.tillBtn.textContent, /Swap scanner/);
+  p.D.tillBtn.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
+  assert.ok(p.D.scannerFault.hidden && !p.D.scScreen.hidden);
+  assert.equal(s.state(), 'pato'); assert.equal(held.by, 'p1');
 });

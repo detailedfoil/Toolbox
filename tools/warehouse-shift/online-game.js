@@ -51,6 +51,7 @@
       locks.delete(who); progress.delete(who); peers.delete(slot);
       if (freshSeat) {
         g.missingScanners.delete(who);
+        g.day()?.offlineScanners.delete(who);
         g.day()?.contributors.delete(who);
       }
       const stool = world.stools.find(s => s.by === who);
@@ -78,7 +79,7 @@
       };
     }
     function snapshot() {
-      return { epoch: g.epoch(), missingScanners: [...g.missingScanners], bell: g.bellCount(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
+      return { epoch: g.epoch(), offlineScanners: [...g.day().offlineScanners], missingScanners: [...g.missingScanners], bell: g.bellCount(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
     }
     function apply(s, reset) {
       const newDay = epoch !== s.epoch;
@@ -108,7 +109,7 @@
       p.render(); p.queueChanged();
       if (!reset && s.bell !== lastBell) g.showBell();
       lastBell = s.bell;
-      p.syncScanner(s.missingScanners.includes(p.id));
+      p.syncScanner(s.missingScanners.includes(p.id), s.offlineScanners.includes(p.id));
       if (newDay && started) g.announceDayEvent();
       if (!over && replica.over) g.dayOver();
       g.dirty();
@@ -222,7 +223,8 @@
     }
     function action(slot, op, args) {
       const who = 'p' + slot, pos = peers.get(slot), day = g.day(), till = () => tills[locks.get(who)];
-      if (g.missingScanners.has(who) && ['take', 'line', 'fetch', 'putAway', 'handOver', 'paTake', 'paPut'].includes(op)) return false;
+      if (op === 'swapScanner') return day.swapScanner(who, pos);
+      if ((day.offlineScanners.has(who) || g.missingScanners.has(who)) && ['take', 'line', 'fetch', 'putAway', 'handOver', 'paTake', 'paPut'].includes(op)) return false;
       if (op === 'takeStool' || op === 'dropStool') {
         const stool = world.stools.find(s => s.id === args.id);
         if (!stool) return false;
@@ -313,6 +315,7 @@
       frozen: () => !!net && (!net.ready || net.paused), panel: () => !panel.hidden,
       open: t => guest() ? net.request('tillOpen', { till: tills.indexOf(t) }) : open(p.id, tills.indexOf(t), p.me),
       close: () => guest() ? net.request('tillClose', {}) : locks.delete(p.id),
+      swapScanner: () => net.request('swapScanner', {}),
       stool: (op, id) => net.request(op, { id }),
       call: () => net.request('call', {}), bell: () => net.request('bell', {}), tick: now => net?.tick(now)
     };

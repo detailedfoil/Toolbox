@@ -189,12 +189,16 @@
       shoes: { title: 'Kickstool shoes', price: 350, owned: false },
       label: { title: 'Scanner name label', price: 150, owned: false }
     };
-    let jobSlots = 1;
+    const reliabilityPrices = [125, 225, 350, 500];
+    const reliabilityKey = 'ws-scanner-reliability';
+    let scannerTier = 1, jobSlots = 1;
     function readSlots() {
       try {
         for (const [id, item] of Object.entries(kit)) {
           if (localStorage.getItem('ws-kit-' + id) === '1') item.owned = true;
         }
+        const savedTier = Number(localStorage.getItem(reliabilityKey));
+        if (Number.isInteger(savedTier) && savedTier > scannerTier && savedTier <= 5) scannerTier = savedTier;
         const n = Number(localStorage.getItem(slotKey));
         if (Number.isInteger(n) && n > jobSlots && n <= 4) jobSlots = n;
       } catch (e) { /* keep the session's training */ }
@@ -520,6 +524,12 @@
       return staff;
     }
     const dayEnv = {
+      scannerHolders() {
+        const ids = players.map(p => p.id);
+        if (online) for (const slot of online.peers.keys()) ids.push('p' + slot);
+        return ids.filter(id => !missingScanners.has(id));
+      },
+      scannerFault(who) { players.find(p => p.id === who)?.syncScanner(false, true); },
       tillCover,
       listed: (o) => { if (online?.room()) for (const l of o.lines) online.trackStock(l.item); for (const p of players) p.listed(o); },
       changed: (o) => { for (const p of players) p.changed(o); tidyScreens(); },
@@ -539,7 +549,8 @@
       const old = day;
       const event = mode === 0 ? Day.rollEvent(Math.random) : null;
       const shiftId = globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
-      day = Day.create({ world, World, Till, requests, shiftId, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null });
+      day = Day.create({ world, World, Till, requests, shiftId, scannerTier, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null });
+      if (old?.offlineScanners) day.offlineScanners = new Set(old.offlineScanners);
       dayNo++; bellCust = null; bellCount = 0; nextBellCheck = 0;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
       S.delivery.set(day.delivery);
@@ -645,7 +656,7 @@
     try { samOff = localStorage.getItem('ws-sam') === 'off'; } catch (e) { /* fine */ }
     const missingScanners = new Set();
     function checkScannerMixup(c, who) {
-      if (!crew.length || missingScanners.has(who)) return;
+      if (!crew.length || missingScanners.has(who) || day.offlineScanners.has(who)) return;
       const local = players.some(p => p.id === who);
       const labelled = local ? kit.label.owned : online?.peers.get(Number(who.slice(1)))?.label;
       if (!day.scannerMixup(c, who, labelled)) return;
@@ -671,7 +682,7 @@
       if (!b) return;
       if (day) { if (online?.room()) online.releaseWork('Sam'); else day.release('Sam'); }
       crew.splice(crew.indexOf(b), 1);
-      missingScanners.clear(); for (const p of players) p.syncScanner(false);
+      missingScanners.clear(); for (const p of players) p.syncScanner(false, day?.offlineScanners.has(p.id));
       speeches.delete(b);
       b.fig.group.visible = false; b.fig.trolley.group.visible = false;
       samSaved = b; samOff = true; dirty = true;
@@ -1025,14 +1036,18 @@
       function banner(title, text, ms, kind) { D.bannerTitle.textContent = title; D.bannerText.textContent = text || ''; D.banner.className = kind === 'bell' ? 'ws-banner show bell' : 'ws-banner show'; clearTimeout(bannerT); bannerT = setTimeout(() => { D.banner.className = 'ws-banner'; }, ms || 1800); }
       P.toast = toast;
       P.scannerMissing = false;
-      P.syncScanner = missing => {
-        if (P.scannerMissing === missing) return;
-        P.scannerMissing = missing;
-        D.scanner.hidden = missing || !active;
+      P.scannerFault = false;
+      P.syncScanner = (taken, offline = false) => {
+        const missing = taken || offline, wasOffline = P.scannerFault;
+        if (P.scannerMissing === missing && wasOffline === offline) return;
+        P.scannerMissing = missing; P.scannerFault = offline;
+        D.scannerFault.hidden = !offline; D.scScreen.hidden = offline;
+        D.scanner.hidden = taken || !active;
         if (missing) {
           cancelBlueAction(); D.scMenu.hidden = true; hint.until = 0;
+          if (offline) { banner('Scanner disconnected', 'Swap it at the charging dock in the office.', 5500, 'bell'); return; }
           banner('Sam has your scanner', 'Find Sam to get it back.', 5500, 'bell');
-        } else banner('Scanner returned', 'Your scanner is ready to use.', 2500);
+        } else banner(wasOffline ? 'Replacement scanner ready' : 'Scanner returned', 'Your scanner is ready to use.', 2500);
       };
 
       /* ---------- the list: choosing an order ---------- */
@@ -1557,7 +1572,7 @@
       /* ---------- the till ---------- */
       let nearTill = null;
       P.tillCust = null;
-      let greetC = null, doorOn = null, bellOn = false, pcOn = false, stoolOn = null, aimedBox = null;
+      let dockOn = false, greetC = null, doorOn = null, bellOn = false, pcOn = false, stoolOn = null, aimedBox = null;
       // what's in the middle of your view that you could use: a till, a customer to greet, the door, the service bell
       // (detailedfoil, 20 Nov 2026: "easy to accidentally do stuff around tills": only what you're looking at, with an outline)
       function aimAt(x, y, z) {
@@ -1571,7 +1586,7 @@
       }
       function checkTill() { // the thing you're looking at: a till behind the counter (the one by the gap is Sam's), the door, a customer to greet, the bell
         if (till && till.isOpen()) return; // at a till: keep it
-        let best = null, g = null, dr = null, br = false, pcx = false, st = null, box = null, bestAng = 9;
+        let best = null, g = null, dr = null, br = false, pcx = false, st = null, dock = false, box = null, bestAng = 9;
         const behind = me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75;
         const take = (a, lim, fn, b) => { if (a.ang < lim && a.ang < bestAng) { bestAng = a.ang; best = null; g = null; dr = null; br = false; pcx = false; st = null; fn(); box = b; } };
         if (active) {
@@ -1606,23 +1621,35 @@
               if (a.d < 2.0) take(a, 0.3, () => { st = s; }, { x: s.x, y: s.y, z0: 0, z1: 0.72, w: 0.68, d: 0.68 });
             }
           }
+          if (P.scannerFault && day?.atScannerDock(me)) {
+            const q = world.scannerDock, a = aimAt(q.x, q.y, q.z);
+            if (a.ang < 0.48) {
+              dock = true;
+              box = { x: q.x, y: q.y, z0: q.z - 0.13, z1: q.z + 0.12, w: 0.68, d: 0.18 };
+            }
+          }
           { // the manager's PC in the office
             const q = world.pc, a = aimAt(q.x, q.y, 1.05);
-            if (!guest() && a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
+            if (!dock && !guest() && a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
           }
         }
         aimedBox = box;
-        const key = (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '') + (st ? 's' + st.id : '');
-        const old = (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '') + (stoolOn ? 's' + stoolOn.id : '');
-        nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx; stoolOn = st;
+        const key = (dock ? 'dock' : '') + (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '') + (st ? 's' + st.id : '');
+        const old = (dockOn ? 'dock' : '') + (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '') + (stoolOn ? 's' + stoolOn.id : '');
+        dockOn = dock; nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx; stoolOn = st;
         if (key === old) return;
         dirty = true;
-        D.tillBtn.hidden = !(nearTill || greetC || doorOn || bellOn || pcOn || stoolOn) || !active;
-        D.tillBtn.firstChild.nodeValue = doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : pcOn ? 'Use PC' : stoolOn ? 'Take stool' : 'Ring bell';
+        D.tillBtn.hidden = !(dockOn || nearTill || greetC || doorOn || bellOn || pcOn || stoolOn) || !active;
+        D.tillBtn.firstChild.nodeValue = dockOn ? 'Swap scanner' : doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : pcOn ? 'Use PC' : stoolOn ? 'Take stool' : 'Ring bell';
         renderScanner();
       }
       // the button, or Scan: lock the door, say hello to the customer, or open the till
       function useAction() {
+        if (dockOn && P.scannerFault) {
+          if (guest()) remote(() => online.swapScanner());
+          else if (day.swapScanner(P.id, me)) P.syncScanner(false);
+          checkTill(); return true;
+        }
         if (doorOn && day) {
           if (guest()) { remote(() => day.lock()); return true; }
           const ok = day.lock();
@@ -2131,7 +2158,7 @@
       };
       P.afterRender = (now) => { placeSay(); placeBubs(now); };
       P.start = () => { if (state === 'idle') state = day && day.over ? 'end' : 'list'; renderScanner(); };
-      P.show = () => { D.scanner.hidden = P.scannerMissing; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; stepBtnSync(); };
+      P.show = () => { D.scanner.hidden = P.scannerMissing && !P.scannerFault; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; stepBtnSync(); };
       // things the controls and the tests use
       Object.assign(P, { banner, scanAt, enter, back, page, digit, useHint, toggleSquat, openTill, closeTill, countOne, confirmQty, handOver, hitAt, holdHit, scanHold, scanPut, tapRow,
         state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
@@ -2365,7 +2392,8 @@
     const careerXP = () => Array.from(career.values()).reduce((a, b) => a + b, 0);
     const presetXP = 350;
     const kitSpend = () => Object.values(kit).reduce((sum, item) => sum + (item.owned ? item.price : 0), 0);
-    const availableXP = () => careerXP() - kitSpend() - slotPrices.slice(0, jobSlots - 1).reduce((sum, price) => sum + price, 0);
+    const spentOnReliability = () => reliabilityPrices.slice(0, scannerTier - 1).reduce((sum, cost) => sum + cost, 0);
+    const availableXP = () => careerXP() - spentOnReliability() - kitSpend() - slotPrices.slice(0, jobSlots - 1).reduce((sum, price) => sum + price, 0);
     const trainingStatus = () => 'Sam · ' + jobSlots + '/4 job slots · ' + availableXP() + ' XP available';
     function renderPurchase(btn) {
       const price = slotPrices[jobSlots - 1];
@@ -2378,6 +2406,14 @@
       $('careerXP').textContent = careerXP() + ' career XP · ' + trainingStatus();
       $('dayTraining').textContent = trainingStatus();
       renderPurchase($('trainBtn')); renderPurchase($('dayTrain'));
+      for (const btn of document.querySelectorAll('[data-reliability]')) {
+        const cost = reliabilityPrices[scannerTier - 1];
+        btn.dataset.reliability = scannerTier;
+        btn.disabled = !cost || availableXP() < cost;
+        btn.textContent = cost ? 'Upgrade to tier ' + (scannerTier + 1) + ' · ' + cost + ' XP' : 'Fully upgraded';
+        btn.previousElementSibling.textContent = 'Scanner reliability · Tier ' + scannerTier + '/5 · ' + (6 - scannerTier) +
+          (scannerTier === 5 ? ' disconnect' : ' disconnects') + ' per shift';
+      }
       for (const btn of document.querySelectorAll('[data-kit]')) {
         const item = kit[btn.dataset.kit];
         btn.disabled = item.owned || availableXP() < item.price;
@@ -2391,6 +2427,8 @@
         let key, value;
         if (id === 'slot' && expected === jobSlots && jobSlots < 4 && availableXP() >= slotPrices[jobSlots - 1]) {
           key = slotKey; value = String(++jobSlots);
+        } else if (id === 'reliability' && expected === scannerTier && scannerTier < 5 && availableXP() >= reliabilityPrices[scannerTier - 1]) {
+          key = reliabilityKey; value = String(++scannerTier);
         } else if (kit[id] && !kit[id].owned && availableXP() >= kit[id].price) {
           kit[id].owned = true; key = 'ws-kit-' + id; value = '1';
         }
@@ -2403,9 +2441,10 @@
     }
     function buySlot(expected) { return purchase('slot', expected); }
     for (const btn of [$('trainBtn'), $('dayTrain')]) btn.onclick = () => buySlot(Number(btn.dataset.slots));
+    for (const btn of document.querySelectorAll('[data-reliability]')) btn.onclick = () => purchase('reliability', Number(btn.dataset.reliability));
     for (const btn of document.querySelectorAll('[data-kit]')) btn.onclick = () => purchase(btn.dataset.kit);
     window.addEventListener('storage', e => {
-      if (e.key === slotKey || e.key?.startsWith('ws-kit-')) readSlots();
+      if (e.key === slotKey || e.key === reliabilityKey || e.key?.startsWith('ws-kit-')) readSlots();
       else if (e.key?.startsWith(receiptPrefix) && e.newValue) career.set(e.key, Number(e.newValue) || 0);
       else return;
       careerView();
