@@ -14,7 +14,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=15c4a81a86">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=7cd305c525">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=b66e39ba67">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -122,7 +122,8 @@
       <p class="ws-small" id="careerXP"></p>
       <label class="ws-name">Name on your badge <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Trainee" enterkeyhint="done"></label>
       <div class="ws-row">
-        <button class="ws-go" id="startBtn" type="button">Start shift</button>
+        <button class="ws-go" id="startBtn" type="button">Continue</button>
+        <button class="ws-alt" id="newGameBtn" type="button">New game</button>
         <button class="ws-alt" id="twoBtn" type="button" hidden>Two players</button>
         <button class="ws-alt" id="onlineBtn" type="button" hidden>Online co-op</button>
         <button class="ws-alt" id="howBtn" type="button">How to play</button>
@@ -134,6 +135,16 @@
       <p class="ws-small">A made-up warehouse with the store's 10,999 nailed products. Play with your phone sideways or upright, and turn it whenever you like.</p>
     </div>
   </div>
+
+  <dialog class="ws-card ws-reset-dialog" id="newGameDialog" aria-labelledby="newGameTitle" aria-describedby="newGameWarning">
+    <h1 id="newGameTitle">Start a new game?</h1>
+    <p id="newGameWarning">This will delete all progress and start completely fresh.</p>
+    <div class="ws-row">
+      <button class="ws-go" id="confirmNewGame" type="button">Continue</button>
+      <button class="ws-alt" id="backNewGame" type="button" autofocus>Back</button>
+    </div>
+    <p class="ws-small" id="newGameError" role="status" hidden></p>
+  </dialog>
 
   <section class="ws-cover" id="onlineCover" hidden aria-labelledby="roomTitle">
     <div class="ws-card">
@@ -280,6 +291,6 @@
 <script src="warehouse-shift/online.js?v=cdcf8996c8"></script>
 <script src="warehouse-shift/online-game.js?v=6c07607ded"></script>
 <script src="warehouse-shift/playtest.js?v=223d2eb3db"></script>
-<script src="warehouse-shift/game.js?v=7a1222c94a"></script>
+<script src="warehouse-shift/game.js?v=f491039c72"></script>
 </body>
 </html>
