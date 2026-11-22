@@ -124,27 +124,29 @@ def phone_host_reconnect(browser, errors):
     guest.locator("#roomCode").fill(code)
     guest.locator("#joinRoom").click()
     guest.wait_for_function("!roomBtn.hidden && roomBtn.textContent.includes('2/4')")
-    guest.evaluate("""() => {
-      const s = __shift, g = s.world.goodsin[s.day().deliveryLeft()[0].src], o = g.obj;
-      Object.assign(s.me, g.stand);
-      const x = (o.x0 + o.x1) / 2, y = (o.y0 + o.y1) / 2;
-      s.me.yaw = Math.atan2(s.me.x - x, s.me.y - y);
-      s.me.pitch = Math.atan2(o.z1 / 2 - s.me.eye, Math.hypot(x - s.me.x, y - s.me.y));
-      s.applyCam(); s.cam.updateMatrixWorld(); s.page(-1); s.enter(); s.scanAt(...s.players[0].centre());
+    # Claim a carton through the guest's network action at goods in. Select a
+    # source with a low top carton so this reconnect test doesn't need a stool.
+    carton = guest.evaluate("""async () => {
+      const s = __shift, day = s.day();
+      for (const g of s.world.goodsin) {
+        const cartons = day.deliveryLeft(g.i).sort((a,b) => g.slots[b.slot].z0 - g.slots[a.slot].z0);
+        if (!cartons.length || cartons[0].loc.z0 > 1.2) continue;
+        Object.assign(s.me, g.stand); s.applyCam();
+        const held = await day.paTake(g.i);
+        if (held) return held.id;
+      }
+      throw Error('No accessible low carton at goods in');
     }""")
-    guest.wait_for_function("__shift.state() === 'pato'")
-    carton = guest.evaluate("__shift.day().delivery.find(d => d.by === 'p2').id")
     host.evaluate("hostSocket.close()")
     guest.wait_for_function("!onlineCover.hidden && roomMessage.textContent.includes('reconnect')", polling=50)
     guest.wait_for_function("onlineCover.hidden && roomBtn.textContent.includes('2/4')")
-    assert guest.evaluate("__shift.state()") == "pato"
-    guest.evaluate("""id => {
-      const s = __shift, l = s.day().delivery.find(d => d.id === id && d.by === 'p2').loc;
+    assert guest.evaluate("""async id => {
+      const s = __shift, day = s.day(), carton = day.delivery.find(d => d.id === id && d.by === 'p2');
+      if (!carton) return false;
+      const l = carton.loc;
       s.me.x = (l.x0 + l.x1) / 2; s.me.y = l.face.front + l.face.out * 0.65;
-      s.me.squat = l.z0 < 0.45; s.me.eye = s.me.squat ? 0.95 : 1.62;
-      s.me.yaw = l.face.out > 0 ? 0 : Math.PI;
-      s.me.pitch = Math.atan2((l.z0 + l.z1) / 2 - s.me.eye, 0.65);
-      s.applyCam(); s.cam.updateMatrixWorld(); s.scanAt(...s.players[0].centre()); s.enter();
+      s.me.squat = l.z0 < 0.45; s.applyCam();
+      return await day.paPut(carton);
     }""", carton)
     host.wait_for_function("id => __shift.day().delivery.find(d => d.id === id)?.doneBy === 'p2'", arg=carton)
     minute = host.evaluate("__shift.day().clockMinute()")
