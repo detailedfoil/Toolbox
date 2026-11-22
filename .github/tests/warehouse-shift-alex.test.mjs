@@ -139,7 +139,7 @@ test('a shift on their own: Sam picks what is left on the list and puts c picks 
 
 test('the holding area: Sam fetches the bag on the line they took, kept for that customer', () => {
   let takes = [];
-  for (const seed of [77, 78, 79]) takes = takes.concat(shift(seed, { minutes: 25 }).events.filter((e) => e.take));
+  for (const seed of [77, 78, 79]) takes = takes.concat(shift(seed, { minutes: 25, mode: 'hold' }).events.filter((e) => e.take));
   assert.ok(takes.length >= 2, takes.length + ' bags fetched');
   for (const t of takes) assert.ok(t.kept, t.take + ' was kept for the customer whose line Sam took');
 });
@@ -186,7 +186,7 @@ test('Sam walks round you: standing on their spot, in the centre aisle, or walki
     }; })()
   };
   for (const [name, fn] of Object.entries(cases)) {
-    const s = shift(8, { minutes: 15, you: fn });
+    const s = shift(8, { minutes: 15, mode: 'pick', you: fn });
     assert.ok(s.done.length >= 1, name + ': ' + s.done.length + ' jobs done');
     assert.ok(s.closestYou >= 2 * YOU - 0.005, name + ': came within ' + s.closestYou.toFixed(3) + ' m of you');
   }
