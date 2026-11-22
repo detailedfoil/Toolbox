@@ -436,8 +436,8 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const customer = day.send('kiosk'); customer.pay = { how: 'cash', say: 'Cash, please.' };
   day.arrived(customer);
   await until(() => customer.by === 'p4', 'cashier to claim the customer');
-  const rand = day.r; day.r = () => 0.05;
-  host.s.tick(6); day.r = rand;
+  day.scannerMixups.labelled.limit = day.scannerMixups.labelled.until = 1;
+  host.s.tick(6);
   await until(() => guests[2].$('scanner').hidden, 'guest cashier to lose their scanner');
   assert.ok([host, ...guests.slice(0, 2)].every(g => !g.$('scanner').hidden));
   await until(() => cashier.till.stage() === 'details', 'customer to walk to the guest till');
@@ -474,6 +474,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   cashier.me.x = host.s.crew[0].x; cashier.me.y = host.s.crew[0].y;
   cashier.applyCam();
   await until(() => !guests[2].$('scanner').hidden, 'guest to collect their scanner from Sam');
+  assert.ok(host.s.crew[0].log.some(line => /name/.test(line.text)), 'Sam notices the name on the guest scanner');
   // Reserve the fetched bag's OC slot until the tote actually crosses the counter.
   day.mode = 'hold';
   const collect = day.send('collect', { code, surname: day.hold[code].surname });

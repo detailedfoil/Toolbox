@@ -181,19 +181,36 @@ test('the host scores each completed human action once and sends the same result
   assert.equal(d.lock(), false);
 });
 
-test('Fusion checks scanner mix-ups once and halves the chance for a named scanner', () => {
-  const day = fresh();
-  for (const [labelled, roll, expected] of [[false, 0.399, true], [false, 0.4, false], [true, 0.199, true], [true, 0.2, false]]) {
-    const c = { state: 'serving', by: 'p2', ready: false };
-    let rolls = 0;
-    day.r = () => { rolls++; return roll; };
-    assert.equal(day.scannerMixup(c, 'p2', labelled), false);
-    c.ready = true;
-    assert.equal(day.scannerMixup(c, 'p1', labelled), false);
-    assert.equal(day.scannerMixup(c, 'p2', labelled), expected);
-    assert.equal(day.scannerMixup(c, 'p2', labelled), false);
-    assert.equal(rolls, 1);
+test('scanner mix-ups use a shift-wide target and check each ready customer once', () => {
+  const observed = [new Set(), new Set()];
+  for (let seed = 0; seed < 24; seed++) {
+    for (const [i, labelled] of [false, true].entries()) {
+      const day = Day.create({ world, World: W, Till, requests, rand: W.rng(1234), delivery: 0, shiftId: 'mix-up-' + seed });
+      let count = 0;
+      for (let n = 0; n < 15; n++) {
+        const who = n % 2 ? 'p1' : 'p2';
+        const customer = { state: 'serving', by: who, ready: false };
+        assert.equal(day.scannerMixup(customer, who, labelled), false);
+        customer.ready = true;
+        assert.equal(day.scannerMixup(customer, 'p3', labelled), false);
+        if (day.scannerMixup(customer, who, labelled)) count++;
+        assert.equal(day.scannerMixup(customer, who, labelled), false);
+      }
+      observed[i].add(count);
+    }
   }
+  assert.deepEqual([...observed[0]].sort(), [2, 3, 4]);
+  assert.deepEqual([...observed[1]].sort(), [0, 1]);
+});
+
+test('buying a scanner label honours mix-ups that already happened that shift', () => {
+  const day = fresh();
+  const mixups = day.scannerMixups;
+  mixups.unlabelled.until = mixups.labelled.until = mixups.labelled.limit = 1;
+  const serving = { state: 'serving', by: 'p1', ready: true };
+  assert.equal(day.scannerMixup({ ...serving }, 'p1', false), true);
+  assert.equal(day.scannerMixup({ ...serving }, 'p1', true), false);
+  assert.equal(mixups.count, 1);
 });
 
 test('scanner faults interrupt a held order after random working time and respect each tier', () => {

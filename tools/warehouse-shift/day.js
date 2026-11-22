@@ -81,6 +81,13 @@
     this.baseXP = 0;
     this.coveredXP = 0;
     this.offlineScanners = new Set();
+    const mixupRandom = this.World.rng(this.World.hash((this.shiftId || '') + '/scanner mix-ups'));
+    const nextMixupGap = () => 1 + Math.floor(mixupRandom() * (this.firstDay ? 2 : 3));
+    this.scannerMixups = {
+      count: 0, nextGap: nextMixupGap,
+      unlabelled: { limit: 2 + Math.floor(mixupRandom() * 3), until: nextMixupGap() },
+      labelled: { limit: Math.floor(mixupRandom() * 2), until: nextMixupGap() }
+    };
     this.faultSchedule = [];
     const faults = 6 - (o.scannerTier || 1);
     const faultRandom = this.World.rng(this.World.hash(this.shiftId || 'scanner dock'));
@@ -406,7 +413,13 @@
   Day.prototype.scannerMixup = function (c, who, labelled) {
     if (c.scannerChecked || c.by !== who || c.state !== 'serving' || !c.ready) return false;
     c.scannerChecked = true;
-    return this.r() < (labelled ? 0.2 : 0.4);
+    const mixups = this.scannerMixups;
+    const target = labelled ? mixups.labelled : mixups.unlabelled;
+    // The same shift total applies even when players share the tills or buy a name label mid-shift.
+    if (mixups.count >= target.limit || --target.until > 0) return false;
+    mixups.count++;
+    target.until = mixups.nextGap();
+    return true;
   };
   Day.prototype.serve = function (c, who) {
     if (!this.tillsOpen() || !c || c.state !== 'counter' || c.by) return false;
