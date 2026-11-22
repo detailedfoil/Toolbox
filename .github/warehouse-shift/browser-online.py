@@ -66,8 +66,9 @@ def shared_shift(browser, errors):
       getComputedStyle(el).animationName
     ]""")
     assert colours == ["rgb(255, 255, 255)", "rgb(0, 0, 0)", "sc-code-fall"]
-    host.get_by_text("Server connection issue", exact=True).wait_for()
-    host.get_by_text("Swap at the charging dock in the office.", exact=True).wait_for()
+    offline = host.locator(".sc-offline")
+    offline.get_by_text("Server connection issue", exact=True).wait_for()
+    offline.get_by_text("Swap at the charging dock in the office.", exact=True).wait_for()
     assert not guest.locator(".sc-offline").is_visible()
     host.evaluate("""() => {
       const s=__shift, q=s.world.scannerDock;
@@ -75,7 +76,7 @@ def shared_shift(browser, errors):
       s.applyCam();
     }""")
     host.get_by_role("button", name="Swap scanner").click()
-    host.locator(".sc-offline").wait_for(state="hidden")
+    offline.wait_for(state="hidden")
     host.evaluate("id => {const d=__shift.day(); d.paPut(d.delivery.find(c=>c.id===id),'p1');}", carton["id"])
     guest.wait_for_function("""d => {
       const item=__shift.world.locs.byCode[d.dest].item;
