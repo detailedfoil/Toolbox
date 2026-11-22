@@ -457,7 +457,6 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   assert.ok(await runnerDay.handOver(job));
   assert.ok(day.freeSpots().includes(code));
   await until(() => guests.every(g => g.s.figs.some(f => f.c?.id === collect.id && f.counterTote)), 'the same parcel on every counter');
-  const previous = s.day();
   day.phase = 'lock'; assert.equal(day.lock(), true);
   await until(() => !host.$('dayCover').hidden && guests.every(g => !g.$('dayCover').hidden), 'end of day screens');
   const receipt = 'ws-shift-xp/' + day.shiftId;
@@ -472,6 +471,8 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   await until(() => picker.sockets.length > endedConnections && picker.$('onlineCover').hidden && !picker.$('dayCover').hidden,
     'guest to rejoin the completed shift');
   assert.equal(picker.$('careerXP').textContent, beforeReconnect);
+  const previous = s.day();
+  assert.equal(previous.report.id, day.shiftId);
   assert.equal(host.$('nextDayBtn').hidden, false);
   assert.ok(guests.every(g => g.$('nextDayBtn').hidden));
   picker.$('nextDayBtn').click();
