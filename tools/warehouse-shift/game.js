@@ -534,7 +534,7 @@
         return ids.filter(id => !missingScanners.has(id));
       },
       scannerFault(who) { players.find(p => p.id === who)?.syncScanner(false, true); },
-      tillCover,
+      tillCover, xpChanged: syncShiftXP,
       listed: (o) => { if (online?.room()) for (const l of o.lines) online.trackStock(l.item); for (const p of players) p.listed(o); },
       changed: (o) => { for (const p of players) p.changed(o); tidyScreens(); },
       customer: (c) => comeIn(c),
@@ -1644,7 +1644,7 @@
           }
           { // the manager's PC in the office
             const q = world.pc, a = aimAt(q.x, q.y, 1.05);
-            if (!dock && !guest() && a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
+            if (!dock && a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
           }
         }
         aimedBox = box;
@@ -1727,21 +1727,27 @@
       };
       P.kitSync();
       /* ---------- the manager's PC: what Sam does first (detailedfoil, 20 Nov 2026) ---------- */
-      const pc = { open: false, sel: 0, el: null };
+      const pc = { open: false, shop: false, sel: 0, shopSel: 0, el: null };
       function pcBuild() {
         const el = document.createElement('div');
         el.className = 'ws-pc'; el.hidden = true;
-        el.innerHTML = '<div class="ws-pc-box"><div class="ws-pc-top"><b>Sam\'s jobs</b><span>Manager PC</span><button type="button" class="ws-pc-x" aria-label="Close">Close &#10005;</button></div>' +
-          '<p>Sam does the ticked jobs, the top one first. Untick a job and Sam leaves it to you. When the slots are full, ticking a new job replaces the lowest ticked job. Sam still greets waiting customers.</p>' +
-          '<div class="ws-training"><span></span><button type="button" data-pc="train"></button></div><ol class="ws-pc-list"></ol><div class="ws-presets" hidden>' +
+        el.innerHTML = '<div class="ws-pc-box"><div class="ws-pc-top"><b>Manager PC</b><span class="ws-wallet"></span><button type="button" class="ws-pc-x" aria-label="Close">Close &#10005;</button></div>' +
+          '<div class="ws-pc-tabs"><button type="button" data-pc="jobs">Sam’s jobs</button><button type="button" data-pc="shop">Upgrades</button></div><section class="ws-jobs"><p>Sam does the ticked jobs, the top one first. Untick a job and Sam leaves it to you. When the slots are full, ticking a new job replaces the lowest ticked job. Sam still greets waiting customers.</p>' +
+          '<ol class="ws-pc-list"></ol><div class="ws-presets" hidden>' +
           presetNames.map((name, i) => '<div><b>' + name + '</b><button type="button" data-pc="load" data-i="' + i + '" aria-label="Apply ' + name + '">Apply</button>' +
             '<button type="button" data-pc="save" data-i="' + i + '" aria-label="Save current jobs to ' + name + '">Save current</button></div>').join('') +
-          '<small></small><output aria-live="polite"></output></div><div class="ws-pc-keys"></div><button type="button" class="ws-pc-close">Close</button></div>';
+          '<small></small><output aria-live="polite"></output></div></section><div class="ws-pc-keys"></div><button type="button" class="ws-pc-close">Close</button></div>';
+        el.querySelector('.ws-pc-keys').before($('upgradeShop').content.cloneNode(true));
         D.root.appendChild(el);
         el.addEventListener('click', (e) => {
-          const b = e.target.closest('[data-pc]'); if (!b) return;
+          const b = e.target.closest('button'); if (!b) return;
+          if (b.hasAttribute('data-kit')) { purchase(b.dataset.kit); return; }
+          for (const id of ['digital', 'reliability']) {
+            if (id in b.dataset) { purchase(id, Number(b.dataset[id])); return; }
+          }
           const i = +b.dataset.i, a = b.dataset.pc;
           initAudio();
+          if (a === 'shop' || a === 'jobs') { pcTab(a === 'shop'); return; }
           if (a === 'train') { buySlot(Number(b.dataset.slots)); pcRender(); return; }
           if (a === 'save' || a === 'load') { pcPreset(i, a === 'save'); return; }
           if (a === 'tick') { pc.sel = i; pcToggle(); } else if (a === 'up') { pc.sel = i; pcShift(-1); } else if (a === 'down') { pc.sel = i; pcShift(1); }
@@ -1757,13 +1763,30 @@
           '<span class="n">' + (i + 1) + '</span><span class="t">' + PRIO_NAMES[j.id][0] + '<small>' + PRIO_NAMES[j.id][1] + '</small></span>' +
           '<button type="button" data-pc="up" data-i="' + i + '" aria-label="Move up"' + (i ? '' : ' disabled') + '>&#9650;</button>' +
           '<button type="button" data-pc="down" data-i="' + i + '" aria-label="Move down"' + (i < samPrio.length - 1 ? '' : ' disabled') + '>&#9660;</button></li>').join('');
-        const training = pc.el.querySelector('.ws-training');
-        training.querySelector('span').textContent = trainingStatus();
-        renderPurchase(training.querySelector('button'));
+        pc.el.querySelector('.ws-wallet').textContent = availableXP() + ' XP available';
+        pc.el.querySelector('.ws-jobs').hidden = pc.shop;
+        pc.el.querySelector('.ws-shop').hidden = !pc.shop;
+        pc.el.querySelector('[data-pc="jobs"]').disabled = !!guest();
+        for (const button of pc.el.querySelectorAll('.ws-pc-tabs button')) button.setAttribute('aria-pressed', String((button.dataset.pc === 'shop') === pc.shop));
+        renderShop(pc.el);
         const panel = pc.el.querySelector('.ws-presets');
         panel.hidden = careerXP() < presetXP;
         panel.querySelector('small').textContent = P.padIndex != null ? 'X / Y apply · Hold LT with X / Y to save' : touch ? '' : '1 / 2 apply · Shift + 1 / 2 save';
-        pc.el.querySelector('.ws-pc-keys').textContent = P.padIndex !== null && P.padIndex !== undefined ? 'D-pad choose, A tick, LB/RB move, View buys the next slot, B closes' : touch ? 'Tap a box to tick it, the arrows to move it' : 'Arrow keys choose, Space ticks, [ and ] move, T buys the next slot, Esc closes';
+        pc.el.querySelector('.ws-pc-keys').textContent = pc.shop ? (P.padIndex != null ? 'D-pad choose · A buy · View switch page · B close' : '') : P.padIndex != null ? 'D-pad choose, A tick, LB/RB move, View opens upgrades, B closes' : touch ? 'Tap a box to tick it, the arrows to move it' : 'Arrow keys choose, Space ticks, [ and ] move, U opens upgrades, Esc closes';
+      }
+      function pcTab(shop) {
+        pc.shop = shop || !!guest();
+        pc.shopSel = 0;
+        pc.el.querySelector('.ws-pc-box').scrollTop = 0;
+        pcRender();
+        if (pc.shop && P.padIndex != null) shopMove(0);
+        else if (pc.shop) pc.el.querySelector('[data-pc="shop"]').focus({ preventScroll: true });
+      }
+      function shopMove(delta) {
+        const buttons = pc.el.querySelectorAll('.ws-shop button');
+        pc.shopSel = (pc.shopSel + delta + buttons.length) % buttons.length;
+        for (const [i, button] of buttons.entries()) button.closest('.ws-shop-row').classList.toggle('on', i === pc.shopSel);
+        buttons[pc.shopSel].scrollIntoView?.({ block: 'nearest' });
       }
       function pcPreset(i, save) {
         if (careerXP() < presetXP) return;
@@ -1785,7 +1808,7 @@
         pc.el.querySelector('output').textContent = '';
         if (idx === 0 && locked()) document.exitPointerLock();
         keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; me.vx = me.vy = 0;
-        pc.open = true; pc.sel = 0; pc.el.hidden = false; SFX.key(); pcRender();
+        pc.open = true; pc.sel = 0; pc.el.hidden = false; SFX.key(); pcTab(!!guest());
         D.tillBtn.hidden = true;
       }
       function closePc() { if (!pc.open) return; pc.open = false; pc.el.hidden = true; SFX.key(); if (idx === 0) canvas.focus({ preventScroll: true }); pcOn = false; checkTill(); renderScanner(); }
@@ -1803,7 +1826,15 @@
       }
       function pcKey(e) {
         if (e.repeat && !(e.code === 'ArrowUp' || e.code === 'ArrowDown')) return;
-        if (e.code === 'KeyT') { buySlot(Number(pc.el.querySelector('[data-pc="train"]').dataset.slots)); pcRender(); }
+        if (e.code === 'KeyU') pcTab(!pc.shop);
+        else if (pc.shop && ['Escape', 'KeyF', 'Backspace'].includes(e.code)) closePc();
+        else if (pc.shop && e.code === 'Tab') {
+          const buttons = Array.from(pc.el.querySelectorAll('button:enabled')).filter(b => b.getClientRects().length);
+          const index = buttons.indexOf(document.activeElement);
+          if (buttons.length) buttons[(index + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length].focus();
+        }
+        else if (pc.shop) return;
+        else if (e.target.closest?.('button') && ['Space', 'Enter'].includes(e.code)) return;
         else if (e.code === 'Digit1' || e.code === 'Digit2') pcPreset(Number(e.code.slice(-1)) - 1, e.shiftKey);
         else if (e.code === 'ArrowUp' || e.code === 'KeyW') pcMove(-1);
         else if (e.code === 'ArrowDown' || e.code === 'KeyS') pcMove(1);
@@ -2106,8 +2137,14 @@
         if (pc.open) {
           still();
           const d = steer(true);
+          if (hit(8)) { pcTab(!pc.shop); return; }
+          if (pc.shop) {
+            if (d === 'up' || d === 'down') shopMove(d === 'up' ? -1 : 1);
+            if (hit(0)) pc.el.querySelectorAll('.ws-shop button')[pc.shopSel].click();
+            if (hit(1) || hit(9)) closePc();
+            return;
+          }
           if (d === 'up' || d === 'down') pcMove(d === 'up' ? -1 : 1);
-          if (hit(8)) { buySlot(Number(pc.el.querySelector('[data-pc="train"]').dataset.slots)); pcRender(); }
           if (hit(2)) pcPreset(0, now[6]); if (hit(3)) pcPreset(1, now[6]);
           if (hit(0)) pcToggle(); if (hit(4)) pcShift(-1); if (hit(5)) pcShift(1);
           if (hit(1) || hit(9)) closePc();
@@ -2257,7 +2294,7 @@
       root.querySelector('[data-el="tag"]').textContent = 'Player 2';
       $('pv1').after(root);
       const p2 = makePlayer(1, grab(root));
-      players.push(p2);
+      players.push(p2); p2.D.xpBalance.textContent = availableXP() + ' XP';
       figLayers();
       root.querySelector('[data-el="tag"]').textContent = p2.name;
       p2.render();
@@ -2415,39 +2452,44 @@
     const trainingStatus = () => 'Sam · ' + jobSlots + '/4 job slots · ' + availableXP() + ' XP available';
     function renderPurchase(btn) {
       const price = slotPrices[jobSlots - 1];
-      btn.hidden = price === undefined;
       btn.disabled = !price || availableXP() < price;
       btn.dataset.slots = jobSlots;
       btn.textContent = price ? 'Train Sam · slot ' + (jobSlots + 1) + ' · ' + price + ' XP' : 'Fully trained';
     }
-    function careerView() {
-      $('careerXP').textContent = careerXP() + ' career XP · ' + trainingStatus();
-      $('dayTraining').textContent = trainingStatus();
-      renderPurchase($('trainBtn')); renderPurchase($('dayTrain'));
-      for (const btn of document.querySelectorAll('[data-reliability]')) {
+    function renderShop(root) {
+      renderPurchase(root.querySelector('[data-pc="train"]'));
+      for (const btn of root.querySelectorAll('[data-reliability]')) {
         const cost = reliabilityPrices[scannerTier - 1];
         btn.dataset.reliability = scannerTier;
         btn.disabled = !cost || availableXP() < cost;
         btn.textContent = cost ? 'Upgrade to tier ' + (scannerTier + 1) + ' · ' + cost + ' XP' : 'Fully upgraded';
-        btn.previousElementSibling.textContent = 'Scanner reliability · Tier ' + scannerTier + '/5 · ' + (6 - scannerTier) +
+        root.querySelector('[data-status="reliability"]').textContent = 'Tier ' + scannerTier + '/5 · ' + (6 - scannerTier) +
           (scannerTier === 5 ? ' disconnect' : ' disconnects') + ' per shift';
       }
-      for (const btn of document.querySelectorAll('[data-digital]')) {
+      for (const btn of root.querySelectorAll('[data-digital]')) {
         const current = digitalTiers[digitalTier - 1], next = digitalTiers[digitalTier];
         btn.dataset.digital = digitalTier;
         btn.disabled = !next || availableXP() < next.cost;
         btn.textContent = next
           ? 'Tier ' + (digitalTier + 1) + ' · ' + next.collection + '% click & collect · ' + next.cost + ' XP'
           : 'Fully upgraded';
-        btn.previousElementSibling.textContent = 'Tier ' + digitalTier + '/' + digitalTiers.length + ' · ' +
+        root.querySelector('[data-status="digital"]').textContent = 'Tier ' + digitalTier + '/' + digitalTiers.length + ' · ' +
           current.collection + '% click & collect';
       }
-      for (const btn of document.querySelectorAll('[data-kit]')) {
+      for (const btn of root.querySelectorAll('[data-kit]')) {
         const item = kit[btn.dataset.kit];
         btn.disabled = item.owned || availableXP() < item.price;
-        btn.textContent = item.title + (item.owned ? ' · Owned' : ' · ' + item.price + ' XP');
+        btn.textContent = item.owned ? 'Owned' : item.price + ' XP';
       }
-      for (const p of players) p.kitSync();
+    }
+    function careerView() {
+      $('careerXP').textContent = careerXP() + ' career XP · ' + trainingStatus() + ' at the Manager PC';
+      $('dayTraining').textContent = availableXP() + ' XP available at the Manager PC';
+      for (const p of players) {
+        p.D.xpBalance.textContent = availableXP() + ' XP';
+        p.kitSync();
+        if (p.pcOpen()) p.refreshPc();
+      }
     }
     function purchase(id, expected) {
       function applyPurchase() {
@@ -2464,37 +2506,50 @@
         }
         if (key) try { localStorage.setItem(key, value); } catch (e) { /* keep session progress */ }
         careerView();
-        for (const p of players) if (p.pcOpen()) p.refreshPc();
       }
       if (navigator.locks) return navigator.locks.request('ws-career-purchase', applyPurchase);
       applyPurchase();
     }
     function buySlot(expected) { return purchase('slot', expected); }
-    for (const btn of [$('trainBtn'), $('dayTrain')]) btn.onclick = () => buySlot(Number(btn.dataset.slots));
-    for (const btn of document.querySelectorAll('[data-reliability]')) btn.onclick = () => purchase('reliability', Number(btn.dataset.reliability));
-    for (const btn of document.querySelectorAll('[data-digital]')) btn.onclick = () => purchase('digital', Number(btn.dataset.digital));
-    for (const btn of document.querySelectorAll('[data-kit]')) btn.onclick = () => purchase(btn.dataset.kit);
     window.addEventListener('storage', e => {
       if (e.key === slotKey || e.key === reliabilityKey || e.key === digitalKey || e.key?.startsWith('ws-kit-')) readSlots();
-      else if (e.key?.startsWith(receiptPrefix) && e.newValue) career.set(e.key, Number(e.newValue) || 0);
+      else if (e.key?.startsWith(receiptPrefix) && e.newValue) {
+        const known = career.get(e.key) || 0, incoming = Number(e.newValue);
+        if (!Number.isSafeInteger(incoming) || incoming <= 0) return;
+        if (incoming >= known) career.set(e.key, incoming);
+        else try {
+          if ((Number(localStorage.getItem(e.key)) || 0) < known) localStorage.setItem(e.key, String(known));
+        } catch (e) { /* keep the higher session balance */ }
+      }
       else return;
       careerView();
     });
     careerView();
-    function showShiftScore(r, eligible) {
-      const earned = eligible ? r.xp : 0, previousXP = careerXP();
-      if (earned && r.id) {
-        const key = receiptPrefix + r.id;
-        career.set(key, earned);
-        try { localStorage.setItem(key, String(earned)); } catch (e) { /* keep this session's XP */ }
-      }
+    function bankXP(id, earned) {
+      if (!id || !Number.isSafeInteger(earned) || earned <= 0) return;
+      const key = receiptPrefix + id, prior = career.get(key) || 0;
+      if (earned <= prior) return;
+      let total = earned;
+      try {
+        total = Math.max(earned, Number(localStorage.getItem(key)) || 0);
+        localStorage.setItem(key, String(total));
+      } catch (e) { /* still available for this session */ }
+      career.set(key, total);
       careerView();
+    }
+    function syncShiftXP() {
+      const eligible = day?.eligible || Array.from(day?.contributors || []);
+      if (!players.some(p => eligible.includes(p.id))) return;
+      bankXP(day.shiftId, day.baseXP + Math.round(day.coveredXP * 0.05));
+    }
+    function showShiftScore(r, eligible) {
+      if (eligible) bankXP(r.id, r.xp);
       $('shiftScore').textContent = 'Shift score · ' + r.score + ' / 1,000';
       statsHtml($('scoreRows'), r.rows.map(row => [row.earned + '/' + row.possible, row.label]));
       $('earnedXP').textContent = eligible
         ? r.baseXP + ' work XP + ' + r.bonus + ' shift bonus + ' + r.coverBonus + ' Service Champ bonus = ' + r.xp + ' XP'
         : '0 XP earned on this device';
-      const unlocked = previousXP < presetXP && careerXP() >= presetXP;
+      const unlocked = eligible && careerXP() - (career.get(receiptPrefix + r.id) || 0) < presetXP && careerXP() >= presetXP;
       $('scoreUnlock').textContent = unlocked ? 'Unlocked · Sam’s job presets on the manager PC' : '';
       $('scoreUnlock').hidden = !unlocked;
     }
@@ -2792,7 +2847,7 @@
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
         kit, missingScanners, checkScannerMixup, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
-        setDay(d, n) { day = d; dayNo = n; },
+        setDay(d, n) { day = d; dayNo = n; syncShiftXP(); },
         resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },
         clearDayView() {
           timers.length = 0; for (const f of figs) if (!f.free) freeFig(f);
