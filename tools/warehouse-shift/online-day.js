@@ -9,6 +9,8 @@
   function snapshot(day, tills, stockItems) {
     return {
       ...fields(day, ['phase', 'total', 'done', 'over', 'mode', 'event']),
+      tillCovered: !!day.emit('tillCover')?.length,
+      report: day.report || null, eligible: day.report ? Array.from(day.contributors) : [],
       hold: Object.fromEntries(Object.entries(day.hold).map(([k, p]) => [k, parcel(p)])), busy: { ...day.busy },
       orders: day.orders.map(o => ({
         ...fields(o, ['id', 'no', 'kind', 'status', 'by', 'doneBy', 'counts', 'locs', 'units', 'surname', 'code']),
@@ -63,7 +65,7 @@
         const prev = new Map(old.map(o => [o.id, o]));
         return next.map(row => Object.assign(prev.get(row.id) || {}, decode(row)));
       };
-      Object.assign(this, fields(s, ['phase', 'total', 'done', 'over', 'mode', 'event', 'hold', 'busy']));
+      Object.assign(this, fields(s, ['phase', 'total', 'done', 'over', 'mode', 'event', 'hold', 'busy', 'report', 'eligible', 'tillCovered']));
       this.orders = merge(this.orders, s.orders, row => ({ ...row, lines: unpack(row.lines) }));
       this.customers = merge(this.customers, s.customers, row => ({
         ...row, cust: row.accounts && Object.assign(row.accounts[0], { db: row.accounts }), at: this.tills[row.at], order: this.orders.find(o => o.id === row.orderId),
@@ -117,6 +119,7 @@
         if (!own || o.status !== 'taken' || !Number.isInteger(a.index) || a.index !== ctx.progress.get(who)) return false;
         const ln = o.lines[a.index];
         if (!ln || !atLoc(ln.loc)) return false;
+        day.confirmLine(o, a.index, who);
         ctx.progress.set(who, a.index + 1);
         if (a.index + 1 === o.lines.length) day.picked(o);
         return true;

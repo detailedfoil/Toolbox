@@ -14,7 +14,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=220bdb176f">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=a7dd59c5ce">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=b66e39ba67">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -39,6 +39,7 @@
   <div class="ws-banner" id="banner" data-el="banner" role="status"><b id="bannerTitle" data-el="bannerTitle"></b><span id="bannerText" data-el="bannerText"></span></div>
   <div class="ws-say" id="say" data-el="say" hidden aria-live="polite"><p id="sayText" data-el="sayText"></p></div>
   <div class="ws-chips" id="chips" data-el="chips" hidden>
+    <span class="ws-cover-bonus" data-el="coverBonus" hidden>Till cover +5%</span>
     <span class="ws-order ws-chip-done" id="orderChip" data-el="orderChip"><span>Orders done</span> <b id="doneCount" data-el="doneCount">0</b></span>
     <span class="ws-order" id="toteChip" data-el="toteChip" title="Lines in the tote"><svg viewBox="0 0 24 16" width="20" height="14" aria-hidden="true"><path d="M1 3h22l-2 12H3z" fill="#2e66b5" stroke="#9cc0ff" stroke-width="1.2"/><path d="M5 6h14" stroke="#9cc0ff" stroke-width="1.2"/></svg><b id="toteCount" data-el="toteCount">0</b></span>
   </div>
@@ -47,7 +48,7 @@
   <button class="ws-tillbtn" id="tillBtn" data-el="tillBtn" type="button" hidden>Use till<small>F</small></button>
   <section class="sc" id="scanner" data-el="scanner" hidden aria-label="Scanner">
     <div class="sc-body">
-      <span class="sc-speaker"></span><span class="sc-led"></span><span class="sc-power"></span>
+      <span class="sc-name-label" data-el="nameLabel" hidden></span><span class="sc-speaker"></span><span class="sc-led"></span><span class="sc-power"></span>
       <div class="sc-screen" id="scScreen" data-el="scScreen">
         <div class="sc-status">
           <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="#dfe6f2" stroke-width="2.4"/><circle cx="12" cy="12" r="3.6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="#dfe6f2" stroke-width="2.2"/></svg><svg viewBox="0 0 16 24" aria-hidden="true"><rect x="2" y="4" width="12" height="18" rx="2" fill="none" stroke="#dfe6f2" stroke-width="2"/><rect x="5" y="1" width="6" height="3"/><path d="M5 10l6 6M11 10l-6 6" stroke="#dfe6f2" stroke-width="1.8"/></svg></span>
@@ -110,6 +111,7 @@
       <h1>Warehouse Shift</h1>
       <p>A day is 15 to 25 picks on one list, shared with Sam. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
       <div id="startStats"></div>
+      <p class="ws-small" id="careerXP"></p>
       <label class="ws-name">Name on your badge <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Trainee" enterkeyhint="done"></label>
       <div class="ws-row">
         <button class="ws-go" id="startBtn" type="button">Start shift</button>
@@ -119,6 +121,11 @@
         <button class="ws-alt" id="installBtn" type="button" hidden>Install game</button>
         <button class="ws-alt" id="updBtn" type="button">Check for updates</button>
       </div>
+      <details class="ws-upgrades"><summary>Upgrades</summary><div class="ws-row">
+        <button class="ws-alt" id="trainBtn" type="button">Train Sam</button>
+        <button class="ws-alt" data-kit="label" type="button">Scanner name label · 150 XP</button>
+        <button class="ws-alt" data-kit="shoes" type="button">Kickstool shoes · 350 XP</button>
+      </div><p class="ws-small">Name labels halve scanner mix-ups. Kickstool shoes let you Step up anywhere.</p></details>
       <p class="ws-small" id="updMsg" hidden></p>
       <p class="ws-small">A made-up warehouse with the store's 10,999 nailed products. Play with your phone sideways or upright, and turn it whenever you like.</p>
     </div>
@@ -150,6 +157,9 @@
     <div class="ws-card">
       <button class="ws-x" id="helpX" type="button" aria-label="Close">&times;</button>
       <h1>How to play</h1>
+      <p>Lock up to earn a team score out of 1,000. Quick greetings, short customer waits, prompt picks and speedy putaway all count. The timers use playing time. A missed delivery puts more weight on customer waits.</p>
+      <p>Human teammates share 5 XP per greeting, 15 per sale, 10 per confirmed pick line, 10 per finished order and 10 per shelved carton. Contribute to the shift to collect the shared XP plus up to 25% at lock-up. Work done while a teammate or Sam stands at a till earns 5% extra XP, including its share of the shift bonus. Standing cover counts as contributing. Rewards are rounded at lock-up and saved on this device.</p>
+      <p>Sam starts with one active job. Swap jobs freely on the manager PC. Buy permanent second, third and fourth job slots for 100, 250 and 500 XP. Online shifts use the host’s training. Two saved job lists unlock at 350 lifetime XP.</p>
       <div class="ws-cols2">
         <div>
           <h2>The pick list</h2>
@@ -177,9 +187,9 @@
           <h2>Sam</h2>
           <ul>
             <li><b>Sam</b> works from the same list, at the same pace as a person. What Sam does first is set on the <b>PC on the manager's desk</b> in the office: tick or untick each job (customer picks, the queue, holding area picks, the delivery) and move them up or down. Unticked jobs are yours.</li>
-            <li>If a customer waits about six seconds for help, Sam rings the <b>service bell</b>. Ring it yourself to call for help on tills. Everyone in co-op hears it, and Sam gives one waiting till customer priority.</li>
+            <li>If a customer waits about six seconds for help, Sam rings the <b>service bell</b>. Ring it yourself to call for help on tills. Everyone in co-op hears it, and Sam prioritises a waiting till customer when assigned to the queue.</li>
             <li>Sam pushes a <b>trolley</b>. While they pick it blocks the aisle, so you can't get past. Sam won't go down an aisle you're in.</li>
-            <li>If Sam picks up your scanner by mistake while you’re serving on Fusion, finish the sale and walk up to Sam to get it back.</li>
+            <li>Sam has a 40% chance of taking your scanner by mistake when you serve a Fusion customer. A scanner name label halves that to 20%. Finish the sale and walk up to Sam to get your scanner back.</li>
           </ul>
           <h2>At the till</h2>
           <ul>
@@ -224,7 +234,16 @@
   <div class="ws-cover" id="dayCover" hidden>
     <div class="ws-card">
       <h1 id="dayTitle">All picks clear</h1>
-      <p>Every pick on today's list is done and nobody's waiting. Your day:</p>
+      <h2 id="shiftScore">Shift score</h2>
+      <div id="scoreRows"></div>
+      <p id="earnedXP"></p><p id="scoreUnlock" hidden></p>
+      <p id="dayTraining"></p>
+      <details class="ws-upgrades"><summary>Upgrades</summary><div class="ws-row">
+        <button class="ws-alt" id="dayTrain" type="button">Train Sam</button>
+        <button class="ws-alt" data-kit="label" type="button">Scanner name label · 150 XP</button>
+        <button class="ws-alt" data-kit="shoes" type="button">Kickstool shoes · 350 XP</button>
+      </div><p class="ws-small">Name labels halve scanner mix-ups. Kickstool shoes let you Step up anywhere.</p></details>
+      <h2>Your shift</h2>
       <div id="dayStats"></div>
       <div class="ws-row"><button class="ws-go" id="nextDayBtn" type="button">Start the next day</button><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div>
     </div>
@@ -238,12 +257,12 @@
 <script src="warehouse-shift/scene.js?v=06770b465c"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=ad9ad407b9"></script>
-<script src="warehouse-shift/day.js?v=70d2ad66ec"></script>
+<script src="warehouse-shift/day.js?v=eb85d10361"></script>
 <script src="warehouse-shift/bot.js?v=7a7b89c1ec"></script>
 <script src="warehouse-shift/tillui.js?v=b855e77b8f"></script>
-<script src="warehouse-shift/online-day.js?v=f0d7998171"></script>
+<script src="warehouse-shift/online-day.js?v=c90c5df8e3"></script>
 <script src="warehouse-shift/online.js?v=cdcf8996c8"></script>
-<script src="warehouse-shift/online-game.js?v=88d09cf53b"></script>
-<script src="warehouse-shift/game.js?v=90eaad1d85"></script>
+<script src="warehouse-shift/online-game.js?v=4a27f0633e"></script>
+<script src="warehouse-shift/game.js?v=256388390f"></script>
 </body>
 </html>

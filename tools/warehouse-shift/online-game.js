@@ -26,7 +26,7 @@
     }
     const guest = () => !!net && net.slot > 1;
     const pose = () => ({ x: p.me.x, y: p.me.y, yaw: p.me.yaw + Math.PI, speed: p.me.speed, squat: p.me.squat,
-      name: p.name, step: !!p.me.step, atTill: p.tillOpen(), shelf: p.shelf() });
+      name: p.name, shoes: g.kit.shoes.owned, label: g.kit.label.owned, step: !!p.me.step, atTill: p.tillOpen(), shelf: p.shelf() });
     function peerPose(slot, data) {
       if (!Number.isInteger(slot) || slot < 1 || slot > 4 || slot === net.slot || !data) return false;
       if (![data.x, data.y, data.yaw, data.speed].every(Number.isFinite) || data.x < 0 || data.x > world.W || data.y < 0 || data.y > world.D || g.blocked(data.x, data.y)) return false;
@@ -41,14 +41,18 @@
       }
       const name = typeof data.name === 'string' && g.cleanName(data.name.slice(0, 32)) || 'Player ' + slot;
       const who = 'p' + slot, stool = world.stools.find(s => s.by === who);
-      peers.set(slot, { name, step: !!stool && !!data.step,
+      peers.set(slot, { name, shoes: data.shoes === true, label: data.label === true,
+        step: (!!stool || data.shoes === true) && !!data.step,
         atTill: locks.has(who) && !!data.atTill, x: data.x, y: data.y, yaw: data.yaw % (2 * Math.PI), speed: Math.max(0, Math.min(3.2, data.speed)), squat: !!data.squat, shelf: items.has(data.shelf) ? data.shelf : null });
       return true;
     }
     function release(slot, freshSeat = false) {
       const who = 'p' + slot;
       locks.delete(who); progress.delete(who); peers.delete(slot);
-      if (freshSeat) g.missingScanners.delete(who);
+      if (freshSeat) {
+        g.missingScanners.delete(who);
+        g.day()?.contributors.delete(who);
+      }
       const stool = world.stools.find(s => s.by === who);
       if (stool) { stool.by = null; S.setStool(stool.id, stool.home.x, stool.home.y); }
       if (g.day()) wire.release(g.day(), who);
