@@ -14,7 +14,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=00e0637f21">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=ea64a15363">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=b66e39ba67">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -39,7 +39,7 @@
   <div class="ws-banner" id="banner" data-el="banner" role="status"><b id="bannerTitle" data-el="bannerTitle"></b><span id="bannerText" data-el="bannerText"></span></div>
   <div class="ws-say" id="say" data-el="say" hidden aria-live="polite"><p id="sayText" data-el="sayText"></p></div>
   <div class="ws-chips" id="chips" data-el="chips" hidden>
-    <span class="ws-cover-bonus" data-el="coverBonus" hidden>Till cover +5%</span>
+    <span class="ws-cover-bonus" data-el="coverBonus" hidden>Service Champ bonus +5% XP</span>
     <span class="ws-order ws-chip-done" id="orderChip" data-el="orderChip"><span>Orders done</span> <b id="doneCount" data-el="doneCount">0</b></span>
     <span class="ws-order" id="toteChip" data-el="toteChip" title="Lines in the tote"><svg viewBox="0 0 24 16" width="20" height="14" aria-hidden="true"><path d="M1 3h22l-2 12H3z" fill="#2e66b5" stroke="#9cc0ff" stroke-width="1.2"/><path d="M5 6h14" stroke="#9cc0ff" stroke-width="1.2"/></svg><b id="toteCount" data-el="toteCount">0</b></span>
   </div>
@@ -90,8 +90,10 @@
           <button type="button" data-k="back" class="pb" aria-label="Delete">&#x232B;</button><button type="button" data-k="0">0</button><button type="button" data-k="enter" class="pe" aria-label="Enter">&#x21B5;</button>
         </div>
         <div class="sc-menu" id="scMenu" data-el="scMenu" hidden></div>
-        <div class="sc-confirm" id="scConfirm" data-el="scConfirm" hidden>
-          <button class="sc-k sc-fn" data-el="scConfirmBtn" type="button"></button>
+        <div class="sc-confirm" id="scConfirm" data-el="scConfirm" role="group" aria-label="Scanner options" hidden>
+          <button class="sc-k sc-fn" data-el="scConfirmFn" type="button">Function</button>
+          <button class="sc-k sc-fn" data-el="scConfirmHint" type="button" hidden>Hint</button>
+          <button class="sc-k sc-fn" data-el="scConfirmQuickPick" type="button" hidden>Quick Pick</button>
         </div>
         <div class="sc-flash" id="scFlash" data-el="scFlash"></div>
       </div>
@@ -273,6 +275,6 @@
 <script src="warehouse-shift/online-day.js?v=8bf4cf273f"></script>
 <script src="warehouse-shift/online.js?v=cdcf8996c8"></script>
 <script src="warehouse-shift/online-game.js?v=083e13c48f"></script>
-<script src="warehouse-shift/game.js?v=37127993f7"></script>
+<script src="warehouse-shift/game.js?v=732aa57705"></script>
 </body>
 </html>

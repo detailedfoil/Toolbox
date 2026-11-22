@@ -83,7 +83,7 @@ test('Quick Pick confirms the top customer pick only when doing putaway empty-ha
   const { $, s } = await game(t, { online: false, phone: true });
   $('startBtn').click();
   for (const job of s.prio()) job.on = false;
-  const day = s.day(), button = $('scQuickPick'), confirm = $('scConfirm').querySelector('button');
+  const day = s.day(), button = $('scQuickPick'), options = $('scConfirm'), hint = s.players[0].D.scConfirmHint;
   for (const o of day.list()) day.take(o, 'test');
   s.players[0].page(-1);
   s.enter();
@@ -98,14 +98,17 @@ test('Quick Pick confirms the top customer pick only when doing putaway empty-ha
   assert.doesNotMatch($('scText').textContent, /Picks waiting/);
   button.click();
   assert.equal($('scConfirm').hidden, false);
-  assert.equal(confirm.textContent, 'Quick Pick');
+  assert.deepEqual(Array.from(options.querySelectorAll('button:not([hidden])'), option => option.textContent),
+    ['Function', 'Hint', 'Quick Pick']);
   assert.equal(collect.status, 'listed');
-  s.back();
-  assert.equal($('scConfirm').hidden, true);
-
-  $('scHint').click();
   assert.equal(s.players[0].stats.hints, 0);
-  confirm.click();
+  hint.click();
+  assert.equal(s.players[0].stats.hints, 1, 'choose Hint after opening with Quick Pick');
+  assert.ok(options.hidden);
+  assert.equal(collect.status, 'listed');
+  $('scHint').click();
+  s.back();
+  assert.ok(options.hidden);
   assert.equal(s.players[0].stats.hints, 1);
 
   const carton = day.deliveryLeft()[0], goods = s.world.goodsin[carton.src].obj;
@@ -127,7 +130,7 @@ test('Quick Pick confirms the top customer pick only when doing putaway empty-ha
   second.s.enter();
   second.$('scQuickPick').click();
   assert.equal(urgent.status, 'listed');
-  second.$('scConfirm').querySelector('button').click();
+  second.s.players[0].D.scConfirmQuickPick.click();
   assert.equal(second.s.order(), urgent);
   assert.equal(urgent.by, 'p1');
   assert.equal(second.$('scQuickPick').hidden, true);
@@ -534,6 +537,13 @@ test('split-screen earns till cover, shares one payout and buys permanent job sl
   const { $, w, s } = await game(t, { online: false, storage: { 'ws-sam-prio': JSON.stringify(oldJobs) } });
   $('twoBtn').click(); s.join({ kind: 'kb' }); s.join({ kind: 'pad', pad: 0 }); $('joinGo').click();
   const [p, worker] = s.players;
+  p.D.scFn.click();
+  assert.ok(!p.D.scConfirm.hidden && worker.D.scConfirm.hidden);
+  assert.ok(p.D.scConfirmHint.hidden && p.D.scConfirmQuickPick.hidden, 'home only offers Function');
+  p.D.scConfirmFn.click();
+  assert.ok(!p.D.scMenu.hidden && worker.D.scMenu.hidden);
+  p.back();
+  assert.equal(p.D.coverBonus.textContent, 'Service Champ bonus +5% XP');
   assert.deepEqual(Array.from(s.prio().filter(j => j.on), j => j.id), ['queue']);
   p.openPc();
   const panel = w.document.querySelector('.ws-presets'), pc = panel.parentElement;
@@ -555,6 +565,7 @@ test('split-screen earns till cover, shares one payout and buys permanent job sl
   const key = 'ws-shift-xp/' + d.shiftId, total = d.report.xp;
   assert.equal(Number(w.localStorage.getItem(key)), total);
   assert.equal(d.report.coverBonus, Math.round(900 * (1 + d.report.score / 4000) * 0.05));
+  assert.match($('earnedXP').textContent, /Service Champ bonus/);
   assert.match($('scoreUnlock').textContent, /Sam’s job presets/);
   d.emit('over');
   assert.match($('careerXP').textContent, new RegExp('^' + total + ' career XP'));

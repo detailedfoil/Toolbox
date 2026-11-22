@@ -213,7 +213,7 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .sc-pad .pb{background:#5a6478}
 /* the function menu */
 .sc-menu{position:absolute;left:0;right:0;top:4.6%;bottom:30.5%;padding:3% 4%;background:#0b1022f7;z-index:3;display:flex;flex-direction:column;justify-content:space-evenly;gap:1.5%;border-bottom:.12em solid #3a4560;overflow:hidden}
-.sc-confirm{position:absolute;inset:4.6% 0 30.5%;z-index:4;background:#0b1022f7;padding:8%;display:grid}
+.sc-confirm{position:absolute;inset:4.6% 0 30.5%;z-index:4;background:#0b1022f7;padding:6%;display:grid;grid-auto-rows:minmax(0,1fr);gap:5%}
 .sc-confirm .sc-k{font-size:2.5em;white-space:normal}
 .sc-menu h3{margin:0;font-size:1.4em;font-weight:700;color:#ffd34d;text-align:center}
 .sc-menu button{display:flex;gap:.7em;align-items:center;width:100%;flex:1 1 0;max-height:2.6em;min-height:0;padding:0 .6em;border:0;border-radius:.3em;background:#18213a;color:#f4f6fb;font:500 1.3em/1 inherit;text-align:left;cursor:pointer;font-family:inherit;white-space:nowrap;overflow:hidden}
@@ -277,7 +277,7 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-presets small,.ws-presets output{flex-basis:100%}
 .ws-training{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 14px}
 .ws-training button{min-height:36px}
-.ws-cover-bonus{position:absolute;top:100%;left:0;margin-top:3px;white-space:nowrap;border-radius:5px;padding:2px 6px;background:#11271eeb;color:#a6edbd;font:700 11px system-ui,sans-serif;pointer-events:none}
+.ws-cover-bonus{position:absolute;top:100%;left:0;margin-top:3px;max-width:100%;white-space:normal;border-radius:5px;padding:2px 6px;background:#11271eeb;color:#a6edbd;font:700 11px system-ui,sans-serif;pointer-events:none}
 .ws-upgrades{margin:12px 0}
 .ws-upgrades summary{cursor:pointer;font-weight:700;padding:6px 0}
 .sc-name-label{position:absolute;top:5%;left:50%;transform:translateX(-50%) rotate(-2deg);max-width:58%;overflow:hidden;white-space:nowrap;padding:0 .4em;background:#ede5bd;color:#24251e;font:bold 1.15em/1.3 system-ui,sans-serif}

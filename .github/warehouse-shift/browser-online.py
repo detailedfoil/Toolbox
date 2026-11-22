@@ -92,6 +92,14 @@ def shared_shift(browser, errors):
             scanner = guest.locator("#scanner").bounding_box()
             assert scanner["x"] > w / 2 and scanner["y"] < h / 8
             assert scanner["height"] <= h * 0.4
+            small = guest.locator("#scFn")
+            original_height = small.bounding_box()["height"]
+            small.tap()
+            enlarged = guest.locator('[data-el="scConfirmFn"]')
+            assert enlarged.bounding_box()["height"] > original_height
+            enlarged.tap()
+            assert guest.locator("#scMenu").is_visible()
+            guest.locator("#scBack").tap()
     # Wait for the other browser's worker figure to reach the host's new spot.
     host_xy = host.evaluate("[__shift.me.x,__shift.me.y]")
     guest.wait_for_function("""([x,y]) => __shift.S.scene.children.some(o => o.visible &&
