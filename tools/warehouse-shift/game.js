@@ -925,6 +925,15 @@
       let homeSel = 1, carton = null; // the scanner's main menu (Putaway / Today Picking), the delivery carton in your hands
       const HOME = ['Putaway', 'Today Picking'];
       let blueAction = null;
+      const blueOptions = [
+        [D.scFn, D.scConfirmFn, () => menu(true)],
+        [D.scHint, D.scConfirmHint, useHint],
+        [D.scQuickPick, D.scConfirmQuickPick, () => {
+          if (pending || state !== 'pa' || carton) return;
+          const first = day?.list()[0];
+          if (first) startPick(first);
+        }]
+      ];
       const idleState = () => state === 'list' || state === 'end' || state === 'home' || state === 'pa';
       const stats = { putaway: 0, orders: 0, picks: 0, lines: 0, units: 0, wrong: 0, hints: 0, tills: 0, perfect: 0, since: Date.now() };
       let life = { orders: 0, lines: 0, units: 0 };
@@ -968,7 +977,7 @@
         const listing = state === 'list' || state === 'end' || state === 'idle' || state === 'home';
         D.scList.hidden = !listing; D.scSelect.hidden = !listing; D.scText.hidden = listing; D.scHint.hidden = listing;
         D.scQuickPick.hidden = state !== 'pa' || !!carton || !day?.list().length;
-        if (blueAction?.button.hidden) cancelBlueAction();
+        syncBlueOptions();
         D.scPicked.style.visibility = state === 'scan' || state === 'qty' ? '' : 'hidden';
         D.scEnter.classList.toggle('pulse', (state === 'deliver' && atCounter) || (state === 'qty' && full));
         D.scHint.classList.toggle('used', hint.until > performance.now());
@@ -1537,6 +1546,7 @@
       function menu(open) {
         if (open && P.scannerMissing) return;
         if (!open) { D.scMenu.hidden = true; return; }
+        cancelBlueAction();
         const items = [
           ['1', me.squat ? 'Stand up' : 'Squat', () => toggleSquat()],
           ['2', 'Hint', () => useHint()],
@@ -2019,34 +2029,37 @@
       press(D.scBack, () => back());
       press(D.scLogoff, () => { SFX.key(); endShift(); });
       function cancelBlueAction() {
+        if (D.scConfirm.contains(document.activeElement) && blueAction && !blueAction.hidden) {
+          blueAction.focus({ preventScroll: true });
+        }
         blueAction = null;
         D.scConfirm.hidden = true;
       }
-      function previewBlueAction(button, label, run) {
+      function syncBlueOptions() {
+        if (D.scConfirm.hidden) return;
+        const focused = document.activeElement;
+        for (const [button, enlarged] of blueOptions) enlarged.hidden = button.hidden;
+        if (D.scConfirm.contains(focused) && focused.hidden) D.scConfirmFn.focus({ preventScroll: true });
+      }
+      for (const [button, enlarged, run] of blueOptions) {
         button.addEventListener('click', () => {
-          if (!P.playing()) return;
+          if (!P.playing() || button.hidden) return;
           initAudio();
           SFX.key();
           if (!D.scMenu.hidden && button === D.scFn) { menu(false); return; }
           if (!D.scMenu.hidden) return;
-          blueAction = { button, run };
-          D.scConfirmBtn.textContent = label;
+          blueAction = button;
           D.scConfirm.hidden = false;
-          D.scConfirmBtn.focus({ preventScroll: true });
+          syncBlueOptions();
+          enlarged.focus({ preventScroll: true });
+        });
+        enlarged.addEventListener('click', () => {
+          if (D.scConfirm.hidden || !P.playing() || button.hidden) return;
+          blueAction = button;
+          cancelBlueAction();
+          run();
         });
       }
-      previewBlueAction(D.scFn, 'Function', () => menu(true));
-      previewBlueAction(D.scHint, 'Hint', useHint);
-      previewBlueAction(D.scQuickPick, 'Quick Pick', () => {
-        if (pending || state !== 'pa' || carton) return;
-        const first = day?.list()[0];
-        if (first) startPick(first);
-      });
-      D.scConfirmBtn.addEventListener('click', () => {
-        const action = blueAction;
-        cancelBlueAction();
-        if (P.playing() && action && !action.button.hidden) action.run();
-      });
       press(D.tillBtn, () => { if (!useAction()) openTill(); });
       press(D.scKbd, () => { SFX.key(); toast(state === 'list' ? 'Up and down choose, Enter starts the pick' : 'No typing: scan the location once for each item'); });
       press(D.scUp, () => page(-1)); press(D.scDown, () => page(1));
@@ -2347,7 +2360,7 @@
         if (e.key === 'Escape' || e.key === 'Tab') { p.menu(false); e.preventDefault(); return; }
       }
       if (!D.scConfirm.hidden && e.key === 'Escape') { p.back(); e.preventDefault(); return; }
-      if ([D.scHint, D.scQuickPick, D.scFn, D.scConfirmBtn].includes(e.target) && (e.key === 'Enter' || e.key === ' ')) {
+      if (([D.scHint, D.scQuickPick, D.scFn].includes(e.target) || D.scConfirm.contains(e.target)) && (e.key === 'Enter' || e.key === ' ')) {
         if (e.repeat) e.preventDefault();
         return;
       }
@@ -2479,7 +2492,7 @@
       $('shiftScore').textContent = 'Shift score · ' + r.score + ' / 1,000';
       statsHtml($('scoreRows'), r.rows.map(row => [row.earned + '/' + row.possible, row.label]));
       $('earnedXP').textContent = eligible
-        ? r.baseXP + ' work XP + ' + r.bonus + ' shift bonus + ' + r.coverBonus + ' till cover = ' + r.xp + ' XP'
+        ? r.baseXP + ' work XP + ' + r.bonus + ' shift bonus + ' + r.coverBonus + ' Service Champ bonus = ' + r.xp + ' XP'
         : '0 XP earned on this device';
       const unlocked = previousXP < presetXP && careerXP() >= presetXP;
       $('scoreUnlock').textContent = unlocked ? 'Unlocked · Sam’s job presets on the manager PC' : '';
