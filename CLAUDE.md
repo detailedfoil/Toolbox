@@ -146,7 +146,7 @@ explain changes in plain English and say what they'll see.
     plan out itself: `.github/stock-swaps/make-plans.py` (Python: numpy, scipy 1.9+ for milp, openpyxl) solves the whole
     area at once for every slider step, with and without Swaps only, into `data/plans.json` (about 20 KB; identical plans
     stored once). Run it with the area stock export and the units sold export, e.g.
-    `python3 .github/stock-swaps/make-plans.py STOCK.xlsx SOLD.xlsx --days 4 --stock-date 21.11.2026 --sales "16.11 to 20.11.2026"`
+    `python3 .github/stock-swaps/make-plans.py STOCK.xlsx SOLD.xlsx --days 6 --stock-date 22.11.2026 --sales "16.11 to 21.11.2026"`
     (about 3 minutes; `--only 60,90` tries a few steps without writing). Each store's transactions (Area Overview) and
     place are in its `STORES` list: update the transactions with the files. The rules (top of the script, copied into the
     file as `rules`, which `plan.js` reads): demand = half own sales, half transactions share of area sales; a store gives
