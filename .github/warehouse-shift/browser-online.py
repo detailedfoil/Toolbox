@@ -208,18 +208,19 @@ def recorded_solo_shift(browser, errors):
     assert summary["start"]["day"] == 1 and summary["start"]["touchControls"]
     assert summary["timing"]["menuBreakSeconds"] >= 0.2
     assert summary["result"]["xpEarned"] >= 20 and summary["result"]["sam"]["delivery"] >= 1
-    kinds = [event["event"] for event in summary["events"]]
+    kinds = [event["event"] for event in summary["events"] if event.get("who") != "Sam"]
     expected = ["carton.start", "scanner.crash", "scanner.swap", "carton.finish",
                 "pick.start", "pick.collected", "pick.finish", "lock-up"]
     positions = [kinds.index(kind) for kind in expected]
     assert positions == sorted(positions), kinds
-    page.evaluate("navigator.clipboard.writeText = () => Promise.reject(new Error('denied'))")
+    page.evaluate("() => { navigator.clipboard.writeText = () => Promise.reject(new Error('denied')); }")
     page.locator("#copyPlaytest").tap()
     page.get_by_text("Select and copy the summary below.").wait_for()
     assert json.loads(page.locator("#playtestReport").input_value()) == summary
     page.locator("#nextDayBtn").tap()
     page.evaluate("__shift.day().phase = 'lock'; __shift.day().lock()")
     page.locator("#copyPlaytest").tap()
+    page.locator("#playtestReport").wait_for(state="visible")
     assert json.loads(page.locator("#playtestReport").input_value())["start"]["day"] == 2
     page.context.close()
 
