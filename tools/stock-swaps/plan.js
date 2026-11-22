@@ -107,7 +107,8 @@
     var then = Date.UTC(+m[3], +m[2] - 1, +m[1]);
     var d = now || new Date();
     var days = Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - then) / 86400000);
-    var when = days <= 0 ? 'TODAY' : days === 1 ? 'YESTERDAY' : days <= 6 ? days + ' DAYS AGO' : 'ON ' + stockDate;
+    var date = m[1].padStart(2, '0') + '.' + m[2].padStart(2, '0') + '.' + m[3];
+    var when = days <= 0 ? 'TODAY ' + date : days === 1 ? 'YESTERDAY ' + date : days <= 6 ? days + ' DAYS AGO ' + date : 'ON ' + date;
     return { text: 'STOCK LAST UPDATED 6:00AM ' + when, days: Math.max(0, days) };
   }
 
