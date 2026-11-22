@@ -268,3 +268,11 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .phone-portrait .ws-chips{left:max(8px,env(safe-area-inset-left));top:calc(max(8px,env(safe-area-inset-top)) + 46px)}
 .phone-portrait .ws-squat,.phone-portrait .ws-tillbtn{bottom:max(14px,env(safe-area-inset-bottom))}
 .phone-portrait .ws-squat.ws-step{bottom:calc(max(14px,env(safe-area-inset-bottom)) + 82px)}
+
+.ws-cobalt .sc-body{background:linear-gradient(90deg,#12233e,#375e9d 12%,#233e6a 50%,#1b3050 90%,#102139)}
+.ws-presets{display:flex;gap:6px;flex-wrap:wrap;margin:5px 14px}
+.ws-presets button{min-height:36px}
+#scoreUnlock{color:#ffd34d;font-weight:700}
+.ws-presets>div{display:flex;align-items:center;gap:6px}
+.ws-presets>div b{min-width:90px}
+.ws-presets small,.ws-presets output{flex-basis:100%}

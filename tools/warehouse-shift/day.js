@@ -67,6 +67,10 @@
     this.t = 0; this.nextId = 1; this.used = {};
     this.orders = []; this.customers = []; this.owners = []; this.log = [];
     this.phase = 'closed';                 // closed (c picks, before opening), open, lock (everything's done: waiting for you to lock the front door), done
+    this.shiftId = o.shiftId || null;
+    this.xpActions = new Set();
+    this.contributors = new Set();
+    this.baseXP = 0;
     this.done = 0; this.released = 0; this.over = false;
     // the holding area: what's in each OC spot, and who's on their way to it (fetching it, or filling it)
     this.hold = {}; this.busy = {};
@@ -194,7 +198,8 @@
   };
   Day.prototype.paPut = function (d, who) {
     if (!d || d.done || d.by !== who) return false;
-    d.done = true; d.doneBy = who;
+    d.done = true; d.doneBy = who; d.finishedAt = this.t;
+    this.credit(who, 'carton-' + d.id, 10);
     this.World.place(this.world, d.item, d.loc, d.qty); this.emit('stock', d.item);
     this.log.push({ t: this.t, kind: 'putaway', by: who, took: this.t - d.takenAt });
     this.emit('delivery', d);
@@ -312,7 +317,7 @@
   Day.prototype.unreserve = function (code, who) { if (this.busy[code] === 'put:' + who) this.busy[code] = null; };
   // a picked c order into an empty OC spot: it waits there for its customer
   Day.prototype.putAway = function (o, code, who) {
-    if (!(code in this.hold) || this.hold[code] || (this.busy[code] && this.busy[code] !== 'put:' + who)) return null;
+    if (o.status === 'done' || !(code in this.hold) || this.hold[code] || (this.busy[code] && this.busy[code] !== 'put:' + who)) return null;
     var p = this.parcel(o.surname, o.no);
     p.order = o; p.locs = o.locs; p.units = o.units;
     this.hold[code] = p; this.busy[code] = null;
@@ -327,12 +332,14 @@
     if (o.status === 'done') return false;
     o.status = 'done'; o.doneBy = who;
     var c = o.cust;
-    if (c) { c.state = 'leaving'; this.emit('step', c); }
+    if (c) { c.handedAt = this.t; c.state = 'leaving'; this.emit('step', c); }
     this.emit('changed', o);
     this.finish(o);
     return true;
   };
   Day.prototype.finish = function (o) {
+    o.finishedAt = this.t;
+    this.credit(o.doneBy, 'finished-' + o.id, 10);
     if (o.counts) this.done++;
     this.log.push({ t: this.t, no: o.no, kind: o.kind, by: o.doneBy, took: this.t - (o.takenAt || o.t) });
     this.check();
@@ -354,6 +361,8 @@
   };
   // paid for: the order goes on the list and the customer stands to one side
   Day.prototype.tillDone = function (c, lines, extra) {
+    if (c.order) return c.order;
+    this.credit(c.by, 'sale-' + c.id, 15);
     var o = this.makeOrder('till', lines, c, true, extra);
     c.order = o; c.state = 'waiting'; c.by = null; c.ready = false;
     this.emit('step', c);
@@ -446,6 +455,7 @@
   Day.prototype.greet = function (c, who) {
     if (!c || c.state !== 'greet' || (who !== 'Sam' && !this.canGreet(who))) return false;
     c.greeter = who; c.greeted = this.t;
+    this.credit(who, 'greet-' + c.id, 5);
     this.decide(c);
     if (c.kind === 'till' || c.kind === 'kiosk') { c.state = 'counter'; this.emit('step', c); return true; }
     if (c.code && this.hold[c.code]) { // a bag in the holding area (several products): a line to fetch it
@@ -516,9 +526,47 @@
     return true;
   };
   // the day's done: lock up, and only then does it end
+  Day.prototype.credit = function (who, key, amount) {
+    if (!/^p[1-4]$/.test(who) || this.xpActions.has(key)) return;
+    this.xpActions.add(key);
+    this.contributors.add(who);
+    this.baseXP += amount;
+  };
+  Day.prototype.confirmLine = function (order, index, who) {
+    this.credit(who, 'line-' + order.id + '-' + index, 10);
+  };
+  Day.prototype.shiftReport = function () {
+    function pace(target, elapsed) {
+      return Number.isFinite(elapsed) ? Math.min(1, target / Math.max(1, elapsed)) : 0;
+    }
+    var customers = this.customers.filter(c => Number.isFinite(c.here));
+    var picks = this.orders.filter(o => o.counts && o.lines.length && Number.isFinite(o.finishedAt));
+    var noDelivery = this.event === 'failedDelivery';
+    var categories = [
+      ['Greetings', 100, customers.map(c => pace(12, c.greeted - c.here))],
+      ['Customer waits', noDelivery ? 450 : 300, customers.map(c => {
+        var target = c.kind === 'collect' ? 90 : c.kind === 'ck' ? 100 : 180;
+        return pace(target, c.handedAt - c.here);
+      })],
+      ['Picking', 250, picks.map(o => pace(45 + 15 * (o.lines.length - 1), o.finishedAt - o.takenAt))],
+      ['Delivery', noDelivery ? 0 : 150, this.delivery.map(d => pace(30, d.finishedAt - d.takenAt))]
+    ];
+    // When a practice day contains no timed jobs of one kind, share its weight among the applicable jobs.
+    var weight = categories.reduce((n, row) => n + (row[2].length ? row[1] : 0), 0);
+    var remaining = 800, active = categories.filter(row => row[1] && row[2].length);
+    var rows = active.map(([label, max, samples], i) => {
+      var possible = i === active.length - 1 ? remaining : Math.round(800 * max / weight);
+      remaining -= possible;
+      return { label, possible, earned: Math.round(possible * samples.reduce((a, b) => a + b, 0) / samples.length) };
+    });
+    rows.push({ label: 'Lock-up', possible: 200, earned: this.over ? 200 : 0 });
+    var score = rows.reduce((n, row) => n + row.earned, 0);
+    var bonus = Math.round(this.baseXP * score / 4000);
+    return { id: this.shiftId, rows, score, baseXP: this.baseXP, bonus, xp: this.baseXP + bonus };
+  };
   Day.prototype.lock = function () {
     if (this.phase !== 'lock') return false;
-    this.phase = 'done'; this.over = true;
+    this.phase = 'done'; this.over = true; this.report = this.shiftReport();
     this.emit('locked');
     this.emit('over');
     return true;

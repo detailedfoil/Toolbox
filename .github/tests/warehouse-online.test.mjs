@@ -134,3 +134,49 @@ test('losing a picked tote restores its stock once and preserves other reservati
   assert.equal(shared.stock, sharedStock - 2);
   assert.equal(shared.reserved, 1);
 });
+
+test('shift score rewards timely work, counts abandoned customers and reallocates cancelled delivery', () => {
+  const d = fresh();
+  d.customers = [{ kind: 'ck', here: 10, greeted: 22, handedAt: 110 },
+    { kind: 'collect', here: 50 }];
+  d.orders = [{ counts: true, lines: [{}, {}], takenAt: 0, finishedAt: 60 }];
+  d.delivery = [{ takenAt: 10, finishedAt: 70 }];
+  d.phase = 'lock';
+  assert.ok(d.lock());
+  assert.deepEqual(d.report.rows.map(r => [r.label, r.earned, r.possible]), [
+    ['Greetings', 50, 100], ['Customer waits', 150, 300], ['Picking', 250, 250],
+    ['Delivery', 75, 150], ['Lock-up', 200, 200]
+  ]);
+  assert.equal(d.report.score, 725);
+  assert.equal(d.report.xp, 0);
+  d.event = 'failedDelivery'; d.delivery = [];
+  const cancelled = d.shiftReport();
+  assert.equal(cancelled.score, 725);
+  assert.equal(cancelled.rows.find(r => r.label === 'Customer waits').possible, 450);
+  assert.ok(!cancelled.rows.some(r => r.label === 'Delivery'));
+});
+
+test('the host scores each completed human action once and sends the same result to a guest', () => {
+  const d = fresh();
+  d.shiftId = 'test-shift'; d.walkinTill = 0;
+  const c = d.send('kiosk');
+  d.arrived(c);
+  assert.ok(d.greet(c, 'p2')); assert.equal(d.greet(c, 'p2'), false);
+  assert.ok(d.serve(c, 'p3'));
+  const lines = c.kiosk.list[c.kiosk.mine].lines, o = d.tillDone(c, lines);
+  assert.equal(d.tillDone(c, lines), o);
+  assert.ok(d.take(o, 'p1'));
+  o.lines.forEach((_, i) => { d.confirmLine(o, i, 'p1'); d.confirmLine(o, i, 'p1'); });
+  d.picked(o);
+  assert.ok(d.handOver(o, 'p1')); assert.equal(d.handOver(o, 'p1'), false);
+  const carton = d.paTake(null, 'p2'); assert.ok(d.paPut(carton, 'p2')); assert.equal(d.paPut(carton, 'p2'), false);
+  const samCarton = d.paTake(null, 'Sam'); assert.ok(d.paPut(samCarton, 'Sam'));
+  assert.equal(d.baseXP, 5 + 15 + 10 * o.lines.length + 10 + 10);
+  d.phase = 'lock'; d.lock();
+  const mirror = new DayProxy(other, Day.Day, [], () => {}, W, () => {});
+  mirror.apply(wire(d)); mirror.apply(wire(d));
+  assert.deepEqual(mirror.report, d.report);
+  assert.equal(mirror.report.xp, d.baseXP + Math.round(d.baseXP * d.report.score / 4000));
+  assert.deepEqual(mirror.eligible.sort(), ['p1', 'p2', 'p3']);
+  assert.equal(d.lock(), false);
+});

@@ -48,7 +48,10 @@
     function release(slot, freshSeat = false) {
       const who = 'p' + slot;
       locks.delete(who); progress.delete(who); peers.delete(slot);
-      if (freshSeat) g.missingScanners.delete(who);
+      if (freshSeat) {
+        g.missingScanners.delete(who);
+        g.day()?.contributors.delete(who);
+      }
       const stool = world.stools.find(s => s.by === who);
       if (stool) { stool.by = null; S.setStool(stool.id, stool.home.x, stool.home.y); }
       if (g.day()) wire.release(g.day(), who);

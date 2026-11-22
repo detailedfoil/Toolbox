@@ -172,12 +172,26 @@
     const PRIO_NAMES = { cust: ['Customer picks', 'Click & collect, till orders, bag collections'], queue: ['Queue', 'Serving till customers'],
       hold: ['Holding area picks', 'c picks for the holding area'], delivery: ['Delivery', 'Putting the delivery away'] };
     const PRIO_DEFAULT = ['cust', 'queue', 'hold', 'delivery'];
-    let samPrio = PRIO_DEFAULT.map((id) => ({ id, on: true }));
-    try {
-      const sv = JSON.parse(localStorage.getItem('ws-sam-prio') || 'null');
-      if (Array.isArray(sv) && sv.length === PRIO_DEFAULT.length && PRIO_DEFAULT.every((id) => sv.some((j) => j && j.id === id))) samPrio = sv.map((j) => ({ id: j.id, on: !!j.on }));
-    } catch (e) { /* fine */ }
-    function saveSamPrio() { try { localStorage.setItem('ws-sam-prio', JSON.stringify(samPrio)); } catch (e) { /* fine */ } }
+    function loadPriority(key, defaults) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(key));
+        if (Array.isArray(saved) && saved.length === PRIO_DEFAULT.length &&
+            PRIO_DEFAULT.every(id => saved.some(job => job && job.id === id))) {
+          return saved.map(job => ({ id: job.id, on: !!job.on }));
+        }
+      } catch (e) { /* use the defaults */ }
+      return defaults.map(id => ({ id, on: true }));
+    }
+    let samPrio = loadPriority('ws-sam-prio', PRIO_DEFAULT);
+    const presetNames = ['Cover tills', 'Clear delivery'];
+    const presets = [
+      loadPriority('ws-sam-preset-0', ['queue', 'cust', 'hold', 'delivery']),
+      loadPriority('ws-sam-preset-1', ['delivery', 'cust', 'queue', 'hold'])
+    ];
+    function savePriority(key, jobs) {
+      try { localStorage.setItem(key, JSON.stringify(jobs)); } catch (e) { /* keep the session settings */ }
+    }
+    function saveSamPrio() { savePriority('ws-sam-prio', samPrio); }
     let bellCust = null, bellCount = 0, nextBellCheck = 0;
     function bellQueue() { if (bellCust?.state !== 'counter') bellCust = null; return bellCust ? [bellCust] : []; }
     function showBell() {
@@ -491,7 +505,8 @@
       if (guest()) return;
       const old = day;
       const event = mode === 0 ? Day.rollEvent(Math.random) : null;
-      day = Day.create({ world, World, Till, requests, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null });
+      const shiftId = globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+      day = Day.create({ world, World, Till, requests, shiftId, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null });
       dayNo++; bellCust = null; bellCount = 0; nextBellCheck = 0;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
       S.delivery.set(day.delivery);
@@ -1209,6 +1224,7 @@
         const ln = order.lines[cur];
         if (guest() && !await remote(() => day.line(order, cur))) { say('Confirm at the scanned shelf', 'warn'); return; }
         SFX.pick(); flash(false);
+        if (!guest()) day.confirmLine(order, cur, P.id);
         stats.lines++; stats.units += ln.qty; life.lines++; life.units += ln.qty; saveLife();
         flyToTote(ln);
         setTimeout(() => { D.toteChip.classList.remove('bump'); void D.toteChip.offsetWidth; D.toteChip.classList.add('bump'); }, 480);
@@ -1638,12 +1654,16 @@
         el.className = 'ws-pc'; el.hidden = true;
         el.innerHTML = '<div class="ws-pc-box"><div class="ws-pc-top"><b>Sam\'s jobs</b><span>Manager PC</span><button type="button" class="ws-pc-x" aria-label="Close">Close &#10005;</button></div>' +
           '<p>Sam does the ticked jobs, the top one first. Untick a job and Sam leaves it to you. Sam always says hello to customers waiting, and the service bell always works.</p>' +
-          '<ol class="ws-pc-list"></ol><div class="ws-pc-keys"></div><button type="button" class="ws-pc-close">Close</button></div>';
+          '<ol class="ws-pc-list"></ol><div class="ws-presets" hidden>' +
+          presetNames.map((name, i) => '<div><b>' + name + '</b><button type="button" data-pc="load" data-i="' + i + '" aria-label="Apply ' + name + '">Apply</button>' +
+            '<button type="button" data-pc="save" data-i="' + i + '" aria-label="Save current jobs to ' + name + '">Save current</button></div>').join('') +
+          '<small></small><output aria-live="polite"></output></div><div class="ws-pc-keys"></div><button type="button" class="ws-pc-close">Close</button></div>';
         D.root.appendChild(el);
         el.addEventListener('click', (e) => {
           const b = e.target.closest('[data-pc]'); if (!b) return;
           const i = +b.dataset.i, a = b.dataset.pc;
           initAudio();
+          if (a === 'save' || a === 'load') { pcPreset(i, a === 'save'); return; }
           if (a === 'tick') { pc.sel = i; pcToggle(); } else if (a === 'up') { pc.sel = i; pcShift(-1); } else if (a === 'down') { pc.sel = i; pcShift(1); }
         });
         el.querySelector('.ws-pc-close').addEventListener('click', () => closePc());
@@ -1657,10 +1677,28 @@
           '<span class="n">' + (i + 1) + '</span><span class="t">' + PRIO_NAMES[j.id][0] + '<small>' + PRIO_NAMES[j.id][1] + '</small></span>' +
           '<button type="button" data-pc="up" data-i="' + i + '" aria-label="Move up"' + (i ? '' : ' disabled') + '>&#9650;</button>' +
           '<button type="button" data-pc="down" data-i="' + i + '" aria-label="Move down"' + (i < samPrio.length - 1 ? '' : ' disabled') + '>&#9660;</button></li>').join('');
+        const panel = pc.el.querySelector('.ws-presets');
+        panel.hidden = careerXP() < presetXP;
+        panel.querySelector('small').textContent = P.padIndex != null ? 'X / Y apply · Hold LT with X / Y to save' : touch ? '' : '1 / 2 apply · Shift + 1 / 2 save';
         pc.el.querySelector('.ws-pc-keys').textContent = P.padIndex !== null && P.padIndex !== undefined ? 'D-pad choose, A tick, LB move up, RB move down, B close' : touch ? 'Tap a box to tick it, the arrows to move it' : 'Arrow keys choose, Space ticks, [ and ] move it, Esc closes';
+      }
+      function pcPreset(i, save) {
+        if (careerXP() < presetXP) return;
+        if (save) {
+          presets[i] = samPrio.map(job => ({ ...job }));
+          savePriority('ws-sam-preset-' + i, presets[i]);
+        } else {
+          samPrio = presets[i].map(job => ({ ...job }));
+          saveSamPrio();
+          pc.sel = 0;
+        }
+        SFX.key();
+        pcRender();
+        pc.el.querySelector('output').textContent = presetNames[i] + (save ? ' saved' : ' applied');
       }
       function openPc() {
         if (!pc.el) pcBuild();
+        pc.el.querySelector('output').textContent = '';
         if (idx === 0 && locked()) document.exitPointerLock();
         keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; me.vx = me.vy = 0;
         pc.open = true; pc.sel = 0; pc.el.hidden = false; SFX.key(); pcRender();
@@ -1676,7 +1714,8 @@
       }
       function pcKey(e) {
         if (e.repeat && !(e.code === 'ArrowUp' || e.code === 'ArrowDown')) return;
-        if (e.code === 'ArrowUp' || e.code === 'KeyW') pcMove(-1);
+        if (e.code === 'Digit1' || e.code === 'Digit2') pcPreset(Number(e.code.slice(-1)) - 1, e.shiftKey);
+        else if (e.code === 'ArrowUp' || e.code === 'KeyW') pcMove(-1);
         else if (e.code === 'ArrowDown' || e.code === 'KeyS') pcMove(1);
         else if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') pcToggle();
         else if (e.code === 'BracketLeft' || e.code === 'PageUp') pcShift(-1);
@@ -1975,6 +2014,7 @@
           still();
           const d = steer(true);
           if (d === 'up' || d === 'down') pcMove(d === 'up' ? -1 : 1);
+          if (hit(2)) pcPreset(0, now[6]); if (hit(3)) pcPreset(1, now[6]);
           if (hit(0)) pcToggle(); if (hit(4)) pcShift(-1); if (hit(5)) pcShift(1);
           if (hit(1) || hit(9)) closePc();
           return;
@@ -2264,6 +2304,55 @@
       for (const [v, l] of rows) { const d = document.createElement('div'), b = document.createElement('b'), s = document.createElement('span'); b.textContent = v; s.textContent = l; d.append(b, s); box.appendChild(d); }
       el.appendChild(box);
     }
+    const receiptPrefix = 'ws-shift-xp/';
+    const career = new Map();
+    let cobalt = false;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(receiptPrefix)) career.set(key, Number(localStorage.getItem(key)) || 0);
+      }
+      cobalt = localStorage.getItem('ws-shell') === 'cobalt';
+    } catch (e) { /* still playable without storage */ }
+    const careerXP = () => Array.from(career.values()).reduce((a, b) => a + b, 0);
+    const shellXP = 100, presetXP = 350;
+    function careerView() {
+      const xp = careerXP(), shell = $('shellBtn');
+      const next = xp < shellXP ? 'Cobalt scanner at 100 XP' : xp < presetXP ? 'Sam’s job presets at 350 XP' : 'Sam’s job presets unlocked';
+      $('careerXP').textContent = xp + ' career XP · ' + next;
+      shell.hidden = xp < shellXP;
+      shell.textContent = 'Scanner shell · ' + (cobalt ? 'Cobalt' : 'Original');
+      document.body.classList.toggle('ws-cobalt', cobalt && xp >= shellXP);
+    }
+    function toggleShell() {
+      if (careerXP() < shellXP) return;
+      cobalt = !cobalt;
+      try { localStorage.setItem('ws-shell', cobalt ? 'cobalt' : 'original'); } catch (e) { /* this session */ }
+      careerView();
+    }
+    $('shellBtn').onclick = toggleShell;
+    careerView();
+    function showShiftScore(r, eligible) {
+      const earned = eligible ? r.xp : 0, previousXP = careerXP();
+      if (earned && r.id) {
+        const key = receiptPrefix + r.id;
+        career.set(key, earned);
+        try { localStorage.setItem(key, String(earned)); } catch (e) { /* keep this session's XP */ }
+      }
+      careerView();
+      $('shiftScore').textContent = 'Shift score · ' + r.score + ' / 1,000';
+      statsHtml($('scoreRows'), r.rows.map(row => [row.earned + '/' + row.possible, row.label]));
+      $('earnedXP').textContent = eligible ? r.baseXP + ' team XP + ' + r.bonus + ' score bonus · ' + careerXP() + ' career XP'
+        : '0 XP earned on this device · ' + careerXP() + ' career XP';
+      const unlocked = [];
+      if (previousXP < shellXP && careerXP() >= shellXP) unlocked.push('Cobalt scanner shell');
+      if (previousXP < presetXP && careerXP() >= presetXP) unlocked.push('Sam’s job presets');
+      $('scoreUnlock').textContent = unlocked.length ? 'Unlocked · ' + unlocked.join(' and ') : '';
+      $('scoreUnlock').hidden = !unlocked.length;
+      $('dayShell').hidden = careerXP() < shellXP;
+      $('dayShell').textContent = 'Scanner shell · ' + (cobalt ? 'Cobalt' : 'Original');
+    }
+    $('dayShell').onclick = () => { toggleShell(); $('dayShell').textContent = $('shellBtn').textContent; };
     function endShift() {
       if (locked()) document.exitPointerLock();
       const st = me1.stats, mins = Math.max(1, Math.round((Date.now() - st.since) / 60000));
@@ -2273,6 +2362,11 @@
     $('keepBtn').addEventListener('click', () => { $('endCover').hidden = true; });
     // all 20 picks done and nobody waiting: your own day, nothing about Sam's (detailedfoil)
     function dayOver() {
+      const report = day.report;
+      if (report) {
+        const eligible = day.eligible || Array.from(day.contributors);
+        showShiftScore(report, players.some(p => eligible.includes(p.id)));
+      }
       SFX.dayEnd();
       for (const p of players) p.dayOver();
       later(1.2, () => {

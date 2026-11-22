@@ -458,6 +458,18 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const previous = s.day();
   day.phase = 'lock'; assert.equal(day.lock(), true);
   await until(() => !host.$('dayCover').hidden && guests.every(g => !g.$('dayCover').hidden), 'end of day screens');
+  const receipt = 'ws-shift-xp/' + day.shiftId;
+  for (const device of [host, ...guests]) {
+    const active = day.contributors.has(device.s.players[0].id);
+    assert.equal(device.w.localStorage.getItem(receipt), active ? String(day.report.xp) : null);
+    assert.equal(device.$('shiftScore').textContent, host.$('shiftScore').textContent);
+  }
+  const beforeReconnect = picker.$('careerXP').textContent;
+  const endedConnections = picker.sockets.length;
+  picker.sockets.at(-1).terminate();
+  await until(() => picker.sockets.length > endedConnections && picker.$('onlineCover').hidden && !picker.$('dayCover').hidden,
+    'guest to rejoin the completed shift');
+  assert.equal(picker.$('careerXP').textContent, beforeReconnect);
   assert.equal(host.$('nextDayBtn').hidden, false);
   assert.ok(guests.every(g => g.$('nextDayBtn').hidden));
   picker.$('nextDayBtn').click();
@@ -481,4 +493,31 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   assert.ok(guests.every(g => g.s.day().event === 'failedDelivery'));
   host.sockets.at(-1).send(JSON.stringify({ type: 'leave' }));
   await until(() => guests.every(g => !g.$('onlineCover').hidden && /host left/.test(g.$('roomMessage').textContent)), 'room to end for everyone');
+});
+
+test('split-screen shares one career, persists both unlocks and pays a replayed result once', async t => {
+  const { $, w, s } = await game(t, { online: false });
+  $('twoBtn').click(); s.join({ kind: 'kb' }); s.join({ kind: 'pad', pad: 0 }); $('joinGo').click();
+  const [p] = s.players;
+  p.openPc();
+  const panel = w.document.querySelector('.ws-presets');
+  assert.ok(panel.hidden);
+  p.closePc();
+  const d = s.day();
+  d.credit('p2', 'test-work', 400);
+  d.phase = 'lock'; d.lock();
+  const key = 'ws-shift-xp/' + d.shiftId, total = d.report.xp;
+  assert.equal(Number(w.localStorage.getItem(key)), total);
+  assert.match($('scoreUnlock').textContent, /Cobalt scanner shell and Sam’s job presets/);
+  $('dayShell').click(); assert.ok(w.document.body.classList.contains('ws-cobalt'));
+  d.emit('over');
+  assert.match($('careerXP').textContent, new RegExp('^' + total + ' career XP'));
+  assert.equal([...Array(w.localStorage.length).keys()].filter(i => w.localStorage.key(i).startsWith('ws-shift-xp/')).length, 1);
+  p.openPc();
+  assert.equal(panel.hidden, false);
+  const preset = (action, i) => panel.querySelector('[data-pc="' + action + '"][data-i="' + i + '"]').click();
+  preset('load', 1); assert.equal(s.prio()[0].id, 'delivery');
+  preset('save', 0); preset('load', 0);
+  assert.equal(JSON.parse(w.localStorage.getItem('ws-sam-preset-0'))[0].id, 'delivery');
+  assert.equal(JSON.parse(w.localStorage.getItem('ws-sam-prio'))[0].id, 'delivery');
 });
