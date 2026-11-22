@@ -71,6 +71,7 @@
     this.xpActions = new Set();
     this.contributors = new Set();
     this.baseXP = 0;
+    this.coveredXP = 0;
     this.done = 0; this.released = 0; this.over = false;
     // the holding area: what's in each OC spot, and who's on their way to it (fetching it, or filling it)
     this.hold = {}; this.busy = {};
@@ -346,6 +347,11 @@
   };
 
   /* ---------- the till ---------- */
+  Day.prototype.scannerMixup = function (c, who, labelled) {
+    if (c.scannerChecked || c.by !== who || c.state !== 'serving' || !c.ready) return false;
+    c.scannerChecked = true;
+    return this.r() < (labelled ? 0.2 : 0.4);
+  };
   Day.prototype.serve = function (c, who) {
     if (!this.tillsOpen() || !c || c.state !== 'counter' || c.by) return false;
     if (this.customers.some(function (other) { return other.state === 'serving' && other.by === who; })) return false;
@@ -527,10 +533,15 @@
   };
   // the day's done: lock up, and only then does it end
   Day.prototype.credit = function (who, key, amount) {
-    if (!/^p[1-4]$/.test(who) || this.xpActions.has(key)) return;
+    if (this.over || !/^p[1-4]$/.test(who) || this.xpActions.has(key)) return;
     this.xpActions.add(key);
     this.contributors.add(who);
     this.baseXP += amount;
+    var cover = this.emit('tillCover') || [];
+    if (cover.length) {
+      this.coveredXP += amount;
+      for (var staff of cover) if (/^p[1-4]$/.test(staff)) this.contributors.add(staff);
+    }
   };
   Day.prototype.confirmLine = function (order, index, who) {
     this.credit(who, 'line-' + order.id + '-' + index, 10);
@@ -562,7 +573,9 @@
     rows.push({ label: 'Lock-up', possible: 200, earned: this.over ? 200 : 0 });
     var score = rows.reduce((n, row) => n + row.earned, 0);
     var bonus = Math.round(this.baseXP * score / 4000);
-    return { id: this.shiftId, rows, score, baseXP: this.baseXP, bonus, xp: this.baseXP + bonus };
+    // Round once at lock-up, including the performance bonus on covered work.
+    var coverBonus = Math.round(this.coveredXP * (1 + score / 4000) * 0.05);
+    return { id: this.shiftId, rows, score, baseXP: this.baseXP, bonus, coverBonus, xp: this.baseXP + bonus + coverBonus };
   };
   Day.prototype.lock = function () {
     if (this.phase !== 'lock') return false;

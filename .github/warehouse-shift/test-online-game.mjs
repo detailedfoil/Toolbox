@@ -15,7 +15,7 @@ async function until(check, what) {
   const limit = Date.now() + 8000;
   while (!check()) { if (Date.now() > limit) assert.fail('Timed out waiting for ' + what); await pause(30); }
 }
-async function game(t, { online = true, phone = false, installed = false, loadPhotos = false, event = null } = {}) {
+async function game(t, { online = true, phone = false, installed = false, loadPhotos = false, event = null, storage = {} } = {}) {
   const w = new JSDOM(page, { runScripts: 'outside-only', pretendToBeVisual: true,
     url: origin + '/Toolbox/tools/warehouse-shift.html' + (online ? '?relay=' + relay : '') }).window;
 
@@ -23,6 +23,7 @@ async function game(t, { online = true, phone = false, installed = false, loadPh
   w.matchMedia = q => ({ matches: (phone && q === '(pointer: coarse)') || (installed && q.includes('display-mode: fullscreen')) });
   if (!phone) delete w.ontouchstart;
   w.innerWidth = phone ? 844 : 1280; w.innerHeight = phone ? 390 : 720;
+  for (const [key, value] of Object.entries(storage)) w.localStorage.setItem(key, value);
   w.localStorage.setItem('toolbox.signedIn.area20', 'STEPHEN');
   w.localStorage.setItem('ws-helped', '1'); w.localStorage.setItem('ws-sound', 'off');
   w.fetch = async url => new Response(readFileSync(path.join(base, String(url).split('?')[0])));
@@ -302,7 +303,8 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   for (const job of host.s.prio()) job.on = false;
   const room = host.$('roomBtn').textContent.slice(0, 6);
   for (let i = 0; i < 3; i++) {
-    const guest = await game(t, { phone: i === 0 });
+    const guest = await game(t, { phone: i === 0, storage: i === 2 ?
+      { 'ws-shift-xp/prior': '500', 'ws-kit-shoes': '1', 'ws-kit-label': '1' } : {} });
     guest.$('nameIn').value = ['River', 'Lake', 'Oak'][i];
     guest.$('nameIn').dispatchEvent(new guest.w.Event('input'));
     guest.$('onlineBtn').click(); guest.$('roomCode').value = room; guest.$('joinRoom').click();
@@ -487,6 +489,17 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   cancelled.take(visitor.order, 'p1'); cancelled.picked(visitor.order); cancelled.handOver(visitor.order, 'p1');
   await until(() => guests.every(g => g.s.day().clockMinute() === cancelled.clockMinute() && g.s.day().done === 1),
     'customer handover to advance the shared wall clock');
+  const shoeUser = guests[2].s;
+  const highItem = host.s.world.items.find(it => it.loc?.face.kind === 'AA' && it.loc.shelf.no >= 13 && host.w.ShiftWorld.room(it) > 0);
+  const high = cancelled.makeOrder('c', [{ item: highItem, qty: 1 }], null, true);
+  await until(() => shoeUser.day().orders.some(o => o.id === high.id), 'high pick to reach the guest with shoes');
+  const proxy = shoeUser.day(), highJob = proxy.orders.find(o => o.id === high.id), shelf = highJob.lines[0].loc;
+  assert.ok(await proxy.take(highJob));
+  shoeUser.me.x = (shelf.x0 + shelf.x1) / 2; shoeUser.me.y = shelf.face.front + shelf.face.out * 0.65;
+  assert.equal(await proxy.line(highJob, 0), false);
+  shoeUser.players[0].toggleStep();
+  assert.ok(await proxy.line(highJob, 0), 'host accepts high shelf with deployed shoes');
+  assert.ok(host.s.world.stools.every(stool => !stool.by));
   host.sockets.at(-1).terminate();
   await until(() => host.sockets.length === 2 && guests.every(g => g.$('onlineCover').hidden), 'original host to reconnect');
   assert.equal(host.s.crew.length, 1);
@@ -495,29 +508,74 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   await until(() => guests.every(g => !g.$('onlineCover').hidden && /host left/.test(g.$('roomMessage').textContent)), 'room to end for everyone');
 });
 
-test('split-screen shares one career, persists both unlocks and pays a replayed result once', async t => {
-  const { $, w, s } = await game(t, { online: false });
+test('split-screen earns till cover, shares one payout and buys permanent job slots', async t => {
+  const oldJobs = ['queue', 'delivery', 'hold', 'cust'].map(id => ({ id, on: true }));
+  const { $, w, s } = await game(t, { online: false, storage: { 'ws-sam-prio': JSON.stringify(oldJobs) } });
   $('twoBtn').click(); s.join({ kind: 'kb' }); s.join({ kind: 'pad', pad: 0 }); $('joinGo').click();
-  const [p] = s.players;
+  const [p, worker] = s.players;
+  assert.deepEqual(Array.from(s.prio().filter(j => j.on), j => j.id), ['queue']);
   p.openPc();
-  const panel = w.document.querySelector('.ws-presets');
+  const panel = w.document.querySelector('.ws-presets'), pc = panel.parentElement;
   assert.ok(panel.hidden);
+  const tick = i => pc.querySelector('[data-pc="tick"][data-i="' + i + '"]').click();
+  tick(1);
+  assert.deepEqual(Array.from(s.prio().filter(j => j.on), j => j.id), ['delivery']);
+  assert.ok(pc.querySelector('[data-pc="train"]').disabled);
   p.closePc();
-  const d = s.day();
-  d.credit('p2', 'test-work', 400);
+  const d = s.day(), counter = s.world.counter, till = s.tills[0];
+  Object.assign(p.me, { x: (till.x0 + till.x1) / 2, y: counter.y1 + 0.6, speed: 0 });
+  Object.assign(worker.me, { x: counter.x0 - 4, y: counter.y0 - 4 });
+  d.credit('p2', 'test-work', 900);
+  assert.ok(d.contributors.has('p1'), 'standing cover contributes');
+  p.me.speed = 2;
+  d.credit('p2', 'test-uncovered', 10);
+  assert.equal(d.coveredXP, 900);
   d.phase = 'lock'; d.lock();
   const key = 'ws-shift-xp/' + d.shiftId, total = d.report.xp;
   assert.equal(Number(w.localStorage.getItem(key)), total);
-  assert.match($('scoreUnlock').textContent, /Cobalt scanner shell and Sam’s job presets/);
-  $('dayShell').click(); assert.ok(w.document.body.classList.contains('ws-cobalt'));
+  assert.equal(d.report.coverBonus, Math.round(900 * (1 + d.report.score / 4000) * 0.05));
+  assert.match($('scoreUnlock').textContent, /Sam’s job presets/);
   d.emit('over');
   assert.match($('careerXP').textContent, new RegExp('^' + total + ' career XP'));
   assert.equal([...Array(w.localStorage.length).keys()].filter(i => w.localStorage.key(i).startsWith('ws-shift-xp/')).length, 1);
+  $('dayTrain').click();
+  assert.equal(w.localStorage.getItem('ws-sam-job-slots'), '2');
   p.openPc();
-  assert.equal(panel.hidden, false);
+  const train = pc.querySelector('[data-pc="train"]');
   const preset = (action, i) => panel.querySelector('[data-pc="' + action + '"][data-i="' + i + '"]').click();
-  preset('load', 1); assert.equal(s.prio()[0].id, 'delivery');
-  preset('save', 0); preset('load', 0);
+  preset('load', 1);
+  assert.equal(s.prio().filter(j => j.on).length, 2);
+  assert.equal(s.prio()[0].id, 'delivery');
+  preset('save', 0);
   assert.equal(JSON.parse(w.localStorage.getItem('ws-sam-preset-0'))[0].id, 'delivery');
-  assert.equal(JSON.parse(w.localStorage.getItem('ws-sam-prio'))[0].id, 'delivery');
+  train.click(); train.click();
+  assert.equal(w.localStorage.getItem('ws-sam-job-slots'), '4');
+  assert.ok(train.hidden);
+  assert.match($('careerXP').textContent, new RegExp((total - 850) + ' XP available'));
+  preset('load', 1);
+  assert.equal(s.prio().filter(j => j.on).length, 4);
+  const storage = Object.fromEntries(Object.entries(w.localStorage));
+  const reopened = await game(t, { online: false, storage });
+  assert.match(reopened.$('careerXP').textContent, /4\/4 job slots/);
+  assert.ok(reopened.$('trainBtn').hidden);
+  assert.equal(reopened.s.prio().filter(j => j.on).length, 4);
+});
+
+test('kickstool shoes and a named scanner spend earned XP once and work on a phone after relaunch', async t => {
+  const first = await game(t, { online: false, phone: true, storage: { 'ws-shift-xp/previous': '500' } });
+  const buy = id => first.w.document.querySelector('[data-kit="' + id + '"]').click();
+  buy('label'); buy('shoes'); buy('shoes');
+  assert.match(first.$('careerXP').textContent, /0 XP available/);
+  assert.ok(first.$('trainBtn').disabled);
+  const { $, s, w } = await game(t, { online: false, phone: true, storage: Object.fromEntries(Object.entries(first.w.localStorage)) });
+  $('nameIn').value = 'JO'; $('nameIn').dispatchEvent(new w.Event('input'));
+  $('startBtn').click();
+  const p = s.players[0];
+  assert.equal(p.D.nameLabel.hidden, false);
+  assert.equal(p.D.nameLabel.textContent, 'JO');
+  assert.equal(p.D.stepBtn.hidden, false);
+  p.D.stepBtn.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
+  assert.equal(p.me.step, true); assert.ok(s.world.stools.every(stool => !stool.by));
+  p.D.stepBtn.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
+  assert.equal(p.me.step, false);
 });

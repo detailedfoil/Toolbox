@@ -9,6 +9,7 @@
   function snapshot(day, tills, stockItems) {
     return {
       ...fields(day, ['phase', 'total', 'done', 'over', 'mode', 'event']),
+      tillCovered: !!day.emit('tillCover')?.length,
       report: day.report || null, eligible: day.report ? Array.from(day.contributors) : [],
       hold: Object.fromEntries(Object.entries(day.hold).map(([k, p]) => [k, parcel(p)])), busy: { ...day.busy },
       orders: day.orders.map(o => ({
@@ -64,7 +65,7 @@
         const prev = new Map(old.map(o => [o.id, o]));
         return next.map(row => Object.assign(prev.get(row.id) || {}, decode(row)));
       };
-      Object.assign(this, fields(s, ['phase', 'total', 'done', 'over', 'mode', 'event', 'hold', 'busy', 'report', 'eligible']));
+      Object.assign(this, fields(s, ['phase', 'total', 'done', 'over', 'mode', 'event', 'hold', 'busy', 'report', 'eligible', 'tillCovered']));
       this.orders = merge(this.orders, s.orders, row => ({ ...row, lines: unpack(row.lines) }));
       this.customers = merge(this.customers, s.customers, row => ({
         ...row, cust: row.accounts && Object.assign(row.accounts[0], { db: row.accounts }), at: this.tills[row.at], order: this.orders.find(o => o.id === row.orderId),

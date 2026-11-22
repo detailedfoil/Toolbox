@@ -180,3 +180,18 @@ test('the host scores each completed human action once and sends the same result
   assert.deepEqual(mirror.eligible.sort(), ['p1', 'p2', 'p3']);
   assert.equal(d.lock(), false);
 });
+
+test('Fusion checks scanner mix-ups once and halves the chance for a named scanner', () => {
+  const day = fresh();
+  for (const [labelled, roll, expected] of [[false, 0.399, true], [false, 0.4, false], [true, 0.199, true], [true, 0.2, false]]) {
+    const c = { state: 'serving', by: 'p2', ready: false };
+    let rolls = 0;
+    day.r = () => { rolls++; return roll; };
+    assert.equal(day.scannerMixup(c, 'p2', labelled), false);
+    c.ready = true;
+    assert.equal(day.scannerMixup(c, 'p1', labelled), false);
+    assert.equal(day.scannerMixup(c, 'p2', labelled), expected);
+    assert.equal(day.scannerMixup(c, 'p2', labelled), false);
+    assert.equal(rolls, 1);
+  }
+});

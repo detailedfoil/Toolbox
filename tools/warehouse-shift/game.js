@@ -183,6 +183,27 @@
       return defaults.map(id => ({ id, on: true }));
     }
     let samPrio = loadPriority('ws-sam-prio', PRIO_DEFAULT);
+    const slotPrices = [100, 250, 500];
+    const slotKey = 'ws-sam-job-slots';
+    const kit = {
+      shoes: { title: 'Kickstool shoes', price: 350, owned: false },
+      label: { title: 'Scanner name label', price: 150, owned: false }
+    };
+    let jobSlots = 1;
+    function readSlots() {
+      try {
+        for (const [id, item] of Object.entries(kit)) {
+          if (localStorage.getItem('ws-kit-' + id) === '1') item.owned = true;
+        }
+        const n = Number(localStorage.getItem(slotKey));
+        if (Number.isInteger(n) && n > jobSlots && n <= 4) jobSlots = n;
+      } catch (e) { /* keep the session's training */ }
+    }
+    function limitJobs() {
+      for (const job of samPrio.filter(j => j.on).slice(jobSlots)) job.on = false;
+    }
+    readSlots();
+    limitJobs();
     const presetNames = ['Cover tills', 'Clear delivery'];
     const presets = [
       loadPriority('ws-sam-preset-0', ['queue', 'cust', 'hold', 'delivery']),
@@ -205,8 +226,8 @@
     function ringBell(who) {
       if (day?.phase !== 'open') return false;
       announceBell();
-      // A manual ring also gives Sam one waiting till customer, even with Queue unticked.
-      if (crew.length && !bellQueue().length) {
+      // Ring for help even when Sam is assigned elsewhere.
+      if (crew.length && samPrio.some(j => j.id === 'queue' && j.on) && !bellQueue().length) {
         if (!day.queue().length) day.greet(day.ungreeted()[0], who);
         bellCust = day.queue()[0] || null;
       }
@@ -487,7 +508,19 @@
     // always starts on mixed: the practice setting used to be remembered, and one stray tap left every customer a click and collect (detailedfoil, 20 Nov 2026)
     try { localStorage.removeItem('ws-orders'); } catch (e) { /* fine */ }
     let day = null, dayNo = 0;
+    function tillCover() {
+      function standing(pos) {
+        const atCounter = (pos.y >= counter.y1 && pos.y <= counter.y1 + 1.25) ||
+          (pos.y <= counter.y0 && pos.y >= counter.y0 - 1.25);
+        return atCounter && pos.speed <= 0.15 && tills.some(t => Math.abs(pos.x - tillX(t)) <= 0.95);
+      }
+      const staff = players.filter(p => standing(p.me)).map(p => p.id);
+      if (online) for (const [slot, pos] of online.peers) if (standing(pos)) staff.push('p' + slot);
+      if (crew.some(standing)) staff.push('Sam');
+      return staff;
+    }
     const dayEnv = {
+      tillCover,
       listed: (o) => { if (online?.room()) for (const l of o.lines) online.trackStock(l.item); for (const p of players) p.listed(o); },
       changed: (o) => { for (const p of players) p.changed(o); tidyScreens(); },
       customer: (c) => comeIn(c),
@@ -542,7 +575,7 @@
         const on = samPrio.filter((j) => j.on).map((j) => j.id);
         // the queue: till customers who've waited a few seconds with nobody coming to serve them
         const q = on.includes('queue') ? day.queue().filter((c) => c.greeter === 'Sam' || day.t - c.greeted > 5) : [];
-        return { orders: day.listLate().filter((o) => day.samCanPick(o)), queue: samTillFree() ? q : [], bell: samTillFree() ? bellQueue() : [], greet: day.ungreeted().filter((c) => day.t - c.here > 2), prio: on,
+        return { orders: day.listLate().filter((o) => day.samCanPick(o)), queue: samTillFree() ? q : [], bell: samTillFree() && on.includes('queue') ? bellQueue() : [], greet: day.ungreeted().filter((c) => day.t - c.here > 2), prio: on,
           delivery: day.event === 'lightDuties' ? 0 : day.deliveryLeft().length,
           early: day.listEarly().filter((o) => day.samCanPick(o) && on.includes(o.kind === 'c' ? 'hold' : 'cust')) };
       },
@@ -612,9 +645,10 @@
     try { samOff = localStorage.getItem('ws-sam') === 'off'; } catch (e) { /* fine */ }
     const missingScanners = new Set();
     function checkScannerMixup(c, who) {
-      if (c.scannerChecked || c.by !== who || c.state !== 'serving' || !c.ready) return;
-      c.scannerChecked = true;
-      if (!crew.length || missingScanners.has(who) || day.r() >= 0.1) return;
+      if (!crew.length || missingScanners.has(who)) return;
+      const local = players.some(p => p.id === who);
+      const labelled = local ? kit.label.owned : online?.peers.get(Number(who.slice(1)))?.label;
+      if (!day.scannerMixup(c, who, labelled)) return;
       missingScanners.add(who);
       players.find(p => p.id === who)?.syncScanner(true);
     }
@@ -774,7 +808,7 @@
       P.fig = S.makeWorker({ name: P.name, skin: idx ? 0x8d5a3b : 0xe0b394, hair: idx ? 0x1a1a1a : 0x5a3a22 });
       P.setName = (n) => {
         P.name = cleanName(n) || defaultName(idx);
-        S.setBadge(P.fig, P.name);
+        S.setBadge(P.fig, P.name); D.nameLabel.textContent = P.name;
         if (D.tag) D.tag.textContent = P.name;
         try { localStorage.setItem(idx ? 'ws-name2' : 'ws-name', P.name); } catch (e) { /* fine */ }
         dirty = true;
@@ -1098,7 +1132,7 @@
         if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
-        if (needsStep(h.loc) && !me.step) { say('Too high: use a kick stool', 'warn'); toast(P.stool ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
+        if (needsStep(h.loc) && !me.step) { say('Too high: step up', 'warn'); toast(P.stool || kit.shoes.owned ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
         const tr = S.trayOf(h.loc);
         if (World.sameSpot(h.loc, carton.loc)) {
           if (state === 'paqty') { say('Press Enter', 'warn'); SFX.miss(); return; }
@@ -1182,7 +1216,7 @@
         if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
-        if (needsStep(h.loc) && !me.step) { say('Too high: use a kick stool', 'warn'); toast(P.stool ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
+        if (needsStep(h.loc) && !me.step) { say('Too high: step up', 'warn'); toast(P.stool || kit.shoes.owned ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
         const ln = order.lines[cur], tr = S.trayOf(h.loc);
         S.setBox(S.aimBox, S.locBox(h.loc), 0.012); S.aimBox.visible = true;
         if (World.sameSpot(h.loc, ln.loc)) {
@@ -1613,7 +1647,7 @@
       function placeStool() {
         if (P.stool) poseStool(P.stool, me.x, me.y, me.yaw, me.step);
       }
-      function stepBtnSync() { D.stepBtn.hidden = !P.stool || !active; D.stepBtn.setAttribute('aria-pressed', String(!!me.step)); D.stepBtn.firstChild.textContent = me.step ? 'Down' : 'Step'; }
+      function stepBtnSync() { D.stepBtn.hidden = !(P.stool || kit.shoes.owned) || !active; D.stepBtn.setAttribute('aria-pressed', String(!!me.step)); D.stepBtn.firstChild.textContent = me.step ? 'Down' : 'Step'; }
       function takeStool() {
         const s = stoolOn; if (!s || s.by || P.stool) return;
         if (guest()) {
@@ -1636,7 +1670,7 @@
         if (msg) toast('Stool put back', 'dim');
       }
       function toggleStep() {
-        if (!P.stool) { toast('Take a kick stool first (at the end of a row)', 'warn'); return; }
+        if (!P.stool && !kit.shoes.owned) { toast('Take a kick stool first (at the end of a row)', 'warn'); return; }
         if (me.squat) toggleSquat();
         me.step = !me.step; me.vx = me.vy = 0; SFX.key(); placeStool(); stepBtnSync(); dirty = true;
       }
@@ -1647,14 +1681,18 @@
         stepBtnSync(); dirty = true;
       };
       P.toggleStep = toggleStep; P.stoolSync = stepBtnSync;
+      P.kitSync = () => {
+        stepBtnSync(); D.nameLabel.textContent = P.name; D.nameLabel.hidden = !kit.label.owned;
+      };
+      P.kitSync();
       /* ---------- the manager's PC: what Sam does first (detailedfoil, 20 Nov 2026) ---------- */
       const pc = { open: false, sel: 0, el: null };
       function pcBuild() {
         const el = document.createElement('div');
         el.className = 'ws-pc'; el.hidden = true;
         el.innerHTML = '<div class="ws-pc-box"><div class="ws-pc-top"><b>Sam\'s jobs</b><span>Manager PC</span><button type="button" class="ws-pc-x" aria-label="Close">Close &#10005;</button></div>' +
-          '<p>Sam does the ticked jobs, the top one first. Untick a job and Sam leaves it to you. Sam always says hello to customers waiting, and the service bell always works.</p>' +
-          '<ol class="ws-pc-list"></ol><div class="ws-presets" hidden>' +
+          '<p>Sam does the ticked jobs, the top one first. Untick a job and Sam leaves it to you. When the slots are full, ticking a new job replaces the lowest ticked job. Sam still greets waiting customers.</p>' +
+          '<div class="ws-training"><span></span><button type="button" data-pc="train"></button></div><ol class="ws-pc-list"></ol><div class="ws-presets" hidden>' +
           presetNames.map((name, i) => '<div><b>' + name + '</b><button type="button" data-pc="load" data-i="' + i + '" aria-label="Apply ' + name + '">Apply</button>' +
             '<button type="button" data-pc="save" data-i="' + i + '" aria-label="Save current jobs to ' + name + '">Save current</button></div>').join('') +
           '<small></small><output aria-live="polite"></output></div><div class="ws-pc-keys"></div><button type="button" class="ws-pc-close">Close</button></div>';
@@ -1663,6 +1701,7 @@
           const b = e.target.closest('[data-pc]'); if (!b) return;
           const i = +b.dataset.i, a = b.dataset.pc;
           initAudio();
+          if (a === 'train') { buySlot(Number(b.dataset.slots)); pcRender(); return; }
           if (a === 'save' || a === 'load') { pcPreset(i, a === 'save'); return; }
           if (a === 'tick') { pc.sel = i; pcToggle(); } else if (a === 'up') { pc.sel = i; pcShift(-1); } else if (a === 'down') { pc.sel = i; pcShift(1); }
         });
@@ -1677,10 +1716,13 @@
           '<span class="n">' + (i + 1) + '</span><span class="t">' + PRIO_NAMES[j.id][0] + '<small>' + PRIO_NAMES[j.id][1] + '</small></span>' +
           '<button type="button" data-pc="up" data-i="' + i + '" aria-label="Move up"' + (i ? '' : ' disabled') + '>&#9650;</button>' +
           '<button type="button" data-pc="down" data-i="' + i + '" aria-label="Move down"' + (i < samPrio.length - 1 ? '' : ' disabled') + '>&#9660;</button></li>').join('');
+        const training = pc.el.querySelector('.ws-training');
+        training.querySelector('span').textContent = trainingStatus();
+        renderPurchase(training.querySelector('button'));
         const panel = pc.el.querySelector('.ws-presets');
         panel.hidden = careerXP() < presetXP;
         panel.querySelector('small').textContent = P.padIndex != null ? 'X / Y apply · Hold LT with X / Y to save' : touch ? '' : '1 / 2 apply · Shift + 1 / 2 save';
-        pc.el.querySelector('.ws-pc-keys').textContent = P.padIndex !== null && P.padIndex !== undefined ? 'D-pad choose, A tick, LB move up, RB move down, B close' : touch ? 'Tap a box to tick it, the arrows to move it' : 'Arrow keys choose, Space ticks, [ and ] move it, Esc closes';
+        pc.el.querySelector('.ws-pc-keys').textContent = P.padIndex !== null && P.padIndex !== undefined ? 'D-pad choose, A tick, LB/RB move, View buys the next slot, B closes' : touch ? 'Tap a box to tick it, the arrows to move it' : 'Arrow keys choose, Space ticks, [ and ] move, T buys the next slot, Esc closes';
       }
       function pcPreset(i, save) {
         if (careerXP() < presetXP) return;
@@ -1689,6 +1731,7 @@
           savePriority('ws-sam-preset-' + i, presets[i]);
         } else {
           samPrio = presets[i].map(job => ({ ...job }));
+          limitJobs();
           saveSamPrio();
           pc.sel = 0;
         }
@@ -1706,7 +1749,12 @@
       }
       function closePc() { if (!pc.open) return; pc.open = false; pc.el.hidden = true; SFX.key(); if (idx === 0) canvas.focus({ preventScroll: true }); pcOn = false; checkTill(); renderScanner(); }
       function pcMove(d) { pc.sel = (pc.sel + d + samPrio.length) % samPrio.length; SFX.key(); pcRender(); }
-      function pcToggle() { const j = samPrio[pc.sel]; j.on = !j.on; SFX.key(); saveSamPrio(); pcRender(); }
+      function pcToggle() {
+        const job = samPrio[pc.sel], enabled = samPrio.filter(j => j.on);
+        if (!job.on && enabled.length >= jobSlots) enabled[enabled.length - 1].on = false;
+        job.on = !job.on;
+        SFX.key(); saveSamPrio(); pcRender();
+      }
       function pcShift(d) {
         const i = pc.sel, k = i + d;
         if (k < 0 || k >= samPrio.length) { SFX.miss(); return; }
@@ -1714,7 +1762,8 @@
       }
       function pcKey(e) {
         if (e.repeat && !(e.code === 'ArrowUp' || e.code === 'ArrowDown')) return;
-        if (e.code === 'Digit1' || e.code === 'Digit2') pcPreset(Number(e.code.slice(-1)) - 1, e.shiftKey);
+        if (e.code === 'KeyT') { buySlot(Number(pc.el.querySelector('[data-pc="train"]').dataset.slots)); pcRender(); }
+        else if (e.code === 'Digit1' || e.code === 'Digit2') pcPreset(Number(e.code.slice(-1)) - 1, e.shiftKey);
         else if (e.code === 'ArrowUp' || e.code === 'KeyW') pcMove(-1);
         else if (e.code === 'ArrowDown' || e.code === 'KeyS') pcMove(1);
         else if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') pcToggle();
@@ -1724,7 +1773,7 @@
         else return;
         e.preventDefault();
       }
-      P.pcOpen = () => pc.open; P.pcKey = pcKey; P.openPc = openPc; P.closePc = closePc;
+      P.refreshPc = pcRender; P.pcOpen = () => pc.open; P.pcKey = pcKey; P.openPc = openPc; P.closePc = closePc;
       P.useAction = useAction;
       async function openTill() {
         if (!till || till.isOpen() || !nearTill || !canUseTill(nearTill)) return;
@@ -1738,7 +1787,7 @@
         if (idx === 0 && locked()) document.exitPointerLock();
         keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0;
         if (P.onTill) P.onTill();
-        me.vx = me.vy = 0;
+        me.vx = me.vy = me.speed = 0;
         SFX.key();
         cancelBlueAction();
         till.open(tills.indexOf(nearTill) + 1);
@@ -2014,6 +2063,7 @@
           still();
           const d = steer(true);
           if (d === 'up' || d === 'down') pcMove(d === 'up' ? -1 : 1);
+          if (hit(8)) { buySlot(Number(pc.el.querySelector('[data-pc="train"]').dataset.slots)); pcRender(); }
           if (hit(2)) pcPreset(0, now[6]); if (hit(3)) pcPreset(1, now[6]);
           if (hit(0)) pcToggle(); if (hit(4)) pcShift(-1); if (hit(5)) pcShift(1);
           if (hit(1) || hit(9)) closePc();
@@ -2306,31 +2356,60 @@
     }
     const receiptPrefix = 'ws-shift-xp/';
     const career = new Map();
-    let cobalt = false;
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key?.startsWith(receiptPrefix)) career.set(key, Number(localStorage.getItem(key)) || 0);
       }
-      cobalt = localStorage.getItem('ws-shell') === 'cobalt';
     } catch (e) { /* still playable without storage */ }
     const careerXP = () => Array.from(career.values()).reduce((a, b) => a + b, 0);
-    const shellXP = 100, presetXP = 350;
+    const presetXP = 350;
+    const kitSpend = () => Object.values(kit).reduce((sum, item) => sum + (item.owned ? item.price : 0), 0);
+    const availableXP = () => careerXP() - kitSpend() - slotPrices.slice(0, jobSlots - 1).reduce((sum, price) => sum + price, 0);
+    const trainingStatus = () => 'Sam · ' + jobSlots + '/4 job slots · ' + availableXP() + ' XP available';
+    function renderPurchase(btn) {
+      const price = slotPrices[jobSlots - 1];
+      btn.hidden = price === undefined;
+      btn.disabled = !price || availableXP() < price;
+      btn.dataset.slots = jobSlots;
+      btn.textContent = price ? 'Train Sam · slot ' + (jobSlots + 1) + ' · ' + price + ' XP' : 'Fully trained';
+    }
     function careerView() {
-      const xp = careerXP(), shell = $('shellBtn');
-      const next = xp < shellXP ? 'Cobalt scanner at 100 XP' : xp < presetXP ? 'Sam’s job presets at 350 XP' : 'Sam’s job presets unlocked';
-      $('careerXP').textContent = xp + ' career XP · ' + next;
-      shell.hidden = xp < shellXP;
-      shell.textContent = 'Scanner shell · ' + (cobalt ? 'Cobalt' : 'Original');
-      document.body.classList.toggle('ws-cobalt', cobalt && xp >= shellXP);
+      $('careerXP').textContent = careerXP() + ' career XP · ' + trainingStatus();
+      $('dayTraining').textContent = trainingStatus();
+      renderPurchase($('trainBtn')); renderPurchase($('dayTrain'));
+      for (const btn of document.querySelectorAll('[data-kit]')) {
+        const item = kit[btn.dataset.kit];
+        btn.disabled = item.owned || availableXP() < item.price;
+        btn.textContent = item.title + (item.owned ? ' · Owned' : ' · ' + item.price + ' XP');
+      }
+      for (const p of players) p.kitSync();
     }
-    function toggleShell() {
-      if (careerXP() < shellXP) return;
-      cobalt = !cobalt;
-      try { localStorage.setItem('ws-shell', cobalt ? 'cobalt' : 'original'); } catch (e) { /* this session */ }
+    function purchase(id, expected) {
+      function applyPurchase() {
+        readSlots();
+        let key, value;
+        if (id === 'slot' && expected === jobSlots && jobSlots < 4 && availableXP() >= slotPrices[jobSlots - 1]) {
+          key = slotKey; value = String(++jobSlots);
+        } else if (kit[id] && !kit[id].owned && availableXP() >= kit[id].price) {
+          kit[id].owned = true; key = 'ws-kit-' + id; value = '1';
+        }
+        if (key) try { localStorage.setItem(key, value); } catch (e) { /* keep session progress */ }
+        careerView();
+        for (const p of players) if (p.pcOpen()) p.refreshPc();
+      }
+      if (navigator.locks) return navigator.locks.request('ws-career-purchase', applyPurchase);
+      applyPurchase();
+    }
+    function buySlot(expected) { return purchase('slot', expected); }
+    for (const btn of [$('trainBtn'), $('dayTrain')]) btn.onclick = () => buySlot(Number(btn.dataset.slots));
+    for (const btn of document.querySelectorAll('[data-kit]')) btn.onclick = () => purchase(btn.dataset.kit);
+    window.addEventListener('storage', e => {
+      if (e.key === slotKey || e.key?.startsWith('ws-kit-')) readSlots();
+      else if (e.key?.startsWith(receiptPrefix) && e.newValue) career.set(e.key, Number(e.newValue) || 0);
+      else return;
       careerView();
-    }
-    $('shellBtn').onclick = toggleShell;
+    });
     careerView();
     function showShiftScore(r, eligible) {
       const earned = eligible ? r.xp : 0, previousXP = careerXP();
@@ -2342,17 +2421,13 @@
       careerView();
       $('shiftScore').textContent = 'Shift score · ' + r.score + ' / 1,000';
       statsHtml($('scoreRows'), r.rows.map(row => [row.earned + '/' + row.possible, row.label]));
-      $('earnedXP').textContent = eligible ? r.baseXP + ' team XP + ' + r.bonus + ' score bonus · ' + careerXP() + ' career XP'
-        : '0 XP earned on this device · ' + careerXP() + ' career XP';
-      const unlocked = [];
-      if (previousXP < shellXP && careerXP() >= shellXP) unlocked.push('Cobalt scanner shell');
-      if (previousXP < presetXP && careerXP() >= presetXP) unlocked.push('Sam’s job presets');
-      $('scoreUnlock').textContent = unlocked.length ? 'Unlocked · ' + unlocked.join(' and ') : '';
-      $('scoreUnlock').hidden = !unlocked.length;
-      $('dayShell').hidden = careerXP() < shellXP;
-      $('dayShell').textContent = 'Scanner shell · ' + (cobalt ? 'Cobalt' : 'Original');
+      $('earnedXP').textContent = eligible
+        ? r.baseXP + ' work XP + ' + r.bonus + ' shift bonus + ' + r.coverBonus + ' till cover = ' + r.xp + ' XP'
+        : '0 XP earned on this device';
+      const unlocked = previousXP < presetXP && careerXP() >= presetXP;
+      $('scoreUnlock').textContent = unlocked ? 'Unlocked · Sam’s job presets on the manager PC' : '';
+      $('scoreUnlock').hidden = !unlocked;
     }
-    $('dayShell').onclick = () => { toggleShell(); $('dayShell').textContent = $('shellBtn').textContent; };
     function endShift() {
       if (locked()) document.exitPointerLock();
       const st = me1.stats, mins = Math.max(1, Math.round((Date.now() - st.since) / 60000));
@@ -2417,9 +2492,9 @@
       if (touch && !standalone) fullScreen(true);
       $('startCover').hidden = true; $('joinCover').hidden = true;
       $('topBar').hidden = false;
+      active = true;
       for (const p of players) p.show();
       $('stickZone').hidden = !touch || split;
-      active = true;
       stayAwake();
       layout();
       for (const p of players) p.start();
@@ -2541,6 +2616,7 @@
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('warehouse-shift-sw.js', { scope: 'warehouse-shift' }).catch(() => {});
 
     /* ---------- the shared world, a step at a time ---------- */
+    let coverRefresh = 0;
     function worldStep(dt) {
       let changed = false;
       if (online?.frozen()) return false;
@@ -2555,6 +2631,11 @@
         checkServiceBell();
       }
       if (online && online.animate(dt)) changed = true;
+      if (active && day && (coverRefresh -= dt) <= 0) {
+        coverRefresh = 0.25;
+        const covered = guest() ? day.tillCovered : tillCover().length > 0;
+        for (const p of players) p.D.coverBonus.hidden = !covered;
+      }
       if (day && S.clockTick(day.clockMinute())) changed = true;
       if (updateCCTV(dt)) changed = true;
       return changed;
@@ -2640,7 +2721,7 @@
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
-        missingScanners, checkScannerMixup, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
+        kit, missingScanners, checkScannerMixup, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; },
         resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },
         clearDayView() {
