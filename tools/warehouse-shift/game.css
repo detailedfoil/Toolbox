@@ -21,9 +21,10 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-banner{position:absolute;left:var(--cx,50%);top:16%;transform:translate(-50%,-8px) scale(.96);z-index:4;pointer-events:none;text-align:center;
   padding:12px 22px;border-radius:16px;background:#0b1022ee;border:2px solid #ffd34d;opacity:0;transition:opacity .25s,transform .25s}
 .ws-banner.show{opacity:1;transform:translate(-50%,0) scale(1)}
-.ws-banner.bell{z-index:20}
+.ws-banner.bell{z-index:20;width:max-content;max-width:calc(100% - 24px);box-sizing:border-box}
 .ws-banner b{display:block;font-size:22px;color:#ffd34d;letter-spacing:.02em}
 .ws-banner span{font-size:14px;color:#dbe4f0}
+.ws-banner small{display:block;margin-top:4px;color:#dbe4f0;font:12px/1.35 system-ui,sans-serif}
 
 /* what the customer says, over their head (game.js places it) */
 .ws-say{position:absolute;left:0;top:0;z-index:4;max-width:min(320px,46vw);padding:8px 12px;border-radius:14px;background:#fffef6;color:#1b1b1b;
@@ -288,3 +289,4 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-shop-row span{font-weight:700}
 .ws-shop-row.on{outline:2px solid #c78a13;outline-offset:-2px}
 .ws-shop button:disabled{color:#4a5967;background:#e2e8ed}
+.ws-pc-list .tick:disabled{background:#e2e8ed;border-color:#96a6b6;cursor:default}

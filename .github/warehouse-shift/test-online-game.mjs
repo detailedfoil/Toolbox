@@ -317,7 +317,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const room = host.$('roomBtn').textContent.slice(0, 6);
   for (let i = 0; i < 3; i++) {
     const guest = await game(t, { phone: i === 0, storage: i === 2 ?
-      { 'ws-shift-xp/prior': '500', 'ws-kit-shoes': '1', 'ws-kit-label': '1' } : {} });
+      { 'ws-shift-xp/prior': '600', 'ws-kit-shoes': '1', 'ws-kit-label': '1', 'ws-sam-training': '{"queue":"paid"}' } : {} });
     guest.$('nameIn').value = ['River', 'Lake', 'Oak'][i];
     guest.$('nameIn').dispatchEvent(new guest.w.Event('input'));
     guest.$('onlineBtn').click(); guest.$('roomCode').value = room; guest.$('joinRoom').click();
@@ -347,7 +347,8 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   assert.match(bellButton.textContent, /Ring bell/);
   bellButton.dispatchEvent(new phone.w.Event('pointerdown', { bubbles: true }));
   await until(() => [host, ...guests].every(g => g.$('bannerTitle').textContent === 'Ding dong' &&
-    g.$('bannerText').textContent === 'Help needed on tills'), 'phone bell press to reach all four players');
+    g.$('bannerText').textContent === 'Help needed on tills' &&
+    /Sam isn't till trained yet.*100 XP/.test(g.s.players[0].D.bannerDetail.textContent)),  'phone bell press to reach all four players');
   const stoolId = host.s.world.stools[0].id;
   const aimAtStool = g => {
     const s = g.s, stool = s.world.stools.find(v => v.id === stoolId);
@@ -524,6 +525,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const cancelled = host.s.day();
   assert.equal(cancelled.walkinTill, 0.35, 'the host tier also applies on the next day');
   assert.equal(cancelled.delivery.length, 0);
+  assert.equal(cancelled.firstDay, false);
   cancelled.walkinTill = 0;
   const visitor = cancelled.start('ck');
   cancelled.arrived(visitor); cancelled.greet(visitor, 'p1');
@@ -549,9 +551,8 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   await until(() => guests.every(g => !g.$('onlineCover').hidden && /host left/.test(g.$('roomMessage').textContent)), 'room to end for everyone');
 });
 
-test('split-screen earns till cover, shares one payout and buys permanent job slots', async t => {
-  const oldJobs = ['queue', 'delivery', 'hold', 'cust'].map(id => ({ id, on: true }));
-  const { $, w, s } = await game(t, { online: false, storage: { 'ws-sam-prio': JSON.stringify(oldJobs) } });
+test('split-screen banks till-cover XP and buys separate Sam skills mid-shift', async t => {
+  const { $, w, s } = await game(t, { online: false });
   $('twoBtn').click(); s.join({ kind: 'kb' }); s.join({ kind: 'pad', pad: 0 }); $('joinGo').click();
   const [p, worker] = s.players;
   p.D.scFn.click();
@@ -560,33 +561,48 @@ test('split-screen earns till cover, shares one payout and buys permanent job sl
   p.D.scConfirmFn.click();
   assert.ok(!p.D.scMenu.hidden && worker.D.scMenu.hidden);
   p.back();
-  assert.equal(p.D.coverBonus.textContent, 'Service Champ bonus +5% XP');
-  assert.deepEqual(Array.from(s.prio().filter(j => j.on), j => j.id), ['queue']);
-  p.openPc();
-  const panel = w.document.querySelector('.ws-presets'), pc = panel.closest('.ws-pc');
-  assert.ok(panel.hidden);
-  const tick = i => pc.querySelector('[data-pc="tick"][data-i="' + i + '"]').click();
-  tick(1);
-  assert.deepEqual(Array.from(s.prio().filter(j => j.on), j => j.id), ['delivery']);
-  assert.ok(pc.querySelector('[data-pc="train"]').disabled);
-  p.closePc();
   const d = s.day(), counter = s.world.counter, till = s.tills[0];
+  assert.ok(d.firstDay);
+  assert.ok(d.delivery.length >= 4 && d.delivery.length <= 5);
+  const jobsOn = () => Array.from(s.prio().filter(j => j.on), j => j.id);
+  assert.deepEqual(jobsOn(), ['delivery']);
+
+  // A fresh Sam neither greets nor serves, even after the bell.
+  d.plan.length = 0;
+  const c = d.send('till');
+  d.arrived(c);
+  d.t += 6;
+  assert.equal(s.crew[0].choose()?.greet, undefined);
+  s.tick(0.3);
+  assert.match(p.D.bannerDetail.textContent, /100 XP on the Manager PC/);
+  assert.equal(c.state, 'greet');
+
   Object.assign(p.me, { x: (till.x0 + till.x1) / 2, y: counter.y1 + 0.6, speed: 0 });
   Object.assign(worker.me, { x: counter.x0 - 4, y: counter.y0 - 4 });
+  s.tick(0.05);
+  assert.equal(p.D.coverBonus.textContent, 'Service Champ bonus +5% XP');
   d.credit('p2', 'test-work', 900);
   assert.ok(d.contributors.has('p1'), 'standing cover contributes');
   p.me.speed = 2;
   d.credit('p2', 'test-uncovered', 10);
   assert.equal(d.coveredXP, 900);
-  assert.equal(Number(w.localStorage.getItem('ws-shift-xp/' + d.shiftId)), 955);
-  p.openPc();
-  pc.querySelector('[data-pc="shop"]').click();
-  pc.querySelector('[data-pc="train"]').click();
-  assert.equal(w.localStorage.getItem('ws-sam-job-slots'), '2');
+  const key = 'ws-shift-xp/' + d.shiftId;
+  assert.equal(Number(w.localStorage.getItem(key)), 955);
+  const pc = openShop({ s });
+  const buy = id => pc.querySelector('[data-training="' + id + '"]').click();
+  buy('queue'); buy('queue');
   assert.equal(p.D.xpBalance.textContent, '855 XP');
+  assert.deepEqual(jobsOn(), ['queue', 'delivery']);
+  assert.equal(s.crew[0].choose().greet, c, 'till training lets Sam greet immediately');
+  buy('hold');
+  assert.deepEqual(jobsOn(), ['queue', 'hold', 'delivery']);
+  buy('cust');
+  assert.deepEqual(jobsOn(), ['cust', 'queue', 'hold', 'delivery']);
+  assert.equal(worker.D.xpBalance.textContent, '655 XP');
   p.closePc();
+
   d.phase = 'lock'; d.lock();
-  const key = 'ws-shift-xp/' + d.shiftId, total = d.report.xp;
+  const total = d.report.xp;
   assert.equal(Number(w.localStorage.getItem(key)), total);
   assert.equal(d.report.coverBonus, Math.round(900 * (1 + d.report.score / 4000) * 0.05));
   assert.match($('earnedXP').textContent, /Service Champ bonus/);
@@ -594,26 +610,42 @@ test('split-screen earns till cover, shares one payout and buys permanent job sl
   d.emit('over');
   assert.match($('careerXP').textContent, new RegExp('^' + total + ' career XP'));
   assert.equal([...Array(w.localStorage.length).keys()].filter(i => w.localStorage.key(i).startsWith('ws-shift-xp/')).length, 1);
-  assert.equal(w.localStorage.getItem('ws-sam-job-slots'), '2');
+
   p.openPc();
-  const train = pc.querySelector('[data-pc="train"]');
+  const panel = pc.querySelector('.ws-presets');
   const preset = (action, i) => panel.querySelector('[data-pc="' + action + '"][data-i="' + i + '"]').click();
   preset('load', 1);
-  assert.equal(s.prio().filter(j => j.on).length, 2);
+  assert.equal(jobsOn().length, 4);
   assert.equal(s.prio()[0].id, 'delivery');
   preset('save', 0);
   assert.equal(JSON.parse(w.localStorage.getItem('ws-sam-preset-0'))[0].id, 'delivery');
-  train.click(); train.click();
-  assert.equal(w.localStorage.getItem('ws-sam-job-slots'), '4');
-  assert.ok(train.disabled);
-  assert.match($('careerXP').textContent, new RegExp((total - 850) + ' XP available'));
-  preset('load', 1);
-  assert.equal(s.prio().filter(j => j.on).length, 4);
   const storage = Object.fromEntries(Object.entries(w.localStorage));
   const reopened = await game(t, { online: false, storage });
-  assert.match(reopened.$('careerXP').textContent, /4\/4 job slots/);
-  assert.equal(reopened.$('trainBtn'), null);
+  assert.match(reopened.$('careerXP').textContent, /4\/4 skills/);
   assert.equal(reopened.s.prio().filter(j => j.on).length, 4);
+});
+
+test('paid job slots become skills based on saved priorities without changing XP', async t => {
+  const oldJobs = ['hold', 'delivery', 'queue', 'cust'].map(id => ({ id, on: id === 'queue' || id === 'delivery' }));
+  const { $, w, s } = await game(t, { online: false, storage: {
+    'ws-sam-prio': JSON.stringify(oldJobs), 'ws-sam-job-slots': '2', 'ws-shift-xp/prior': '500'
+  } });
+  $('startBtn').click();
+  const pc = openShop({ s });
+  assert.equal(pc.querySelector('[data-training="queue"]').textContent, 'Trained');
+  assert.match($('careerXP').textContent, /2\/4 skills.*400 XP available/);
+  s.players[0].closePc();
+  const bell = s.world.bell;
+  Object.assign(s.me, { x: bell.x, y: bell.y - 0.9, yaw: Math.PI, pitch: Math.atan2(bell.z - s.me.eye, 0.9) });
+  s.applyCam();
+  s.players[0].D.tillBtn.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
+  assert.equal($('bannerTitle').textContent, 'Ding dong');
+  assert.equal(s.players[0].D.bannerDetail.hidden, true);
+  openShop({ s }).querySelector('[data-training="hold"]').click();
+  assert.match($('careerXP').textContent, /3\/4 skills.*300 XP available/);
+  const saved = Object.fromEntries(Object.entries(w.localStorage));
+  const reopened = await game(t, { online: false, storage: saved });
+  assert.match(reopened.$('careerXP').textContent, /3\/4 skills.*300 XP available/);
 });
 
 test('kickstool shoes and a named scanner spend earned XP once and work on a phone after relaunch', async t => {
@@ -622,7 +654,7 @@ test('kickstool shoes and a named scanner spend earned XP once and work on a pho
   const buy = id => first.w.document.querySelector('[data-kit="' + id + '"]').click();
   buy('label'); buy('shoes'); buy('shoes');
   assert.match(first.$('careerXP').textContent, /0 XP available/);
-  assert.ok(first.w.document.querySelector('[data-pc="train"]').disabled);
+  assert.ok(first.w.document.querySelector('[data-training="queue"]').disabled);
   const { $, s, w } = await game(t, { online: false, phone: true, storage: Object.fromEntries(Object.entries(first.w.localStorage)) });
   $('nameIn').value = 'JO'; $('nameIn').dispatchEvent(new w.Event('input'));
   $('startBtn').click();
@@ -678,7 +710,7 @@ test('Digital First upgrades spend shared XP, persist, and apply when the next s
   upgrade.click();
   assert.equal(initial.w.localStorage.getItem('ws-digital-first'), '3');
   assert.ok(upgrade.disabled, 'the remaining 50 XP cannot buy another tier');
-  assert.ok(pc.querySelector('[data-pc="train"]').disabled, 'Digital First spends the same XP as Sam training');
+  assert.ok(pc.querySelector('[data-training="queue"]').disabled, 'Digital First spends the same XP as Sam training');
 
   const saved = Object.fromEntries(Object.entries(initial.w.localStorage));
   const reopened = await game(t, { online: false, phone: true, storage: saved });

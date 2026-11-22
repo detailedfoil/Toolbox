@@ -169,10 +169,10 @@
     const ALEX_TILL = tills[tills.length - 1]; // the left-hand one from behind the counter, by the gap
     const tillX = (t) => (t.x0 + t.x1) / 2;
     // Sam's jobs, set on the manager's PC (detailedfoil, 20 Nov 2026): ticked ones, top first. Kept on the device.
-    const PRIO_NAMES = { cust: ['Customer picks', 'Click & collect, till orders, bag collections'], queue: ['Queue', 'Serving till customers'],
+    const PRIO_NAMES = { cust: ['Customer picks', 'Click & collect, till orders, bag collections'], queue: ['Till service', 'Greeting and serving customers'],
       hold: ['Holding area picks', 'c picks for the holding area'], delivery: ['Delivery', 'Putting the delivery away'] };
     const PRIO_DEFAULT = ['cust', 'queue', 'hold', 'delivery'];
-    function loadPriority(key, defaults) {
+    function loadPriority(key, defaults, enabled = defaults) {
       try {
         const saved = JSON.parse(localStorage.getItem(key));
         if (Array.isArray(saved) && saved.length === PRIO_DEFAULT.length &&
@@ -180,11 +180,27 @@
           return saved.map(job => ({ id: job.id, on: !!job.on }));
         }
       } catch (e) { /* use the defaults */ }
-      return defaults.map(id => ({ id, on: true }));
+      return defaults.map(id => ({ id, on: enabled.includes(id) }));
     }
-    let samPrio = loadPriority('ws-sam-prio', PRIO_DEFAULT);
-    const slotPrices = [100, 250, 500];
-    const slotKey = 'ws-sam-job-slots';
+    const trainingPrice = 100;
+    const trainingKey = 'ws-sam-training';
+    const trained = { delivery: 'included' };
+    let samPrio = loadPriority('ws-sam-prio', PRIO_DEFAULT, ['delivery']);
+    function migrateTraining() {
+      const prices = [100, 250, 500];
+      try {
+        const slots = Number(localStorage.getItem('ws-sam-job-slots'));
+        if (!Number.isInteger(slots) || slots < 2 || slots > 4) return 0;
+        if (localStorage.getItem(trainingKey) === null) {
+          const extras = samPrio.filter(job => job.id !== 'delivery');
+          const priority = [...extras.filter(job => job.on), ...extras.filter(job => !job.on)];
+          for (const job of priority.slice(0, slots - 1)) trained[job.id] = 'legacy';
+          localStorage.setItem(trainingKey, JSON.stringify(trained));
+        }
+        return prices.slice(0, slots - 1).reduce((sum, cost) => sum + cost, 0);
+      } catch (e) { return 0; }
+    }
+    const legacyTrainingSpend = migrateTraining();
     const kit = {
       shoes: { title: 'Kickstool shoes', price: 350, owned: false },
       label: { title: 'Scanner name label', price: 150, owned: false }
@@ -193,8 +209,8 @@
     const reliabilityKey = 'ws-scanner-reliability';
     const digitalTiers = Day.DIGITAL_FIRST;
     const digitalKey = 'ws-digital-first';
-    let scannerTier = 1, jobSlots = 1, digitalTier = 1;
-    function readSlots() {
+    let scannerTier = 1, digitalTier = 1;
+    function readUpgrades() {
       try {
         for (const [id, item] of Object.entries(kit)) {
           if (localStorage.getItem('ws-kit-' + id) === '1') item.owned = true;
@@ -203,15 +219,20 @@
         if (Number.isInteger(savedTier) && savedTier > scannerTier && savedTier <= 5) scannerTier = savedTier;
         const savedDigital = Number(localStorage.getItem(digitalKey));
         if (Number.isInteger(savedDigital) && savedDigital > digitalTier && savedDigital <= digitalTiers.length) digitalTier = savedDigital;
-        const n = Number(localStorage.getItem(slotKey));
-        if (Number.isInteger(n) && n > jobSlots && n <= 4) jobSlots = n;
+        const savedTraining = JSON.parse(localStorage.getItem(trainingKey));
+        for (const id of PRIO_DEFAULT) {
+          if (id !== 'delivery' && ['legacy', 'paid'].includes(savedTraining?.[id])) trained[id] = savedTraining[id];
+        }
       } catch (e) { /* keep the session's training */ }
     }
     function limitJobs() {
-      for (const job of samPrio.filter(j => j.on).slice(jobSlots)) job.on = false;
+      for (const job of samPrio) if (!trained[job.id]) job.on = false;
     }
-    readSlots();
+    const hadJobsOn = samPrio.some(job => job.on);
+    readUpgrades();
     limitJobs();
+    if (hadJobsOn && !samPrio.some(job => job.on)) samPrio.find(job => job.id === 'delivery').on = true;
+    const tillAssigned = () => !!trained.queue && samPrio.some(job => job.id === 'queue' && job.on);
     const presetNames = ['Cover tills', 'Clear delivery'];
     const presets = [
       loadPriority('ws-sam-preset-0', ['queue', 'cust', 'hold', 'delivery']),
@@ -221,21 +242,26 @@
       try { localStorage.setItem(key, JSON.stringify(jobs)); } catch (e) { /* keep the session settings */ }
     }
     function saveSamPrio() { savePriority('ws-sam-prio', samPrio); }
-    let bellCust = null, bellCount = 0, nextBellCheck = 0;
+    let bellCust = null, bellCount = 0, nextBellCheck = 0, bellTillTrained = false;
     function bellQueue() { if (bellCust?.state !== 'counter') bellCust = null; return bellCust ? [bellCust] : []; }
-    function showBell() {
+    function showBell(tillTrained) {
       tone(784, 0, 0.48, 'sine', 0.1);
       tone(622, 0.28, 0.65, 'sine', 0.1);
       S.pressBell(true);
       later(0.22, () => S.pressBell(false));
-      for (const p of players) p.banner('Ding dong', 'Help needed on tills', 3400, 'bell');
+      const detail = tillTrained ? '' : "Sam isn't till trained yet. Train him for " + trainingPrice + ' XP on the Manager PC.';
+      for (const p of players) p.banner('Ding dong', 'Help needed on tills', 3400, 'bell', detail);
     }
-    function announceBell() { bellCount++; showBell(); }
+    function announceBell() {
+      bellCount++;
+      bellTillTrained = !!trained.queue;
+      showBell(bellTillTrained);
+    }
     function ringBell(who) {
       if (day?.phase !== 'open') return false;
       announceBell();
       // Ring for help even when Sam is assigned elsewhere.
-      if (crew.length && samPrio.some(j => j.id === 'queue' && j.on) && !bellQueue().length) {
+      if (crew.length && tillAssigned() && !bellQueue().length) {
         if (!day.queue().length) day.greet(day.ungreeted()[0], who);
         bellCust = day.queue()[0] || null;
       }
@@ -553,7 +579,7 @@
       const old = day;
       const event = mode === 0 ? Day.rollEvent(Math.random) : null;
       const shiftId = globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
-      day = Day.create({ world, World, Till, requests, shiftId, scannerTier, digitalTier, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null });
+      day = Day.create({ world, World, Till, requests, shiftId, scannerTier, digitalTier, firstDay: dayNo === 0, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null });
       if (old?.offlineScanners) day.offlineScanners = new Set(old.offlineScanners);
       dayNo++; bellCust = null; bellCount = 0; nextBellCheck = 0;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
@@ -587,10 +613,12 @@
     const crewEnv = {
       board: () => {
         if (!(day && active)) return { orders: [], queue: [], bell: [], greet: [], prio: [], delivery: 0, early: [] };
-        const on = samPrio.filter((j) => j.on).map((j) => j.id);
+        const on = samPrio.filter(j => trained[j.id] && j.on).map(j => j.id);
         // the queue: till customers who've waited a few seconds with nobody coming to serve them
         const q = on.includes('queue') ? day.queue().filter((c) => c.greeter === 'Sam' || day.t - c.greeted > 5) : [];
-        return { orders: day.listLate().filter((o) => day.samCanPick(o)), queue: samTillFree() ? q : [], bell: samTillFree() && on.includes('queue') ? bellQueue() : [], greet: day.ungreeted().filter((c) => day.t - c.here > 2), prio: on,
+        const greet = on.includes('queue') ? day.ungreeted().filter(c => day.t - c.here > 2) : [];
+        return { orders: day.listLate().filter((o) => day.samCanPick(o)), queue: samTillFree() ? q : [],
+          bell: samTillFree() && on.includes('queue') ? bellQueue() : [], greet, prio: on,
           delivery: day.event === 'lightDuties' ? 0 : day.deliveryLeft().length,
           early: day.listEarly().filter((o) => day.samCanPick(o) && on.includes(o.kind === 'c' ? 'hold' : 'cust')) };
       },
@@ -603,7 +631,7 @@
         return d;
       },
       paPut(b, d) { if (b.fig.held) { b.fig.carry.remove(b.fig.held); b.fig.held = null; } day.paPut(d, b.name); dirty = true; },
-      greet: (b, c) => { if (day) day.greet(c, b.name); },
+      greet: (b, c) => { if (day && tillAssigned()) day.greet(c, b.name); },
       take: (b, o) => !!day && day.take(o, b.name),
       serve(b, c) { if (!day || !samTillFree() || !day.serve(c, b.name)) return false; showScreen(b.till, null); callTo(c, b.till); return true; },
       picked: (b, o) => day.picked(o),
@@ -1046,7 +1074,15 @@
       let toastT = 0;
       function toast(text, kind) { D.toast.textContent = text; D.toast.className = 'ws-toast show' + (kind ? ' ' + kind : ''); clearTimeout(toastT); toastT = setTimeout(() => { D.toast.className = 'ws-toast'; }, 1300); }
       let bannerT = 0;
-      function banner(title, text, ms, kind) { D.bannerTitle.textContent = title; D.bannerText.textContent = text || ''; D.banner.className = kind === 'bell' ? 'ws-banner show bell' : 'ws-banner show'; clearTimeout(bannerT); bannerT = setTimeout(() => { D.banner.className = 'ws-banner'; }, ms || 1800); }
+      function banner(title, text, ms, kind, detail = '') {
+        D.bannerTitle.textContent = title;
+        D.bannerText.textContent = text || '';
+        D.bannerDetail.textContent = detail;
+        D.bannerDetail.hidden = !detail;
+        D.banner.className = kind === 'bell' ? 'ws-banner show bell' : 'ws-banner show';
+        clearTimeout(bannerT);
+        bannerT = setTimeout(() => { D.banner.className = 'ws-banner'; }, ms || 1800);
+      }
       P.toast = toast;
       P.scannerMissing = false;
       P.scannerFault = false;
@@ -1732,7 +1768,7 @@
         const el = document.createElement('div');
         el.className = 'ws-pc'; el.hidden = true;
         el.innerHTML = '<div class="ws-pc-box"><div class="ws-pc-top"><b>Manager PC</b><span class="ws-wallet"></span><button type="button" class="ws-pc-x" aria-label="Close">Close &#10005;</button></div>' +
-          '<div class="ws-pc-tabs"><button type="button" data-pc="jobs">Sam’s jobs</button><button type="button" data-pc="shop">Upgrades</button></div><section class="ws-jobs"><p>Sam does the ticked jobs, the top one first. Untick a job and Sam leaves it to you. When the slots are full, ticking a new job replaces the lowest ticked job. Sam still greets waiting customers.</p>' +
+          '<div class="ws-pc-tabs"><button type="button" data-pc="jobs">Sam’s jobs</button><button type="button" data-pc="shop">Upgrades</button></div><section class="ws-jobs"><p>Sam does the ticked jobs in priority order. Train him under Upgrades to unlock more jobs.</p>' +
           '<ol class="ws-pc-list"></ol><div class="ws-presets" hidden>' +
           presetNames.map((name, i) => '<div><b>' + name + '</b><button type="button" data-pc="load" data-i="' + i + '" aria-label="Apply ' + name + '">Apply</button>' +
             '<button type="button" data-pc="save" data-i="' + i + '" aria-label="Save current jobs to ' + name + '">Save current</button></div>').join('') +
@@ -1741,6 +1777,7 @@
         D.root.appendChild(el);
         el.addEventListener('click', (e) => {
           const b = e.target.closest('button'); if (!b) return;
+          if (b.hasAttribute('data-training')) { purchase('training', b.dataset.training); return; }
           if (b.hasAttribute('data-kit')) { purchase(b.dataset.kit); return; }
           for (const id of ['digital', 'reliability']) {
             if (id in b.dataset) { purchase(id, Number(b.dataset[id])); return; }
@@ -1748,7 +1785,6 @@
           const i = +b.dataset.i, a = b.dataset.pc;
           initAudio();
           if (a === 'shop' || a === 'jobs') { pcTab(a === 'shop'); return; }
-          if (a === 'train') { buySlot(Number(b.dataset.slots)); pcRender(); return; }
           if (a === 'save' || a === 'load') { pcPreset(i, a === 'save'); return; }
           if (a === 'tick') { pc.sel = i; pcToggle(); } else if (a === 'up') { pc.sel = i; pcShift(-1); } else if (a === 'down') { pc.sel = i; pcShift(1); }
         });
@@ -1759,8 +1795,8 @@
       function pcRender() {
         const list = pc.el.querySelector('.ws-pc-list');
         list.innerHTML = samPrio.map((j, i) => '<li class="' + (i === pc.sel ? 'on' : '') + (j.on ? '' : ' off') + '">' +
-          '<button type="button" class="tick" data-pc="tick" data-i="' + i + '" aria-label="Tick">' + (j.on ? '&#10003;' : '') + '</button>' +
-          '<span class="n">' + (i + 1) + '</span><span class="t">' + PRIO_NAMES[j.id][0] + '<small>' + PRIO_NAMES[j.id][1] + '</small></span>' +
+          '<button type="button" class="tick" data-pc="tick" data-i="' + i + '" aria-label="' + (trained[j.id] ? 'Toggle ' + PRIO_NAMES[j.id][0] + '" aria-pressed="' + j.on + '"' : PRIO_NAMES[j.id][0] + ' requires training" disabled') + '>' + (j.on ? '&#10003;' : '') + '</button>' +
+          '<span class="n">' + (i + 1) + '</span><span class="t">' + PRIO_NAMES[j.id][0] + '<small>' + PRIO_NAMES[j.id][1] + (trained[j.id] ? '' : ' · Training required') + '</small></span>' +
           '<button type="button" data-pc="up" data-i="' + i + '" aria-label="Move up"' + (i ? '' : ' disabled') + '>&#9650;</button>' +
           '<button type="button" data-pc="down" data-i="' + i + '" aria-label="Move down"' + (i < samPrio.length - 1 ? '' : ' disabled') + '>&#9660;</button></li>').join('');
         pc.el.querySelector('.ws-wallet').textContent = availableXP() + ' XP available';
@@ -1814,8 +1850,8 @@
       function closePc() { if (!pc.open) return; pc.open = false; pc.el.hidden = true; SFX.key(); if (idx === 0) canvas.focus({ preventScroll: true }); pcOn = false; checkTill(); renderScanner(); }
       function pcMove(d) { pc.sel = (pc.sel + d + samPrio.length) % samPrio.length; SFX.key(); pcRender(); }
       function pcToggle() {
-        const job = samPrio[pc.sel], enabled = samPrio.filter(j => j.on);
-        if (!job.on && enabled.length >= jobSlots) enabled[enabled.length - 1].on = false;
+        const job = samPrio[pc.sel];
+        if (!trained[job.id]) { pcTab(true); return; }
         job.on = !job.on;
         SFX.key(); saveSamPrio(); pcRender();
       }
@@ -2448,16 +2484,17 @@
     const kitSpend = () => Object.values(kit).reduce((sum, item) => sum + (item.owned ? item.price : 0), 0);
     const spentOnReliability = () => reliabilityPrices.slice(0, scannerTier - 1).reduce((sum, cost) => sum + cost, 0);
     const spentOnDigital = () => digitalTiers.slice(0, digitalTier).reduce((sum, tier) => sum + tier.cost, 0);
-    const availableXP = () => careerXP() - spentOnDigital() - spentOnReliability() - kitSpend() - slotPrices.slice(0, jobSlots - 1).reduce((sum, price) => sum + price, 0);
-    const trainingStatus = () => 'Sam · ' + jobSlots + '/4 job slots · ' + availableXP() + ' XP available';
-    function renderPurchase(btn) {
-      const price = slotPrices[jobSlots - 1];
-      btn.disabled = !price || availableXP() < price;
-      btn.dataset.slots = jobSlots;
-      btn.textContent = price ? 'Train Sam · slot ' + (jobSlots + 1) + ' · ' + price + ' XP' : 'Fully trained';
-    }
+    const spentOnTraining = () => legacyTrainingSpend + Object.values(trained).filter(status => status === 'paid').length * trainingPrice;
+    const availableXP = () => careerXP() - spentOnDigital() - spentOnReliability() - kitSpend() - spentOnTraining();
+    const trainingStatus = () => 'Sam · ' + Object.keys(trained).length + '/4 skills · ' + availableXP() + ' XP available';
     function renderShop(root) {
-      renderPurchase(root.querySelector('[data-pc="train"]'));
+      for (const btn of root.querySelectorAll('[data-training]')) {
+        const owned = !!trained[btn.dataset.training];
+        btn.disabled = owned || availableXP() < trainingPrice;
+        btn.textContent = owned ? 'Trained' : 'Train · ' + trainingPrice + ' XP';
+        const skill = PRIO_NAMES[btn.dataset.training][0];
+        btn.setAttribute('aria-label', owned ? skill + ' trained' : 'Train Sam in ' + skill + ' for ' + trainingPrice + ' XP');
+      }
       for (const btn of root.querySelectorAll('[data-reliability]')) {
         const cost = reliabilityPrices[scannerTier - 1];
         btn.dataset.reliability = scannerTier;
@@ -2493,10 +2530,13 @@
     }
     function purchase(id, expected) {
       function applyPurchase() {
-        readSlots();
+        readUpgrades();
         let key, value;
-        if (id === 'slot' && expected === jobSlots && jobSlots < 4 && availableXP() >= slotPrices[jobSlots - 1]) {
-          key = slotKey; value = String(++jobSlots);
+        if (id === 'training' && PRIO_DEFAULT.includes(expected) && !trained[expected] && availableXP() >= trainingPrice) {
+          trained[expected] = 'paid';
+          key = trainingKey; value = JSON.stringify(trained);
+          samPrio.find(job => job.id === expected).on = true;
+          saveSamPrio();
         } else if (id === 'reliability' && expected === scannerTier && scannerTier < 5 && availableXP() >= reliabilityPrices[scannerTier - 1]) {
           key = reliabilityKey; value = String(++scannerTier);
         } else if (id === 'digital' && expected === digitalTier && digitalTiers[digitalTier] && availableXP() >= digitalTiers[digitalTier].cost) {
@@ -2510,9 +2550,8 @@
       if (navigator.locks) return navigator.locks.request('ws-career-purchase', applyPurchase);
       applyPurchase();
     }
-    function buySlot(expected) { return purchase('slot', expected); }
     window.addEventListener('storage', e => {
-      if (e.key === slotKey || e.key === reliabilityKey || e.key === digitalKey || e.key?.startsWith('ws-kit-')) readSlots();
+      if (e.key === trainingKey || e.key === reliabilityKey || e.key === digitalKey || e.key?.startsWith('ws-kit-')) readUpgrades();
       else if (e.key?.startsWith(receiptPrefix) && e.newValue) {
         const known = career.get(e.key) || 0, incoming = Number(e.newValue);
         if (!Number.isSafeInteger(incoming) || incoming <= 0) return;
@@ -2846,7 +2885,7 @@
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
-        kit, missingScanners, checkScannerMixup, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
+        kit, missingScanners, checkScannerMixup, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, bellTillTrained: () => bellTillTrained, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; syncShiftXP(); },
         resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },
         clearDayView() {

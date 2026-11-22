@@ -64,6 +64,7 @@
     var self = this;
     this.world = o.world; this.World = o.World; this.Till = o.Till; this.requests = o.requests || null;
     this.r = o.rand || Math.random; this.env = o.env || {};
+    this.firstDay = !!o.firstDay;
     this.total = o.total || (15 + Math.floor(this.r() * 11)); // 15 to 25 picks (detailedfoil: it needn't be exactly 20)
     this.mode = MODES[o.mode] ? o.mode : 'mixed';
     this.event = this.mode === 'mixed' && EVENT_IDS.indexOf(o.event) >= 0 ? o.event : null;
@@ -142,7 +143,7 @@
   Day.prototype.fillPlan = function (initial) {
     var from = Math.max(this.first, this.released), n = this.plan.length - from, rest, i;
     if (initial && this.mode === 'mixed') {
-      var nc = Math.min(n - 4, MID_C[0] + Math.floor(this.r() * (MID_C[1] - MID_C[0] + 1)));
+      var nc = Math.max(0, Math.min(n - 4, MID_C[0] + Math.floor(this.r() * (MID_C[1] - MID_C[0] + 1))));
       n -= nc;
       var nt = Math.max(0, Math.round(this.tillShare * n));
       var kiosks = Math.max(Number(nt >= 2), Math.round(nt * KIOSK_SHARE));
@@ -157,6 +158,13 @@
       var kinds = MODES[this.mode];
       rest = [];
       for (i = 0; i < n; i++) rest.push(this.mode === 'mixed' ? this.walkInKind() : this.pick(kinds));
+    }
+    if (initial && this.firstDay) {
+      // Round the two workloads independently so a third of the day's customers still come in.
+      var holding = rest.filter(function (k) { return k === 'c'; }).length;
+      var holdingLeft = Math.round(holding / 3), customersLeft = Math.round((rest.length - holding) / 3);
+      rest = rest.filter(function (k) { return k === 'c' ? holdingLeft-- > 0 : customersLeft-- > 0; });
+      this.total = this.plan.length = rest.length;
     }
     // never three the same in a row
     var prev = this.plan.slice(0, from);
@@ -198,6 +206,7 @@
     this.delivery = [];
     if (!gi.length || n === 0) return;
     if (!n) n = DELIVERY[0] + Math.floor(this.r() * (DELIVERY[1] - DELIVERY[0] + 1));
+    if (this.firstDay) n = Math.round(n / 3);
     var slots = [];
     gi.forEach(function (g) { g.slots.forEach(function (sl, k) { slots.push({ src: g.i, slot: k }); }); });
     // fill from the bottom up, spread over the cages and pallets

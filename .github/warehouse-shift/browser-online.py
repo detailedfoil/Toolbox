@@ -107,7 +107,7 @@ def shared_shift(browser, errors):
             }""")
             guest.get_by_role("button", name="Use PC").tap()
             shop = guest.locator(".ws-shop")
-            assert shop.is_visible() and shop.locator(".ws-shop-row").count() == 5
+            assert shop.is_visible() and shop.locator(".ws-shop-row").count() == 7
             bounds = shop.bounding_box()
             assert bounds["x"] >= 0 and bounds["x"] + bounds["width"] <= w
             shop.get_by_text("Kickstool shoes").scroll_into_view_if_needed()
