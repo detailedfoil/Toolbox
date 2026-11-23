@@ -10,7 +10,9 @@
     return box(middle(o.x0, o.x1), middle(o.y0, o.y1), middle(z0, z1), o.x1 - o.x0, o.y1 - o.y0, z1 - z0);
   }
   const cue = (text, selector, target, stand) => ({ text, selector, target, stand });
-  const walk = (text, target, stand) => cue(text, null, target, stand);
+  function walk(text, target, stand, action) {
+    return { text, target, stand, action };
+  }
   const act = k => '[data-act="' + k + '"]';
   const field = k => '[data-f="' + k + '"]';
   const clean = s => s.toUpperCase().replace(/\s/g, '');
@@ -117,13 +119,16 @@
         holdingOrder = day.makeOrder('c', [{ item: saleItem, qty: 1 }], null, true, { surname: day.surname() });
       }
       if (fullTour) {
-        const loc = stockItem.loc;
-        World.vacate(world, stockItem); day.emit('stock', stockItem);
-        carton = { id: 1, item: stockItem, loc, qty: 4, src: 0, slot: 0, by: null, done: false };
-        day.delivery = [carton];
         const parcel = day.parcel(day.surname(), null);
         day.hold[holdSpot.code] = Object.assign(parcel, { locs: 2, units: 3 });
       }
+    }
+    function deliverCarton() {
+      const loc = stockItem.loc;
+      World.vacate(world, stockItem); day.emit('stock', stockItem);
+      carton = { id: 1, item: stockItem, loc, qty: 4, src: 0, slot: 0, by: null, done: false };
+      day.delivery = [carton];
+      S.delivery.set(day.delivery); p.deliveryChanged();
     }
     function sendSale() {
       customer = day.send(lesson === 'kiosk' ? 'kiosk' : 'till');
@@ -166,7 +171,7 @@
       const far = distance(me, stand) > 0.85;
       if (putaway && !p.stool && D.stepBtn.hidden) {
         return walk('High shelf. Go to the red kick stool, look down and use Take stool.',
-          box(stool.x, stool.y, 0.34, 0.6, 0.6, 0.68), point(stool.x - 0.65, stool.y));
+          box(stool.x, stool.y, 0.34, 0.6, 0.6, 0.68), point(stool.x - 0.65, stool.y), 'Take stool');
       }
       if (far) return walk('Find ' + loc.code + '. Read area, bay, shelf, then position. Bay 01 starts at the centre aisle.', target, stand);
       if (putaway && !me.step) return cue('At the shelf, use Step to reach the high label.', '#stepBtn', target, stand);
@@ -181,7 +186,7 @@
           'A lowercase c goes into holding. Scan any empty OC spot to store the tote. Try ' + spot.code + '.';
         return walk(task, objectBox(spot, spot.z0, spot.z1), point(spot.x1 + 0.75, middle(spot.y0, spot.y1)));
       }
-      if (state === 'restock') return walk('Take the tote to the middle shop-floor shelf. Face it and use Restock shelf for bonus XP.', floorBox, floorAt);
+      if (state === 'restock') return walk('Take the tote to the middle shop-floor shelf. Face it and use Restock shelf for bonus XP.', floorBox, floorAt, 'Restock shelf');
       if (state === 'deliver') {
         const stand = tillAt(customer?.at || tills[0]);
         return cue('Take the tote behind the trade counter and ' + confirm() + ' to hand it over.', covered() ? '#scEnter' : null, objectBox(counter, 0, 1.02), stand);
@@ -190,13 +195,13 @@
       return shelfGuide(p.activeLine().loc, false);
     }
     function office() {
-      if (!p.pcOpen() && !trained()) return walk('Follow the trail into the office. Face the glowing Manager PC and use it.', box(pc.x, pc.y, 1.08, 0.63, 0.12, 0.42), point(pc.x, pc.desk.y0 - 0.48));
+      if (!p.pcOpen() && !trained()) return walk('Your pick is on the faulty scanner. Go to the office and open the glowing Manager PC.', box(pc.x, pc.y, 1.08, 0.63, 0.12, 0.42), point(pc.x, pc.desk.y0 - 0.48), 'Use PC');
       if (p.pcOpen()) {
-        if (trained()) return cue('That upgrade applies straight away. Close the Manager PC.', '.ws-pc-x');
+        if (trained()) return cue('Purchase complete. Close the Manager PC.', '.ws-pc-x');
         if (D.root.querySelector('.ws-shop').hidden) return cue('Sam starts on delivery. Open Upgrades to train him for till service.', '[data-pc="shop"]');
         return cue('Spend your 100 practice XP on Sam’s till service.', '[data-training="queue"]');
       }
-      if (p.scannerFault) return walk('Your scanner went offline mid-pick. Face the charging dock beside the PC and use Swap scanner.', box(dock.x, dock.y, dock.z, 0.64, 0.18, 0.23), point(dock.x, pc.desk.y0 - 0.42));
+      if (p.scannerFault) return walk('Your scanner went offline mid-pick. Face the charging dock beside the PC and use Swap scanner.', box(dock.x, dock.y, dock.z, 0.64, 0.18, 0.23), point(dock.x, pc.desk.y0 - 0.42), 'Swap scanner');
       if (!sawCCTV) {
         const angle = Math.atan2(camBox.x - me.x, me.y - camBox.y) + me.yaw;
         sawCCTV = distance(me, camAt) < 1.5 && Math.cos(angle) > 0.78;
@@ -207,8 +212,8 @@
     function meet(c) {
       const t = c.at || tills[0], target = c.state === 'greet' && c.fig ? box(c.fig.group.position.x, c.fig.group.position.z, 1.2, 0.52, 0.46, 1.1) : objectBox(t, 0.98, 1.36);
       if (c.state === 'coming') return walk('Stand behind the counter while the customer walks up. This area earns Service Champ +5% XP.', objectBox(t, 0.98, 1.36), tillAt(t));
-      if (c.state === 'greet') return walk('Look at the customer from behind the till. When Greet appears, ' + use() + '.', target, tillAt(t));
-      return walk('Face the glowing till and use it to open Fusion for this customer.', target, tillAt(t));
+      if (c.state === 'greet') return walk('Look at the customer from behind the till. When Greet appears, ' + use() + '.', target, tillAt(t), 'Greet');
+      return walk('Face the glowing till and use it to open Fusion for this customer.', target, tillAt(t), 'Use till');
     }
     function nextCue() {
       if (!$('helpCover').hidden) return cue('Close How to play to return to the tutorial.', '#helpX');
@@ -237,7 +242,7 @@
       }
       if (fullTour && !bellRung() && !customer.greeter && !customer.order) {
         const b = world.bell;
-        return walk('Behind the counter you earn Service Champ +5% XP. Ring the red bell to call for till cover.', box(b.x, b.y, b.z, 0.4, 0.17, 0.3), point(b.x, counter.y0 - 0.7));
+        return walk('Behind the counter you earn Service Champ +5% XP. Ring the red bell to call for till cover.', box(b.x, b.y, b.z, 0.4, 0.17, 0.3), point(b.x, counter.y0 - 0.7), 'Ring bell');
       }
       if (!customer.order) return meet(customer);
       if (!fullTour) { complete(); return null; }
@@ -250,7 +255,7 @@
         chapter = p.order().kind === 'replen' ? 5 : p.order().kind === 'hold' ? 4 : fault ? 3 : 2;
         return workOrder();
       }
-      if (!carton.done && carton.by === p.id) {
+      if (carton && !carton.done && carton.by === p.id) {
         chapter = 4;
         if (p.state() === 'paqty') return cue('One confirmation shelves the whole carton. ' + confirm() + '.', '#scEnter');
         return shelfGuide(carton.loc, true);
@@ -260,6 +265,7 @@
         return scannerMenu(1, 'Today Picking', 'list');
       }
       chapter = 4;
+      if (!carton) deliverCarton();
       if (!carton.done) {
         const g = world.goodsin[carton.src];
         return scannerMenu(0, 'Putaway', 'pa', walk('Goods in is where delivery arrives. Scan the carton on the glowing cage.', objectBox(g.obj), g.stand));
@@ -271,7 +277,7 @@
       const replen = day.orders.find(o => o.kind === 'replen');
       if (replen?.status !== 'done') return scannerMenu(2, 'Shop floor replen', 'list');
       day.released = day.plan.length; day.check();
-      return walk('Replen earned extra XP. Finish the shift by facing the front door and using Lock door.', box(doorX, world.D - 0.3, 1.05, entrance.to - entrance.from, 0.2, 2.1), point(doorX, world.D - 0.95));
+      return walk('Replen earned extra XP. Finish the shift by facing the front door and using Lock door.', box(doorX, world.D - 0.3, 1.05, entrance.to - entrance.from, 0.2, 2.1), point(doorX, world.D - 0.95), 'Lock door');
     }
     function route(goal) {
       if (!goal) { routeTo = null; trail.visible = false; bearing.hidden = true; return; }
@@ -305,7 +311,8 @@
       const title = fullTour ? (chapter + 1) + '/6 · ' + chapters[chapter] : lesson === 'kiosk' ? 'Till practice · Kiosk & cash' : lesson === 'holding' ? 'Warehouse practice · Holding area' : 'Till practice · CrashFix';
       if ($('guideChapter').textContent !== title) $('guideChapter').textContent = title;
       if ($('guideTask').textContent !== current.text) $('guideTask').textContent = current.text;
-      const target = current.selector && D.root.ownerDocument.querySelector(current.selector);
+      let target = current.selector && document.querySelector(current.selector);
+      if (current.action && !D.tillBtn.hidden && D.tillBtn.firstChild.nodeValue === current.action) target = D.tillBtn;
       if (target !== marked) {
         marked?.classList.remove('guide-target'); target?.classList.add('guide-target'); marked = target;
         if (target?.closest('.fu-tw,.ws-pc-box,.cf-scroll')) target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });

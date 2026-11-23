@@ -8,6 +8,7 @@ on:
       - 'workers/warehouse-relay/**'
       - '.github/warehouse-shift/test-*.mjs'
       - '.github/warehouse-shift/browser-online.py'
+      - '.github/warehouse-shift/tutorial-playthrough.js'
       - '.github/tests/warehouse-online.test.mjs'
       - '.github/workflows/warehouse-online.yml'
   workflow_dispatch:

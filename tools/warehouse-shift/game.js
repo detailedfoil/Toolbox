@@ -1332,7 +1332,8 @@
         if (tr) { tr.target = out ? 1 : 0; if (out) { openTray = tr; SFX.slide(); } }
       }
       function shut() { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; }
-      function scanAt(nx, ny) {
+      function scanAt(nx, ny, useAimedObject = false) {
+        if (useAimedObject && (stoolOn || pcOn) && useAction()) return;
         if (P.scannerMissing) { if (!useAction() && nearTill) openTill(); return; }
         if (blueAction) return;
         if (order?.kind === 'replen' && doorOn && useAction()) return;
@@ -1975,10 +1976,6 @@
       }
       P.refreshPc = pcRender; P.pcOpen = () => pc.open; P.pcKey = pcKey; P.openPc = openPc; P.closePc = closePc;
       P.useAction = useAction;
-      P.scanForward = () => {
-        if ((stoolOn || pcOn) && useAction()) return;
-        const [x, y] = centreNdc(); scanAt(x, y);
-      };
       async function openTill() {
         if (!till || till.isOpen() || !nearTill || !canUseTill(nearTill)) return;
         if (!day.tillsOpen()) { toast(Day.EVENTS[day.event].title + ' · Click & collect only'); return; }
@@ -2328,7 +2325,7 @@
         const curve = (v) => Math.sign(v) * Math.pow(Math.abs(v), 1.6);
         lookIn.x = curve(rx); lookIn.y = curve(ry);
         if (now[6] !== padRun) { padRun = now[6]; running = padRun; }
-        if (hit(7)) { initAudio(); P.scanForward(); }
+        if (hit(7)) { initAudio(); const c = centreNdc(); scanAt(c[0], c[1], true); }
         if (hit(1)) back();
         if (hit(2)) toggleSquat();
         if (hit(4)) toggleStep();
@@ -2575,7 +2572,7 @@
       if (e.repeat) return;
       if (/^[0-9]$/.test(e.key)) { p.digit(e.key); e.preventDefault(); return; }
       switch (e.code) {
-        case 'KeyF': p.scanForward(); e.preventDefault(); break;
+        case 'KeyF': { const c = p.centre(); p.scanAt(c[0], c[1], true); e.preventDefault(); break; }
         case 'KeyC': p.toggleSquat(); break;
         case 'KeyV': p.toggleStep(); break;
         case 'KeyH': case 'F4': p.useHint(); e.preventDefault(); break;
