@@ -740,11 +740,12 @@
       if (this.slip()) { yield this.T(0.8, 1.4); this.cSay(this.pick(SAY.notMine) + ' ' + c.kiosk.sayName); yield this.T(2.0, 4.0); }
       this.cSay(this.pick(SAY.mine));
       const floor = lines.find(l => l.floor);
-      if (floor) { yield this.T(PACE.reply); this.cSay(floor.say); }
+      if (floor) { yield 1; this.emit('sfx', 'scan'); yield 1; }
       yield this.T(1.0, 2.0);
     } else {
       for (var i = 0; i < lines.length; i++) {
         var ln = lines[i], find = PACE[ln.kind] || PACE.describe;
+        if (ln.floor) { yield 1; this.emit('sfx', 'scan'); yield 1; continue; }
         if (i) { this.say(this.pick(SAY.more)); yield this.T(PACE.reply); }
         this.cSay({ text: ((ln.next ? ln.next + ' ' : '') + ln.say).trim(), quote: ln.quote, hint: ln.hint, qty: ln.qtySay });
         yield this.T(find); // found on CrashFix, its code copied: the customer says straight away if it's right

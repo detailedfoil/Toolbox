@@ -276,14 +276,35 @@
       const problem = deliveryProblem(s);
       if (s.ready && problem) { say(problem); return; }
       const ln = s.lines[s.cur];
-      if (!ln) return;
+      if (!ln || ln.floor) return;
       ln.asked = (ln.asked || 0) + 1;
       if (ln.asked >= 2 && !ln.clued) { ln.clued = true; s.slips++; if (o.onSlip) o.onSlip(); say({ text: ln.clue }); return; }
       sayRequest(true);
     }
+    function scanFloor(s, line) {
+      if (line.scanning || line.done) return;
+      line.scanning = true;
+      later(1000, () => {
+        if (S.session !== s) return;
+        sfx('beep');
+        later(1000, () => {
+          if (S.session !== s) return;
+          const code = line.item.code, item = product(code);
+          s.basket.push({ code, item: line.item, name: item?.name || line.item.name, qty: line.qty,
+            price: item?.price ?? Till.price(line.item), avail: Till.avail(line.item), status: 'ok', line: s.lines.indexOf(line) });
+          line.done = true;
+          s.cur = s.lines.findIndex(l => !l.done);
+          s.ready = s.cur < 0;
+          if (s.ready) s.cur = s.lines.length;
+          renderBasket();
+          if (!s.ready) sayRequest(false);
+        });
+      });
+    }
     function sayRequest(again) {
       const s = S.session, ln = s && s.lines[s.cur];
       if (!ln) return;
+      if (ln.floor) { scanFloor(s, ln); return; }
       const lead = again ? (ln.kind === 'need' ? 'Like I said, it says:' : 'Like I said: ') : (ln.next ? ln.next + ' ' : '');
       if (ln.kind === 'need') say({ text: again ? lead : (lead + ln.say).trim(), quote: ln.quote, hint: ln.hint, qty: ln.qtySay, kind: 'need' });
       else say({ text: again ? lead + ln.say : (lead + ln.say).trim(), qty: ln.qtySay });
@@ -391,14 +412,18 @@
         s.slips++; if (o.onSlip) o.onSlip(); sfx('bad'); say("That's not mine, mate. I haven't used the kiosk."); return;
       }
       if (!k.mine) { s.slips++; if (o.onSlip) o.onSlip(); sfx('bad'); say("That's not mine. " + s.kiosk.sayName); return; }
-      s.lines = k.lines.map((l) => ({ shortage: l.shortage, reply: l.reply, kind: 'code', item: l.item, qty: l.qty, accept: [l.item.code], done: true, clue: "It's " + l.item.code.split('').join(' ') + '.',
+      s.lines = k.lines.map((l) => ({ floor: l.floor, shortage: l.shortage, reply: l.reply, kind: 'code', item: l.item, qty: l.qty, accept: [l.item.code], done: !l.floor, clue: "It's " + l.item.code.split('').join(' ') + '.',
         say: 'I had ' + l.item.code + ' on my kiosk order.', qtySay: l.qty > 1 ? l.qty + ' of them.' : '', next: '' }));
       s.basket = k.lines.map((l, i) => { const p = product(l.item.code); return { code: l.item.code, name: p ? p.name : l.item.name, qty: l.qty, price: p ? p.price : Till.price(l.item), avail: l.shortage ? 0 : Till.avail(l.item), item: l.item, status: 'ok', line: i }; });
       s.cur = s.lines.length; s.ready = true; s.stage = 'ordering';
       renderBasket(); show('order'); sfx('good');
       const shortage = k.lines.find(l => l.shortage);
       const floor = k.lines.find(l => l.floor);
-      if (floor) say(floor.say);
+      if (floor) {
+        s.cur = s.lines.findIndex(l => l.floor);
+        s.basket = s.basket.filter(row => row.line !== s.cur);
+        s.ready = false; renderBasket(); scanFloor(s, s.lines[s.cur]);
+      }
       if (shortage) { say(shortage.reply); return; }
       if (floor) return;
       say(pick(["That's the one, yeah.", "Yep, that's mine.", "That's mine, cheers."]));
@@ -432,8 +457,10 @@
         const tr = document.createElement('tr');
         tr.className = 'fu-line ' + r.status;
         tr.dataset.i = i;
-        tr.innerHTML = '<td>' + esc(r.code) + '</td><td><input class="fu-q" data-row="' + i + '" value="' + r.qty + '" maxlength="3" autocomplete="off" inputmode="' + (osk() ? 'none' : 'numeric') + '"></td><td class="' + (r.avail ? '' : 'out') + '">' + r.avail +
-          '</td><td class="d">' + esc(r.name) + '</td><td><button type="button" class="fu-delivery" data-delivery="' + i + '" aria-label="Delivery for ' + esc(r.code) + ', ' + (r.tcnd ? 'TCND' : 'Today') + '" aria-pressed="' + !!r.tcnd + '">' + (r.tcnd ? 'TCND' : 'Today') + '</button></td><td>1</td><td>' + (r.price / 100).toFixed(2) + '</td><td>' + (r.price * r.qty / 100).toFixed(2) + '</td><td><button type="button" class="fu-del" data-del="' + i + '" aria-label="Remove line">&times;</button></td>';
+        const picked = s.lines[r.line]?.floor;
+        const status = picked ? 'Picked' : r.tcnd ? 'TCND' : 'Today';
+        tr.innerHTML = '<td>' + esc(r.code) + '</td><td><input class="fu-q" ' + (picked ? 'disabled ' : '') + 'data-row="' + i + '" value="' + r.qty + '" maxlength="3" autocomplete="off" inputmode="' + (osk() ? 'none' : 'numeric') + '"></td><td class="' + (r.avail ? '' : 'out') + '">' + r.avail +
+          '</td><td class="d">' + esc(r.name) + '</td><td><button type="button" class="fu-delivery' + (picked ? ' picked" disabled' : '"') + ' data-delivery="' + i + '" aria-label="Delivery for ' + esc(r.code) + ', ' + status + '" aria-pressed="' + !!r.tcnd + '">' + status + '</button></td><td>1</td><td>' + (r.price / 100).toFixed(2) + '</td><td>' + (r.price * r.qty / 100).toFixed(2) + '</td><td><button type="button" class="fu-del" ' + (picked ? 'disabled ' : '') + 'data-del="' + i + '" aria-label="Remove line">&times;</button></td>';
         body.appendChild(tr);
       });
       V.count.textContent = String(rows.length);
@@ -442,6 +469,7 @@
     }
     function addLine() {
       const s = S.session;
+      if (s?.lines[s.cur]?.floor) return;
       const code = F.part.value.toUpperCase().replace(/[\s-]/g, '').replace(/O/g, '0');
       const qtyText = F.qty.value.trim();
       if (!code) { fuMsg('Type a part number first.'); sfx('bad'); return; }
@@ -472,7 +500,7 @@
       const dup = s.basket.find((r) => r !== row && r.code === row.code && r.status === 'ok');
       if (dup) { row.status = 'wrong'; renderBasket(); say("I've already got that one."); sfx('bad'); later(1300, () => removeRow(row)); return; }
       const ln = s.lines[s.cur];
-      const verdict = Till.judge(ln, row.code, row.qty);
+      const verdict = ln?.floor ? 'wrong' : Till.judge(ln, row.code, row.qty);
       if (verdict === 'wrong') {
         row.status = 'wrong'; s.slips++; if (o.onSlip) o.onSlip();
         renderBasket(); sfx('bad');
@@ -500,6 +528,7 @@
       else say(pick(RIGHT));
       const next = s.lines.findIndex((l) => !l.done);
       if (next < 0) { s.cur = s.lines.length; s.ready = true; if (!ln.shortage) later(1100, () => say(pick(["That's everything. I'll pay now.", "That's the lot, cheers.", "That's all I need. How much is that?"]))); }
+      else if (s.lines[next].floor) { s.cur = next; scanFloor(s, s.lines[next]); }
       else { s.cur = next; later(quiet ? 900 : 1300, () => sayRequest(false)); }
     }
     function removeRow(row) {

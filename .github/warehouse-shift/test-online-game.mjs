@@ -492,10 +492,14 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   ui.F.no.value = session.cust.no; ui.search(); ui.select();
   assert.equal(session.stage, 'kiosk');
   ui.openKiosk(); ui.S.ksel = session.kiosk.mine; ui.kioskSelect();
+  if (customer.floorOffer) {
+    assert.equal(session.ready, false);
+    await until(() => cashier.till.el.querySelector('.fu-delivery.picked'), 'guest till to scan the shelf item');
+  }
   ui.goPay();
   assert.equal(session.stage, 'ordering', 'the customer needs the extra line set to TCND');
   const extra = kioskOrder.lines.at(-1);
-  const delivery = cashier.till.el.querySelector('[data-delivery="' + (session.basket.length - 1) + '"]');
+  const delivery = cashier.till.el.querySelector('[data-delivery="' + session.basket.findIndex(row => row.code === extra.item.code) + '"]');
   assert.equal(delivery.textContent, 'Today');
   delivery.click();
   assert.equal(delivery.textContent, 'TCND');

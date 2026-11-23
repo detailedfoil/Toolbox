@@ -81,11 +81,6 @@ window.playTutorial = async function (lesson) {
     await text('Collect the bag from ' + sp.code); scanBag();
     walk(tillPos(s.tills[0]),w.counter.y0-.65); key('Enter');
   } else {
-    if (lesson === 'tour') {
-      await text('middle shop-floor shelf');
-      if (day.customers.length) throw Error('Spawned before player visited the floor');
-      const f = w.replenShelf; walk(f.x0-.7,mid(f.y0,f.y1));
-    }
     await wait(() => day.customers.length === 1, 'First customer');
     const c = day.customers[0];
     if (lesson === 'tour') {
@@ -115,6 +110,10 @@ window.playTutorial = async function (lesson) {
       await text('TCND'); click('[data-delivery="1"]');
     } else {
       for (const l of c.lines) {
+        if (l.floor) {
+          await wait(() => find('.fu-delivery.picked')?.textContent === 'Picked', 'Automatic floor scan');
+          continue;
+        }
         if (lesson === 'catalogue' && !l.shortage) {
           await text('CrashFix'); click('[data-tab=crashfix]');
           field('[data-f=q]',l.item.name);
@@ -148,17 +147,19 @@ window.playTutorial = async function (lesson) {
       shelf(loc); key('f');
       await wait(() => p.scannerFault, 'Practice fault');
       if ($('scQty').textContent !== '1') throw Error('Expected one scanned unit');
-      const pc=w.pc; walk(pc.x,pc.desk.y0-.48); aim(pc.x,pc.y,1.05); await interact('Use PC');
-      await text('Open Upgrades'); click('[data-pc=shop]'); await text('100 practice XP'); click('[data-training=queue]');
-      await text('Close the Manager PC'); click('.ws-pc-x');
-      const dock=w.scannerDock; walk(dock.x,pc.desk.y0-.42); aim(dock.x,dock.y,dock.z); await interact('Swap scanner');
-      await text('CCTV');
-      const cam=w.objects.find(o=>o.kind==='cctv'), cy=mid(cam.y0,cam.y1);
-      walk(cam.x0-.85,cy); aim(cam.x0,cy,1.5); await text('Find ' + loc.code);
+      const dock=w.scannerDock; walk(dock.x,w.pc.desk.y0-.42); aim(dock.x,dock.y,dock.z); await interact('Swap scanner');
+      await text('Find ' + loc.code);
       shelf(loc); key('f'); if (!s.full()) throw Error('Replacement lost scanned quantity');
       key('Enter');
       function hand() { walk(tillPos(s.tills[0]),w.counter.y0-.65); key('Enter'); }
-      hand(); await text('Main Menu'); menu(0); await text('Goods in');
+      hand();
+      const pc=w.pc; walk(pc.x,pc.desk.y0-.48); aim(pc.x,pc.y,1.05); await interact('Use PC');
+      await text('Open Upgrades'); click('[data-pc=shop]'); await text('100 practice XP'); click('[data-training=queue]');
+      await text('Close the Manager PC'); click('.ws-pc-x');
+      await text('CCTV');
+      const cam=w.objects.find(o=>o.kind==='cctv'), cy=mid(cam.y0,cam.y1);
+      walk(cam.x0-.85,cy); aim(cam.x0,cy,1.5); await text('Main Menu');
+      menu(0); await text('Goods in');
       const carton=day.delivery[0], g=w.goodsin[carton.src];
       walk(g.stand.x,g.stand.y); aim(g.x,mid(g.obj.y0,g.obj.y1),0.7); key('f'); await text('kick stool');
       const stool=w.stools.find(v=>v.area==='AAB'); walk(stool.x-.65,stool.y); aim(stool.x,stool.y,.25); await interact('Take stool');
