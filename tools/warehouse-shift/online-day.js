@@ -4,7 +4,7 @@
   const fields = (o, keys) => Object.fromEntries(keys.filter(k => o[k] !== undefined).map(k => [k, o[k]]));
   const parcel = p => p && fields(p, ['surname', 'num', 'collection', 'despatch', 'locs', 'units']);
   const lines = ls => (ls || []).map(l => ({
-    ...fields(l, ['qty', 'kind', 'accept', 'say', 'quote', 'hint', 'clue', 'qtySay', 'next', 'shortage', 'reply', 'tcnd']), sku: l.item.code, location: l.loc?.code
+    ...fields(l, ['qty', 'kind', 'accept', 'say', 'quote', 'hint', 'clue', 'qtySay', 'next', 'shortage', 'reply', 'tcnd', 'floor']), sku: l.item.code, location: l.loc?.code
   }));
   function snapshot(day, tills, stockItems) {
     return {
@@ -36,7 +36,7 @@
       this.tills = tills;
       this.request = request;
       this.hold = {}; this.busy = {}; this.orders = []; this.customers = []; this.delivery = []; this.t = 0;
-      for (const name of ['list', 'queue', 'label', 'freeSpots', 'ungreeted', 'canGreet', 'deliveryLeft', 'summary', 'tillsOpen', 'clockMinute', 'atScannerDock']) this[name] = Day.prototype[name];
+      for (const name of ['list', 'queue', 'label', 'freeSpots', 'ungreeted', 'canGreet', 'deliveryLeft', 'summary', 'tillsOpen', 'clockMinute', 'atScannerDock', 'atReplenShelf']) this[name] = Day.prototype[name];
     }
     applyStock(rows) {
       const { world, World } = this;
@@ -78,6 +78,7 @@
     line(o, index) { return this.request('line', { id: o.id, index }); }
     fetch(o) { return this.request('fetch', { id: o.id }); }
     putAway(o, code) { return this.request('putAway', { id: o.id, code }); }
+    restock(o) { return this.request('restock', { id: o.id }); }
     handOver(o) { return this.request('handOver', { id: o.id }); }
     paTake(src) { return this.request('paTake', { src }).then(id => this.delivery.find(d => d.id === id)); }
     paPut(d) { return this.request('paPut', { id: d.id }); }
@@ -134,6 +135,7 @@
         if (!own || o.status !== 'picked' || o.kind !== 'c' || o.cust || !atSpot(a.code)) return false;
         return parcel(day.putAway(o, a.code, who));
       }
+      case 'restock': return day.restock(o, who, ctx.pose);
       case 'handOver': {
         const h = day.world.handover, p = ctx.pose;
         if (!own || o.status !== 'picked' || !o.cust || p.x < h.x0 || p.x > h.x1 || p.y < h.y0 || p.y > h.y1 + 0.08) return false;

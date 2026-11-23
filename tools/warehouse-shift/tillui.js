@@ -397,7 +397,10 @@
       s.cur = s.lines.length; s.ready = true; s.stage = 'ordering';
       renderBasket(); show('order'); sfx('good');
       const shortage = k.lines.find(l => l.shortage);
+      const floor = k.lines.find(l => l.floor);
+      if (floor) say(floor.say);
       if (shortage) { say(shortage.reply); return; }
+      if (floor) return;
       say(pick(["That's the one, yeah.", "Yep, that's mine.", "That's mine, cheers."]));
       later(1300, () => say(pick(["That's everything. How much is that?", "That's the lot.", "That's all of it, I think."])));
     }

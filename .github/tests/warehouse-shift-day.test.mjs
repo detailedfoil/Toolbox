@@ -111,7 +111,7 @@ test('a day is 15 to 25 picks, the shop is open from the start (no morning c pic
     assert.equal(day.orders.filter((o) => o.counts).length, day.total, 'every pick counts');
     assert.equal(day.first, 0, 'no c picks before opening');
     if (d !== alone) assert.ok(day.orders.filter((o) => o.kind === 'c').length >= 3, 'c picks come in during the day');
-    assert.ok(day.orders.every((o) => o.status === 'done'), 'every order finished');
+    assert.ok(day.orders.every((o) => o.status === 'done' || (o.kind === 'replen' && o.status === 'skipped')), 'every order finished');
     assert.equal(day.present().length, 0, 'nobody left waiting');
     assert.ok(d.T > 6 * 60 && d.T < 55 * 60, 'about a shift: ' + (d.T / 60).toFixed(1) + ' min');
     // the door: nobody comes in before it's unlocked, and the day only ends after it's locked
@@ -244,7 +244,7 @@ test('whoever starts an order has it: off the list, nobody else can take it, and
   assert.ok(!day.list().includes(o), 'off the list');
   assert.equal(day.take(o, 'Sam'), false, 'Sam can\'t have it');
   assert.equal(day.take(o, 'p1'), false, 'and taking it again doesn\'t start it over');
-  for (const d of days) assert.ok(d.day.orders.every((x) => x.status === 'done' && x.by), 'every order started was finished by whoever started it');
+  for (const d of days) assert.ok(d.day.orders.filter(x => x.kind !== 'replen').every((x) => x.status === 'done' && x.by), 'every order started was finished by whoever started it');
   const game = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/game.js'), 'utf8');
   assert.match(game, /say\('Finish task', 'err'/, 'Back on the scanner says Finish task');
 });

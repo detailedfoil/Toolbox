@@ -496,6 +496,7 @@
       locs: locs, items: placed, unplaced: items.length - placed.length,
       building: bl.b, openings: bl.openings, walls: bl.walls, rooms: bl.rooms, objects: bl.objects, zones: bl.zones, columns: bl.columns,
       counter: counter, holding: bl.holding, goodsin: bl.goodsin, pc: bl.pc,
+      replenShelf: bl.objects.find(o => o.kind === 'gondola' && o.kiosks),
       scannerDock: { x: bl.pc.desk.x0 + 0.39, y: bl.pc.desk.y0 + 0.24, z: bl.pc.desk.z1 + 0.13 },
       stools: bl.stools,
       // the service bell: a big red button on the staff side of the counter (your side, not the customers') (detailedfoil, 19 Nov 2026)

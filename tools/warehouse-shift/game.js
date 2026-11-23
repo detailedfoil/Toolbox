@@ -589,7 +589,7 @@
       step: (c) => onStep(c),
       playerCount: () => online?.room()?.peers.size || players.length,
       unlocked: () => { for (const p of players) { p.banner('Doors open', 'Customers will be in shortly', 2600); p.queueChanged(); } },
-      closing: () => { for (const p of players) { p.banner('All done', 'Lock the front door', 6000); p.queueChanged(); } SFX.order(); },
+      closing: () => { for (const p of players) { p.banner('Ready to lock up', day.orders.some(o => o.kind === 'replen' && o.status !== 'done') ? 'Restock the shop floor for bonus XP, or lock the front door.' : 'Lock the front door', 6000); p.queueChanged(); } SFX.order(); },
       locked: () => { SFX.key(); },
       stock: (it) => { if (online?.room()) online.trackStock(it); if (S.stockChange && it.mesh) S.stockChange(it); dirty = true; },
       holdSet: (code, parcel) => { if (S.hold) S.hold.set(code, parcel); dirty = true; },
@@ -983,7 +983,11 @@
       let order = null, cur = 0, state = 'idle', typed = '', full = false, viewLine = -1, viewTimer = 0, msgUntil = 0, msg = null, atCounter = false;
       let sel = 0, selId = null, slips = 0, carry = null;
       let homeSel = 1, carton = null; // the scanner's main menu (Putaway / Today Picking), the delivery carton in your hands
-      const HOME = ['Putaway', 'Today Picking'];
+      const HOME = ['Putaway', 'Today Picking', 'Shop floor replen'];
+      function scannerList() {
+        if (!day) return [];
+        return homeSel === 2 ? day.orders.filter(o => o.kind === 'replen' && o.status === 'listed') : day.list();
+      }
       let blueAction = null;
       const blueOptions = [
         [D.scFn, D.scConfirmFn, () => menu(true)],
@@ -1007,11 +1011,11 @@
       function renderTote() {
         if (!order || state === 'list' || state === 'idle' || state === 'end' || state === 'home' || state.indexOf('pa') === 0) { D.toteCount.textContent = '0'; return; }
         if (order.kind === 'hold') { D.toteCount.textContent = (state === 'deliver' ? 1 : 0) + '/1'; return; }
-        D.toteCount.textContent = (state === 'deliver' || state === 'put' ? order.lines.length : cur) + '/' + order.lines.length;
+        D.toteCount.textContent = (state === 'deliver' || state === 'restock' || state === 'put' ? order.lines.length : cur) + '/' + order.lines.length;
       }
       const suffix = (o) => (o.kind === 'c' ? ' c' : o.kind === 'till' ? '' : ' CK');
       function renderList(showMsg) {
-        const list = day ? day.list() : [];
+        const list = scannerList();
         if (selId !== null) { const i = list.findIndex((o) => o.id === selId); if (i >= 0) sel = i; }
         sel = Math.max(0, Math.min(sel, list.length - 1));
         selId = list[sel] ? list[sel].id : null;
@@ -1019,10 +1023,10 @@
           const li = document.createElement('li'), b = document.createElement('b');
           li.className = i === sel ? 'on' : ''; li.dataset.i = String(i);
           b.textContent = i === sel ? '>' : '';
-          li.append(b, document.createTextNode(day.label(o)));
+          li.append(b, document.createTextNode(o.kind === 'replen' ? plural(o.units, 'item', 'items') : day.label(o)));
           return li;
         });
-        if (!rows.length) { const li = document.createElement('li'); li.className = 'none'; li.textContent = state === 'end' ? 'All picks clear' : 'No picks'; rows.push(li); }
+        if (!rows.length) { const li = document.createElement('li'); li.className = 'none'; li.textContent = state === 'end' ? 'All picks clear' : homeSel === 2 ? (day.orders.some(o => o.kind === 'replen' && ['taken', 'picked'].includes(o.status)) ? 'Replen in progress' : 'Shop floor full') : 'No picks'; rows.push(li); }
         D.scRows.replaceChildren(...rows);
         let note = '', cls = 'warn';
         if (showMsg) { note = msg.text; cls = msg.cls || 'warn'; }
@@ -1030,7 +1034,7 @@
         else if (day && day.phase === 'lock') note = 'All done: lock the front door';
         else if (day && day.ungreeted().length) note = 'Customer waiting: say hello';
         else if (day && day.queue().length && !P.tillCust) note = 'Till customer waiting';
-        else if (day && !list.length && day.deliveryLeft().length) note = 'No picks: put the delivery away';
+        else if (homeSel !== 2 && day && !list.length && day.deliveryLeft().length) note = 'No picks: put the delivery away';
         D.scNote.textContent = note; D.scNote.className = 'sc-note ' + cls; D.scNote.hidden = !note;
       }
       function renderScanner() {
@@ -1044,7 +1048,7 @@
         D.scEnter.classList.toggle('pulse', (state === 'deliver' && atCounter) || (state === 'qty' && full));
         D.scHint.classList.toggle('used', hint.until > performance.now());
         if (listing) {
-          if (state === 'home') renderHome(showMsg); else { D.scLt.textContent = 'Today Picking'; D.scLh.textContent = 'ORDER'; renderList(showMsg); }
+          if (state === 'home') renderHome(showMsg); else { D.scLt.textContent = homeSel === 2 ? 'Pick replen' : 'Today Picking'; D.scLh.textContent = 'ORDER'; renderList(showMsg); }
           D.scNote.hidden = D.scNote.hidden && !showMsg; return;
         }
         D.scNote.hidden = true;
@@ -1052,7 +1056,7 @@
         if (state === 'scan' || state === 'qty') {
           const i = viewLine >= 0 ? viewLine : cur, ln = order.lines[i];
           if (!ln) return;
-          L.push(['Today Picking'], [viewLine >= 0 ? 'Line ' + (i + 1) + ' of ' + order.lines.length : 'Pick To Tote/Trolley', viewLine >= 0 ? 'warn' : '']);
+          L.push([order.kind === 'replen' ? 'Pick replen' : 'Today Picking'], [viewLine >= 0 ? 'Line ' + (i + 1) + ' of ' + order.lines.length : 'Pick To Tote/Trolley', viewLine >= 0 ? 'warn' : '']);
           L.push([ln.loc.code, 'big'], [ln.item.code, 'gap'], [short(ln.item.name)], ['Qty: ' + ln.qty, 'gap']);
           if (full && viewLine < 0) L.push(['Press Enter', 'gap ok']);
         } else if (state === 'pa') {
@@ -1066,6 +1070,8 @@
           L.push(['Click & Collect'], ['Holding area', 'warn'], [order.hold.code, 'big'], [order.hold.parcel.surname.toUpperCase(), 'gap'], ['Scan the tote', 'gap dim'], ['by Goods In', 'dim']);
         } else if (state === 'put') {
           L.push(['Today Picking'], ['Pick Complete', 'ok'], [order.no + ' c', 'big'], ['Holding area', 'gap warn'], ['Any empty OC', 'gap'], ['Scan its label', 'dim']);
+        } else if (state === 'restock') {
+          L.push(['Pick replen'], ['Pick complete', 'ok'], ['Shop floor', 'big'], ['Restock the middle shelving unit', 'gap']);
         } else if (state === 'deliver' && order.kind === 'hold') {
           L.push(['Click & Collect'], ['Bag collected', 'ok'], [order.hold.code, 'big'], [order.hold.parcel.surname.toUpperCase(), 'gap dim']);
           L.push(atCounter ? ['Press Enter to', 'gap warn'] : ['Take it to', 'gap'], atCounter ? ['hand over', 'warn'] : ['Trade Counter']);
@@ -1099,6 +1105,7 @@
         D.scNote.textContent = note; D.scNote.className = 'sc-note ' + cls; D.scNote.hidden = !note;
       }
       function openHome(i) {
+        homeSel = i; sel = 0; selId = null;
         SFX.key();
         if (i === 0) { state = 'pa'; if (day && day.event !== 'failedDelivery' && !day.deliveryLeft().length) say('No delivery left', 'dim'); }
         else state = 'list';
@@ -1170,19 +1177,20 @@
         try { const value = await action(); return current === generation && value; }
         finally { if (current === generation) pending = false; }
       }
-      async function startPick(o = day?.list()[sel]) {
-        if (!o) { say('No picks yet', 'dim'); SFX.miss(); return; }
+      async function startPick(o = scannerList()[sel]) {
+        if (!o) { say(homeSel === 2 ? 'No replen to pick' : 'No picks yet', 'dim'); SFX.miss(); return; }
         if (!(guest() ? await remote(() => day.take(o)) : day.take(o, P.id))) { say('Already taken', 'err'); SFX.bad(); renderScanner(); return; }
         order = o; cur = 0; typed = ''; full = false; viewLine = -1; hint.until = 0; slips = 0; carry = null;
         SFX.order(); flash(false);
-        if (o.kind === 'hold') { state = 'hold'; banner(o.no + ' CK', 'Click & collect in the holding area: ' + o.hold.code, 2000); }
+        if (o.kind === 'replen') { state = 'scan'; banner('Pick replen', 'Pick replacements for the shop floor', 2200); }
+        else if (o.kind === 'hold') { state = 'hold'; banner(o.no + ' CK', 'Click & collect in the holding area: ' + o.hold.code, 2000); }
         else { state = 'scan'; banner(o.no + suffix(o), (o.kind === 'c' ? 'For the holding area: ' : o.kind === 'ck' ? 'Customer waiting: ' : 'Till order, customer waiting: ') + plural(o.locs, 'location', 'locations') + ', ' + plural(o.units, 'item', 'items'), 2200); }
         renderScanner();
       }
       P.listed = function (o) {
         if (state !== 'list' && state !== 'home' && state !== 'pa') return;
         SFX.listed();
-        toast('New pick: ' + day.label(o));
+        toast(o.kind === 'replen' ? 'Shop floor replen waiting' : 'New pick: ' + day.label(o));
         renderScanner();
       };
       P.changed = function (o) {
@@ -1197,7 +1205,7 @@
       P.queueChanged = function () { if (idleState()) renderScanner(); callOver(); };
       P.newDay = function () { if (state === 'end' || state === 'idle') { state = 'home'; homeSel = 1; order = null; } sel = 0; selId = null; renderScanner(); };
       P.deliveryChanged = function () { if (state === 'pa' || state === 'home') renderScanner(); };
-      P.dayOver = function () { if (!order && !carton) state = 'end'; renderScanner(); };
+      P.dayOver = function () { if (order?.kind === 'replen') { shut(); order = null; carry = null; hint.until = 0; } if (!order && !carton) state = 'end'; renderScanner(); };
 
       /* ---------- aiming and scanning ---------- */
       const ray = new T.Raycaster(), ndc = new T.Vector2();
@@ -1327,13 +1335,15 @@
       function scanAt(nx, ny) {
         if (P.scannerMissing) { if (!useAction() && nearTill) openTill(); return; }
         if (blueAction) return;
+        if (order?.kind === 'replen' && doorOn && useAction()) return;
+        if (state === 'restock') { restock(); return; }
         if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } return; }
         if ((doorOn || greetC || bellOn || pcOn) && idleState() && useAction()) return;
         if (nearTill && (idleState() || tillHit(nx, ny))) { openTill(); return; }
         if (state === 'pa') { scanGoods(nx, ny); return; }
         if (state === 'pato' || state === 'paqty') { scanPaLoc(nx, ny); return; }
         if (state === 'home') { say('Choose with the arrows, then Enter', 'dim'); SFX.miss(); return; }
-        if (state === 'list' || state === 'end') { const n = day ? day.list().length : 0; say(n ? 'Press Enter to start a pick' : 'No picks yet', 'dim'); SFX.miss(); return; }
+        if (state === 'list' || state === 'end') { const n = scannerList().length; say(n ? 'Press Enter to start a pick' : 'No picks yet', 'dim'); SFX.miss(); return; }
         if (state === 'hold') { scanHold(nx, ny); return; }
         if (state === 'put') { scanPut(nx, ny); return; }
         if (state !== 'scan' && state !== 'qty') return;
@@ -1394,8 +1404,9 @@
         if (cur < order.lines.length) { state = 'scan'; toast('Next location: ' + (cur + 1) + ' of ' + order.lines.length, 'good'); }
         else {
           hint.until = 0;
-          state = order.kind === 'c' && !order.cust ? 'put' : 'deliver';
-          if (state === 'put') banner('Pick complete', 'Put it in any empty OC spot in the holding area', 2400);
+          state = order.kind === 'replen' ? 'restock' : order.kind === 'c' && !order.cust ? 'put' : 'deliver';
+          if (state === 'restock') banner('Pick replen complete', 'Take the tote to the middle shelf on the shop floor', 2400);
+          else if (state === 'put') banner('Pick complete', 'Put it in any empty OC spot in the holding area', 2400);
           else banner('Pick complete', 'Take the tote to the trade counter', 2200);
           if (!guest()) day.picked(order);
         }
@@ -1415,7 +1426,7 @@
           renderScanner();
           return;
         }
-        if (state === 'list' || state === 'pa') { SFX.key(); homeSel = state === 'pa' ? 0 : 1; state = 'home'; renderScanner(); return; }
+        if (state === 'list' || state === 'pa') { SFX.key(); homeSel = state === 'pa' ? 0 : homeSel === 2 ? 2 : 1; state = 'home'; renderScanner(); return; }
         if (state === 'scan' || state === 'qty' || state === 'hold' || state === 'put' || state === 'deliver' || state === 'pato' || state === 'paqty') { say('Finish task', 'err', 1800); SFX.bad(); flash(true); }
       }
       function digit() { if (state === 'qty' || state === 'scan') { say('Scan the location for each one', 'warn'); SFX.miss(); } }
@@ -1427,6 +1438,7 @@
         else if (state === 'paqty') paConfirm();
         else if (state === 'list') startPick();
         else if (state === 'qty') { if (full) confirmQty(); else { say('Scan the location for each one', 'warn'); SFX.miss(); } }
+        else if (state === 'restock') restock();
         else if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } }
         else if (state === 'scan') { say('Scan the location first', 'warn'); SFX.miss(); }
         else if (state === 'hold') { say('Scan the tote in the holding area', 'warn'); SFX.miss(); }
@@ -1436,10 +1448,10 @@
         if (P.scannerMissing) return;
         if (state === 'home') { SFX.key(); homeSel = (homeSel + dir + HOME.length) % HOME.length; renderScanner(); return; }
         if (state === 'list') {
-          const n = day ? day.list().length : 0;
+          const n = scannerList().length;
           if (!n) return;
           SFX.key();
-          sel = (sel + dir + n) % n; selId = day.list()[sel].id;
+          sel = (sel + dir + n) % n; selId = scannerList()[sel].id;
           renderScanner();
           return;
         }
@@ -1450,7 +1462,7 @@
         viewTimer = viewLine >= 0 ? 4 : 0;
         renderScanner();
       }
-      function tapRow(i) { if (state === 'home') { if (i === homeSel) openHome(i); else { SFX.key(); homeSel = i; renderScanner(); } return; } if (state !== 'list') return; if (i === sel) { SFX.key(); enter(); return; } const list = day ? day.list() : []; if (!list[i]) return; SFX.key(); sel = i; selId = list[i].id; renderScanner(); }
+      function tapRow(i) { if (state === 'home') { if (i === homeSel) openHome(i); else { SFX.key(); homeSel = i; renderScanner(); } return; } if (state !== 'list') return; if (i === sel) { SFX.key(); enter(); return; } const list = scannerList(); if (!list[i]) return; SFX.key(); sel = i; selId = list[i].id; renderScanner(); }
 
       /* ---------- the holding area: fetching a bag, putting a c pick away ---------- */
       async function scanHold(nx, ny) {
@@ -1503,6 +1515,7 @@
       const hint = { until: 0, loc: null, counter: false, till: null, spot: null, t: 0 };
       function useHint() {
         if (P.scannerMissing) return;
+        if (state === 'restock') { toast('Face the middle shelving unit on the shop floor'); return; }
         if (state === 'pa') {
           const left = day ? day.deliveryLeft() : [];
           if (!left.length) { toast('No delivery left', ''); return; }
@@ -1624,6 +1637,13 @@
         order = null; state = day && day.over ? 'end' : 'list'; atCounter = false; hint.until = 0; carry = null;
         renderScanner();
       }
+      async function restock() {
+        if (state !== 'restock' || P.scannerMissing) return;
+        if (!shelfOn) { say('Face the middle shop-floor shelf', 'warn'); return; }
+        const o = order;
+        const ok = guest() ? await remote(() => day.restock(o)) : day.restock(o, P.id, me);
+        if (ok && order === o) { finish('Shop floor replenished', '+' + (10 * o.units) + ' XP'); checkTill(); }
+      }
       async function handOver() {
         if (state !== 'deliver' || !atCounter) return;
         const o = order, c = o.cust;
@@ -1685,7 +1705,7 @@
       /* ---------- the till ---------- */
       let nearTill = null;
       P.tillCust = null;
-      let dockOn = false, greetC = null, doorOn = null, bellOn = false, pcOn = false, stoolOn = null, aimedBox = null;
+      let shelfOn = false, dockOn = false, greetC = null, doorOn = null, bellOn = false, pcOn = false, stoolOn = null, aimedBox = null;
       // what's in the middle of your view that you could use: a till, a customer to greet, the door, the service bell
       // (detailedfoil, 20 Nov 2026: "easy to accidentally do stuff around tills": only what you're looking at, with an outline)
       function aimAt(x, y, z) {
@@ -1746,18 +1766,25 @@
             if (!dock && a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
           }
         }
+        let shelf = false;
+        if (state === 'restock' && !P.scannerMissing && day.atReplenShelf(me)) {
+          const unit = world.replenShelf;
+          const x = Math.max(unit.x0, Math.min(unit.x1, me.x)), y = Math.max(unit.y0, Math.min(unit.y1, me.y));
+          shelf = aimAt(x, y, 1.2).ang < 0.8;
+        }
         aimedBox = box;
-        const key = (dock ? 'dock' : '') + (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '') + (st ? 's' + st.id : '');
-        const old = (dockOn ? 'dock' : '') + (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '') + (stoolOn ? 's' + stoolOn.id : '');
-        dockOn = dock; nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx; stoolOn = st;
+        const key = (shelf ? 'replen' : '') + (dock ? 'dock' : '') + (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '') + (st ? 's' + st.id : '');
+        const old = (shelfOn ? 'replen' : '') + (dockOn ? 'dock' : '') + (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '') + (stoolOn ? 's' + stoolOn.id : '');
+        shelfOn = shelf; dockOn = dock; nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx; stoolOn = st;
         if (key === old) return;
         dirty = true;
-        D.tillBtn.hidden = !(dockOn || nearTill || greetC || doorOn || bellOn || pcOn || stoolOn) || !active;
-        D.tillBtn.firstChild.nodeValue = dockOn ? 'Swap scanner' : doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : pcOn ? 'Use PC' : stoolOn ? 'Take stool' : 'Ring bell';
+        D.tillBtn.hidden = !(shelfOn || dockOn || nearTill || greetC || doorOn || bellOn || pcOn || stoolOn) || !active;
+        D.tillBtn.firstChild.nodeValue = shelfOn ? 'Restock shelf' : dockOn ? 'Swap scanner' : doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : pcOn ? 'Use PC' : stoolOn ? 'Take stool' : 'Ring bell';
         renderScanner();
       }
       // the button, or Scan: lock the door, say hello to the customer, or open the till
       function useAction() {
+        if (shelfOn) { restock(); return true; }
         if (dockOn && P.scannerFault) {
           if (guest()) remote(() => online.swapScanner());
           else if (day.swapScanner(P.id, me)) P.syncScanner(false);

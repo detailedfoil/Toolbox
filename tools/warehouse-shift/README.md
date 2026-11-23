@@ -37,6 +37,12 @@ The wall clock normally moves from 07:00 to 20:00 as delivery is put away. On a 
 - In **Putaway**, scan the top carton on a goods-in cage or pallet. Take it to the destination shown on the scanner, scan the shelf, and press **Enter** once to shelve the carton. When empty-handed in Putaway, **Quick Pick** lets you take the top waiting customer pick if offered.
 - For blue scanner actions with a confirmation step, the first press enlarges the available choices together. Press the action you want to confirm it.
 
+### Shop floor replen
+
+On shifts with till sales, customers buy 2–4 extra units from the shop floor. Listen for a line such as “I picked this up off the shop-floor shelf.” Ring it through with their usual order. Sam can serve these sales too. The customer already has those units. Payment adds the replacements to **Shop floor replen** on the scanner main menu. Collection-only shifts have no shop-floor sales.
+
+The scanner shows **Shop floor full** until a sale creates work. Open **Pick replen**, select the batch and scan the warehouse locations as usual. Take the completed tote to the middle shelving unit on the shop floor, face it and use **Restock shelf**. Sales made while someone is picking start another batch. In co-op each batch belongs to one picker. Restocking awards **10 XP per unit** at the shelf. Lock-up is available when the normal shift work is finished. Skipping outstanding replen forfeits its XP.
+
 ### Finding stock
 
 **AAB-03-07-02** means area AAB, bay 03, shelf 07, position 02. The area is on the rack end. Bay 01 begins at the centre aisle. Shelf 01 is at the bottom. Count the positions from left to right as you face the rack.
@@ -52,7 +58,7 @@ Squat for bottom shelves. High shelves require **Step** on a red kick stool or t
 3. For a kiosk customer, open **Kiosk Orders**, find the name they used, and select the order to populate the basket. For a walk-in order, enter the item code and quantity. If they give a description, search **CrashFix**, open results to inspect the details, and copy a suitable item's code into Fusion. **Ask again** repeats the request and can give a clue.
 4. Each till customer, including kiosk customers and those Sam serves, has a 20% chance of asking for one extra item with **Avail 0**. Half want it tomorrow. Switch that row’s green **Today** button to orange **TCND** to charge for it. The other half decline it. Use **×** to remove their item. Keep the ordinary items on **Today**.
 5. Choose **Pay & Go**, followed by card or cash as requested. For cash, select the notes and coins to make the correct change and press **Give change**. Exact cash completes automatically.
-6. Only the ordinary items go on the pick list. A TCND line ends at payment and creates no next-day task. The sale creates a pick order and the customer waits near the counter gap. Anyone on the shift can pick and hand it over.
+6. Only warehouse items for collection today go on the customer pick list. A TCND line ends at payment and creates no next-day task. The sale creates a pick order and the customer waits near the counter gap. Anyone on the shift can pick and hand it over.
 
 ### Sam, service bells, and scanner problems
 
