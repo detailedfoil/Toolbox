@@ -88,6 +88,47 @@ test('the normal game starts solo and local split-screen without opening a socke
   }
 });
 
+test('a shop-floor sale fills the replen scanner and the middle shelf pays the batch once', async t => {
+  const { $, s, w } = await game(t, { online: false, phone: true });
+  $('startBtn').click();
+  const day = s.day(), player = s.players[0], scanner = player.D;
+  s.tapRow(2); s.tapRow(2);
+  assert.match(scanner.scRows.textContent, /Shop floor full/);
+  const c = day.send('kiosk'), basket = c.kiosk.list[c.kiosk.mine].lines;
+  const ix = day.world.items.findIndex(it => it.loc?.face.area === 'BAA' && it.loc.z0 > 0.45 && it.loc.z1 < 1.8 &&
+    it.size !== 'B' && w.ShiftWorld.room(it) >= 4 && basket.every(l => l.item !== it));
+  assert.ok(ix >= 0);
+  day.floorRandom = () => (ix + 0.5) / day.world.items.length;
+  c.state = 'counter'; day.serve(c, 'Sam');
+  assert.ok(c.floorOffer?.say.includes('floor') || c.floorOffer?.say.includes('shelf'));
+  const order = day.tillDone(c, basket);
+  assert.ok(order.lines.every(l => l.item !== c.floorOffer.item));
+  const batch = day.orders.find(o => o.kind === 'replen');
+  assert.equal(day.list().includes(batch), false);
+  const before = day.baseXP;
+  s.enter(); assert.equal(s.order(), batch);
+  assert.match(scanner.scText.textContent, /Pick replen/);
+  const ln = batch.lines[0], l = ln.loc;
+  s.me.x = (l.x0 + l.x1) / 2; s.me.y = l.face.front + l.face.out * 0.65;
+  s.me.yaw = l.face.out > 0 ? 0 : Math.PI;
+  s.me.pitch = Math.atan2((l.z0 + l.z1) / 2 - s.me.eye, 0.65);
+  s.applyCam(); s.cam.updateMatrixWorld();
+  for (let i = 0; i < ln.qty; i++) s.scanAt(...player.centre());
+  assert.equal(s.full(), true);
+  await s.confirmQty(); assert.equal(s.state(), 'restock');
+  assert.equal(day.baseXP, before);
+  assert.equal(day.restock(batch, 'p1', s.me), false);
+  const shelf = s.world.replenShelf;
+  Object.assign(s.me, { x: shelf.x1 + 0.7, y: (shelf.y0 + shelf.y1) / 2, yaw: Math.PI / 2, pitch: -0.4 });
+  s.applyCam();
+  assert.match(scanner.tillBtn.textContent, /Restock shelf/);
+  scanner.tillBtn.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
+  assert.equal(batch.status, 'done');
+  assert.equal(day.baseXP, before + 10 * ln.qty);
+  assert.equal(day.restock(batch, 'p1', s.me), false);
+  assert.match(scanner.scRows.textContent, /Shop floor full/);
+});
+
 test('Quick Pick confirms the top customer pick only when doing putaway empty-handed', async t => {
   const { $, s } = await game(t, { online: false, phone: true });
   $('startBtn').click();

@@ -739,6 +739,8 @@
       yield this.T(2.0, 5.0);  // finding their name in the list
       if (this.slip()) { yield this.T(0.8, 1.4); this.cSay(this.pick(SAY.notMine) + ' ' + c.kiosk.sayName); yield this.T(2.0, 4.0); }
       this.cSay(this.pick(SAY.mine));
+      const floor = lines.find(l => l.floor);
+      if (floor) { yield this.T(PACE.reply); this.cSay(floor.say); }
       yield this.T(1.0, 2.0);
     } else {
       for (var i = 0; i < lines.length; i++) {

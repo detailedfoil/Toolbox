@@ -76,6 +76,9 @@
     this.orders = []; this.customers = []; this.owners = []; this.log = [];
     this.phase = 'closed';                 // closed (c picks, before opening), open, lock (everything's done: waiting for you to lock the front door), done
     this.shiftId = o.shiftId || null;
+    this.floorRandom = this.World.rng(this.World.hash((this.shiftId || '') + '/floor sales'));
+    this.floorTarget = 2 + Math.floor(this.floorRandom() * 3);
+    this.floorAllocated = 0;
     this.xpActions = new Set();
     this.contributors = new Set();
     this.baseXP = 0;
@@ -291,7 +294,7 @@
 
   /* ---------- the list ---------- */
   Day.prototype.list = function () {
-    return this.orders.filter(function (o) { return o.status === 'listed'; })
+    return this.orders.filter(function (o) { return o.status === 'listed' && o.kind !== 'replen'; })
       .sort(function (a, b) { return Number(a.kind === 'c') - Number(b.kind === 'c'); });
   };
   Day.prototype.label = function (o) { return o.no + ' ' + o.locs + ':' + o.units + (o.kind === 'c' ? ' c' : o.kind === 'till' ? '' : ' CK'); };
@@ -322,9 +325,16 @@
       var q = Math.min(l.qty, World.room(l.item)); l.item.reserved = (l.item.reserved || 0) + q;
       return { item: l.item, loc: l.item.loc, qty: q };
     });
+    var batch = kind === 'replen' && this.orders.find(o => o.kind === kind && o.status === 'listed');
+    if (batch) lines = batch.lines.concat(lines);
     lines.sort(function (a, b) { return a.loc.order - b.loc.order; });
     var locs = {}, units = 0;
     lines.forEach(function (l) { locs[l.loc.code] = 1; units += l.qty; });
+    if (batch) {
+      Object.assign(batch, { lines, locs: Object.keys(locs).length, units });
+      this.emit('listed', batch);
+      return batch;
+    }
     var o = { id: this.nextId++, no: (extra && extra.no) || this.number(), kind: kind, lines: lines, locs: Object.keys(locs).length, units: units,
       status: 'listed', by: null, cust: cust || null, counts: counts !== false, t: this.t, surname: cust ? cust.surname : null, code: null, hold: null };
     if (extra) for (var k in extra) if (k !== 'no') o[k] = extra[k];
@@ -337,7 +347,7 @@
   /* ---------- picking ---------- */
   // whoever starts an order has it, and there's no backing out
   Day.prototype.take = function (o, who) {
-    if (!o || o.status !== 'listed' || (who === 'Sam' && !this.samCanPick(o))) return false;
+    if (this.over || !o || o.status !== 'listed' || (who === 'Sam' && !this.samCanPick(o))) return false;
     o.status = 'taken'; o.by = who; o.takenAt = this.t;
     this.emit('playtest', 'pick.start', { who, order: o.id, kind: o.kind, lines: o.lines.length, units: o.units });
     this.emit('changed', o);
@@ -421,9 +431,48 @@
     target.until = mixups.nextGap();
     return true;
   };
+  // Add a shop-floor purchase to the first till sale, then spread any remaining units across the shift.
+  Day.prototype.offerFloorItem = function (c) {
+    if (c.floorOffer || this.floorAllocated >= this.floorTarget) return;
+    var kiosk = c.kind === 'kiosk' && c.kiosk.list[c.kiosk.mine];
+    var lines = kiosk ? kiosk.lines : c.lines;
+    if (!lines || !lines.length) return;
+    var remaining = this.floorTarget - this.floorAllocated;
+    var futureTills = this.plan.slice(this.released).filter(k => k === 'till' || k === 'kiosk').length;
+    if (this.floorAllocated && futureTills && this.released / this.plan.length < this.floorAllocated / this.floorTarget) return;
+    var qty = futureTills ? 1 : remaining;
+    var used = new Set(lines.flatMap(l => l.accept || [l.item.code]));
+    var start = Math.floor(this.floorRandom() * this.world.items.length);
+    for (var i = 0; i < this.world.items.length; i++) {
+      var item = this.world.items[(start + i) % this.world.items.length];
+      if (!item.loc || item.size === 'B' || used.has(item.code) || this.World.room(item) < qty) continue;
+      var intro = ["I picked this up off the shop-floor shelf.", "I've brought this over from the shop floor.", "Got this one off the shelf out front."];
+      var say = intro[Math.floor(this.floorRandom() * intro.length)] + ' Code ' + item.code + '.';
+      var line = { floor: true, kind: 'code', item, qty, accept: [item.code], say, clue: say, qtySay: qty > 1 ? qty + ' of these, please.' : '' };
+      var shortage = lines.findIndex(l => l.shortage);
+      lines.splice(shortage < 0 ? lines.length : shortage, 0, line);
+      if (kiosk) kiosk.total += this.Till.price(item) * qty;
+      item.reserved = (item.reserved || 0) + qty;
+      this.floorAllocated += qty;
+      c.floorOffer = line;
+      break;
+    }
+  };
+  Day.prototype.atReplenShelf = function (pose) {
+    var s = this.world.replenShelf;
+    return Math.hypot(Math.max(s.x0 - pose.x, 0, pose.x - s.x1), Math.max(s.y0 - pose.y, 0, pose.y - s.y1)) <= 1.35;
+  };
+  Day.prototype.restock = function (o, who, pose) {
+    if (this.over || !o || o.kind !== 'replen' || o.by !== who || o.status !== 'picked' || !this.atReplenShelf(pose)) return false;
+    o.status = 'done'; o.doneBy = who;
+    this.credit(who, 'replen-' + o.id, 10 * o.units);
+    this.emit('changed', o);
+    return true;
+  };
   Day.prototype.serve = function (c, who) {
     if (!this.tillsOpen() || !c || c.state !== 'counter' || c.by) return false;
     if (this.customers.some(function (other) { return other.state === 'serving' && other.by === who; })) return false;
+    this.offerFloorItem(c);
     c.state = 'serving'; c.by = who; c.greeter = who; c.ready = false;
     this.emit('playtest', 'sale.start', { who, customer: c.id, kind: c.kind });
     this.emit('step', c);
@@ -441,8 +490,13 @@
     if (c.order) return c.order;
     this.emit('playtest', 'sale.paid', { who: c.by, customer: c.id, kind: c.kind });
     this.credit(c.by, 'sale-' + c.id, 15);
-    var pickLines = lines.filter(function (line) { return !line.tcnd && !line.shortage; });
+    var pickLines = lines.filter(function (line) { return !line.tcnd && !line.shortage && line.item !== c.floorOffer?.item; });
     var o = this.makeOrder('till', pickLines, c, true, extra);
+    if (c.floorOffer) {
+      var floor = c.floorOffer;
+      floor.item.reserved -= floor.qty;
+      this.makeOrder('replen', [floor], null, false);
+    }
     c.order = o; c.state = 'waiting'; c.by = null; c.ready = false;
     this.emit('step', c);
     return o;
@@ -450,6 +504,11 @@
   // a customer going without what they came for: their pick comes later instead
   Day.prototype.giveUp = function (c) {
     if (c.state === 'gone' || c.state === 'leaving') return;
+    if (c.floorOffer && !c.order) {
+      c.floorOffer.item.reserved -= c.floorOffer.qty;
+      this.floorAllocated -= c.floorOffer.qty;
+      c.floorOffer = null;
+    }
     var o = c.order;
     if (o && o.status !== 'done') {
       if (o.kind === 'hold') { this.busy[o.hold.code] = null; o.status = 'done'; o.counts = false; this.plan.push('collect'); }
@@ -503,6 +562,9 @@
   Day.prototype.decide = function (c) {
     if (!this.tillsOpen() || this.mode !== 'mixed' || !this.canTill || !this.walkinTill) return;
     var want = this.r() < this.walkinTill, isTill = c.kind === 'till' || c.kind === 'kiosk';
+    // The last walk-in can bring the rest of today's floor items, even on a quiet first day.
+    if (!want && this.floorAllocated < this.floorTarget && !this.plan.slice(this.released).some(k => k !== 'c') &&
+        !this.customers.some(other => other !== c && (other.state === 'coming' || other.state === 'greet' || other.state === 'counter'))) want = true;
     if (want) {
       if (isTill) return;
       this.freeCode(c);
@@ -627,6 +689,7 @@
     this.emit('playtest', 'xp.earned', { who, source: key.split('-')[0], amount, covered: cover.length > 0 });
   };
   Day.prototype.confirmLine = function (order, index, who) {
+    if (order.kind === 'replen') return;
     this.credit(who, 'line-' + order.id + '-' + index, 10);
   };
   Day.prototype.shiftReport = function () {
@@ -662,6 +725,12 @@
   };
   Day.prototype.lock = function () {
     if (this.phase !== 'lock') return false;
+    for (const o of this.orders) {
+      if (o.kind === 'replen' && (o.status === 'listed' || o.status === 'taken')) {
+        for (const l of o.lines) l.item.reserved -= l.qty;
+      }
+      if (o.kind === 'replen' && o.status !== 'done') { o.status = 'skipped'; o.by = null; }
+    }
     this.phase = 'done'; this.over = true; this.report = this.shiftReport();
     this.emit('locked');
     this.emit('over');
@@ -710,7 +779,7 @@
     }
     if (this.phase === 'closed') { if (this.orders.some(left)) return; this.open(); return; }
     if (this.phase !== 'open') return;
-    if (this.orders.some(function (o) { return o.status !== 'done'; })) return;
+    if (this.orders.some(function (o) { return o.kind !== 'replen' && o.status !== 'done'; })) return;
     if (this.present().length) return;
     if (this.delivery.some(function (d) { return !d.done; })) return; // the delivery has to be away first
     this.phase = 'lock'; this.emit('closing');

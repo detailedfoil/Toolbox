@@ -89,6 +89,33 @@ test('a paid kiosk basket must belong to the serving player and match the custom
   assert.equal(d.list().length, 1);
 });
 
+test('guests share replen batches, deposit only at the shop shelf and can skip a later batch', () => {
+  const d = fresh(), ctx = context(), shelf = world.replenShelf;
+  const items = world.items.filter(it => it.loc && W.room(it) >= 2).slice(0, 3);
+  const sale = item => d.makeOrder('replen', [{ item, qty: 1 }], null, false);
+  const batch = sale(items[0]);
+  assert.equal(sale(items[1]), batch);
+  const act = (who, op, args = {}) => command(d, who, op, { id: batch.id, ...args }, ctx);
+  assert.ok(act('p2', 'take'));
+  assert.equal(act('p3', 'take'), false);
+  const later = sale(items[2]), reserved = items[2].reserved;
+  assert.notEqual(later.id, batch.id);
+  for (const [index, l] of batch.lines.entries()) {
+    ctx.pose.x = (l.loc.x0 + l.loc.x1) / 2; ctx.pose.y = l.loc.face.front;
+    assert.ok(act('p2', 'line', { index }));
+  }
+  assert.equal(act('p2', 'restock'), false);
+  Object.assign(ctx.pose, { x: shelf.x1 + 0.5, y: (shelf.y0 + shelf.y1) / 2 });
+  assert.equal(act('p3', 'restock'), false);
+  assert.ok(act('p2', 'restock'));
+  assert.equal(act('p2', 'restock'), false);
+  assert.equal(d.baseXP, 20);
+  d.phase = 'lock'; assert.ok(d.lock());
+  assert.equal(later.status, 'skipped');
+  assert.equal(items[2].reserved, reserved - 1);
+  assert.equal(d.baseXP, 20);
+});
+
 test('delivery locations and shelf stock survive a move, a late join and a new day', () => {
   const host = W.build(cat), guest = W.build(cat), stockItems = new Set(), visuals = [];
   const start = () => Day.create({ world: host, World: W, Till, requests, rand: W.rng(3912),
