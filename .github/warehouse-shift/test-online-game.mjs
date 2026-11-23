@@ -787,3 +787,12 @@ test('Digital First upgrades spend shared XP, persist, and apply when the next s
   assert.equal(reopened.$('dayCover').querySelector('[data-digital]'), null);
   assert.match(openShop(reopened).querySelector('[data-status="digital"]').textContent, /Tier 3\/5 · 50% click & collect/);
 });
+
+for (const lesson of ['tour', 'kiosk', 'catalogue', 'holding']) {
+  test('playable induction completes ' + lesson + ' without a career write', async t => {
+    const { w, sockets } = await game(t, { online: false, storage: { 'ws-shift-xp/existing': '442', 'ws-kit-shoes': '1' } });
+    w.eval(readFileSync(path.join(REPO, '.github/warehouse-shift/tutorial-playthrough.js'), 'utf8'));
+    assert.ok(await w.playTutorial(lesson));
+    assert.equal(sockets.length, 0);
+  });
+}

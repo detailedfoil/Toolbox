@@ -302,3 +302,27 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-playtest-toggle input{width:18px;height:18px;margin:0;accent-color:#ffd34d}
 .ws-playtest-toggle span{color:#b5c2d4;font-weight:400}
 .ws-playtest-report{box-sizing:border-box;width:100%;height:7rem;padding:8px;color:#e5edf8;background:#0f141c;border:1px solid #566379;border-radius:8px;font:.8rem monospace;touch-action:pan-y}
+
+/* Give the guide its own strip so it never covers Fusion fields or the thumbstick. */
+.guide-launch{width:100%;min-height:42px;border-color:#edbc49;color:#ffdb78}
+.guide-chooser{display:grid;gap:10px}
+.guide-chooser h1,.guide-chooser p{margin:0 0 4px}
+.guide-chooser [data-lesson]{padding:12px 16px;text-align:left}
+.guide-chooser small{display:block;font-size:.82rem;font-weight:500;margin-top:2px}
+.shift-guide{position:fixed;z-index:60;top:0;left:0;width:100%;box-sizing:border-box;display:flex;align-items:center;gap:12px;
+  padding:max(6px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 7px max(12px,env(safe-area-inset-left));
+  border-bottom:2px solid #f2c65b;background:#10253b;color:#fff}
+.guide-copy{flex:1;min-width:0}
+.guide-copy small{display:block;color:#ffdb78;font-size:11px;font-weight:750}
+.guide-copy strong{display:block;font-size:clamp(13px,2.2vw,17px);line-height:1.22;font-weight:620}
+.shift-guide button{flex:none;min-height:36px;max-width:84px;padding:4px 8px;color:#f1f6fb;background:#20394d;border:1px solid #678296;border-radius:7px;font-weight:650;cursor:pointer}
+.guide-bearing{flex:none;text-align:center;width:38px;color:#ffdb78}
+.guide-bearing b{display:block;font:900 26px/26px system-ui}
+.guide-bearing small{display:block;font:700 10px/12px system-ui}
+.ws .guide-target{outline:3px solid #ffc526!important;outline-offset:-1px;box-shadow:0 0 0 3px #352e11,0 0 12px 5px #ffcb43!important}
+.ws tr.guide-target{outline-offset:-3px}
+@media(max-height:480px){.shift-guide{gap:7px;padding-top:3px;padding-bottom:3px}.guide-copy strong{font-size:13px}}
+@media(max-width:480px){.shift-guide{gap:7px}.shift-guide button{width:56px;font-size:12px}.guide-bearing{width:30px}}
+
+.guide-arrow{position:fixed;z-index:55;pointer-events:none;color:#ffce3d;font:900 32px/1 system-ui;transform:translate(-100%,-50%);text-shadow:0 2px 2px #182437,1px 0 2px #182437}
+.guide-arrow.from-right{transform:translate(0,-50%) rotate(180deg)}

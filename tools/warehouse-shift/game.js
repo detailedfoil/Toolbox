@@ -85,12 +85,12 @@
     let lookPick = 0;
     try { lookPick = Math.max(0, LOOKS.findIndex((l) => l[0] === localStorage.getItem('ws-look'))); } catch (e) { /* fine */ }
     const players = [];
-    let active = false, online = null, recordSolo = false;
+    let active = false, online = null, recordSolo = false, tutorial = null;
     const careerRevisionKey = 'ws-career-reset';
     let careerRevision;
     try { careerRevision = localStorage.getItem(careerRevisionKey); } catch (e) { /* fine */ }
     function canSaveCareer() {
-      if (recordSolo) return false;
+      if (recordSolo || tutorial) return false;
       try { return localStorage.getItem(careerRevisionKey) === careerRevision; } catch (e) { return false; }
     }
     const standalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
@@ -600,7 +600,8 @@
       const old = day;
       const event = mode === 0 ? Day.rollEvent(Math.random) : null;
       const shiftId = globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
-      day = Day.create({ world, World, Till, requests, shiftId, scannerTier, digitalTier, firstDay: dayNo === 0, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null });
+      day = Day.create({ world, World, Till, requests, shiftId, scannerTier, digitalTier, firstDay: dayNo === 0, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null, ...(tutorial ? tutorial.dayOptions : {}) });
+      if (tutorial) tutorial.prepare(day);
       if (old?.offlineScanners) day.offlineScanners = new Set(old.offlineScanners);
       dayNo++; bellCust = null; bellCount = 0; nextBellCheck = 0;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
@@ -1331,7 +1332,8 @@
         if (tr) { tr.target = out ? 1 : 0; if (out) { openTray = tr; SFX.slide(); } }
       }
       function shut() { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; }
-      function scanAt(nx, ny) {
+      function scanAt(nx, ny, useAimedObject = false) {
+        if (useAimedObject && (stoolOn || pcOn) && useAction()) return;
         if (P.scannerMissing) { if (!useAction() && nearTill) openTill(); return; }
         if (blueAction) return;
         if (order?.kind === 'replen' && doorOn && useAction()) return;
@@ -1364,6 +1366,7 @@
           if (tr) slideTray(tr, true); else if (ln.loc.item) { pulled = ln.loc.item; pulled.pullTarget = ln.loc.face.kind === 'BB' ? 0.12 : 0.07; pulling.add(pulled); }
           if (hint.loc === ln.loc) hint.until = 0;
           countOne();
+          tutorial?.firstScan(order);
         } else {
           stats.wrong++; slips++;
           SFX.bad(); flash(true);
@@ -1678,7 +1681,7 @@
         D.scMenu.replaceChildren();
         const h = document.createElement('h3'); h.textContent = 'Functions'; D.scMenu.appendChild(h);
         for (const [k, t, fn] of items) {
-          if ((k === '5' && day?.event) || (guest() && (k === '5' || k === '7'))) continue;
+          if ((tutorial && (k === '5' || k === '7')) || (k === '5' && day?.event) || (guest() && (k === '5' || k === '7'))) continue;
           const b = document.createElement('button'); b.type = 'button';
           const kb = document.createElement('b'); kb.textContent = k; b.appendChild(kb); b.appendChild(document.createTextNode(t));
           b.addEventListener('click', (e) => { e.stopPropagation(); SFX.key(); menu(false); fn(); renderScanner(); });
@@ -2266,8 +2269,20 @@
           }
           return;
         }
+        if (!$('lessonEnd').hidden) { still(); if (hit(0) || hit(1)) $('lessonHome').click(); return; }
+        if (!$('lessonCover').hidden || !$('startCover').hidden) {
+          still();
+          const panel = !$('lessonCover').hidden ? $('lessonCover') : $('startCover');
+          const buttons = [...panel.querySelectorAll('button:not([hidden]):enabled')];
+          const i = buttons.indexOf(document.activeElement), dir = steer(true);
+          if (dir) buttons[(i + (dir === 'down' || dir === 'right' ? 1 : buttons.length - 1) + buttons.length) % buttons.length]?.focus();
+          else if (hit(0) || hit(9)) (buttons[i] || panel.querySelector('.ws-go')).click();
+          else if (hit(1) && panel === $('lessonCover')) $('lessonBack').click();
+          return;
+        }
+        if (tutorial && now[8] && hit(9)) { $('lessonExit').click(); return; }
         // A goes on, B closes help.
-        const cover = ['startCover', 'helpCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
+        const cover = ['helpCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
         if (cover) {
           still();
           if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false);
@@ -2310,7 +2325,7 @@
         const curve = (v) => Math.sign(v) * Math.pow(Math.abs(v), 1.6);
         lookIn.x = curve(rx); lookIn.y = curve(ry);
         if (now[6] !== padRun) { padRun = now[6]; running = padRun; }
-        if (hit(7)) { initAudio(); const c = centreNdc(); scanAt(c[0], c[1]); }
+        if (hit(7)) { initAudio(); const c = centreNdc(); scanAt(c[0], c[1], true); }
         if (hit(1)) back();
         if (hit(2)) toggleSquat();
         if (hit(4)) toggleStep();
@@ -2348,13 +2363,14 @@
         if (active && aimedBox && !S.aimBox.visible) { S.setBox(S.aimBox, aimedBox, 0.03); S.aimBox.visible = true; S.aimBox.material.color.set(0xffd400); }
         else S.aimBox.material.color.set(0xffffff);
         applyHint();
+        tutorial?.drawGlow();
       };
       P.afterRender = (now) => { placeSay(); placeBubs(now); };
       P.start = () => { if (state === 'idle') state = day && day.over ? 'end' : 'list'; renderScanner(); };
       P.show = () => { D.scanner.hidden = P.scannerMissing && !P.scannerFault; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; stepBtnSync(); };
       // things the controls and the tests use
       Object.assign(P, { banner, scanAt, enter, back, page, digit, useHint, toggleSquat, openTill, closeTill, countOne, confirmQty, handOver, hitAt, holdHit, scanHold, scanPut, tapRow,
-        state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
+        scannerPage: () => homeSel, activeLine: () => order?.lines[cur], state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
       renderScanner();
       return P;
     }
@@ -2414,8 +2430,15 @@
     let stageH = 1;
     function layout() {
       const vv = window.visualViewport;
-      const vw = Math.max(1, Math.round(vv ? vv.width : window.innerWidth)), vh = Math.max(1, Math.round(vv ? vv.height : window.innerHeight));
-      stage.style.left = Math.round(vv ? vv.offsetLeft : 0) + 'px'; stage.style.top = Math.round(vv ? vv.offsetTop : 0) + 'px';
+      const vw = Math.max(1, Math.round(vv ? vv.width : window.innerWidth));
+      const guide = $('shiftGuide'), offset = guide.hidden ? 0 : guide.offsetHeight;
+      const vh = Math.max(1, Math.round(vv ? vv.height : window.innerHeight) - offset);
+      if (offset) {
+        guide.style.top = Math.round(vv?.offsetTop || 0) + 'px';
+        guide.style.left = Math.round(vv?.offsetLeft || 0) + 'px';
+        guide.style.width = vw + 'px';
+      }
+      stage.style.left = Math.round(vv ? vv.offsetLeft : 0) + 'px'; stage.style.top = (Math.round(vv ? vv.offsetTop : 0) + offset) + 'px';
       stage.style.width = vw + 'px'; stage.style.height = vh + 'px';
       stageH = vh;
       renderer.setSize(vw, vh, false);
@@ -2521,6 +2544,8 @@
     /* ---------- controls: keyboard ---------- */
     const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', KeyD: 'r', ArrowLeft: 'tl', ArrowRight: 'tr', KeyQ: 'tl', KeyE: 'tr' };
     window.addEventListener('keydown', (e) => {
+      if (!$('lessonCover').hidden && e.key === 'Escape') { $('lessonBack').click(); return; }
+      if (e.target === $('lessonExit') && ['Enter', ' '].includes(e.key)) return;
       if (e.altKey || e.ctrlKey || e.metaKey || online?.panel()) return;
       if (joining && e.target && e.target.tagName === 'INPUT') { if (e.key === 'Enter') e.target.blur(); return; } // typing a name
       if (joining) { if (e.key === 'Escape') { leaveJoin(); return; } if (joined.length >= 2 && e.key === 'Enter') { startSplit(); e.preventDefault(); return; } join({ kind: 'kb' }); e.preventDefault(); return; }
@@ -2547,7 +2572,7 @@
       if (e.repeat) return;
       if (/^[0-9]$/.test(e.key)) { p.digit(e.key); e.preventDefault(); return; }
       switch (e.code) {
-        case 'KeyF': { const c = p.centre(); p.scanAt(c[0], c[1]); e.preventDefault(); break; }
+        case 'KeyF': { const c = p.centre(); p.scanAt(c[0], c[1], true); e.preventDefault(); break; }
         case 'KeyC': p.toggleSquat(); break;
         case 'KeyV': p.toggleStep(); break;
         case 'KeyH': case 'F4': p.useHint(); e.preventDefault(); break;
@@ -2664,7 +2689,7 @@
         }
         careerView();
       }
-      if (!recordSolo && navigator.locks) return navigator.locks.request('ws-career-purchase', applyPurchase);
+      if (!tutorial && !recordSolo && navigator.locks) return navigator.locks.request('ws-career-purchase', applyPurchase);
       applyPurchase();
     }
     window.addEventListener('storage', e => {
@@ -2757,6 +2782,7 @@
     });
     // all 20 picks done and nobody waiting: your own day, nothing about Sam's (detailedfoil)
     function dayOver() {
+      if (tutorial) { tutorial.complete(); return; }
       const report = day.report;
       if (report) {
         const eligible = day.eligible || Array.from(day.contributors);
@@ -2827,6 +2853,40 @@
       statsHtml($('startStats'), [[testing ? 0 : me1.life.orders, 'orders done'],
         [testing ? 0 : me1.life.lines, 'lines picked'], [world.items.length.toLocaleString('en-GB'), 'products']]);
     }
+    const lessonCover = $('lessonCover');
+    $('tutorialBtn').addEventListener('click', () => {
+      $('startCover').hidden = true; lessonCover.hidden = false;
+      lessonCover.querySelector('[data-lesson]').focus();
+    });
+    $('lessonBack').addEventListener('click', () => {
+      lessonCover.hidden = true; $('startCover').hidden = false; $('tutorialBtn').focus();
+    });
+    for (const button of lessonCover.querySelectorAll('[data-lesson]')) {
+      button.onclick = () => {
+        if (active || day) return;
+        tutorial = window.ShiftTutorial.create({
+          lesson: button.dataset.lesson, $, world, World, Till, Crew, S, T, player: me1, tills, touch,
+          covered: () => tillCover().includes(me1.id), bellRung: () => bellCount > 0,
+          trained: () => Object.keys(trained).length > 1 || scannerTier > 1 || digitalTier > 1 || Object.values(kit).some(k => k.owned),
+          finish(summary) {
+            active = false;
+            if (locked()) document.exitPointerLock();
+            me1.keysClear();
+            $('shiftGuide').hidden = true; $('lessonEnd').hidden = false;
+            $('lessonResult').textContent = summary; $('lessonHome').focus(); layout();
+          }
+        });
+        resetCareer();
+        career.set('practice-allowance', trainingPrice);
+        careerView();
+        lessonCover.hidden = true; $('shiftGuide').hidden = false;
+        newDay(); beginShift();
+        tutorial.update(1);
+        if (window.ResizeObserver) new ResizeObserver(layoutSoon).observe($('shiftGuide'));
+        layout();
+      };
+    }
+    for (const id of ['lessonExit', 'lessonHome']) $(id).onclick = () => location.reload();
     $('recordPlaytest').addEventListener('change', renderStartCareer);
     function resetCareer() {
       career.clear();
@@ -2853,10 +2913,7 @@
       for (const p of players) p.start();
       for (const p of players) p.till.preload();
       announceDayEvent();
-      let helped = false;
-      try { helped = localStorage.getItem('ws-helped') === '1'; localStorage.setItem('ws-helped', '1'); } catch (e) { /* fine */ }
-      if (!helped) showHelp(true);
-      else if (!touch) for (const p of players) p.toast(p.kb ? 'Click the view to look round' : 'Your controller: RT scans, A is Enter');
+      if (!tutorial && !touch) for (const p of players) p.toast(p.kb ? 'Click the view to look round' : 'Your controller: RT scans, A is Enter');
       canvas.focus({ preventScroll: true });
       dirty = true;
     }
@@ -3017,7 +3074,10 @@
       let changed = false;
       if (online?.frozen()) return false;
       runTimers(dt);
-      if (active && day && !guest()) day.tick(dt);
+      if (active && day && !guest()) {
+        if (tutorial) day.t += dt;
+        else day.tick(dt);
+      }
       if (updateMoving(dt)) changed = true;
       if (!guest() && updateFigs(dt)) changed = true;
       if (updateTotes(dt)) changed = true;
@@ -3095,6 +3155,7 @@
       if (!online?.panel() && !online?.frozen()) pollPads(dt);
       for (const p of players) if (p.update(dt, now)) { changed = true; photoDirty = true; }
       if (worldStep(dt)) changed = true;
+      if (tutorial && active && tutorial.update(dt)) changed = true;
       if (S.photos.flush()) changed = true;
       photoT -= dt;
       if (photoT <= 0 && (photoDirty || changed)) {

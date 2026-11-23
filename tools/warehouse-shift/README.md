@@ -8,7 +8,7 @@ Warehouse Shift is a first-person warehouse and trade-counter simulator inside [
 
 ## Start here
 
-Open [the game page](../warehouse-shift.html) through the Toolbox site and sign in with the existing Warehouse Shift account. Use **How to play** for the on-screen tutorial.
+Open [the game page](../warehouse-shift.html) through the Toolbox site and sign in with the existing Warehouse Shift account. Choose **Play tutorial** for a guided first shift. **How to play** opens the reference guide.
 
 | Home screen action | What happens |
 | --- | --- |
@@ -18,6 +18,19 @@ Open [the game page](../warehouse-shift.html) through the Toolbox site and sign 
 | **Two players** | Starts side-by-side local split screen on a supported desktop-sized display. Join with two controllers, or a controller and keyboard/mouse. |
 | **Online co-op** | Host or enter another host's six-character room code. Each device controls one player. |
 | **Install game** / **Check for updates** | Installs the PWA if the browser supports it, or checks for a newer game bundle. |
+
+## Playable tutorial
+
+**Play tutorial → First shift** starts a separate solo practice shift. Follow the gold floor trail around walls, the direction arrow and the glow on the actual object. Fusion, the scanner and the Manager PC outline the next control. The guide updates from what the player actually does. There is no timed reading or Next button.
+
+1. Walk to the shop-floor shelf and around to the staff side of the trade counter. The Service Champ indicator appears there. Ring the service bell, greet the waiting customer and use their till.
+2. In Fusion, enter their surname and postcode, match their extra detail, enter the two order lines and take card payment. One line is a shop-floor purchase.
+3. Claim their order in Today Picking, follow the location code and scan a unit. A staged scanner failure interrupts the pick. Visit the office, buy an upgrade with the 100 practice XP, swap at the dock and look at CCTV. Return to the shelf, finish the quantity and hand over the same order.
+4. After the customer handover, a practice carton arrives at goods in. Use Putaway. Take a kick stool to the high destination, scan the location and confirm the carton. Greet a click-and-collect customer, scan the named OC tote in holding and hand it over.
+5. Open Shop floor replen, squat to pick the replacement and restock the middle shelf. Face the front door and lock up to complete training. Normal career shifts also allow skipping replen.
+6. **Kiosk, TCND & cash** is a separate repeatable till exercise covering kiosk selection, changing an unavailable line to TCND and giving change. **CrashFix lookup** teaches searching by description, copying a matching code, returning to Fusion, removing a declined out-of-stock extra, and paying. **Holding-area picks** lets the player store a lowercase-c order in any empty OC spot and fetch that same tote when its customer arrives.
+
+Exit tutorial (controller: hold View and press Menu), completion, or reloading returns you to the main menu with your regular career. Practice starts fresh each time. It uses the production tills, scanner, movement, stock and XP routines in memory. Sam and random arrivals are absent so the player can take as long as needed. The practice allowance, labour XP, purchases, stock and shift stats do not carry into a real shift. Playtest recording and multiplayer each keep their own entry point.
 
 ## A shift from opening to lock-up
 
@@ -137,6 +150,7 @@ The game is a static HTML/CSS/JavaScript app. It loads a local copy of Three.js 
 | [`world.js`](world.js), [`scene.js`](scene.js) and [`cctv.js`](cctv.js) | Warehouse geometry, stock and location model, Three.js scene, product photos, and office CCTV. |
 | [`bot.js`](bot.js) | Sam's pathfinding, trolley, task selection, navigation, and dialogue. |
 | [`till.js`](till.js), [`tillui.js`](tillui.js) and [`till.css`](till.css) | Customer identities, product requests and payment data, plus Fusion and CrashFix interfaces. CrashFix reuses [Toolbox product search](../product-search/search.js). |
+| [`tutorial.js`](tutorial.js) | Practice timetable, live lesson cues, till highlights and navigable floor trail. |
 | [`playtest.js`](playtest.js) | Foreground and simulation timing, event log, and copyable JSON. |
 | [`online.js`](online.js), [`online-game.js`](online-game.js) and [`online-day.js`](online-day.js) | Relay session and reconnection, host/guest wiring, authoritative actions, snapshots and guest day model. |
 | [`../warehouse-shift-sw.js`](../warehouse-shift-sw.js) and [`../warehouse-shift.webmanifest`](../warehouse-shift.webmanifest) | Installable game and offline bundle. The worker caches the stamped assets before publishing an updated page. |
@@ -167,7 +181,7 @@ npm test --prefix .github
 node .github/stamp.mjs --check
 ```
 
-The [Warehouse online workflow](../../.github/workflows/warehouse-online.yml) starts local Wrangler and runs relay tests, a simulated game DOM, and Chromium browser checks with touch input. Use the [relay README](../../workers/warehouse-relay/README.md#local-checks) for local setup. When the change affects a control or workflow, exercise the actual in-game entry point and relevant desktop, touch, or co-op modes. Include the checks you ran when handing work back.
+The [Warehouse online workflow](../../.github/workflows/warehouse-online.yml) starts local Wrangler and runs relay tests, a simulated game DOM, and Chromium browser checks with touch input. The induction playthroughs use movement with collisions, real scanner labels and Fusion form events. They exercise all four lessons and check the stored career after practice. Run them alone with `node --test --test-name-pattern='playable induction' .github/warehouse-shift/test-online-game.mjs`. Chromium also plays the main induction and checks mobile entry and exit. Use the [relay README](../../workers/warehouse-relay/README.md#local-checks) for local setup. When the change affects a control or workflow, exercise the actual in-game entry point and relevant desktop, touch, or co-op modes. Include the checks you ran when handing work back.
 
 ## Instructions for coding agents
 
