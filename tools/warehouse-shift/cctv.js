@@ -1,9 +1,9 @@
 /* Warehouse Shift: the CCTV monitor (detailedfoil, 21 Nov 2026). It replaces the team notice board: a bigger screen with
-   a 2D map of the shop floor seen from above, the counter and its tills along the bottom and the front door at the top (as
+   a 2D map of the shop floor seen from above, the counter along the bottom and the front door at the top (as
    if you stood behind the counter looking at the door), filling the screen (landscape; no count panel, 21 Nov 2026). The floor in front of the counter is marked pale red where customers wait to
    be served (on your right as you serve) and pale green where they wait for orders they've paid for (on your left), both
    labelled; every customer is a dot in their own shirt colour, ringed by what they're doing, and staff (players and Sam)
-   are navy dots with their initial. A panel on the right counts each kind.
+   are navy squares with their initial.
    Shared, no three.js: create({ canvas, world, zones }) draws the still parts once; draw(data) draws a frame.
    data = { people: [{ x, y, staff, state: 'queue'|'greet'|'till'|'wait'|'walk', colour: '#rrggbb', label }], now: Date } */
 (function (root) {
@@ -17,7 +17,7 @@
     // what the camera sees: the shop, the strip behind the counter, a little outside the door
     const X0 = room.x0 - 0.2, X1 = room.x1 + 0.2, Y0 = counter.y0 - 0.65, Y1 = world.D + 0.4;
     const K = W / 1024; // text and marks scale with the canvas (it's 2048 wide on the big wall screen)
-    // landscape (detailedfoil, 21 Nov 2026): the counter and its tills along the bottom, the front door at the top, the map as
+    // landscape (detailedfoil, 21 Nov 2026): the counter along the bottom, the front door at the top, the map as
     // big as the screen allows under a slim top line. Right on the screen is still the small-x side (your right hand as you
     // stand behind the counter looking at the door).
     const HEAD = Math.round(52 * K), PAD = Math.round(10 * K);
@@ -68,16 +68,10 @@
       world.objects.filter((ob) => ob.kind === 'gondola' && ob.x1 > room.x0 && ob.x0 < room.x1 && ob.y0 >= room.y0 - 0.01).forEach((ob) => {
         s.fillStyle = '#34444e'; s.fillRect(...rect(ob)); s.strokeStyle = '#526670'; s.lineWidth = 1.5 * K; s.strokeRect(...rect(ob));
       });
-      // the counter and its tills
+      // the counter
       s.fillStyle = '#5b6b78'; s.fillRect(...rect(counter));
       const cr = rect(counter);
       s.fillStyle = '#c8d3dc'; s.font = px(26); s.textAlign = 'center'; s.textBaseline = 'middle'; s.fillText('COUNTER', cr[0] + cr[2] * 0.5, cr[1] + cr[3] / 2 + K);
-      const tills = world.objects.filter((ob) => ob.kind === 'till' && ob.x0 >= counter.x0 - 0.01 && ob.x1 <= counter.x1 + 0.01);
-      tills.forEach((t) => {
-        const cx = u((t.x0 + t.x1) / 2), cy = v(counter.y1) - 2 * K;
-        s.fillStyle = '#26323a'; s.beginPath(); s.arc(cx, cy - 0.18 * k, 0.2 * k, 0, Math.PI * 2); s.fill();
-        s.strokeStyle = '#8fa3b0'; s.lineWidth = 2 * K; s.stroke();
-      });
       // scan lines
       s.fillStyle = 'rgba(0,0,0,.18)'; for (let y = 0; y < H; y += 3 * K) s.fillRect(0, y, W, K);
       const vg = s.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
@@ -94,7 +88,7 @@
       const hh = (n) => String(n).padStart(2, '0');
       g.textAlign = 'right'; g.font = '700 ' + Math.round(32 * K) + 'px ui-monospace,Menlo,Consolas,monospace';
       g.fillText(hh(now.getDate()) + '/' + hh(now.getMonth() + 1) + '  ' + hh(now.getHours()) + ':' + hh(now.getMinutes()) + ':' + hh(now.getSeconds()), W - PAD, ty);
-      if (now.getSeconds() % 2 === 0) { g.fillStyle = '#ff3b30'; g.beginPath(); g.arc(W - PAD - 400 * K, ty, 12 * K, 0, Math.PI * 2); g.fill(); }
+      if (now.getSeconds() % 2 === 0) { g.fillStyle = '#ff3b30'; g.fillRect(W - PAD - 407 * K, ty - 7 * K, 14 * K, 14 * K); }
       g.fillStyle = '#ff6b6b'; g.font = px(26); g.textAlign = 'right'; g.fillText('REC', W - PAD - 340 * K, ty + K);
       // people: customers first, staff on top
       const people = (data.people || []).filter((p) => inShop(p.x, p.y));
@@ -103,17 +97,17 @@
         const x = u(p.x), y = v(p.y);
         if (p.staff) {
           counts.staff++;
-          g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x, y, 13 * R, 0, Math.PI * 2); g.fill();
-          g.fillStyle = '#1d2c4f'; g.beginPath(); g.arc(x, y, 11 * R, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#ffffff'; g.fillRect(x - 13 * R, y - 13 * R, 26 * R, 26 * R);
+          g.fillStyle = '#1d2c4f'; g.fillRect(x - 11 * R, y - 11 * R, 22 * R, 22 * R);
           g.fillStyle = '#f2c400'; g.font = '900 ' + Math.round(14 * R) + 'px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText((p.label || '?').charAt(0).toUpperCase(), x, y + 0.5);
           return;
         }
         const st = p.state || 'walk';
         if (st === 'queue' || st === 'greet') counts.queue++; else if (st === 'till') counts.till++; else if (st === 'wait') counts.wait++;
-        g.fillStyle = RING[st] || RING.walk; g.globalAlpha = 0.28; g.beginPath(); g.arc(x, y, 22 * R, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
-        g.strokeStyle = RING[st] || RING.walk; g.lineWidth = 3 * R; g.beginPath(); g.arc(x, y, 15 * R, 0, Math.PI * 2); g.stroke();
-        g.fillStyle = p.colour || '#f07a1a'; g.beginPath(); g.arc(x, y, 12 * R, 0, Math.PI * 2); g.fill();
-        if (st === 'greet') { g.fillStyle = '#ffffff'; g.font = '900 ' + Math.round(20 * R) + 'px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', x, y - 29 * R); }
+        g.fillStyle = RING[st] || RING.walk; g.globalAlpha = 0.28; g.beginPath(); g.arc(x, y, 30 * R, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+        g.strokeStyle = RING[st] || RING.walk; g.lineWidth = 3 * R; g.beginPath(); g.arc(x, y, 21 * R, 0, Math.PI * 2); g.stroke();
+        g.fillStyle = p.colour || '#f07a1a'; g.beginPath(); g.arc(x, y, 17 * R, 0, Math.PI * 2); g.fill();
+        if (st === 'greet') { g.fillStyle = '#ffffff'; g.font = '900 ' + Math.round(20 * R) + 'px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', x, y - 38 * R); }
       });
       return counts;
     }
