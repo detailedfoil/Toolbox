@@ -273,6 +273,8 @@
       if (s.stage === 'kiosk') { say(s.kiosk.say + ' ' + s.kiosk.sayName); return; }
       if (s.stage === 'paying') { say(s.pay.say); return; }
       if (s.stage !== 'ordering') return;
+      const problem = deliveryProblem(s);
+      if (s.ready && problem) { say(problem); return; }
       const ln = s.lines[s.cur];
       if (!ln) return;
       ln.asked = (ln.asked || 0) + 1;
@@ -389,17 +391,29 @@
         s.slips++; if (o.onSlip) o.onSlip(); sfx('bad'); say("That's not mine, mate. I haven't used the kiosk."); return;
       }
       if (!k.mine) { s.slips++; if (o.onSlip) o.onSlip(); sfx('bad'); say("That's not mine. " + s.kiosk.sayName); return; }
-      s.lines = k.lines.map((l) => ({ kind: 'code', item: l.item, qty: l.qty, accept: [l.item.code], done: true, clue: "It's " + l.item.code.split('').join(' ') + '.',
+      s.lines = k.lines.map((l) => ({ shortage: l.shortage, reply: l.reply, kind: 'code', item: l.item, qty: l.qty, accept: [l.item.code], done: true, clue: "It's " + l.item.code.split('').join(' ') + '.',
         say: 'I had ' + l.item.code + ' on my kiosk order.', qtySay: l.qty > 1 ? l.qty + ' of them.' : '', next: '' }));
-      s.basket = k.lines.map((l, i) => { const p = product(l.item.code); return { code: l.item.code, name: p ? p.name : l.item.name, qty: l.qty, price: p ? p.price : Till.price(l.item), avail: Till.avail(l.item), item: l.item, status: 'ok', line: i }; });
+      s.basket = k.lines.map((l, i) => { const p = product(l.item.code); return { code: l.item.code, name: p ? p.name : l.item.name, qty: l.qty, price: p ? p.price : Till.price(l.item), avail: l.shortage ? 0 : Till.avail(l.item), item: l.item, status: 'ok', line: i }; });
       s.cur = s.lines.length; s.ready = true; s.stage = 'ordering';
       renderBasket(); show('order'); sfx('good');
+      const shortage = k.lines.find(l => l.shortage);
+      if (shortage) { say(shortage.reply); return; }
       say(pick(["That's the one, yeah.", "Yep, that's mine.", "That's mine, cheers."]));
       later(1300, () => say(pick(["That's everything. How much is that?", "That's the lot.", "That's all of it, I think."])));
     }
 
     // Customer Order: the basket
     function basketTotal() { return S.session ? S.session.basket.reduce((t, r) => t + r.price * r.qty, 0) : 0; }
+    function deliveryProblem(s) {
+      for (const row of s.basket) {
+        const line = s.lines[row.line];
+        if (!line) continue;
+        if (line.shortage === 'decline') return line.reply + ' Remove ' + row.code + ' from the basket.';
+        if (line.shortage === 'tcnd' && !row.tcnd) return line.reply + ' Select TCND for ' + row.code + '.';
+        if (!line.shortage && row.tcnd) return 'I want ' + row.code + ' today. Set that one to Today, please.';
+      }
+      return '';
+    }
     let drawing = false;
     function renderBasket() {
       // taking the rows away blurs a Qty box being typed in, and its change event comes back here: once is enough
@@ -416,7 +430,7 @@
         tr.className = 'fu-line ' + r.status;
         tr.dataset.i = i;
         tr.innerHTML = '<td>' + esc(r.code) + '</td><td><input class="fu-q" data-row="' + i + '" value="' + r.qty + '" maxlength="3" autocomplete="off" inputmode="' + (osk() ? 'none' : 'numeric') + '"></td><td class="' + (r.avail ? '' : 'out') + '">' + r.avail +
-          '</td><td class="d">' + esc(r.name) + '</td><td>Collect</td><td>1</td><td>' + (r.price / 100).toFixed(2) + '</td><td>' + (r.price * r.qty / 100).toFixed(2) + '</td><td><button type="button" class="fu-del" data-del="' + i + '" aria-label="Remove line">&times;</button></td>';
+          '</td><td class="d">' + esc(r.name) + '</td><td><button type="button" class="fu-delivery" data-delivery="' + i + '" aria-label="Delivery for ' + esc(r.code) + ', ' + (r.tcnd ? 'TCND' : 'Today') + '" aria-pressed="' + !!r.tcnd + '">' + (r.tcnd ? 'TCND' : 'Today') + '</button></td><td>1</td><td>' + (r.price / 100).toFixed(2) + '</td><td>' + (r.price * r.qty / 100).toFixed(2) + '</td><td><button type="button" class="fu-del" data-del="' + i + '" aria-label="Remove line">&times;</button></td>';
         body.appendChild(tr);
       });
       V.count.textContent = String(rows.length);
@@ -464,6 +478,7 @@
         return;
       }
       row.line = s.cur;
+      if (ln.shortage) row.avail = 0;
       if (verdict === 'qty') {
         row.status = 'qty'; renderBasket(); sfx('bad');
         say("That's the one, but I need " + ln.qty + '.');
@@ -477,10 +492,11 @@
       const quiet = ln.shown === row.code; // they said it was the one when you copied it
       row.status = 'ok'; ln.done = true;
       renderBasket(); sfx('good');
-      if (quiet) say(pick(['Lovely.', 'Cheers.', 'Nice one.', 'Ta.']));
-      if (!quiet) say(pick(RIGHT));
+      if (ln.shortage) say(ln.reply);
+      else if (quiet) say(pick(['Lovely.', 'Cheers.', 'Nice one.', 'Ta.']));
+      else say(pick(RIGHT));
       const next = s.lines.findIndex((l) => !l.done);
-      if (next < 0) { s.cur = s.lines.length; s.ready = true; later(1100, () => say(pick(["That's everything. I'll pay now.", "That's the lot, cheers.", "That's all I need. How much is that?"]))); }
+      if (next < 0) { s.cur = s.lines.length; s.ready = true; if (!ln.shortage) later(1100, () => say(pick(["That's everything. I'll pay now.", "That's the lot, cheers.", "That's all I need. How much is that?"]))); }
       else { s.cur = next; later(quiet ? 900 : 1300, () => sayRequest(false)); }
     }
     function removeRow(row) {
@@ -490,7 +506,9 @@
       if (i < 0) return;
       s.basket.splice(i, 1);
       if (row.status === 'ok' && row.line >= 0) { // they still need that one
-        const ln = s.lines[row.line]; ln.done = false; s.ready = false;
+        const ln = s.lines[row.line];
+        if (ln.shortage === 'decline') { say("Cheers, just the rest for me then."); renderBasket(); return; }
+        ln.done = false; s.ready = false;
         s.cur = s.lines.findIndex((l) => !l.done);
         say('Hang on, I still need that one.');
       }
@@ -530,6 +548,9 @@
       if (!s.basket.length) { fuMsg('There is nothing in the basket.'); return; }
       if (s.basket.some((r) => r.status === 'pending')) return;
       if (!s.ready) { say(pick(["Hang on, I've not finished yet.", "Wait, there's more."])); return; }
+      if (s.basket.some(r => r.status !== 'ok')) { fuMsg('Correct the basket before payment.'); return; }
+      const problem = deliveryProblem(s);
+      if (problem) { show('order'); say(problem); return; }
       const t = Till.vat(basketTotal());
       V.payname.textContent = s.cust.first + ' ' + s.cust.surname + ' (' + (s.cust.org || 'Private') + ')';
       V.ex.textContent = Till.money(t.ex); V.vat.textContent = Till.money(t.vat); V.inc.textContent = Till.money(t.inc);
@@ -637,7 +658,7 @@
     async function complete(how) {
       const s = S.session; if (!s || s.stage !== 'paying') return;
       s.stage = 'submitting';
-      const lines = s.basket.filter((r) => r.status === 'ok').map((r) => ({ item: r.item, qty: r.qty }));
+      const lines = s.basket.filter((r) => r.status === 'ok').map((r) => ({ item: r.item, qty: r.qty, tcnd: !!r.tcnd }));
       const result = o.onComplete && o.onComplete({ lines, slips: s.slips, how, change: s.cash ? handSum() : 0 });
       if (result && typeof result.then === 'function') {
         s.orderNo = await result;
@@ -824,7 +845,7 @@
     el.addEventListener('click', (e) => {
       const t = e.target;
       // the page moved under the finger (the keyboard coming up does that): it isn't a tap on what's there now
-      if (downAt && t !== downAt && !downAt.contains(t)) return;
+      if (e.detail && downAt && t !== downAt && !downAt.contains(t)) return;
       const tab = t.closest('.tl-tab'); if (tab) { setTab(tab.dataset.tab); return; }
       const go = t.closest('[data-go]'); if (go) { nav(go.dataset.go); return; }
       const dr = t.closest('[data-dr]'); if (dr) { drTake(+dr.dataset.dr); return; }
@@ -832,6 +853,15 @@
       const act = t.closest('[data-act]'); if (act) { action(act.dataset.act); return; }
       const row = t.closest('.fu-tab tbody tr[data-i]'); if (row) { S.sel = +row.dataset.i; sfx('key'); renderResults(); return; }
       const krow = t.closest('.fu-tab tbody tr[data-k]'); if (krow) { S.ksel = +krow.dataset.k; sfx('key'); renderKiosk(); return; }
+      const delivery = t.closest('[data-delivery]');
+      if (delivery && S.session?.stage === 'ordering') {
+        const row = S.session.basket[+delivery.dataset.delivery];
+        row.tcnd = !row.tcnd;
+        delivery.textContent = row.tcnd ? 'TCND' : 'Today';
+        delivery.setAttribute('aria-pressed', String(row.tcnd));
+        delivery.setAttribute('aria-label', 'Delivery for ' + row.code + ', ' + delivery.textContent);
+        sfx('key'); return;
+      }
       const del = t.closest('[data-del]'); if (del) { const s = S.session; if (s && s.basket[+del.dataset.del]) { sfx('key'); removeRow(s.basket[+del.dataset.del]); } return; }
       const cp = t.closest('[data-copy]'); if (cp) { copyCode(cp.dataset.copy); return; }
       const db = t.closest('[data-desc]'); if (db) { toggleDesc(db); return; }

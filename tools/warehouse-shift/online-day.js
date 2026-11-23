@@ -4,7 +4,7 @@
   const fields = (o, keys) => Object.fromEntries(keys.filter(k => o[k] !== undefined).map(k => [k, o[k]]));
   const parcel = p => p && fields(p, ['surname', 'num', 'collection', 'despatch', 'locs', 'units']);
   const lines = ls => (ls || []).map(l => ({
-    ...fields(l, ['qty', 'kind', 'accept', 'say', 'quote', 'hint', 'clue', 'qtySay', 'next']), sku: l.item.code, location: l.loc?.code
+    ...fields(l, ['qty', 'kind', 'accept', 'say', 'quote', 'hint', 'clue', 'qtySay', 'next', 'shortage', 'reply', 'tcnd']), sku: l.item.code, location: l.loc?.code
   }));
   function snapshot(day, tills, stockItems) {
     return {
@@ -157,15 +157,16 @@
       case 'call': return ctx.call();
       case 'tillDone': {
         if (!c || c.by !== who || c.state !== 'serving' || !c.ready || ctx.till() !== c.at || !Array.isArray(a.lines)) return false;
-        const expected = c.kind === 'kiosk' ? c.kiosk.list[c.kiosk.mine].lines : c.lines;
+        const requests = c.kind === 'kiosk' ? c.kiosk.list[c.kiosk.mine].lines : c.lines;
+        const expected = requests.filter(l => l.shortage !== 'decline');
         if (a.lines.length !== expected.length) return false;
         const remaining = expected.slice(), basket = [];
         for (const line of a.lines) {
           if (!line) return false;
           const i = remaining.findIndex(l => l.qty === line.qty && (l.accept || [l.item.code]).includes(line.sku));
           const item = ctx.items.get(line.sku);
-          if (i < 0 || !item) return false;
-          remaining.splice(i, 1); basket.push({ item, qty: line.qty });
+          if (i < 0 || !item || (line.tcnd ?? false) !== (remaining[i].shortage === 'tcnd')) return false;
+          remaining.splice(i, 1); basket.push({ item, qty: line.qty, tcnd: line.tcnd });
         }
         if (a.how !== c.pay.how) return false;
         if (a.how === 'cash') {
