@@ -167,7 +167,7 @@ test('a shortage is one extra distinct request on a 20% roll, including for thre
   for (const [roll, choice, expected] of [[0.199, 0.49, 'tcnd'], [0, 0.5, 'decline'], [0.2, 0, null]]) {
     const draws = [roll, 0, choice, 0], lines = [...normal];
     Till.addStockRequest(world, lines, () => draws.shift());
-    assert.deepEqual(lines.slice(0, 3), normal);
+    normal.forEach((line, i) => assert.equal(lines[i], line));
     assert.equal(lines.length, expected ? 4 : 3);
     if (expected) {
       assert.equal(lines[3].shortage, expected);
