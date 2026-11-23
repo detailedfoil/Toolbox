@@ -64,7 +64,7 @@ Squat for bottom shelves. High shelves require **Step** on a red kick stool or t
 
 Sam is a physical coworker with a trolley. He shares pending work, avoids entering an aisle already occupied by a player, and may block an aisle when he parks to pick. The Manager PC in the office controls which jobs he does and their priority. Enable only the jobs you want him to take. Delivery is trained and enabled by default.
 
-The service bell alerts the team when a customer goes unattended for about six seconds. You can also ring it. Sam prioritises the waiting till customer when trained and assigned to tills. If he needs training, the bell message points to the 100 XP upgrade.
+Sam rings the service bell when a customer has gone unattended for about six seconds and he is within reach on the staff side. You can also ring it. Sam prioritises the waiting till customer when trained and assigned to tills. If he needs training, the bell message points to the 100 XP upgrade.
 
 | Scanner problem | Trigger | Recovery |
 | --- | --- | --- |
@@ -72,6 +72,8 @@ The service bell alerts the team when a customer goes unattended for about six s
 | **Server connection issue** | The shift schedules random disconnects during active picks and putaway. Black-and-white falling text precedes the error. Scanner reliability limits the shift to 5, 4, 3, 2, or 1 disconnects. | Face the office charging dock beside the Manager PC and select **Swap scanner**. Your task and quantities carry over. |
 
 Sam's dialogue appears as text. The game uses generated tones and effects for actions such as scans, bells, and payment.
+
+The office CCTV marks customers with large coloured circles and staff with square initials. The customer rings show whether they are queueing, at a till, or waiting for an order.
 
 ### Shift events
 
@@ -97,7 +99,7 @@ The scanner's **Function** menu also has sound, look speed, help, practice pick 
 
 ## Career, XP, and upgrades
 
-Work completed by human players earns team XP. **5** per greeting, **15** per sale, **10** per confirmed pick line, **10** per finished order, and **10** per shelved carton. Once a human contributes, their device banks the team's work XP as it is earned. Work completed while someone covers the tills earns **Service Champ +5% XP**. Human till cover counts as participation and Sam can supply cover. Sam's own jobs do not generate human work XP.
+Work completed by human players earns team XP. **5** per greeting, **15** per sale, **10** per confirmed pick line, **10** per finished order, and **10** per shelved carton. Once a human contributes, their device banks the team's work XP as it is earned. Work completed while a player or Sam is anywhere in the staff area behind the counter earns **Service Champ +5% XP**, including while they move. Human till cover counts as participation and Sam can supply cover. Sam's own jobs do not generate human work XP.
 
 Lock-up scores the team out of 1,000. The standard weights are 100 for greeting, 300 for customer waits, 250 for picking, 150 for delivery, and 200 for lock-up. The available work categories share the 800 work points if a category has no timed jobs. The shift bonus is work XP multiplied by the score divided by 4,000, up to 25%. Service Champ also applies to the covered work's share of the bonus. The same per-shift receipt is topped up at lock-up, so reopening a result or reconnecting cannot pay it twice.
 

@@ -282,6 +282,8 @@
     function checkServiceBell() {
       if (!crew.length || day.phase !== 'open' || day.t < nextBellCheck) return;
       nextBellCheck = day.t + 0.2;
+      const bell = world.bell;
+      if (!crew.some(b => b.y <= bell.y && Math.hypot(b.x - bell.x, b.y - bell.y) <= 1.35)) return;
       const waiting = day.customers.filter(c => !c.helpCalled && (c.state === 'greet' || c.state === 'counter') && day.t - c.here >= 6);
       if (!waiting.length) return;
       for (const c of waiting) c.helpCalled = true;
@@ -562,14 +564,11 @@
     }
     function samJobs() { return samPrio.filter(job => trained[job.id] && job.on).map(job => job.id); }
     function tillCover() {
-      function standing(pos) {
-        const atCounter = (pos.y >= counter.y1 && pos.y <= counter.y1 + 1.25) ||
-          (pos.y <= counter.y0 && pos.y >= counter.y0 - 1.25);
-        return atCounter && pos.speed <= 0.15 && tills.some(t => Math.abs(pos.x - tillX(t)) <= 0.95);
-      }
-      const staff = players.filter(p => standing(p.me)).map(p => p.id);
-      if (online) for (const [slot, pos] of online.peers) if (standing(pos)) staff.push('p' + slot);
-      if (crew.some(standing)) staff.push('Sam');
+      const behindCounter = pos => pos.x >= counter.x0 && pos.x <= counter.x1 &&
+        pos.y >= counter.y0 - 1.75 && pos.y <= counter.y0;
+      const staff = players.filter(p => behindCounter(p.me)).map(p => p.id);
+      if (online) for (const [slot, pos] of online.peers) if (behindCounter(pos)) staff.push('p' + slot);
+      if (crew.some(behindCounter)) staff.push('Sam');
       return staff;
     }
     const dayEnv = {
