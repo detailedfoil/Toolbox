@@ -14,7 +14,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=7cd305c525">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=6f50203a2f">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=a780cc7caa">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -117,7 +117,8 @@
   <div class="ws-cover" id="startCover" hidden>
     <div class="ws-card">
       <h1>Warehouse Shift</h1>
-      <p>Day one has about a third of the usual delivery and customers. A full day has 15 to 25 picks on one list, shared with Sam. Choose an order on the scanner, pick each location, then take the tote to its customer at the counter, or put a c pick away in the holding area. Customers come to the trade counter too: some order at the till, where you find what they ask for on CrashFix and add it in Fusion.</p>
+      <p>First shift? Walk the branch and serve your first customer with a guide. You can practise at your own pace.</p>
+      <button class="ws-alt guide-launch" id="tutorialBtn" type="button">Play tutorial</button>
       <div id="startStats"></div>
       <p class="ws-small" id="careerXP"></p>
       <label class="ws-name">Name on your badge <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Trainee" enterkeyhint="done"></label>
@@ -136,6 +137,24 @@
     </div>
   </div>
 
+  <section class="ws-cover" id="lessonCover" hidden aria-labelledby="lessonTitle">
+    <div class="ws-card guide-chooser">
+      <h1 id="lessonTitle">Training shift</h1>
+      <p>Choose a lesson. Practice XP and purchases stay in this shift.</p>
+      <button class="ws-go" type="button" data-lesson="tour">First shift <small>Tour the branch and work through to lock-up</small></button>
+      <button class="ws-alt" type="button" data-lesson="kiosk">Kiosk, TCND &amp; cash <small>Find a kiosk order and count out the change</small></button>
+      <button class="ws-alt" type="button" data-lesson="catalogue">CrashFix lookup <small>Find a product by description and put it through Fusion</small></button>
+      <button class="ws-alt" type="button" data-lesson="holding">Holding-area picks <small>Store a tote, then fetch it for its customer</small></button>
+      <button class="ws-alt" id="lessonBack" type="button">Back</button>
+    </div>
+  </section>
+  <section class="ws-cover" id="lessonEnd" hidden aria-labelledby="lessonEndTitle">
+    <div class="ws-card">
+      <h1 id="lessonEndTitle">Training complete</h1>
+      <p id="lessonResult"></p>
+      <button class="ws-go" id="lessonHome" type="button">Return to main menu</button>
+    </div>
+  </section>
   <dialog class="ws-card ws-reset-dialog" id="newGameDialog" aria-labelledby="newGameTitle" aria-describedby="newGameWarning">
     <h1 id="newGameTitle">Start a new game?</h1>
     <p id="newGameWarning">This will delete all progress and start completely fresh.</p>
@@ -183,6 +202,7 @@
     <div class="ws-card">
       <button class="ws-x" id="helpX" type="button" aria-label="Close">&times;</button>
       <h1>How to play</h1>
+      <p>For hands-on practice, choose <b>Play tutorial</b> on the home screen. Follow the floor markers and the amber outline on the next control.</p>
       <p>Lock up to earn a team score out of 1,000. Quick greetings, short customer waits, prompt picks and speedy putaway all count. The timers use playing time. A missed delivery puts more weight on customer waits.</p>
       <p>Human teammates share 5 XP per greeting, 15 per sale, 10 per confirmed pick line, 10 per finished order and 10 per shelved carton. Once you contribute, team work XP is saved as you play. Spend it at the office Manager PC under Upgrades. Lock-up adds a shift bonus of up to 25%. Work done while a teammate or Sam stands at a till earns 5% extra XP, including its share of the shift bonus. Standing cover counts as contributing. Service Champ XP is rounded across the shift and saved on this device.</p>
       <p>Sam starts on delivery. Train him for till service, customer picks or holding area picks under Upgrades on the Manager PC. Each skill costs 100 XP and can be assigned alongside his other skills. Online shifts use the host’s training. Two saved job lists unlock at 350 lifetime XP.</p>
@@ -281,6 +301,12 @@
 
   <div class="ws-cover" id="msg" hidden><div class="ws-card"><p id="msgText"></p><div class="ws-row"><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div></div></div>
 </main>
+<span id="guideArrow" class="guide-arrow" aria-hidden="true" hidden>➜</span>
+<aside id="shiftGuide" class="shift-guide" aria-label="Tutorial" hidden>
+  <div class="guide-bearing" id="guideBearing" hidden aria-hidden="true"><b>↑</b><small></small></div>
+  <div class="guide-copy" role="status" aria-live="polite" aria-atomic="true"><small id="guideChapter"></small><strong id="guideTask"></strong></div>
+  <button id="lessonExit" type="button" title="Leave practice and return to the main menu">Exit tutorial</button>
+</aside>
 <script src="floor-plan/three/three.min.js?v=5018df8bbd"></script>
 <script src="warehouse-shift/world.js?v=19aafae3a4"></script>
 <script src="warehouse-shift/cctv.js?v=385495d986"></script>
@@ -289,11 +315,12 @@
 <script src="warehouse-shift/till.js?v=94c162952b"></script>
 <script src="warehouse-shift/day.js?v=ba49e883d5"></script>
 <script src="warehouse-shift/bot.js?v=cb6b1c0f5c"></script>
-<script src="warehouse-shift/tillui.js?v=8de60848e2"></script>
+<script src="warehouse-shift/tillui.js?v=b8499fe67d"></script>
 <script src="warehouse-shift/online-day.js?v=86082fe35d"></script>
 <script src="warehouse-shift/online.js?v=cdcf8996c8"></script>
 <script src="warehouse-shift/online-game.js?v=b9fac927b5"></script>
 <script src="warehouse-shift/playtest.js?v=223d2eb3db"></script>
-<script src="warehouse-shift/game.js?v=3e3ba5807a"></script>
+<script src="warehouse-shift/tutorial.js?v=6d4d367533"></script>
+<script src="warehouse-shift/game.js?v=b60092149d"></script>
 </body>
 </html>

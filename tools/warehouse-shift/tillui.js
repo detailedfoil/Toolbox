@@ -1088,6 +1088,8 @@
       },
       stage: () => (S.session ? S.session.stage : 'none'),
       session: () => S.session,
+      guideView: () => ({ screen: S.screen, tab: S.tab, selectedRow: S.sel, results: S.results,
+        kioskRow: S.ksel, catalogueFailed: P.failed }),
       preload: loadProducts,
       refresh: renderSay,
       say,

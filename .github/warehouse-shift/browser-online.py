@@ -284,6 +284,23 @@ def recorded_solo_shift(browser, errors):
     page.context.close()
 
 
+def tutorial_shift(browser, errors):
+    page = open_game(browser, errors, phone=True, online=False, saved_career={"ws-shift-xp/existing": "442"})
+    page.set_viewport_size({"width": 420, "height": 800})
+    page.add_script_tag(path=Path(__file__).with_name("tutorial-playthrough.js"))
+    assert "locked up" in page.evaluate("playTutorial('tour')")
+    page.locator("#lessonHome").tap()
+    page.wait_for_selector("#tutorialBtn")
+    assert "442 career XP" in page.locator("#careerXP").inner_text()
+    page.locator("#tutorialBtn").tap()
+    page.locator("[data-lesson=kiosk]").tap()
+    assert page.locator("#shiftGuide").is_visible()
+    page.locator("#lessonExit").tap()
+    page.wait_for_selector("#tutorialBtn")
+    assert "442 career XP" in page.locator("#careerXP").inner_text()
+    page.context.close()
+
+
 if __name__ == "__main__":
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(executable_path=os.environ.get("CHROME_BIN"),
@@ -294,6 +311,7 @@ if __name__ == "__main__":
             shared_shift(browser, errors)
             split_shift(browser, errors)
             recorded_solo_shift(browser, errors)
+            tutorial_shift(browser, errors)
             assert not errors, errors
             print("Rendered host and touch guest, shelf relocation, phone rotation, two-controller split screen and solo playtest export passed.")
         finally:
