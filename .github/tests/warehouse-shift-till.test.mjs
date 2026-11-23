@@ -161,6 +161,21 @@ test('till orders: 1 to 3 different products on the shelves, asked for by code, 
   assert.ok(kinds.code > 100 && kinds.describe > 100 && kinds.need === 0, JSON.stringify(kinds) + ' (by code or key words from the name, never a description sentence: detailedfoil, 21 Nov 2026)');
 });
 
+test('a shortage is one extra distinct request on a 20% roll, including for three-line orders', () => {
+  const normal = Till.makeOrder(world, req, rnd, 3);
+  const used = new Set(normal.flatMap(l => l.accept));
+  for (const [roll, choice, expected] of [[0.199, 0.49, 'tcnd'], [0, 0.5, 'decline'], [0.2, 0, null]]) {
+    const draws = [roll, 0, choice, 0], lines = [...normal];
+    Till.addStockRequest(world, lines, () => draws.shift());
+    assert.deepEqual(lines.slice(0, 3), normal);
+    assert.equal(lines.length, expected ? 4 : 3);
+    if (expected) {
+      assert.equal(lines[3].shortage, expected);
+      assert.ok(lines[3].reply && !used.has(lines[3].item.code));
+    }
+  }
+});
+
 test('the till page: Fusion and CrashFix tabs, the real search, no real usernames, addresses or Screwfix servers', () => {
   const html = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift.html'), 'utf8');
   for (const f of ['product-search/search.js', 'warehouse-shift/till.js', 'warehouse-shift/tillui.js', 'warehouse-shift/till.css']) assert.ok(html.includes(f + '?v='), f);

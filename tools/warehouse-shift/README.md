@@ -50,8 +50,9 @@ Squat for bottom shelves. High shelves require **Step** on a red kick stool or t
 1. Face the customer at the counter and press **Greet**. A click-and-collect customer generates a warehouse pick or a holding-area collection. For a customer ordering or paying, follow them to an available till and press **Use till**. The till nearest the counter gap is Sam's.
 2. In **Fusion**, enter the customer's surname and postcode, press **Search**, and use the third detail they give you to choose the matching result.
 3. For a kiosk customer, open **Kiosk Orders**, find the name they used, and select the order to populate the basket. For a walk-in order, enter the item code and quantity. If they give a description, search **CrashFix**, open results to inspect the details, and copy a suitable item's code into Fusion. **Ask again** repeats the request and can give a clue.
-4. Choose **Pay & Go**, followed by card or cash as requested. For cash, select the notes and coins to make the correct change and press **Give change**. Exact cash completes automatically.
-5. The sale creates a pick order and the customer waits near the counter gap. Anyone on the shift can pick and hand it over.
+4. Each till customer, including kiosk customers and those Sam serves, has a 20% chance of asking for one extra item with **Avail 0**. Half want it tomorrow. Switch that row’s green **Today** button to orange **TCND** to charge for it. The other half decline it. Use **×** to remove their item. Keep the ordinary items on **Today**.
+5. Choose **Pay & Go**, followed by card or cash as requested. For cash, select the notes and coins to make the correct change and press **Give change**. Exact cash completes automatically.
+6. Only the ordinary items go on the pick list. A TCND line ends at payment and creates no next-day task. The sale creates a pick order and the customer waits near the counter gap. Anyone on the shift can pick and hand it over.
 
 ### Sam, service bells, and scanner problems
 

@@ -201,6 +201,26 @@
     }
     return lines;
   }
+  // Roll once after the ordinary basket is complete. This shortage belongs to this sale.
+  function addStockRequest(world, lines, r) {
+    if (r() >= 0.2 || !lines.length) return;
+    var used = new Set();
+    lines.forEach(function (line) {
+      (line.accept || [line.item.code]).forEach(function (code) { used.add(code); });
+    });
+    var start = Math.floor(r() * world.items.length);
+    for (var i = 0; i < world.items.length; i++) {
+      var item = world.items[(start + i) % world.items.length];
+      if (used.has(item.code)) continue;
+      var tomorrow = r() < 0.5;
+      var reply = tomorrow
+        ? pick(r, ["None left? Order it in for tomorrow, please.", "Tomorrow's fine. Can you order one in?", "I'll come back tomorrow for that one."])
+        : pick(r, ["None left? Don't worry, I'll get it elsewhere.", "Leave that one off then, mate.", "I need that today. Take it off and I'll try somewhere else."]);
+      lines.push({ kind: 'code', item: item, qty: 1, accept: [item.code], say: 'Have you got ' + item.code + ' as well?',
+        clue: "It's " + item.code.split('').join(' ') + '.', shortage: tomorrow ? 'tcnd' : 'decline', reply: reply });
+      return;
+    }
+  }
   // how many a till customer wants: mostly one or two, back boxes by the five or ten
   function quantity(it, r) {
     var u = r();
@@ -287,7 +307,7 @@
 
   var api = { hash: hash, searchItems: searchItems, makeCustomer: makeCustomer, lookup: lookup, matches: matches, postcode: postcode,
     price: price, avail: avail, vat: vat, money: money, tender: tender, DENOMS: DENOMS, notesFor: notesFor, denomName: denomName, orderNumber: orderNumber, makeOrder: makeOrder, judge: judge,
-    quantity: quantity, makeKiosk: makeKiosk, payment: payment, HOLD_CODES: HOLD_CODES, holdParcel: holdParcel, holdSay: holdSay, customerNo: customerNo,
+    quantity: quantity, addStockRequest: addStockRequest, makeKiosk: makeKiosk, payment: payment, HOLD_CODES: HOLD_CODES, holdParcel: holdParcel, holdSay: holdSay, customerNo: customerNo,
     SURNAMES: SURNAMES, MEN: MEN, WOMEN: WOMEN };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftTill = api;

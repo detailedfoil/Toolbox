@@ -136,6 +136,8 @@
 .fu-line.qty .fu-q{width:58px;height:32px;border:2px solid #e08a00;background:#fffbe8;font-weight:700;animation:fuFix 1.2s ease-in-out infinite}
 @keyframes fuFix{50%{box-shadow:0 0 0 4px #ffb40066}}
 .fu-fix{color:#9a5b00;font-style:normal}
+.fu-delivery{width:100%;min-width:58px;min-height:28px;border:1px solid #21712a;border-radius:3px;background:linear-gradient(#46b94f,#227c2c);color:white;font:700 14px Arial,sans-serif}
+.fu-delivery[aria-pressed="true"]{border-color:#a55b00;background:linear-gradient(#ffc465,#ef992a);color:#382000}
 .fu-del{width:22px;height:22px;padding:0;border:0;border-radius:50%;background:#d32f2f;color:#fff;font:700 15px/1 Arial,sans-serif}
 .fu-tot{display:flex;justify-content:space-between;gap:12px;padding:9px 14px;color:#fff;font-size:17px}
 .fu-tot .red{color:#ff6f61}

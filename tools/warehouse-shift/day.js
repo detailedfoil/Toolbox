@@ -441,7 +441,8 @@
     if (c.order) return c.order;
     this.emit('playtest', 'sale.paid', { who: c.by, customer: c.id, kind: c.kind });
     this.credit(c.by, 'sale-' + c.id, 15);
-    var o = this.makeOrder('till', lines, c, true, extra);
+    var pickLines = lines.filter(function (line) { return !line.tcnd && !line.shortage; });
+    var o = this.makeOrder('till', pickLines, c, true, extra);
     c.order = o; c.state = 'waiting'; c.by = null; c.ready = false;
     this.emit('step', c);
     return o;
@@ -488,6 +489,13 @@
       c.lines = Till.makeOrder(this.world, this.requests, this.r);
       if (!c.lines.length) { c.kind = kind = 'kiosk'; c.kiosk = Till.makeKiosk(this.world, this.r, c.cust); }
     }
+    var kioskOrder = kind === 'kiosk' && c.kiosk.list[c.kiosk.mine];
+    var lines = kioskOrder ? kioskOrder.lines : c.lines;
+    // Keep the extra till decision independent of arrivals, kiosk contents and normal picks.
+    var stockRandom = this.World.rng(this.World.hash(c.cust.no + '/' + c.id + '/stock request'));
+    Till.addStockRequest(this.world, lines, stockRandom);
+    var last = lines[lines.length - 1];
+    if (kioskOrder && last && last.shortage) kioskOrder.total += Till.price(last.item) * last.qty;
     c.surname = c.cust.surname;
     c.say = this.pick(HELLO[kind]);
   };

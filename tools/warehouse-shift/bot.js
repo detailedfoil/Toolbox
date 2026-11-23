@@ -750,15 +750,23 @@
           this.cSay(this.pick(SAY.wrong));
           yield this.T(find[0] * 0.6, find[1] * 0.6);
         }
-        this.cSay(this.pick(SAY.right));
+        if (!ln.shortage) this.cSay(this.pick(SAY.right));
         yield this.T(PACE.add); // then into Fusion
         yield this.T(0.3, 0.8);
       }
-      this.cSay(this.pick(SAY.all));
+      if (!lines.some(l => l.shortage)) this.cSay(this.pick(SAY.all));
       yield this.T(1.0, 1.8);
     }
     // Pay & Go
-    var total = lines.reduce(function (s, l) { return s + Till.price(l.item) * l.qty; }, 0);
+    var shortage = lines.find(l => l.shortage);
+    if (shortage) {
+      this.say("We've got none of " + shortage.item.code + " today.");
+      yield this.T(PACE.reply);
+      this.cSay(shortage.reply);
+      yield this.T(PACE.add);
+    }
+    var paidLines = lines.filter(l => l.shortage !== 'decline');
+    var total = paidLines.reduce(function (s, l) { return s + Till.price(l.item) * l.qty; }, 0);
     yield this.T(1.0, 2.0);
     this.say(this.pick(SAY.total).replace('{m}', Till.money(total)));
     yield this.T(PACE.reply);
@@ -777,7 +785,7 @@
       yield this.T(1.5, 3.0);
     }
     // paid for: onto the pick list, for whoever gets to it first
-    this.emit('tillDone', c, lines.map(function (l) { return { item: l.item, qty: l.qty }; }));
+    this.emit('tillDone', c, paidLines);
     this.say(this.pick(SAY.going));
     yield this.T(0.6, 1.2);
     this.cSay(this.pick(SAY.wait), c);

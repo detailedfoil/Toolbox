@@ -191,9 +191,8 @@ test('greeted customers walk to separate tills, wait for a free one and can be s
   const till = first.at;
   s.me.x = (till.x0 + till.x1) / 2; s.me.y = s.world.counter.y0 - 0.7;
   s.me.yaw = Math.PI; s.me.pitch = Math.atan2(1.15 - s.me.eye, (till.y0 + till.y1) / 2 - s.me.y);
-  const rand = day.r; day.r = () => 0.099;
+  day.scannerMixups.unlabelled.until = 1;
   s.applyCam(); await s.openTill();
-  day.r = rand;
   assert.equal($('scanner').hidden, true);
   assert.equal($('bannerTitle').textContent, 'Sam has your scanner');
   assert.equal(s.till.session().dayCust, first);
@@ -434,6 +433,10 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   assert.equal(guests[2].w.document.querySelector('[data-v="tillNumber"]').textContent, '1');
   day.mode = 'kiosk';
   const customer = day.send('kiosk'); customer.pay = { how: 'cash', say: 'Cash, please.' };
+  const kioskOrder = customer.kiosk.list[customer.kiosk.mine];
+  kioskOrder.lines = kioskOrder.lines.filter(l => !l.shortage);
+  host.w.ShiftTill.addStockRequest(day.world, kioskOrder.lines, () => 0.1);
+  kioskOrder.total = kioskOrder.lines.reduce((sum, l) => sum + host.w.ShiftTill.price(l.item) * l.qty, 0);
   day.arrived(customer);
   await until(() => customer.by === 'p4', 'cashier to claim the customer');
   day.scannerMixups.labelled.limit = day.scannerMixups.labelled.until = 1;
@@ -446,6 +449,13 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   ui.F.no.value = session.cust.no; ui.search(); ui.select();
   assert.equal(session.stage, 'kiosk');
   ui.openKiosk(); ui.S.ksel = session.kiosk.mine; ui.kioskSelect();
+  ui.goPay();
+  assert.equal(session.stage, 'ordering', 'the customer needs the extra line set to TCND');
+  const extra = kioskOrder.lines.at(-1);
+  const delivery = cashier.till.el.querySelector('[data-delivery="' + (session.basket.length - 1) + '"]');
+  assert.equal(delivery.textContent, 'Today');
+  delivery.click();
+  assert.equal(delivery.textContent, 'TCND');
   ui.goPay(); ui.payCash();
   const cash = session.cash, tillPage = guests[2].w.document;
   assert.ok(cash.due > 0);
@@ -469,6 +479,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   give.click();
   await until(() => customer.order && cashier.till.stage() === 'done', 'host-confirmed cash payment');
   assert.equal(cashier.till.session().orderNo, customer.order.no);
+  assert.ok(customer.order.lines.every(l => l.item.code !== extra.item.code), 'only Today items go to the warehouse');
   assert.equal(day.orders.filter(o => o.cust === customer).length, 1);
   cashier.closeTill();
   cashier.me.x = host.s.crew[0].x; cashier.me.y = host.s.crew[0].y;
