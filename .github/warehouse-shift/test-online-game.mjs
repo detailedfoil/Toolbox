@@ -276,12 +276,14 @@ test('the parked tote closes the aisle until Sam leaves, and idle stools have ha
   }
 });
 
-test('Sam rings once at six seconds for unattended customers and skips customers already helped', async t => {
+test('Sam rings once after six seconds when within reach and skips customers already helped', async t => {
   const { $, s } = await game(t, { online: false });
   $('twoBtn').click(); s.join({ kind: 'kb' }); s.join({ kind: 'pad', pad: 0 }); $('joinGo').click();
   const day = s.day();
   day.plan.length = 0; day.mode = 'kiosk';
-  s.crew[0].update = () => {};
+  const sam = s.crew[0], bell = s.world.bell;
+  sam.update = () => {};
+  Object.assign(sam, { x: bell.x, y: bell.y - 0.8 });
   const waiting = day.send('kiosk'); day.arrived(waiting);
   s.tick(5.7);
   assert.ok(s.players.every(p => p.D.bannerTitle.textContent !== 'Ding dong'));
