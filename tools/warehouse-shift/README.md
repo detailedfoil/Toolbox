@@ -23,9 +23,9 @@ Open [the game page](../warehouse-shift.html) through the Toolbox site and sign 
 
 **Play tutorial → First shift** starts a separate solo practice shift. Follow the gold floor trail around walls, the direction arrow and the glow on the actual object. Fusion, the scanner and the Manager PC outline the next control. The guide updates from what the player actually does. There is no timed reading or Next button.
 
-1. Walk to the shop-floor shelf and around to the staff side of the trade counter. The Service Champ indicator appears there. Ring the service bell, greet the waiting customer and use their till.
-2. In Fusion, enter their surname and postcode, match their extra detail, enter the two order lines and take card payment. One line is a shop-floor purchase.
-3. Claim their order in Today Picking, follow the location code and scan a unit. A staged scanner failure interrupts the pick. Visit the office, buy an upgrade with the 100 practice XP, swap at the dock and look at CCTV. Return to the shelf, finish the quantity and hand over the same order.
+1. Walk to the staff side of the trade counter. The Service Champ indicator appears there. Ring the service bell, greet the waiting customer and use their till.
+2. In Fusion, enter their surname and postcode, match their extra detail, enter the warehouse line and wait for the shop-floor scan and take card payment. One line is a shop-floor purchase.
+3. Claim their order in Today Picking, follow the location code and scan a unit. A staged scanner failure interrupts the pick. Swap the scanner at the office dock. Return to the shelf, finish the quantity and hand over the same order. Return to the Manager PC to spend 100 practice XP, then look at CCTV.
 4. After the customer handover, a practice carton arrives at goods in. Use Putaway. Take a kick stool to the high destination, scan the location and confirm the carton. Greet a click-and-collect customer, scan the named OC tote in holding and hand it over.
 5. Open Shop floor replen, squat to pick the replacement and restock the middle shelf. Face the front door and lock up to complete training. Normal career shifts also allow skipping replen.
 6. **Kiosk, TCND & cash** is a separate repeatable till exercise covering kiosk selection, changing an unavailable line to TCND and giving change. **CrashFix lookup** teaches searching by description, copying a matching code, returning to Fusion, removing a declined out-of-stock extra, and paying. **Holding-area picks** lets the player store a lowercase-c order in any empty OC spot and fetch that same tote when its customer arrives.
@@ -52,7 +52,7 @@ The wall clock normally moves from 07:00 to 20:00 as delivery is put away. On a 
 
 ### Shop floor replen
 
-On shifts with till sales, customers buy 2–4 extra units from the shop floor. Listen for a line such as “I picked this up off the shop-floor shelf.” Ring it through with their usual order. Sam can serve these sales too. The customer already has those units. Payment adds the replacements to **Shop floor replen** on the scanner main menu. Collection-only shifts have no shop-floor sales.
+On shifts with till sales, customers buy 2–4 extra units from the shop floor. The till waits one second, beeps, then adds the item one second later with a dark green **Picked** label. The customer already has it. Sam can serve these sales too. The customer already has those units. Payment adds the replacements to **Shop floor replen** on the scanner main menu. Collection-only shifts have no shop-floor sales.
 
 The scanner shows **Shop floor full** until a sale creates work. Open **Pick replen**, select the batch and scan the warehouse locations as usual. Take the completed tote to the middle shelving unit on the shop floor, face it and use **Restock shelf**. Sales made while someone is picking start another batch. In co-op each batch belongs to one picker. Restocking awards **10 XP per unit** at the shelf. Lock-up is available when the normal shift work is finished. Skipping outstanding replen forfeits its XP.
 

@@ -63,9 +63,10 @@
     const wrong = s.basket.findIndex(row => row.status === 'qty');
     if (wrong >= 0) return cue('Correct the quantity on this line to ' + s.lines[s.basket[wrong].line].qty + ' and confirm.', '[data-row="' + wrong + '"]');
     if (s.basket.some(row => row.status === 'pending' || row.status === 'wrong')) return cue('Listen to the customer while they check the item.');
+    if (line?.floor) return cue('The till scans the shop-floor item automatically. Watch for Picked.');
     if (line) {
       if (lookup) return cue('They gave a description. Open the CrashFix tab to look it up.', '[data-tab="crashfix"]');
-      if (clean(value('part')) !== line.item.code) return cue((line.floor ? 'They brought this from the shop floor. ' : '') + 'Enter ' + line.item.code + ' in Part No.', field('part'));
+      if (clean(value('part')) !== line.item.code) return cue('Enter ' + line.item.code + ' in Part No.', field('part'));
       return cue('Enter ' + line.qty + ' in Qty and ' + submit + ' to add the line.', field('qty'));
     }
     for (const [i, row] of s.basket.entries()) {
@@ -79,7 +80,7 @@
 
   function create({ lesson, $, world, World, Till, Crew, S, T, player: p, tills, touch, covered, bellRung, trained, finish }) {
     const fullTour = lesson === 'tour', me = p.me, D = p.D;
-    const chapters = ['Shop floor', 'Trade counter', 'Warehouse pick', 'Office & scanner dock', 'Goods in & holding', 'Replen & lock-up'];
+    const chapters = ['Trade counter', 'Warehouse pick', 'Scanner dock', 'Office upgrades & CCTV', 'Goods in & holding', 'Replen & lock-up'];
     const nav = new Crew.Nav(world);
     const floor = world.replenShelf, floorBox = objectBox(floor), floorAt = point(floor.x0 - 0.7, floorBox.y);
     const pc = world.pc, dock = world.scannerDock, counter = world.counter;
@@ -95,7 +96,7 @@
     const cctv = world.objects.find(o => o.kind === 'cctv');
     const camBox = objectBox(cctv, cctv.z0), camAt = point(cctv.x0 - 0.85, camBox.y);
     let day, customer, collector, carton, holdingOrder, chapter = fullTour ? 0 : 1;
-    let visited = false, stood = false, fault = false, sawCCTV = false, finished = false, current, marked;
+    let stood = false, fault = false, sawCCTV = false, finished = false, current, marked;
     let tickIn = 0, routeFrom, routeTo, path = [];
     const trail = new T.Group(), ring = new T.RingGeometry(0.07, 0.12, 16);
     const paint = new T.MeshBasicMaterial({ color: 0xffdc62, side: T.DoubleSide });
@@ -140,7 +141,7 @@
         basket.lines = [line(saleItem, 1, ''), next];
         basket.total = basket.lines.reduce((n, l) => n + Till.price(l.item) * l.qty, 0);
       } else if (fullTour) {
-        const floorLine = line(floorItem, 1, 'Picked this up from the shop floor. Code ' + floorItem.code + '.');
+        const floorLine = line(floorItem, 1, 'Picked this up from the shop floor.');
         floorLine.floor = true; floorItem.reserved = (floorItem.reserved || 0) + 1;
         customer.floorOffer = floorLine;
         customer.lines = [line(saleItem, 2, 'Two of ' + saleItem.code + ', please.'), floorLine];
@@ -195,13 +196,13 @@
       return shelfGuide(p.activeLine().loc, false);
     }
     function office() {
-      if (!p.pcOpen() && !trained()) return walk('Your pick is on the faulty scanner. Go to the office and open the glowing Manager PC.', box(pc.x, pc.y, 1.08, 0.63, 0.12, 0.42), point(pc.x, pc.desk.y0 - 0.48), 'Use PC');
+      if (!p.pcOpen() && !trained()) return walk('Order handed over. Go back to the office and open the glowing Manager PC.', box(pc.x, pc.y, 1.08, 0.63, 0.12, 0.42), point(pc.x, pc.desk.y0 - 0.48), 'Use PC');
       if (p.pcOpen()) {
         if (trained()) return cue('Purchase complete. Close the Manager PC.', '.ws-pc-x');
         if (D.root.querySelector('.ws-shop').hidden) return cue('Sam starts on delivery. Open Upgrades to train him for till service.', '[data-pc="shop"]');
         return cue('Spend your 100 practice XP on Sam’s till service.', '[data-training="queue"]');
       }
-      if (p.scannerFault) return walk('Your scanner went offline mid-pick. Face the charging dock beside the PC and use Swap scanner.', box(dock.x, dock.y, dock.z, 0.64, 0.18, 0.23), point(dock.x, pc.desk.y0 - 0.42), 'Swap scanner');
+
       if (!sawCCTV) {
         const angle = Math.atan2(camBox.x - me.x, me.y - camBox.y) + me.yaw;
         sawCCTV = distance(me, camAt) < 1.5 && Math.cos(angle) > 0.78;
@@ -221,7 +222,7 @@
       if (p.tillOpen()) return fusionCue(p.till, Till, lesson, p.padIndex !== null ? 'press LB' : 'press Enter');
       if (!D.scMenu.hidden) return cue('Choose Close to return to your scanner task.', '#scMenu [data-k="0"]');
       if (!D.scConfirm.hidden) return cue('The blue choices expand together. Press Back to return to your task.', '#scBack');
-      if (p.pcOpen() && !(fullTour && fault && !sawCCTV)) return cue('Close the Manager PC to continue the tour.', '.ws-pc-x');
+      if (p.pcOpen() && !(fullTour && customer?.order?.status === 'done' && !sawCCTV)) return cue('Close the Manager PC to continue the tour.', '.ws-pc-x');
       if (lesson === 'holding') {
         if (p.order()) return workOrder();
         if (holdingOrder.status !== 'done') return scannerMenu(1, 'Today Picking', 'list');
@@ -230,15 +231,11 @@
         if (collector.order.status !== 'done') return scannerMenu(1, 'Today Picking', 'list');
         complete(); return null;
       }
-      if (!visited && fullTour) {
-        visited = distance(me, floorAt) < 1.15;
-        if (!visited) return walk('Walk to the middle shop-floor shelf. ' + (p.padIndex !== null ? 'Left stick moves; right stick looks.' : touch ? 'Use the left stick to walk. Drag the view to look.' : 'WASD moves. Click the view and move your mouse to look.'), floorBox, floorAt);
-      }
       if (!customer) sendSale();
       if (!stood) {
-        chapter = 1;
+        chapter = 0;
         stood = covered() || customer.greeter === p.id || !!customer.order;
-        if (!stood) return walk((fullTour ? 'Customers take items from this shelf. ' : '') + 'Follow the trail around the counter and stand on the staff side.', objectBox(tills[0], 0.98, 1.36), tillAt(tills[0]));
+        if (!stood) return walk('Follow the trail behind the counter. ' + (p.padIndex !== null ? 'Move with the left stick and look with the right.' : touch ? 'Walk with the left stick. Drag the view to look.' : 'WASD moves. Click the view for mouse look.'), objectBox(tills[0], 0.98, 1.36), tillAt(tills[0]));
       }
       if (fullTour && !bellRung() && !customer.greeter && !customer.order) {
         const b = world.bell;
@@ -246,13 +243,14 @@
       }
       if (!customer.order) return meet(customer);
       if (!fullTour) { complete(); return null; }
-      if (fault && !sawCCTV) {
+      if (p.scannerFault) { chapter = 2; return walk('Your scanner went offline mid-pick. Face the charging dock beside the PC and use Swap scanner.', box(dock.x, dock.y, dock.z, 0.64, 0.18, 0.23), point(dock.x, pc.desk.y0 - 0.42), 'Swap scanner'); }
+      if (fault && customer.order.status === 'done' && !sawCCTV) {
         chapter = 3;
         const task = office();
         if (task) return task;
       }
       if (p.order()) {
-        chapter = p.order().kind === 'replen' ? 5 : p.order().kind === 'hold' ? 4 : fault ? 3 : 2;
+        chapter = p.order().kind === 'replen' ? 5 : p.order().kind === 'hold' ? 4 : fault ? 2 : 1;
         return workOrder();
       }
       if (carton && !carton.done && carton.by === p.id) {
@@ -261,7 +259,7 @@
         return shelfGuide(carton.loc, true);
       }
       if (customer.order.status !== 'done') {
-        chapter = 2;
+        chapter = 1;
         return scannerMenu(1, 'Today Picking', 'list');
       }
       chapter = 4;
