@@ -582,6 +582,7 @@
         return ids.filter(id => !missingScanners.has(id));
       },
       scannerFault(who) { players.find(p => p.id === who)?.syncScanner(false, true); },
+      salePaid: checkScannerMixup,
       tillCover, xpChanged: syncShiftXP, playtest: recordPlaytest,
       listed: (o) => { if (online?.room()) for (const l of o.lines) online.trackStock(l.item); for (const p of players) p.listed(o); },
       changed: (o) => { for (const p of players) p.changed(o); tidyScreens(); },
@@ -2033,7 +2034,6 @@
         const s = till.session();
         if (s && s.dayCust === c) return; // already talking
         recordPlaytest('sale.ready', { who: P.id, customer: c.id });
-        if (!guest()) checkScannerMixup(c, P.id);
         speeches.delete(c.fig);
         till.serve(c.cust, c.lines, '#' + c.fig.parts.body.color.getHexString(), { kind: c.kind, kiosk: c.kiosk, pay: c.pay, hello: c.say, dayCust: c });
       }
@@ -3186,7 +3186,7 @@
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
-        kit, missingScanners, checkScannerMixup, canGreetAt, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, bellTillTrained: () => bellTillTrained, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
+        kit, missingScanners, canGreetAt, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, bellTillTrained: () => bellTillTrained, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; syncShiftXP(); },
         resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },
         clearDayView() {
