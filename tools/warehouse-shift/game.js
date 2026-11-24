@@ -585,17 +585,12 @@
     }
 
     /* ---------- the day (day.js) ---------- */
-    const MODES = [['mixed', 'mixed', 'every kind of pick'], ['pick', 'C&C', 'click and collect customers only'], ['hold', 'holding', 'picks for the holding area only'],
-      ['till', 'till', 'till orders only'], ['kiosk', 'kiosk', 'kiosk orders only']];
-    let mode = 0;
-    // always starts on mixed: the practice setting used to be remembered, and one stray tap left every customer a click and collect (detailedfoil, 20 Nov 2026)
-    try { localStorage.removeItem('ws-orders'); } catch (e) { /* fine */ }
     let day = null, dayNo = 0;
     let playtest = null, playtestSummary = '';
     function recordPlaytest(kind, detail) { playtest?.record(kind, detail, day.t); }
     function playtestActivity() {
       if (!playtest) return;
-      const overlay = !$('helpCover').hidden || !$('endCover').hidden;
+      const overlay = isPaused() || !$('helpCover').hidden || !$('endCover').hidden;
       playtest.setActivity(document.hidden ? 'background' : overlay ? 'overlay' : 'playing', day.t);
     }
     function samJobs() { return samPrio.filter(job => job.on).map(job => job.id); }
@@ -636,9 +631,9 @@
     function newDay() {
       if (guest()) return;
       const old = day;
-      const event = mode === 0 ? Day.rollEvent(Math.random) : null;
+      const event = Day.rollEvent(Math.random);
       const shiftId = globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
-      day = Day.create({ world, World, Till, requests, shiftId, scannerTier, digitalTier, firstDay: dayNo === 0, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null, ...(tutorial ? tutorial.dayOptions : {}) });
+      day = Day.create({ world, World, Till, requests, shiftId, scannerTier, digitalTier, firstDay: dayNo === 0, mode: 'mixed', event, env: dayEnv, hold: old ? old.hold : null, ...(tutorial ? tutorial.dayOptions : {}) });
       if (tutorial) tutorial.prepare(day);
       if (old?.offlineScanners) day.offlineScanners = new Set(old.offlineScanners);
       dayNo++; bellCust = null; bellCount = 0; nextBellCheck = 0;
@@ -743,11 +738,8 @@
       return b;
     }
     // Sam starts the shift coming out of the staff room, and works the till at the end of the counter by the gap
-    // Sam can be taken off the shift and brought back from the Function menu (detailedfoil, 19 Nov 2026); it's remembered
     const SAM = { name: 'Sam', till: ALEX_TILL, skin: 0xd6a57c, hair: 0x2b1d14, afro: true,
       start: staffRoom ? { x: staffRoom.x1 + 0.6, y: staffRoom.y0 + 0.65, yaw: Math.PI / 2 } : null };
-    let samSaved = null, samOff = false;
-    try { samOff = localStorage.getItem('ws-sam') === 'off'; } catch (e) { /* fine */ }
     const missingScanners = new Set();
     function checkScannerMixup(c, who) {
       if (!crew.length || missingScanners.has(who) || day.offlineScanners.has(who)) return;
@@ -777,29 +769,6 @@
         local?.syncScanner(false);
       }
     }
-    function removeSam() {
-      const b = crew.find((x) => x.name === 'Sam');
-      if (!b) return;
-      if (day) { if (online?.room()) online.releaseWork('Sam'); else day.release('Sam'); }
-      crew.splice(crew.indexOf(b), 1);
-      missingScanners.clear(); for (const p of players) p.syncScanner(false, day?.offlineScanners.has(p.id));
-      speeches.delete(b);
-      b.fig.group.visible = false; b.fig.trolley.group.visible = false;
-      samSaved = b; samOff = true; dirty = true;
-      if (canSaveCareer()) {
-        try { localStorage.setItem('ws-sam', 'off'); } catch (e) { /* fine */ }
-      }
-    }
-    function bringSam() {
-      if (crew.some((x) => x.name === 'Sam')) return;
-      if (samSaved) { samSaved.fig.group.visible = false; samSaved.fig.trolley.group.visible = false; samSaved = null; }
-      hire(SAM);
-      samOff = false; dirty = true;
-      if (canSaveCareer()) {
-        try { localStorage.removeItem('ws-sam'); } catch (e) { /* fine */ }
-      }
-    }
-
     // Sam and their trolley are in your way like anything else (you can step away from them, never into them)
     function trolleyGap(b, x, y) { // how far a point is from the edge of Sam's trolley
       const t = b.trolley;
@@ -1030,7 +999,7 @@
       }
       let blueAction = null;
       const blueOptions = [
-        [D.scFn, D.scConfirmFn, () => menu(true)],
+        [D.scFn, D.scConfirmFn, () => {}],
         [D.scHint, D.scConfirmHint, useHint],
         [D.scQuickPick, D.scConfirmQuickPick, () => {
           if (pending || state !== 'pa' || carton) return;
@@ -1210,7 +1179,7 @@
         D.scanner.hidden = taken || !active;
         syncScannerRecovery();
         if (missing) {
-          cancelBlueAction(); D.scMenu.hidden = true; hint.until = 0;
+          cancelBlueAction(); hint.until = 0;
           if (offline) showScannerCrash();
         } else banner(wasOffline ? 'Replacement scanner ready' : 'Scanner returned', 'Your scanner is ready to use.', 2500);
       };
@@ -1479,7 +1448,6 @@
       function back() {
         if (P.scannerMissing || pending) return;
         if (blueAction) { cancelBlueAction(); return; }
-        if (!D.scMenu.hidden) { menu(false); return; }
         if (state === 'qty' && Number(typed) > 0) {
           SFX.key();
           const n = Number(typed) - 1;
@@ -1500,7 +1468,7 @@
       }
       function digit() { if (state === 'qty' || state === 'scan') { say('Scan the location for each one', 'warn'); SFX.miss(); } }
       function enter() {
-        if (P.scannerMissing || blueAction || !D.scMenu.hidden) return;
+        if (P.scannerMissing || blueAction) return;
         if (state === 'home') openHome(homeSel);
         else if (state === 'pa') { say(day && day.deliveryLeft().length ? 'Scan a carton at goods in' : 'No delivery left', 'warn'); SFX.miss(); }
         else if (state === 'pareturn') { say('Scan the original cage or pallet', 'warn'); SFX.miss(); }
@@ -1736,48 +1704,6 @@
         const h = world.handover, inside = me.x > h.x0 && me.x < h.x1 && me.y > h.y0 && me.y < h.y1 + 0.05;
         if (inside !== atCounter) { atCounter = inside; if (state === 'deliver') { renderScanner(); if (inside) toast('Press Enter to hand over'); } }
       }
-
-      /* ---------- the function menu ---------- */
-      function menu(open) {
-        if (open && P.scannerMissing) return;
-        if (!open) { D.scMenu.hidden = true; return; }
-        cancelBlueAction();
-        const items = [
-          ['1', me.squat ? 'Stand up' : 'Squat', () => toggleSquat()],
-          ['2', 'Hint', () => useHint()],
-          ['3', 'Sound: ' + (audio.on ? 'on' : 'off'), () => { audio.on = !audio.on; if (!audio.on) stopVoice(); try { localStorage.setItem('ws-sound', audio.on ? 'on' : 'off'); } catch (e) { /* fine */ } }],
-          ['4', 'Look: ' + LOOKS[lookPick][0].toLowerCase(), () => { lookPick = (lookPick + 1) % LOOKS.length; try { localStorage.setItem('ws-look', LOOKS[lookPick][0]); } catch (e) { /* fine */ } toast('Look speed: ' + LOOKS[lookPick][0].toLowerCase()); }],
-          ['5', 'Picks: ' + MODES[mode][1], () => { mode = (mode + 1) % MODES.length; if (day) day.setMode(MODES[mode][0]); toast('Picks still to come: ' + MODES[mode][2]); }],
-          ['6', 'Help', () => showHelp(true)],
-          ['7', crew.length ? 'Remove Sam' : 'Bring Sam back', () => { if (crew.length) { removeSam(); toast('Sam has gone home'); } else { bringSam(); toast('Sam is back'); } }],
-          ['8', 'Voices: ' + (audio.voices ? 'on' : 'off'), () => setVoices(!audio.voices)],
-          ['0', 'Close', () => {}]
-        ];
-        D.scMenu.replaceChildren();
-        const h = document.createElement('h3'); h.textContent = 'Functions'; D.scMenu.appendChild(h);
-        for (const [k, t, fn] of items) {
-          if ((tutorial && (k === '5' || k === '7')) || (k === '5' && day?.event) || (guest() && (k === '5' || k === '7'))) continue;
-          const b = document.createElement('button'); b.type = 'button';
-          const kb = document.createElement('b'); kb.textContent = k; b.appendChild(kb); b.appendChild(document.createTextNode(t));
-          b.addEventListener('click', (e) => { e.stopPropagation(); SFX.key(); menu(false); fn(); renderScanner(); });
-          b.dataset.k = k;
-          D.scMenu.appendChild(b);
-        }
-        D.scMenu.hidden = false;
-        menuSel = 0;
-        if (P.padIndex !== null) P.menuMove(0);
-      }
-      P.menu = menu;
-      // a controller in the Function menu: up and down move the highlight, A picks
-      let menuSel = 0;
-      P.menuMove = function (d) {
-        const bs = Array.from(D.scMenu.querySelectorAll('button'));
-        if (!bs.length) return;
-        menuSel = (menuSel + d + bs.length) % bs.length;
-        bs.forEach((b, i) => b.classList.toggle('pad-on', i === menuSel));
-        if (d) SFX.key();
-      };
-      P.menuPick = function () { const b = D.scMenu.querySelectorAll('button')[menuSel]; if (b) b.click(); };
 
       /* ---------- the till ---------- */
       let nearTill = null;
@@ -2038,13 +1964,13 @@
       function openPc() {
         if (!pc.el) pcBuild();
         pc.el.querySelector('output').textContent = '';
-        if (idx === 0 && locked()) document.exitPointerLock();
+        if (P === kbPlayer() && locked()) document.exitPointerLock();
         keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; me.vx = me.vy = 0;
         recordPlaytest('manager-pc.open', { who: P.id });
         pc.open = true; pc.sel = 0; pc.el.hidden = false; SFX.key(); pcTab(!!guest());
         D.tillBtn.hidden = true;
       }
-      function closePc() { if (!pc.open) return; recordPlaytest('manager-pc.close', { who: P.id }); pc.open = false; pc.el.hidden = true; SFX.key(); if (idx === 0) canvas.focus({ preventScroll: true }); pcOn = false; checkTill(); renderScanner(); }
+      function closePc() { if (!pc.open) return; recordPlaytest('manager-pc.close', { who: P.id }); pc.open = false; pc.el.hidden = true; SFX.key(); pcOn = false; checkTill(); renderScanner(); restoreMouse(P); }
       function pcMove(d) { pc.sel = (pc.sel + d + samPrio.length) % samPrio.length; SFX.key(); pcRender(); }
       function pcToggle() {
         const job = samPrio[pc.sel];
@@ -2088,7 +2014,7 @@
           if (!ok) { toast('Till unavailable'); return; }
           nearTill = target;
         }
-        if (idx === 0 && locked()) document.exitPointerLock();
+        if (P === kbPlayer() && locked()) document.exitPointerLock();
         keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0;
         if (P.onTill) P.onTill();
         me.vx = me.vy = me.speed = 0;
@@ -2148,7 +2074,7 @@
             if (!guest() && c) day.unserve(c);
           }
         } else if (c && !serving) { P.tillCust = null; till.clear(); day.unserve(c); }
-        if (idx === 0) canvas.focus({ preventScroll: true });
+        restoreMouse(P);
         sayShown = performance.now() - 9000; dirty = true; // their last words stay up a few seconds
         renderScanner();
       }
@@ -2219,7 +2145,7 @@
         cancelBlueAction();
         generation++; pending = false; keys.clear(); shut(); hint.until = 0; carton = order = carry = null;
         state = 'idle'; typed = ''; full = false; cur = 0; msg = null; viewLine = -1;
-        D.scMenu.hidden = true; till.close(); stopVoice(P); syncScannerRecovery(); till.clear(); P.tillCust = null;
+        till.close(); stopVoice(P); syncScannerRecovery(); till.clear(); P.tillCust = null;
       };
 
       /* ---------- speech bubbles: Sam and the customers, only when near and nothing tall is in the way ---------- */
@@ -2318,8 +2244,6 @@
           if (!P.playing() || P.scannerMissing || button.hidden) return;
           initAudio();
           SFX.key();
-          if (!D.scMenu.hidden && button === D.scFn) { menu(false); return; }
-          if (!D.scMenu.hidden) return;
           blueAction = button;
           D.scConfirm.hidden = false;
           syncBlueOptions();
@@ -2333,7 +2257,7 @@
         });
       }
       P.blueKey = number => {
-        const option = blueOptions[number - 1];
+        const option = number > 0 ? blueOptions[number] : null;
         if (option) option[D.scConfirm.hidden ? 0 : 1].click();
       };
       press(D.tillBtn, useAction);
@@ -2349,7 +2273,7 @@
 
       /* ---------- a controller (game.js gives each player theirs: padIndex) ---------- */
       // Left stick walks (right out to jog), right stick looks, RT scans, A is Enter (detailedfoil), B is Back, X squats, Y is
-      // Hint, the d-pad goes up and down the pick list (and the lines of a pick), Start opens the Function menu, View is
+      // Hint, the d-pad goes up and down the pick list (and the lines of a pick), Start enlarges the blue buttons, View is
       // help, LT held jogs. At the till the d-pad (or stick) moves a highlight and tillui.js does the rest.
       P.padIndex = null;
       let padPrev = [], padWalk = false, padRun = false;
@@ -2395,10 +2319,10 @@
         }
         if (tutorial && now[8] && hit(9)) { $('lessonExit').click(); return; }
         // A goes on, B closes help.
-        const cover = ['helpCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
+        const cover = ['pauseCover', 'helpCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
         if (cover) {
           still();
-          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false);
+          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false); else if (hit(1) && cover.id === 'pauseCover') setPaused(false);
           return;
         }
         if (pc.open) {
@@ -2426,13 +2350,6 @@
           if (hit(9)) closeTill();
           return;
         }
-        if (!D.scMenu.hidden) {
-          still();
-          const d = steer(true);
-          if (d === 'up' || d === 'down') P.menuMove(d === 'up' ? -1 : 1);
-          if (hit(0)) P.menuPick(); else if (hit(1) || hit(9)) { SFX.key(); menu(false); }
-          return;
-        }
         if (!active) return;
         if (lx || ly || padWalk) { stickIn.x = lx; stickIn.y = ly; padWalk = !!(lx || ly); }
         const curve = (v) => Math.sign(v) * Math.pow(Math.abs(v), 1.6);
@@ -2442,16 +2359,16 @@
         if (hit(1)) back();
         if (hit(2)) toggleSquat();
         if (hit(4)) toggleStep();
-        if (hit(3)) useHint();
-        if (hit(0)) { SFX.key(); enter(); }
-        if (hit(9)) { SFX.key(); menu(true); }
+        if (hit(3)) { cancelBlueAction(); useHint(); }
+        if (hit(0)) { if (!D.scConfirm.hidden && !D.scConfirmQuickPick.hidden) D.scConfirmQuickPick.click(); else { SFX.key(); enter(); } }
+        if (hit(9)) toggleBlue(P);
         if (hit(8)) showHelp(true);
         const d = steer(false);
         if (d === 'up' || d === 'left') page(-1); else if (d === 'down' || d === 'right') page(1);
       };
 
       /* ---------- each frame ---------- */
-      P.playing = () => active && !online?.frozen() && !online?.panel() && $('helpCover').hidden && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen()) && !pc.open;
+      P.playing = () => active && !isPaused() && !online?.frozen() && !online?.panel() && $('helpCover').hidden && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen()) && !pc.open;
       P.update = function (dt, now) {
         let changed = false;
         if (players.length > 1) { P.poseFig(dt); changed = changed || me.speed > 0.01; }
@@ -2620,7 +2537,8 @@
         if (e.button !== 0) return;
         if (!locked() && !mouseDrag) {
           // A target can already be lined up after closing a screen or looking with the keyboard.
-          if (!kp.D.scConfirm.hidden || !kp.D.scMenu.hidden || !kp.useAction()) lockMouse();
+          if (kp.D.scConfirm.hidden) kp.useAction();
+          if (kp.playing()) lockMouse();
           e.preventDefault(); return;
         }
         if (locked()) { kp.scanAt(...kp.centre(), true); e.preventDefault(); return; }
@@ -2650,13 +2568,42 @@
       }
     };
     canvas.addEventListener('pointerup', lookEnd); canvas.addEventListener('pointercancel', lookEnd);
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('pointerdown', e => {
+      const p = kbPlayer();
+      if (e.button !== 2 || !p?.playing()) return;
+      p.back();
+      e.preventDefault();
+    }, true);
+    window.addEventListener('contextmenu', e => {
+      if (kbPlayer()?.playing()) e.preventDefault();
+    });
+    window.addEventListener('wheel', e => {
+      const p = kbPlayer();
+      if (!p?.playing() || !e.deltaY) return;
+      p.page(Math.sign(e.deltaY));
+      e.preventDefault();
+    }, { passive: false });
     let mouseDrag = false; // if the mouse can't be captured, dragging looks round instead
     document.addEventListener('pointerlockerror', () => { mouseDrag = true; const kp = kbPlayer(); if (kp) kp.toast('Drag with the mouse to look round'); });
-    document.addEventListener('pointerlockchange', () => { const kp = kbPlayer(); if (locked() && kp) kp.toast('Esc lets go of the mouse'); dirty = true; });
+    let hadPointerLock = false;
+    document.addEventListener('pointerlockchange', () => {
+      const hasPointerLock = locked();
+      if (hadPointerLock && !hasPointerLock && kbPlayer()?.playing()) setPaused(true);
+      hadPointerLock = hasPointerLock;
+      dirty = true;
+    });
+    function restoreMouse(p) {
+      if (!p || p !== kbPlayer() || !p.playing() || touch) return;
+      canvas.focus({ preventScroll: true });
+      if (!locked()) lockMouse();
+    }
+    function toggleBlue(p) {
+      const D = p.D;
+      (D.scConfirm.hidden ? D.scFn : D.scConfirmFn).click();
+    }
     document.addEventListener('mousemove', (e) => {
       const kp = kbPlayer();
-      if (!kp || !locked() || Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return;
+      if (!kp?.playing() || !locked() || Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return;
       const k = 0.0022 * LOOKS[lookPick][1];
       kp.me.yaw -= e.movementX * k; kp.me.pitch -= e.movementY * k; kp.applyCam(); dirty = true;
     });
@@ -2672,16 +2619,10 @@
       const p = kbPlayer();
       if (!p) return;
       const D = p.D;
-      if (p.till.isOpen() && $('helpCover').hidden) { if (e.key === 'Escape') p.closeTill(); return; }
+      if (p.till.isOpen()) return;
       if (p.pcOpen()) { p.pcKey(e); return; }
-      if (!p.playing()) { if (e.key === 'Escape' && !$('helpCover').hidden) showHelp(false); return; }
-      if (!D.scMenu.hidden) {
-        const b = D.scMenu.querySelector('button[data-k="' + e.key + '"]');
-        if (b) { b.click(); e.preventDefault(); return; }
-        if (e.key === 'Escape' || e.key === 'Tab') { p.menu(false); e.preventDefault(); return; }
-      }
-      if (!D.scConfirm.hidden && e.key === 'Escape') { p.back(); e.preventDefault(); return; }
-      const stepWithSpace = e.code === 'Space' && !D.stepBtn.hidden && D.scConfirm.hidden && D.scMenu.hidden;
+      if (!p.playing()) return;
+      const stepWithSpace = e.code === 'Space' && !D.stepBtn.hidden && D.scConfirm.hidden;
       if (!stepWithSpace && ([D.scHint, D.scQuickPick, D.scFn].includes(e.target) || D.scConfirm.contains(e.target)) && (e.key === 'Enter' || e.key === ' ')) {
         if (e.repeat) e.preventDefault();
         return;
@@ -2706,7 +2647,7 @@
           else { SFX.key(); p.enter(); }
           e.preventDefault(); break;
         case 'Backspace': p.back(); e.preventDefault(); break;
-        case 'Tab': case 'KeyM': SFX.key(); p.menu(D.scMenu.hidden); e.preventDefault(); break;
+        case 'Tab': case 'KeyM': toggleBlue(p); e.preventDefault(); break;
         case 'PageUp': case 'BracketLeft': p.page(-1); break;
         case 'PageDown': case 'BracketRight': p.page(1); break;
         default:
@@ -2716,10 +2657,44 @@
     window.addEventListener('blur', () => { for (const p of players) p.keysClear(); stickId = null; stickHome(); });
 
     /* ---------- screens: start, help, end of shift, end of the day ---------- */
+    const pauseCover = $('pauseCover');
+    const isPaused = () => !pauseCover.hidden;
+    let focusBeforePause;
+    function setPaused(on) {
+      if (isPaused() === on) return;
+      pauseCover.hidden = !on;
+      if (on) {
+        focusBeforePause = document.activeElement;
+        for (const p of players) p.keysClear();
+        stickId = null;
+        stickHome();
+        looks.clear();
+        if (locked()) document.exitPointerLock();
+        $('resumeShift').focus({ preventScroll: true });
+      } else {
+        const p = kbPlayer();
+        if (p?.playing()) restoreMouse(p);
+        else focusBeforePause?.focus({ preventScroll: true });
+      }
+      playtestActivity();
+      dirty = true;
+    }
+    $('resumeShift').addEventListener('click', () => setPaused(false));
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (!$('helpCover').hidden) showHelp(false);
+        else if (active && !online?.panel() && $('endCover').hidden && $('dayCover').hidden) {
+          if (!e.repeat) setPaused(!isPaused());
+        } else return;
+      } else if (!isPaused() || (e.target === $('resumeShift') && ['Enter', ' '].includes(e.key))) return;
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
     function showHelp(on) {
       $('helpCover').hidden = !on;
       playtestActivity();
       if (on && locked()) document.exitPointerLock();
+      else if (!on) restoreMouse(kbPlayer());
     }
     $('helpBtn').addEventListener('click', () => showHelp(true));
     $('howBtn').addEventListener('click', () => showHelp(true));
@@ -2969,7 +2944,7 @@
 
     function ensureLocal() {
       if (day) return;
-      if (!samOff) hire(SAM);
+      hire(SAM);
       newDay();
     }
     function renderStartCareer() {
@@ -3023,7 +2998,6 @@
       for (const item of Object.values(kit)) item.owned = false;
       samPrio = defaultPriority(PRIO_DEFAULT);
       PRESET_DEFAULTS.forEach((order, i) => { presets[i] = defaultPriority(order); });
-      samOff = false;
       me1.resetLife();
       careerView();
     }
@@ -3040,8 +3014,9 @@
       for (const p of players) p.start();
       for (const p of players) p.till.preload();
       announceDayEvent();
-      if (!tutorial && !touch) for (const p of players) p.toast(p.kb ? 'Click the view to look round' : 'Your controller: RT scans, A is Enter');
       canvas.focus({ preventScroll: true });
+      if (navigator.userActivation?.isActive) restoreMouse(kbPlayer());
+      if (!tutorial && !touch) for (const p of players) p.toast(p.kb ? 'Esc pauses the shift' : 'Your controller: RT scans, A is Enter');
       dirty = true;
     }
     function startSolo() {
@@ -3199,7 +3174,7 @@
     let coverRefresh = 0;
     function worldStep(dt) {
       let changed = false;
-      if (online?.frozen()) return false;
+      if (online?.frozen() || (isPaused() && !guest())) return false;
       runTimers(dt);
       if (active && day && !guest()) {
         if (tutorial) day.t += dt;
@@ -3282,7 +3257,7 @@
       if (!online?.panel() && !online?.frozen()) pollPads(dt);
       for (const p of players) if (p.update(dt, now)) { changed = true; photoDirty = true; }
       if (worldStep(dt)) changed = true;
-      if (tutorial && active && tutorial.update(dt)) changed = true;
+      if (tutorial && active && !isPaused() && tutorial.update(dt)) changed = true;
       if (S.photos.flush()) changed = true;
       photoT -= dt;
       if (photoT <= 0 && (photoDirty || changed)) {
@@ -3303,7 +3278,7 @@
     if (window.ShiftOnlineGame && window.ShiftOnline && window.ShiftOnlineDay) {
       online = window.ShiftOnlineGame.attach({
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
-        catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
+        catalogue: World.hash(JSON.stringify(cat.items)), isPaused, day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
         kit, missingScanners, canGreetAt, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; syncShiftXP(); },

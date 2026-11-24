@@ -314,7 +314,7 @@ test('the page: day.js loads first, the till customer answers when you copy a co
   assert.ok(at('day.js?v=') > 0 && at('day.js') < at('bot.js') && at('bot.js') < at('game.js'), 'day.js, bot.js, then game.js');
   assert.match(html, /id="dayCover"/); assert.match(html, /All picks clear/);
   const gm = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/game.js'), 'utf8');
-  assert.match(gm, /Lock the front door/); assert.ok(!/Time to open/.test(gm), 'nothing to unlock'); assert.match(gm, /Remove Sam/); assert.match(gm, /Bring Sam back/);
+  assert.match(gm, /Lock the front door/); assert.ok(!/Time to open/.test(gm), 'nothing to unlock'); assert.doesNotMatch(html, /id="scMenu"/);
   const ui = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/tillui.js'), 'utf8');
   assert.match(ui, /function copyCode[\s\S]{0,400}showCustomer\(code\)/, 'copying a code shows it to the customer');
   const bot = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/bot.js'), 'utf8');
@@ -331,8 +331,8 @@ test('controllers: a controller belongs to one player, does everything on the sc
   assert.match(game, /function claimPads/);
   assert.match(game, /players\.some\(\(p\) => p\.padIndex === gp\.index\)/, 'a controller already someone\'s is left alone');
   assert.match(game, /const prev = padPrev, hit = \(i\) => now\[i\] && !prev\[i\];/, 'a press is a button that wasn\'t down last time');
-  for (const [what, re] of [['RT scans', /if \(hit\(7\)\) \{ initAudio\(\); const c = centreNdc\(\); scanAt/], ['A is Enter (detailedfoil)', /if \(hit\(0\)\) \{ SFX\.key\(\); enter\(\); \}/],
-    ['B is Back', /if \(hit\(1\)\) back\(\);/], ['X squats', /if \(hit\(2\)\) toggleSquat\(\);/], ['Y is Hint', /if \(hit\(3\)\) useHint\(\);/], ['Start: the menu', /if \(hit\(9\)\) \{ SFX\.key\(\); menu\(true\); \}/]]) assert.match(game, re, what);
+  for (const [what, re] of [['RT scans', /if \(hit\(7\)\) \{ initAudio\(\); const c = centreNdc\(\); scanAt/], ['A confirms Quick Pick or Enter', /if \(hit\(0\)\) \{ if [^\n]+ D\.scConfirmQuickPick\.click\(\); else \{ SFX\.key\(\); enter\(\); \}/],
+    ['B is Back', /if \(hit\(1\)\) back\(\);/], ['X squats', /if \(hit\(2\)\) toggleSquat\(\);/], ['Y is Hint', /if \(hit\(3\)\) \{ cancelBlueAction\(\); useHint\(\); \}/], ['Start enlarges the blue buttons', /if \(hit\(9\)\) toggleBlue\(P\);/]]) assert.match(game, re, what);
   const ui = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/tillui.js'), 'utf8');
   assert.match(ui, /function pad\(act\)/);
   assert.match(game, /if \(hit\(6\)\) till\.pad\('tabL'\); if \(hit\(7\)\) till\.pad\('tabR'\);/, 'at the till LT and RT switch tabs');

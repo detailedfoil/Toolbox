@@ -69,7 +69,7 @@
       this.previous = key;
     }
     visibility() {
-      if (this.host && this.ready && this.peers.size > 1) this.send({ type: 'frame', frame: this.hooks.frame(), paused: document.hidden });
+      if (this.host && this.ready && this.peers.size > 1) this.send({ type: 'frame', frame: this.hooks.frame(), paused: this.hostPaused() });
     }
     tick(now) {
       if (!this.ready || now - this.time < 100 || this.peers.size < 2 || this.ws.bufferedAmount > 256 * 1024) return;
@@ -105,12 +105,12 @@
         if (!this.peers.has(m.from) || m.from === 1) return;
         if (m.type === 'sync') {
           this.hooks.release(m.from, m.freshSeat === true); this.lastAction.delete(m.from);
-          this.send({ type: 'init', to: m.from, state: this.hooks.snapshot(), frame: this.hooks.frame(), paused: document.hidden });
+          this.send({ type: 'init', to: m.from, state: this.hooks.snapshot(), frame: this.hooks.frame(), paused: this.hostPaused() });
         } else if (m.type === 'pose') this.hooks.peerPose(m.from, m.pose);
         else if (m.type === 'act' && Number.isSafeInteger(m.id) && m.id > (this.lastAction.get(m.from) || 0)) {
           this.lastAction.set(m.from, m.id);
           let result = false;
-          if (!document.hidden && m.epoch === this.hooks.epoch() && m.args && this.hooks.peerPose(m.from, m.pose)) {
+          if (!this.hostPaused() && m.epoch === this.hooks.epoch() && m.args && this.hooks.peerPose(m.from, m.pose)) {
             result = this.hooks.action(m.from, m.op, m.args);
           }
           // Deliver the authoritative objects before resolving the scanner/till callback.
@@ -131,9 +131,10 @@
         if (p) { clearTimeout(p.timer); this.pending.delete(m.id); p.resolve(m.result); }
       }
     }
+    hostPaused() { return document.hidden || !!this.hooks.isPaused?.(); }
     setPaused(value) {
       this.paused = !!value;
-      this.hooks.status(this.paused ? 'The host has paused. Waiting for their game tab…' : '');
+      this.hooks.status(this.paused ? 'The host has paused. Waiting for them to resume…' : '');
     }
   }
 
