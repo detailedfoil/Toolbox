@@ -37,28 +37,28 @@ OUT = os.path.normpath(os.path.join(HERE, '..', '..', 'tools', 'stock-swaps', 'd
 # name in the exports, name on the page, transactions (Black Friday incentive report to 21.11.2026), lat, lng
 # (places from the Area Map's stores.json; Royston's is from its postcode, SG8 5PF, as the map's is approximate)
 STORES = [
-    ("AMERSHAM", "Amersham", 2050, 51.67133, -0.58722),
-    ("BERKHAMSTED", "Berkhamsted", 2334, 51.76831, -0.58138),
-    ("BIGGLESWADE", "Biggleswade", 2378, 52.07483, -0.24107),
-    ("BISHOPS STORTFORD", "Bishops Stortford", 2375, 51.87269, 0.17574),
-    ("CHESHAM", "Chesham", 1506, 51.69872, -0.6098),
-    ("DUNSTABLE", "Dunstable", 2231, 51.8867, -0.50739),
-    ("EPPING - THORNWOOD", "Epping", 2257, 51.7201, 0.12886),
-    ("FLITWICK", "Flitwick", 2592, 52.01016, -0.48516),
-    ("HARLOW", "Harlow", 3305, 51.78708, 0.12209),
-    ("HEMEL HEMPSTEAD", "Hemel Hempstead", 4056, 51.76663, -0.44198),
-    ("HERTFORD", "Hertford", 1922, 51.80292, -0.06274),
-    ("HODDESDON", "Hoddesdon", 3087, 51.76234, 0.00358),
-    ("HOUGHTON REGIS", "Houghton Regis", 1857, 51.90146, -0.5254),
-    ("LEIGHTON BUZZARD", "Leighton Buzzard", 3151, 51.91034, -0.65632),
-    ("LETCHWORTH", "Letchworth", 2859, 51.98446, -0.20678),
-    ("LUTON - BILTON WAY", "Luton Bilton Way", 2286, 51.88581, -0.45067),
-    ("LUTON - WINDMILL TRADING EST", "Luton Windmill", 3053, 51.87715, -0.40466),
-    ("ROYSTON", "Royston", 2684, 52.057788, -0.036401),
-    ("SAFFRON WALDEN", "Saffron Walden", 1402, 52.02107, 0.2538),
-    ("ST ALBANS - HATFIELD ROAD", "St Albans", 3223, 51.75197, -0.27765),
-    ("STEVENAGE", "Stevenage", 3708, 51.90591, -0.21419),
-    ("WELWYN GARDEN CITY", "Welwyn Garden City", 2816, 51.80709, -0.18925),
+    ("AMERSHAM", "Amersham", 2426, 51.67133, -0.58722),
+    ("BERKHAMSTED", "Berkhamsted", 2733, 51.76831, -0.58138),
+    ("BIGGLESWADE", "Biggleswade", 2737, 52.07483, -0.24107),
+    ("BISHOPS STORTFORD", "Bishops Stortford", 2760, 51.87269, 0.17574),
+    ("CHESHAM", "Chesham", 1790, 51.69872, -0.6098),
+    ("DUNSTABLE", "Dunstable", 2591, 51.8867, -0.50739),
+    ("EPPING - THORNWOOD", "Epping", 2615, 51.7201, 0.12886),
+    ("FLITWICK", "Flitwick", 2990, 52.01016, -0.48516),
+    ("HARLOW", "Harlow", 3836, 51.78708, 0.12209),
+    ("HEMEL HEMPSTEAD", "Hemel Hempstead", 4660, 51.76663, -0.44198),
+    ("HERTFORD", "Hertford", 2221, 51.80292, -0.06274),
+    ("HODDESDON", "Hoddesdon", 3545, 51.76234, 0.00358),
+    ("HOUGHTON REGIS", "Houghton Regis", 2135, 51.90146, -0.5254),
+    ("LEIGHTON BUZZARD", "Leighton Buzzard", 3639, 51.91034, -0.65632),
+    ("LETCHWORTH", "Letchworth", 3274, 51.98446, -0.20678),
+    ("LUTON - BILTON WAY", "Luton Bilton Way", 2675, 51.88581, -0.45067),
+    ("LUTON - WINDMILL TRADING EST", "Luton Windmill", 3553, 51.87715, -0.40466),
+    ("ROYSTON", "Royston", 3121, 52.057788, -0.036401),
+    ("SAFFRON WALDEN", "Saffron Walden", 1615, 52.02107, 0.2538),
+    ("ST ALBANS - HATFIELD ROAD", "St Albans", 3704, 51.75197, -0.27765),
+    ("STEVENAGE", "Stevenage", 4280, 51.90591, -0.21419),
+    ("WELWYN GARDEN CITY", "Welwyn Garden City", 3250, 51.80709, -0.18925),
 ]
 
 SHORT = {
@@ -75,6 +75,10 @@ SHORT = {
     "SITE WILLSTROP SOCKS 5PK 7-11": "Socks mixed sizes",
     "VARTA LONGLIFE POWER AA CUBE 40": "Varta AA",
     "VARTA LONGLIFE POWER AAA CUBE 40": "Varta AAA",
+    "FATMAX CLASSIC BLACK 5M/16FT UK": "Fatmax tape",
+    "FIREANGEL CO ALARM FA6813": "Fireangel CO alarm",
+    "SITE SANDY NITRILE COATED LARGE 10PK": "Nitrile gloves",
+    "TURBO MIXED SCREW 1400PC TRADE CASE": "Turbo screws",
 }
 
 RULES = {
@@ -159,6 +163,8 @@ def main():
     ap.add_argument("stock")
     ap.add_argument("sold")
     ap.add_argument("--days", type=float, required=True)
+    ap.add_argument("--more-sold", help="a second sales file (after the incentive's mid-way reset): its units are added on")
+    ap.add_argument("--more-days", type=float, help="days of sales the second file covers")
     ap.add_argument("--stock-date", required=True)
     ap.add_argument("--sales", required=True)
     ap.add_argument("--out", default=OUT)
@@ -170,8 +176,26 @@ def main():
 
     head, stock = load(args.stock)
     head2, sold = load(args.sold)
-    if head != head2:
-        sys.exit("The two files have different products:\n  %s\n  %s" % (head, head2))
+    # Every product in the stock file is used. A product the first sales file doesn't have is new: it counts as 0 sold
+    # for the days of that file and only the days of the file(s) that have it are used for its demand.
+    dayv = np.zeros(len(head))
+    for i, h in enumerate(head):
+        dayv[i] = args.days if h in head2 else 0.0
+    sold = {k: [row[head2.index(h)] if h in head2 else 0.0 for h in head] for k, row in sold.items()}
+    if args.more_sold:
+        if not args.more_days:
+            sys.exit("--more-sold needs --more-days")
+        head3, sold3 = load(args.more_sold)
+        dayv += np.where([h in head3 for h in head], args.more_days, 0.0)
+        for k in list(sold):
+            row3 = sold3.get(k)
+            if row3 is not None:
+                sold[k] = [a + (row3[head3.index(h)] if h in head3 else 0.0) for a, h in zip(sold[k], head)]
+        left = [h for h in head3 if h not in head]
+        if left:
+            sys.exit("Sales file has products the stock file doesn't: %s" % left)
+    if (dayv <= 0).any():
+        sys.exit("No sales days for: %s" % [h for h, d in zip(head, dayv) if d <= 0])
     missing = [s[0] for s in STORES if s[0] not in stock or s[0] not in sold]
     if missing:
         sys.exit("Not in the files: " + ", ".join(missing))
@@ -181,10 +205,10 @@ def main():
 
     n, ni = len(STORES), len(head)
     STK = np.array([stock[s[0]] for s in STORES])
-    SLD = np.array([sold[s[0]] for s in STORES])
+    SLD = np.maximum(0, np.array([sold[s[0]] for s in STORES]))   # returns can make a total below 0
     TXN = np.array([s[2] for s in STORES], float)
     share = TXN / TXN.sum()
-    day = (0.5 * SLD + 0.5 * np.outer(share, SLD.sum(axis=0))) / args.days
+    day = (0.5 * SLD + 0.5 * np.outer(share, SLD.sum(axis=0))) / dayv
     need7 = day * RULES["horizon"]
     sur = np.floor(np.maximum(0, STK - RULES["keep"] * need7) + 1e-9)
     need = np.ceil(np.maximum(0, need7 - STK) - 1e-9)
@@ -374,15 +398,15 @@ def main():
             mine[mode].append(row)
             print("%-5s %3d min, each store: %d runs between them" % (mode, T, sum(len(plans[k]["runs"]) for k in row)), flush=True)
 
-    area_need = SLD.sum(axis=0) * RULES["horizon"] / args.days
+    area_need = SLD.sum(axis=0) * RULES["horizon"] / dayv
     short = [{"item": i, "short": int(round((area_need[i] - STK[:, i].sum()) / 10.0) * 10),
-              "stock": int(STK[:, i].sum()), "sold": int(SLD[:, i].sum())}
+              "stock": int(STK[:, i].sum()), "sold": int(SLD[:, i].sum()), "days": int(dayv[i])}
              for i in range(ni) if area_need[i] - STK[:, i].sum() >= 10]
     short.sort(key=lambda s: -s["short"])
 
     doc = {
         "made": datetime.date.today().isoformat(),
-        "stockDate": args.stock_date, "sales": args.sales, "days": args.days,
+        "stockDate": args.stock_date, "sales": args.sales, "days": float(dayv.max()),
         "rules": RULES, "steps": steps, "items": head,
         "stores": [{"name": s[1], "lat": s[3], "lng": s[4]} for s in STORES],
         "index": index, "mine": mine, "plans": plans, "short": short,

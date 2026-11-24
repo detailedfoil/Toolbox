@@ -235,7 +235,7 @@
     showStamp();
     $('about').textContent = 'Which Area 20 stores should swap stock, best first. Stock at ' + doc.stockDate + ', sales ' + doc.sales + '.';
     $('short').innerHTML = doc.short.map(function (x) {
-      return '<div><b>' + esc(doc.items[x.item]) + '</b>about ' + fmt(x.short) + ' short<br><span>' + fmt(x.stock) + ' in stock, ' + fmt(x.sold) + ' sold in ' + doc.days + ' days</span></div>';
+      return '<div><b>' + esc(doc.items[x.item]) + '</b>about ' + fmt(x.short) + ' short<br><span>' + fmt(x.stock) + ' in stock, ' + fmt(x.sold) + ' sold in ' + (x.days || doc.days) + ' days</span></div>';
     }).join('');
     $('notes').hidden = false;
   }
