@@ -250,8 +250,7 @@
       log.push(line);
       if (log.length > 30) log.shift();
       renderSay();
-      if (o.onSpeech) o.onSpeech(line);
-      if (S.open) sfx('talk');
+      if (o.onSpeech) o.onSpeech(line, S.session?.dayCust);
     }
     function lineHtml(l) {
       return esc(l.text) + (l.quote ? ' <q>' + esc(l.quote) + '</q>' : '') + (l.hint ? ' ' + esc(l.hint) : '') + (l.qty ? ' <b>' + esc(l.qty) + '</b>' : '');
@@ -290,7 +289,6 @@
       if (line.scanning || line.done) return;
       line.scanning = true;
       say(line.say);
-      if (S.open) o.floorHandoff?.(line.say);
       later(1000, () => {
         if (S.session !== s) return;
         sfx('beep');

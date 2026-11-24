@@ -52,7 +52,7 @@ The wall clock normally moves from 07:00 to 20:00 as delivery is put away. On a 
 
 ### Shop floor replen
 
-On shifts with till sales, customers buy 2–4 extra units from the shop floor. The customer says they brought something from the shop floor, without naming the product. The till waits one second, beeps, then adds the item one second later with a dark green **Picked** label. Sam can serve these sales too. The customer’s line is voiced when the device offers a local English voice and sound is enabled. Payment adds the replacements to **Shop floor replen** on the scanner main menu. Collection-only shifts have no shop-floor sales.
+On shifts with till sales, customers buy 2–4 extra units from the shop floor. The customer says they brought something from the shop floor, without naming the product. The till waits one second, beeps, then adds the item one second later with a dark green **Picked** label. Sam can serve these sales too. Like the rest of the character dialogue, the line can be spoken using a local English voice. Payment adds the replacements to **Shop floor replen** on the scanner main menu. Collection-only shifts have no shop-floor sales.
 
 The scanner shows **Shop floor full** until a sale creates work. Open **Pick replen**, select the batch and scan the warehouse locations as usual. Take the completed tote to the middle shelving unit on the shop floor, face it and use **Restock shelf**. Sales made while someone is picking start another batch. In co-op each batch belongs to one picker. Restocking awards **10 XP per unit** at the shelf. Lock-up is available when the normal shift work is finished. Skipping outstanding replen forfeits its XP.
 
@@ -109,6 +109,8 @@ A mixed shift has a 25% chance of one randomly selected event. The start banner 
 | Phone or tablet | Left thumbstick moves, with a larger deflection to jog. Drag the view to look. Both orientations are supported. | Tap labels to scan or use the scanner buttons. Use **Squat**, **Take stool**, **Step**, **Greet**, and **Use till** when shown. Fusion uses the device keyboard or its optional on-screen keyboard. The till suggests rotating upright for touch controls in landscape. |
 | Keyboard and mouse | WASD to move, Shift to jog. Click the view for mouse look, Esc to release it. | Click or F to scan or use the aimed action, Enter or Space to confirm, C to squat, V to step, H/F4 for Hint, Up/Down for the pick list, Tab for Function, Backspace for Back. |
 | Controller | Left stick moves and jogs, right stick looks. | RT scans, A confirms, B goes back, X squats, LB steps, Y hints, D-pad moves through the pick list, Start opens Function. In Fusion, D-pad highlights, A presses, B deletes, LT selects Fusion, RT selects CrashFix, LB confirms, Y asks again, and Start leaves. |
+
+**Character voices** on the start screen and **Function → Voices** during a shift toggle spoken dialogue independently of scan sounds and other effects. The **Sound** toggle mutes both. Voices and captions cover customers and Sam, with local English voices and varied accents where available. Captions stay in English and remain visible with voices disabled.
 
 The scanner's **Function** menu also has sound, look speed, help, practice pick mix, and Remove Sam/Bring Sam back. Practice mix is unavailable during a shift event. Online guests share the host's mix and Sam settings.
 

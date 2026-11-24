@@ -114,20 +114,52 @@
     function runTimers(dt) { for (let i = timers.length - 1; i >= 0; i--) if ((timers[i].t -= dt) <= 0) { const f = timers[i].fn; timers.splice(i, 1); f(); } }
 
     /* ---------- sounds (made on the fly, no files) ---------- */
-    const audio = { ctx: null, on: true };
-    try { audio.on = localStorage.getItem('ws-sound') !== 'off'; } catch (e) { /* fine */ }
+    const audio = { ctx: null, on: true, voices: true };
+    try {
+      audio.on = localStorage.getItem('ws-sound') !== 'off';
+      audio.voices = localStorage.getItem('ws-voices') !== 'off';
+    } catch (e) { /* fine */ }
+    const voiceSwitch = $('voicesOn');
+    const synthesizer = window.speechSynthesis;
+    let speaking = null;
+    function stopVoice(owner) {
+      if (!speaking || (owner && speaking.owner !== owner)) return;
+      speaking = null;
+      synthesizer.cancel();
+    }
+    function setVoices(enabled) {
+      audio.voices = voiceSwitch.checked = enabled;
+      if (!enabled) stopVoice();
+      try { localStorage.setItem('ws-voices', enabled ? 'on' : 'off'); } catch (e) { /* fine */ }
+    }
+    voiceSwitch.checked = audio.voices;
+    voiceSwitch.addEventListener('change', () => setVoices(voiceSwitch.checked));
+    document.addEventListener('visibilitychange', () => { if (document.hidden) stopVoice(); });
+    if (synthesizer) synthesizer.getVoices();
+
     function initAudio() {
       if (audio.ctx) { if (audio.ctx.state === 'suspended') audio.ctx.resume(); return; }
       try { audio.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio.ctx = null; }
     }
-    function speakFloorHandoff(text) {
-      if (!audio.on || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
-      const voices = window.speechSynthesis.getVoices().filter(v => v.localService);
-      const voice = voices.find(v => v.lang === 'en-GB') || voices.find(v => v.lang.startsWith('en'));
+    function speakDialogue(line, speaker, owner, priority = 0) {
+      if (!audio.on || !audio.voices || document.hidden || !synthesizer || !window.SpeechSynthesisUtterance) return;
+      if (speaking && speaking.priority > priority) return;
+      const text = [line.text, line.quote, line.hint, line.qty].filter(Boolean).join(' ');
+      if (!text) return;
+      const accents = ['en-GB', 'en-IE', 'en-AU', 'en-US', 'en-NZ', 'en-CA', 'en-ZA', 'en-IN'];
+      const voices = synthesizer.getVoices().filter(v => v.localService && /^en(?:-|$)/i.test(v.lang));
+      const preferred = accents[speaker % accents.length];
+      const voice = voices.find(v => v.lang === preferred) || (speaker ? voices[speaker % voices.length] : voices.find(v => v.lang === 'en-GB')) || voices[0];
       if (!voice) return;
+      stopVoice();
       const utterance = new window.SpeechSynthesisUtterance(text);
       utterance.voice = voice;
-      window.speechSynthesis.speak(utterance);
+      utterance.lang = voice.lang;
+      utterance.rate = 1.05;
+      const request = { owner, priority };
+      speaking = request;
+      utterance.onend = utterance.onerror = () => { if (speaking === request) speaking = null; };
+      try { synthesizer.speak(utterance); } catch (e) { if (speaking === request) speaking = null; }
     }
     function tone(freq, at, dur, type, vol, slide) {
       const c = audio.ctx; if (!c || !audio.on) return;
@@ -551,9 +583,11 @@
       const f = c && c.fig;
       if (!f || !line || !line.text) return;
       for (const p of players) if (p.tillCust === c && p.tillOpen()) return; // the one at your till talks on the till's screen
+      if (nearestPlayer(f.group.position.x, f.group.position.z) < 7) speakDialogue(line, c.id, f);
       speeches.set(f, { at: (v) => v.set(f.group.position.x, 1.98 * f.group.scale.y, f.group.position.z), line, waiting, until: performance.now() + lasts(line), cls: 'crewcust', fig: f });
     }
     function speakCrew(b, line) {
+      if (nearestPlayer(b.x, b.y) < 7) speakDialogue(line, 0, b);
       speeches.set(b, { at: (v) => b.fig.parts.head.getWorldPosition(v).setY(v.y + 0.25), line, until: performance.now() + lasts(line), cls: 'crew', name: b.name });
     }
 
@@ -646,7 +680,6 @@
     const samTillFree = () => !taken.has(SPOTS[SPOTS.length - 1]);
     const crewEnv = {
       standTill: () => tillAssigned() && day?.tillsOpen(),
-      floorHandoff: (b, text) => { if (nearestPlayer(b.x, b.y) < 4) speakFloorHandoff(text); },
       board: () => {
         if (!(day && active)) return { orders: [], queue: [], bell: [], greet: [], prio: [], delivery: 0, early: [] };
         const on = samPrio.filter(j => trained[j.id] && j.on).map(j => j.id);
@@ -1686,11 +1719,12 @@
         const items = [
           ['1', me.squat ? 'Stand up' : 'Squat', () => toggleSquat()],
           ['2', 'Hint', () => useHint()],
-          ['3', 'Sound: ' + (audio.on ? 'on' : 'off'), () => { audio.on = !audio.on; try { localStorage.setItem('ws-sound', audio.on ? 'on' : 'off'); } catch (e) { /* fine */ } }],
+          ['3', 'Sound: ' + (audio.on ? 'on' : 'off'), () => { audio.on = !audio.on; if (!audio.on) stopVoice(); try { localStorage.setItem('ws-sound', audio.on ? 'on' : 'off'); } catch (e) { /* fine */ } }],
           ['4', 'Look: ' + LOOKS[lookPick][0].toLowerCase(), () => { lookPick = (lookPick + 1) % LOOKS.length; try { localStorage.setItem('ws-look', LOOKS[lookPick][0]); } catch (e) { /* fine */ } toast('Look speed: ' + LOOKS[lookPick][0].toLowerCase()); }],
           ['5', 'Picks: ' + MODES[mode][1], () => { mode = (mode + 1) % MODES.length; if (day) day.setMode(MODES[mode][0]); toast('Picks still to come: ' + MODES[mode][2]); }],
           ['6', 'Help', () => showHelp(true)],
           ['7', crew.length ? 'Remove Sam' : 'Bring Sam back', () => { if (crew.length) { removeSam(); toast('Sam has gone home'); } else { bringSam(); toast('Sam is back'); } }],
+          ['8', 'Voices: ' + (audio.voices ? 'on' : 'off'), () => setVoices(!audio.voices)],
           ['0', 'Close', () => {}]
         ];
         D.scMenu.replaceChildren();
@@ -2052,6 +2086,7 @@
       function closeTill() {
         if (!till || !till.isOpen()) return;
         till.close();
+        stopVoice(P);
         recordPlaytest('till.close', { who: P.id });
         // not talking yet: back in the queue for whoever's free
         const c = P.tillCust;
@@ -2112,11 +2147,13 @@
 
       const till = window.ShiftTillUI.create({
         el: D.till, world, Till, touch,
-        floorHandoff: speakFloorHandoff,
         sfx: (n) => { const f = { key: SFX.key, beep: SFX.scan, good: SFX.pick, bad: SFX.bad, talk: SFX.talk, approved: SFX.approved, drawer: SFX.drawer, coin: SFX.coin, done: SFX.chime }[n]; if (f) f(); },
         onClose: () => closeTill(),
         onComplete: (info) => tillComplete(info),
-        onSpeech: (line) => speak(line),
+        onSpeech: (line, customer) => {
+          speak(line);
+          if (till.isOpen()) speakDialogue(line, customer?.id || 1, P, 1);
+        },
         onSlip: () => { stats.tillSlips = (stats.tillSlips || 0) + 1; },
         idleText: () => (P.tillCust && !P.tillCust.ready ? 'The customer is coming over to this till.' : day && day.queue().length ? 'A customer is waiting at the counter: they\'re coming over.' : 'No customer is waiting to order at the till. Their orders are on the pick list.')
       });
