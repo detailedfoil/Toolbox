@@ -563,9 +563,10 @@
       playtest.setActivity(document.hidden ? 'background' : overlay ? 'overlay' : 'playing', day.t);
     }
     function samJobs() { return samPrio.filter(job => trained[job.id] && job.on).map(job => job.id); }
+    const behindCounter = pos => pos.x >= counter.x0 && pos.x <= counter.x1 &&
+      pos.y >= counter.y0 - 1.75 && pos.y <= counter.y0;
+    const canGreetAt = pos => behindCounter(pos) && tills.some(t => Math.abs(tillX(t) - pos.x) < 1.6);
     function tillCover() {
-      const behindCounter = pos => pos.x >= counter.x0 && pos.x <= counter.x1 &&
-        pos.y >= counter.y0 - 1.75 && pos.y <= counter.y0;
       const staff = players.filter(p => behindCounter(p.me)).map(p => p.id);
       if (online) for (const [slot, pos] of online.peers) if (behindCounter(pos)) staff.push('p' + slot);
       if (crew.some(behindCounter)) staff.push('Sam');
@@ -1014,6 +1015,7 @@
         D.toteCount.textContent = (state === 'deliver' || state === 'restock' || state === 'put' ? order.lines.length : cur) + '/' + order.lines.length;
       }
       const suffix = (o) => (o.kind === 'c' ? ' c' : o.kind === 'till' ? '' : ' CK');
+      let greetArea = false;
       function renderList(showMsg) {
         const list = scannerList();
         if (selId !== null) { const i = list.findIndex((o) => o.id === selId); if (i >= 0) sel = i; }
@@ -1032,7 +1034,7 @@
         if (showMsg) { note = msg.text; cls = msg.cls || 'warn'; }
         else if (state === 'end') { note = 'Day done'; cls = 'ok'; }
         else if (day && day.phase === 'lock') note = 'All done: lock the front door';
-        else if (day && day.ungreeted().length) note = 'Customer waiting: say hello';
+        else if (greetArea && day?.canGreet(P.id) && day.ungreeted().length) note = 'Customer waiting: say hello';
         else if (day && day.queue().length && !P.tillCust) note = 'Till customer waiting';
         else if (homeSel !== 2 && day && !list.length && day.deliveryLeft().length) note = 'No picks: put the delivery away';
         D.scNote.textContent = note; D.scNote.className = 'sc-note ' + cls; D.scNote.hidden = !note;
@@ -1099,7 +1101,7 @@
         let note = '', cls = 'warn';
         if (showMsg) { note = msg.text; cls = msg.cls || 'warn'; }
         else if (day && day.phase === 'lock') note = 'All done: lock the front door';
-        else if (day && day.ungreeted().length) note = 'Customer waiting: say hello';
+        else if (greetArea && day?.canGreet(P.id) && day.ungreeted().length) note = 'Customer waiting: say hello';
         else if (day && day.queue().length && !P.tillCust) note = 'Till customer waiting';
         else if (day && day.list().length) note = 'Picks waiting';
         D.scNote.textContent = note; D.scNote.className = 'sc-note ' + cls; D.scNote.hidden = !note;
@@ -1160,10 +1162,10 @@
         P.scannerMissing = missing; P.scannerFault = offline;
         D.scannerFault.hidden = !offline; D.scScreen.hidden = offline;
         D.scanner.hidden = taken || !active;
+        D.scannerRecovery.hidden = !taken;
         if (missing) {
           cancelBlueAction(); D.scMenu.hidden = true; hint.until = 0;
           if (offline) showScannerCrash();
-          else banner('Sam has your scanner', 'Find Sam to get it back.', 5500, 'bell');
         } else banner(wasOffline ? 'Replacement scanner ready' : 'Scanner returned', 'Your scanner is ready to use.', 2500);
       };
 
@@ -1722,6 +1724,9 @@
       function checkTill() { // the thing you're looking at: a till behind the counter (the one by the gap is Sam's), the door, a customer to greet, the bell
         if (till && till.isOpen()) return; // at a till: keep it
         let best = null, g = null, dr = null, br = false, pcx = false, st = null, dock = false, box = null, bestAng = 9;
+        const inGreetArea = active && canGreetAt(me);
+        const changedGreetArea = greetArea !== inGreetArea;
+        greetArea = inGreetArea;
         const behind = me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75;
         const take = (a, lim, fn, b) => { if (a.ang < lim && a.ang < bestAng) { bestAng = a.ang; best = null; g = null; dr = null; br = false; pcx = false; st = null; fn(); box = b; } };
         if (active) {
@@ -1733,7 +1738,7 @@
             }
           }
           // Greet only from the till area: within about 1.6 m (along the counter) of one of the tills (detailedfoil, 21 Nov 2026)
-          if (day?.canGreet(P.id) && behind && tills.some((t) => Math.abs(tillX(t) - me.x) < 1.6)) {
+          if (day?.canGreet(P.id) && greetArea) {
             for (const c of day.ungreeted()) {
               if (!c.fig) continue;
               const px = c.fig.group.position.x, py = c.fig.group.position.z, a = aimAt(px, py, 1.2);
@@ -1778,7 +1783,10 @@
         const key = (shelf ? 'replen' : '') + (dock ? 'dock' : '') + (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '') + (st ? 's' + st.id : '');
         const old = (shelfOn ? 'replen' : '') + (dockOn ? 'dock' : '') + (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '') + (stoolOn ? 's' + stoolOn.id : '');
         shelfOn = shelf; dockOn = dock; nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx; stoolOn = st;
-        if (key === old) return;
+        if (key === old) {
+          if (changedGreetArea && idleState()) renderScanner();
+          return;
+        }
         dirty = true;
         D.tillBtn.hidden = !(shelfOn || dockOn || nearTill || greetC || doorOn || bellOn || pcOn || stoolOn) || !active;
         D.tillBtn.firstChild.nodeValue = shelfOn ? 'Restock shelf' : dockOn ? 'Swap scanner' : doorOn ? 'Lock door' : greetC ? 'Greet' : nearTill ? 'Use till' : pcOn ? 'Use PC' : stoolOn ? 'Take stool' : 'Ring bell';
@@ -1798,11 +1806,11 @@
           if (ok) { SFX.order(); toast('Door locked'); nearTill = greetC = doorOn = null; checkTill(); }
           return true;
         }
-        if (greetC && day) {
+        if (greetC && day && canGreetAt(me)) {
           const c = greetC;
           if (guest()) { remote(() => day.greet(c)).then(ok => { if (ok) toast('Hello!'); }); return true; }
           if (day.greet(c, P.id)) { SFX.key(); toast('Hello!'); say('Hello, how can I help?', 'dim', 1600); }
-          greetC = null; checkTill();
+          checkTill();
           return true;
         }
         if (stoolOn) { takeStool(); return true; }
@@ -3178,7 +3186,7 @@
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
-        kit, missingScanners, checkScannerMixup, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, bellTillTrained: () => bellTillTrained, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
+        kit, missingScanners, checkScannerMixup, canGreetAt, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, bellTillTrained: () => bellTillTrained, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; syncShiftXP(); },
         resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },
         clearDayView() {

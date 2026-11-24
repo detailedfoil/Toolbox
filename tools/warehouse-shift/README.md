@@ -66,7 +66,7 @@ Squat for bottom shelves. High shelves require **Step** on a red kick stool or t
 
 ### Serving a customer
 
-1. Face the customer at the counter and press **Greet**. A click-and-collect customer generates a warehouse pick or a holding-area collection. For a customer ordering or paying, follow them to an available till and press **Use till**. The till nearest the counter gap is Sam's.
+1. Stand behind the tills, face the customer and press **Greet** when it appears. The scanner’s greeting reminder only appears in the till area. A click-and-collect customer generates a warehouse pick or a holding-area collection. For a customer ordering or paying, follow them to an available till and press **Use till**. The till nearest the counter gap is Sam's.
 2. In **Fusion**, enter the customer's surname and postcode, press **Search**, and use the third detail they give you to choose the matching result.
 3. For a kiosk customer, open **Kiosk Orders**, find the name they used, and select the order to populate the basket. For a walk-in order, enter the item code and quantity. If they give a description, search **CrashFix**, open results to inspect the details, and copy a suitable item's code into Fusion. **Ask again** repeats the request and can give a clue.
 4. Each till customer, including kiosk customers and those Sam serves, has a 20% chance of asking for one extra item with **Avail 0**. Half want it tomorrow. Switch that row’s green **Today** button to orange **TCND** to charge for it. The other half decline it. Use **×** to remove their item. Keep the ordinary items on **Today**.
@@ -81,7 +81,7 @@ Sam rings the service bell when a customer has gone unattended for about six sec
 
 | Scanner problem | Trigger | Recovery |
 | --- | --- | --- |
-| Sam takes the scanner by mistake | The shift draws a target of **2–4** mix-ups with unlabelled scanners and **0–1** with name labels. A ready till customer gives one opportunity. Quiet shifts can finish below the target. The count is shared across the team. Buying a name label mid-shift applies its cap to future mix-ups using the count already reached. | Finish serving, close the till, and walk up to Sam in his aisle or at its entrance. He hands the scanner back and shows a speech bubble. Named scanners get lines such as “Oh, that isn't my name in the gun!” |
+| Sam takes the scanner by mistake | The shift draws a target of **2–4** mix-ups with unlabelled scanners and **0–1** with name labels. A ready till customer gives one opportunity. Quiet shifts can finish below the target. The count is shared across the team. Buying a name label mid-shift applies its cap to future mix-ups using the count already reached. | An on-screen prompt stays visible until you get your scanner back. Finish serving, close the till, and walk up to Sam in his aisle or at its entrance. He hands the scanner back and shows a speech bubble. Named scanners get lines such as “Oh, that isn't my name in the gun!” |
 | **Server connection issue** | The shift schedules random disconnects during active picks and putaway. Black-and-white falling text precedes the error. Scanner reliability limits the shift to 5, 4, 3, 2, or 1 disconnects. | Face the office charging dock beside the Manager PC and select **Swap scanner**. Your task and quantities carry over. |
 
 Sam's dialogue appears as text. The game uses generated tones and effects for actions such as scans, bells, and payment.
