@@ -888,8 +888,6 @@
     var g = w.goodsin[srcs[0]];
     yield* this.walkTo(g.stand);
     yield this.T(PACE.label);
-    // Priorities may change while walking to Goods In. Recheck before claiming a carton.
-    if (!this.choose()?.putaway) return;
     var d = this.emit('paTake', g.i);
     if (!d) return; // someone took the last one
     var sl = g.slots[d.slot], low = sl.z0 < 0.4;

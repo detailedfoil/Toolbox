@@ -690,7 +690,9 @@
       },
       paSources: () => (day && day.event !== 'lightDuties' ? world.goodsin.filter((g) => day.deliveryLeft(g.i).length).map((g) => g.i) : []),
       paTake(b, src) {
-        const d = day && day.paTake(src, b.name);
+        // A customer may have arrived or rung the bell while Sam walked to Goods In.
+        if (!day || !b.choose()?.putaway) return null;
+        const d = day.paTake(src, b.name);
         if (!d) return null;
         const m = new T.Mesh(cartonGeo, cartonMat); m.position.set(0, 0, 0); b.fig.carry.add(m); b.fig.held = m;
         dirty = true;
