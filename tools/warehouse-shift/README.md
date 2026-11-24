@@ -39,7 +39,7 @@ Exit tutorial (controller: hold View and press Menu), completion, or reloading r
 3. Complete every outstanding order, put the delivery away, and clear the waiting customers and restock any outstanding shop-floor replen. **All done** directs you to lock the front door. Face it and use **Lock door**.
 4. The lock-up screen shows the team score, XP, and individual shift stats. Choose **Next** to spend available XP on upgrades. **Start Next Day** opens the next shift with the players in the office. In online co-op the host advances the day.
 
-The wall clock normally moves from 07:00 to 20:00 as delivery is put away. On a cancelled-delivery day it follows completed customer work. The simulation timer and the wall clock are separate.
+The scanner, CCTV and wall clock share the same shift time. It normally moves from 07:00 to 20:00 as delivery is put away. On a cancelled-delivery day it follows completed customer work. The simulation timer and the displayed shift time are separate.
 
 Fusion gives each customer and each search-result account a unique email within the shift. People with different first names can share a postal address.
 

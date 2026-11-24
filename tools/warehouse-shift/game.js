@@ -3237,6 +3237,11 @@
 
     /* ---------- the shared world, a step at a time ---------- */
     let coverRefresh = 0;
+    function shiftClockText(minute) {
+      const hours = String(Math.floor(minute / 60)).padStart(2, '0');
+      const minutes = String(minute % 60).padStart(2, '0');
+      return hours + ':' + minutes;
+    }
     function worldStep(dt) {
       let changed = false;
       if (online?.frozen() || (isPaused() && !guest())) return false;
@@ -3259,8 +3264,13 @@
         const covered = guest() ? day.tillCovered : tillCover().length > 0;
         for (const p of players) p.D.coverBonus.hidden = !covered;
       }
-      if (day && S.clockTick(day.clockMinute())) changed = true;
-      if (updateCCTV(dt)) changed = true;
+      const minute = day?.clockMinute() ?? 7 * 60;
+      if (S.clockTick(minute)) changed = true;
+      const time = shiftClockText(minute);
+      for (const p of players) {
+        if (p.D.scTime.textContent !== time) p.D.scTime.textContent = time;
+      }
+      if (updateCCTV(dt, time)) changed = true;
       return changed;
     }
     /* ---------- the CCTV monitor (detailedfoil, 21 Nov 2026; cctv.js draws it) ---------- */
@@ -3282,17 +3292,17 @@
       for (const b of crew) if (b.fig && b.fig.group.visible) out.push({ x: b.x, y: b.y, staff: true, label: b.name });
       return out;
     }
-    function updateCCTV(dt) {
+    function updateCCTV(dt, time) {
       if (!cctv) return false;
       cctvT -= dt; if (cctvT > 0) return false;
       cctvT = 0.25;
       const o = cctvMon.obj, near = players.some((p) => Math.hypot(p.me.x - o.x0, p.me.y - (o.y0 + o.y1) / 2) < 16);
       if (!near && cctvSig) return false; // nobody close enough to see it: it's drawn again when someone is
-      const people = cctvPeople(), now = new Date();
-      const sig = now.getSeconds() + '|' + people.map((p) => Math.round(p.x * 8) + ',' + Math.round(p.y * 8) + (p.label || p.state)).join(';');
+      const people = cctvPeople();
+      const sig = time + '|' + people.map((p) => Math.round(p.x * 8) + ',' + Math.round(p.y * 8) + (p.label || p.state)).join(';');
       if (sig === cctvSig) return false;
       cctvSig = near ? sig : 'far';
-      cctv.draw({ people, now });
+      cctv.draw({ people, time });
       cctvMon.tex.needsUpdate = true;
       return true;
     }
