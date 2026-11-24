@@ -204,7 +204,7 @@ window.playTutorial = async function (lesson) {
       const carton=day.delivery[0], g=w.goodsin[carton.src];
       walk(g.stand.x,g.stand.y); aim(g.x,mid(g.obj.y0,g.obj.y1),0.7); key('f'); await text('kick stool');
       const stool=w.stools.find(v=>v.area==='AAB'); walk(stool.x-.65,stool.y); aim(stool.x,stool.y,.25); await interact('Take stool');
-      const look=shelf(carton.loc); await text('use Step'); key('KeyV');
+      const look=shelf(carton.loc); await text('use Step'); key('Space');
       for (let i=0;i<30;i++) p.update(.04,performance.now());
       look(); key('f'); await text('whole carton'); key('Enter');
       await text('Main Menu'); menu(2); key('Enter');

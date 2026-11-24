@@ -190,6 +190,74 @@ test('a shop-floor sale fills the replen scanner and the middle shelf pays the b
   assert.match(scanner.scRows.textContent, /Shop floor full/);
 });
 
+test('mouse clicks use highlighted targets and the keyboard steps and chooses blue actions', async t => {
+  const { $, s, w } = await game(t, { online: false });
+  $('startBtn').click();
+  for (const job of s.prio()) job.on = false;
+  const p = s.players[0], day = s.day(), view = $('view');
+  day.plan.length = 0;
+  let locked = null;
+  Object.defineProperty(w.document, 'pointerLockElement', { get: () => locked });
+  view.requestPointerLock = () => { locked = view; };
+  w.document.exitPointerLock = () => { locked = null; };
+  const pointer = (type, button = 0) => {
+    const event = new w.MouseEvent(type, { button, bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'pointerType', { value: 'mouse' });
+    view.dispatchEvent(event);
+  };
+  const key = (code, key = code, target = view) => target.dispatchEvent(new w.KeyboardEvent('keydown', { code, key, bubbles: true, cancelable: true }));
+  const aimFrom = (x, y, tx, ty, z) => {
+    Object.assign(s.me, { x, y, yaw: Math.atan2(x - tx, y - ty), pitch: Math.atan2(z - s.me.eye, Math.hypot(x - tx, y - ty)) });
+    s.applyCam();
+  };
+
+  p.page(-1); key('Space', ' ');
+  assert.equal(s.state(), 'pa', 'Space can still confirm without a stool');
+  const stool = s.world.stools[0];
+  aimFrom(stool.x + 0.9, stool.y, stool.x, stool.y, 0.25);
+  assert.match(p.D.tillBtn.textContent, /Take stool/);
+  pointer('pointerdown', 2);
+  assert.equal(stool.by, null, 'right click does not interact');
+  pointer('pointerdown');
+  assert.equal(stool.by, p.id, 'click takes the outlined stool before scanning a carton');
+  key('Space', ' '); assert.ok(s.me.step);
+  key('Space', ' '); assert.ok(!s.me.step);
+  assert.equal(s.state(), 'pa');
+
+  key('Digit4', '4'); assert.ok(p.D.scConfirm.hidden, 'slot four is still empty');
+  key('Digit1', '1'); assert.ok(!p.D.scConfirm.hidden);
+  key('Digit1', '1'); assert.ok(!p.D.scMenu.hidden);
+  key('Escape'); assert.ok(p.D.scMenu.hidden);
+  key('Space', ' ', p.D.scFn);
+  assert.ok(s.me.step, 'Space steps even after a blue shortcut leaves a button focused');
+  key('Space', ' '); assert.ok(!s.me.step);
+  const item = s.world.items.find(item => item.loc && w.ShiftWorld.room(item) > 0);
+  const order = day.makeOrder('ck', [{ item, qty: 1 }]);
+  key('Digit3', '3'); assert.ok(!p.D.scConfirm.hidden);
+  key('Digit2', '2'); assert.equal(p.stats.hints, 1, 'the second key chooses any visible option');
+  assert.equal(order.status, 'listed');
+  key('Digit3', '3'); key('Digit3', '3');
+  assert.equal(order.status, 'taken');
+
+  locked = view;
+  const customer = day.send('kiosk');
+  s.tick(20);
+  const pos = customer.fig.group.position, y = s.world.counter.y0 - 0.7;
+  aimFrom(pos.x, y, pos.x, pos.z, 1.2);
+  assert.match(p.D.tillBtn.textContent, /Greet/);
+  pointer('pointerdown');
+  assert.notEqual(customer.state, 'greet', 'a locked mouse click greets during an active pick');
+  assert.equal(order.status, 'taken');
+
+  locked = null;
+  w.document.dispatchEvent(new w.Event('pointerlockerror'));
+  const pc = s.world.pc;
+  aimFrom(pc.x, pc.desk.y0 - 0.48, pc.x, pc.y, 1.05);
+  assert.match(p.D.tillBtn.textContent, /Use PC/);
+  pointer('pointerdown'); pointer('pointerup');
+  assert.ok(p.pcOpen(), 'a click also uses the aimed object in drag-to-look mode');
+});
+
 test('Quick Pick confirms the top customer pick only when doing putaway empty-handed', async t => {
   const { $, s } = await game(t, { online: false, phone: true });
   $('startBtn').click();
@@ -210,7 +278,7 @@ test('Quick Pick confirms the top customer pick only when doing putaway empty-ha
   button.click();
   assert.equal($('scConfirm').hidden, false);
   assert.deepEqual(Array.from(options.querySelectorAll('button:not([hidden])'), option => option.textContent),
-    ['Function', 'Hint', 'Quick Pick']);
+    ['Function (1)', 'Hint (2)', 'Quick Pick (3)']);
   assert.equal(collect.status, 'listed');
   assert.equal(s.players[0].stats.hints, 0);
   hint.click();
