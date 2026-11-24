@@ -125,10 +125,14 @@ def short_name(h):
     return SHORT.get(h.upper(), h.title()[:22])
 
 
+LEAVE_OUT = {"Fatmax tape"}   # products to act as if they don't exist (detailedfoil, 24 Nov 2026)
+
+
 def load(path):
     ws = openpyxl.load_workbook(path, data_only=True, read_only=True)["Export"]
     rows = list(ws.iter_rows(values_only=True))
     head = [short_name(h) for h in rows[0][1:] if h is not None]
+    keep = [i for i, h in enumerate(head) if h not in LEAVE_OUT]
     data = {}
     for r in rows[1:]:
         if not r:
@@ -139,7 +143,8 @@ def load(path):
         cells = (tuple(r[1:1 + len(head)]) + (None,) * len(head))[:len(head)]
         if any(v is not None and not isinstance(v, (int, float)) for v in cells):
             continue                                  # a second heading row ("Stock Quantity" and the like)
-        data[str(k).strip().upper()] = [float(v or 0) for v in cells]
+        data[str(k).strip().upper()] = [float(v or 0) for v in (cells[i] for i in keep)]
+    head = [head[i] for i in keep]
     names = list(dict.fromkeys(head))                 # products sharing a short name (the sock sizes) are added together
     if len(names) < len(head):
         for k, row in data.items():
