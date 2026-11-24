@@ -169,6 +169,7 @@
       utterance.voice = voice;
       utterance.lang = voice.lang;
       utterance.rate = 1.05;
+      utterance.volume = 0.5;
       const request = { owner, priority };
       speaking = request;
       utterance.onend = utterance.onerror = () => { if (speaking === request) speaking = null; };

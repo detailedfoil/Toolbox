@@ -96,6 +96,7 @@ test('character voices read English dialogue and can be muted without muting gam
   Object.assign(s.me, { x: sam.x, y: sam.y });
   sam.say('Excuse me, please.');
   assert.equal(calls.at(-1).lang, 'en-GB');
+  assert.equal(calls.at(-1).volume, 0.5);
   const cust = day.send('till');
   p.till.open(1);
   p.till.serve(cust.cust, cust.lines, '#246', { dayCust: cust, hello: 'Hello, I would like to order.' });
