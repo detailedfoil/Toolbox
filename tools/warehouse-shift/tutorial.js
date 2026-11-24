@@ -63,6 +63,11 @@
     const wrong = s.basket.findIndex(row => row.status === 'qty');
     if (wrong >= 0) return cue('Correct the quantity on this line to ' + s.lines[s.basket[wrong].line].qty + ' and confirm.', '[data-row="' + wrong + '"]');
     if (s.basket.some(row => row.status === 'pending' || row.status === 'wrong')) return cue('Listen to the customer while they check the item.');
+    if (line?.tutorialResolve && line.done) {
+      const index = s.basket.findIndex(row => s.lines[row.line] === line);
+      if (line.shortage === 'tcnd') return cue('Avail 0. They want it tomorrow. Change Today to orange TCND.', '[data-delivery="' + index + '"]');
+      return cue('They don’t want this item. Remove it with × before adding the next one.', '[data-del="' + index + '"]');
+    }
     if (line?.floor) return cue('The till scans the shop-floor item automatically. Watch for Picked.');
     if (line) {
       if (lookup) return cue('They gave a description. Open the CrashFix tab to look it up.', '[data-tab="crashfix"]');
@@ -148,14 +153,14 @@
         const reachable = (loc, it) => ![saleItem, floorItem, stockItem].includes(it) && loc.z0 >= 0.45 && loc.z0 < 1.65;
         const lookupItem = pickItem((loc, it) => reachable(loc, it) && /claw hammer|tape measure|flat brush/i.test(it.name)) || pickItem(reachable);
         const lookup = { ...line(lookupItem, 1, 'I’m looking for a ' + lookupItem.name + '.'), tutorialLookup: true };
-        const next = { ...line(stockItem, 1, 'Have you got ' + stockItem.code + '?'), shortage: 'tcnd', reply: 'Tomorrow is fine. Order that one in, please.' };
+        const next = { ...line(stockItem, 1, 'Have you got ' + stockItem.code + '?'), shortage: 'tcnd', tutorialResolve: true, reply: 'Tomorrow is fine. Order that one in, please.' };
         const absent = pickItem((loc, it) => ![saleItem, floorItem, lookupItem, stockItem].includes(it));
-        const declined = { ...line(absent, 1, 'Have you got ' + absent.code + ' as well?'), shortage: 'decline', reply: 'Leave that one off, I need it today.' };
+        const declined = { ...line(absent, 1, 'Have you got ' + absent.code + ' as well?'), shortage: 'decline', tutorialResolve: true, reply: 'Leave that one off, I need it today.' };
         customer.lines = [line(saleItem, 2, 'Two of ' + saleItem.code + ', please.'), lookup, next, declined, floorLine];
       } else {
         const item = pickItem((loc, it) => /claw hammer/i.test(it.name)) || saleItem;
         const declined = line(stockItem, 1, 'Have you got ' + stockItem.code + ' as well?');
-        declined.shortage = 'decline'; declined.reply = 'Leave that one off, I need it today.';
+        declined.shortage = 'decline'; declined.tutorialResolve = true; declined.reply = 'Leave that one off, I need it today.';
         customer.lines = [line(item, 1, 'I’m looking for a ' + item.name + '.'), declined];
       }
     }
@@ -257,7 +262,7 @@
       if (p.scannerFault) { chapter = 2; return walk('Your scanner went offline mid-pick. Face the charging dock beside the PC and use Swap scanner.', box(dock.x, dock.y, dock.z, 0.64, 0.18, 0.23), point(dock.x, pc.desk.y0 - 0.42), 'Swap scanner'); }
       if (customer.order.status === 'done' && !kioskCustomer) {
         kioskCustomer = day.send('kiosk');
-        kioskCustomer.pay = { how: 'card', say: 'Card, please.' };
+        kioskCustomer.pay = { how: 'cash', say: 'I’ll pay cash, please.' };
         const basket = kioskCustomer.kiosk.list[kioskCustomer.kiosk.mine];
         basket.lines = [line(saleItem, 1, '')];
         basket.total = Till.price(saleItem);
