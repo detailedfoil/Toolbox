@@ -52,6 +52,7 @@
       if (freshSeat) {
         g.missingScanners.delete(who);
         g.day()?.offlineScanners.delete(who);
+        g.day()?.scannerProtectedUntil.delete(who);
         g.day()?.contributors.delete(who);
       }
       const stool = world.stools.find(s => s.by === who);
