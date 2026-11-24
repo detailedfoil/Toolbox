@@ -24,7 +24,7 @@
     if (!s) return cue('Your customer is walking over. If this is an empty till, leave it and follow their marker.', leave);
     if (s.stage === 'done' || v.screen === 'done') return cue('Payment accepted. Choose Back to the warehouse to leave Fusion.', '[data-scr="done"] ' + leave);
     const line = s.lines[s.cur];
-    const lookup = lesson === 'catalogue' && s.selected && line && !line.shortage && !line.shown && !v.catalogueFailed;
+    const lookup = (lesson === 'catalogue' || line?.tutorialLookup) && s.selected && line && !line.shortage && !line.shown && !v.catalogueFailed;
     if (v.tab !== 'fusion') {
       if (!lookup) return cue('Switch back to TradeCounter Application to continue in Fusion.', '[data-tab="fusion"]');
       const copy = '[data-copy="' + line.item.code + '"]';
@@ -80,7 +80,7 @@
 
   function create({ lesson, $, world, World, Till, Crew, S, T, player: p, tills, touch, covered, bellRung, trained, finish }) {
     const fullTour = lesson === 'tour', me = p.me, D = p.D;
-    const chapters = ['Trade counter', 'Warehouse pick', 'Scanner dock', 'Office upgrades & CCTV', 'Goods in & holding', 'Replen & lock-up'];
+    const chapters = ['Trade counter', 'Warehouse pick', 'Scanner dock', 'Kiosk order', 'Office upgrades & CCTV', 'Goods in & holding', 'Replen & lock-up'];
     const nav = new Crew.Nav(world);
     const floor = world.replenShelf, floorBox = objectBox(floor), floorAt = point(floor.x0 - 0.7, floorBox.y);
     const pc = world.pc, dock = world.scannerDock, counter = world.counter;
@@ -95,8 +95,9 @@
     const holdSpot = world.holding.spots.find(sp => sp.kind === 'tote' && sp.z0 >= 0.75);
     const cctv = world.objects.find(o => o.kind === 'cctv');
     const camBox = objectBox(cctv, cctv.z0), camAt = point(cctv.x0 - 0.85, camBox.y);
-    let day, customer, collector, carton, holdingOrder, chapter = fullTour ? 0 : 1;
+    let day, customer, kioskCustomer, collector, carton, holdingOrder, chapter = fullTour ? 0 : 1;
     let stood = false, fault = false, sawCCTV = false, finished = false, current, marked;
+    let cctvArrivalUntil = 0;
     let tickIn = 0, routeFrom, routeTo, path = [];
     const trail = new T.Group(), ring = new T.RingGeometry(0.07, 0.12, 16);
     const paint = new T.MeshBasicMaterial({ color: 0xffdc62, side: T.DoubleSide });
@@ -114,7 +115,7 @@
     function prepare(d) {
       day = d;
       // The lesson releases these customers itself. Keep lock-up closed until replen is taught.
-      day.plan = fullTour ? ['till', 'collect'] : [lesson === 'kiosk' ? 'kiosk' : 'till'];
+      day.plan = fullTour ? ['till', 'kiosk', 'collect'] : [lesson === 'kiosk' ? 'kiosk' : 'till'];
       day.total = day.plan.length; day.released = 0; day.floorTarget = 0; day.faultSchedule = [];
       if (lesson === 'holding') {
         holdingOrder = day.makeOrder('c', [{ item: saleItem, qty: 1 }], null, true, { surname: day.surname() });
@@ -141,10 +142,16 @@
         basket.lines = [line(saleItem, 1, ''), next];
         basket.total = basket.lines.reduce((n, l) => n + Till.price(l.item) * l.qty, 0);
       } else if (fullTour) {
-        const floorLine = line(floorItem, 1, 'Picked this up from the shop floor.');
+        const floorLine = line(floorItem, 1, 'Here you go. I picked this up from the shop floor.');
         floorLine.floor = true; floorItem.reserved = (floorItem.reserved || 0) + 1;
         customer.floorOffer = floorLine;
-        customer.lines = [line(saleItem, 2, 'Two of ' + saleItem.code + ', please.'), floorLine];
+        const reachable = (loc, it) => ![saleItem, floorItem, stockItem].includes(it) && loc.z0 >= 0.45 && loc.z0 < 1.65;
+        const lookupItem = pickItem((loc, it) => reachable(loc, it) && /claw hammer|tape measure|flat brush/i.test(it.name)) || pickItem(reachable);
+        const lookup = { ...line(lookupItem, 1, 'I’m looking for a ' + lookupItem.name + '.'), tutorialLookup: true };
+        const next = { ...line(stockItem, 1, 'Have you got ' + stockItem.code + '?'), shortage: 'tcnd', reply: 'Tomorrow is fine. Order that one in, please.' };
+        const absent = pickItem((loc, it) => ![saleItem, floorItem, lookupItem, stockItem].includes(it));
+        const declined = { ...line(absent, 1, 'Have you got ' + absent.code + ' as well?'), shortage: 'decline', reply: 'Leave that one off, I need it today.' };
+        customer.lines = [line(saleItem, 2, 'Two of ' + saleItem.code + ', please.'), lookup, next, declined, floorLine];
       } else {
         const item = pickItem((loc, it) => /claw hammer/i.test(it.name)) || saleItem;
         const declined = line(stockItem, 1, 'Have you got ' + stockItem.code + ' as well?');
@@ -153,7 +160,7 @@
       }
     }
     function firstScan(order) {
-      if (!fullTour || fault || order !== customer?.order) return;
+      if (!fullTour || fault || order !== customer?.order || p.activeLine()?.item !== saleItem) return;
       fault = true;
       day.offlineScanners.add(p.id); day.emit('scannerFault', p.id);
     }
@@ -199,14 +206,18 @@
       if (!p.pcOpen() && !trained()) return walk('Order handed over. Go back to the office and open the glowing Manager PC.', box(pc.x, pc.y, 1.08, 0.63, 0.12, 0.42), point(pc.x, pc.desk.y0 - 0.48), 'Use PC');
       if (p.pcOpen()) {
         if (trained()) return cue('Purchase complete. Close the Manager PC.', '.ws-pc-x');
-        if (D.root.querySelector('.ws-shop').hidden) return cue('Sam starts on delivery. Open Upgrades to train him for till service.', '[data-pc="shop"]');
-        return cue('Spend your 100 practice XP on Sam’s till service.', '[data-training="queue"]');
+        if (D.root.querySelector('.ws-shop').hidden) return cue('Sam starts on delivery. Open Upgrades to train him for customer picks.', '[data-pc="shop"]');
+        return cue('Spend your 100 practice XP on Sam’s customer picks.', '[data-training="cust"]');
       }
 
       if (!sawCCTV) {
         const angle = Math.atan2(camBox.x - me.x, me.y - camBox.y) + me.yaw;
-        sawCCTV = distance(me, camAt) < 1.5 && Math.cos(angle) > 0.78;
+        const pitch = Math.atan2((camBox.z0 + camBox.z1) / 2 - me.eye, distance(me, camBox));
+        sawCCTV = distance(me, camAt) < 1.25 && Math.cos(angle) > 0.96 && Math.abs(me.pitch - pitch) < 0.35;
         if (!sawCCTV) return walk('Look at the office CCTV. Circles are customers; squares are staff.', camBox, camAt);
+        collector = day.send('collect', { code: holdSpot.code, surname: day.hold[holdSpot.code].surname });
+        cctvArrivalUntil = day.t + 2;
+        return cue('A customer is walking in on CCTV. They’re here for Click & Collect.');
       }
       return null;
     }
@@ -244,17 +255,26 @@
       if (!customer.order) return meet(customer);
       if (!fullTour) { complete(); return null; }
       if (p.scannerFault) { chapter = 2; return walk('Your scanner went offline mid-pick. Face the charging dock beside the PC and use Swap scanner.', box(dock.x, dock.y, dock.z, 0.64, 0.18, 0.23), point(dock.x, pc.desk.y0 - 0.42), 'Swap scanner'); }
-      if (fault && customer.order.status === 'done' && !sawCCTV) {
-        chapter = 3;
+      if (customer.order.status === 'done' && !kioskCustomer) {
+        kioskCustomer = day.send('kiosk');
+        kioskCustomer.pay = { how: 'card', say: 'Card, please.' };
+        const basket = kioskCustomer.kiosk.list[kioskCustomer.kiosk.mine];
+        basket.lines = [line(saleItem, 1, '')];
+        basket.total = Till.price(saleItem);
+      }
+      if (kioskCustomer && !kioskCustomer.order) { chapter = 3; return meet(kioskCustomer); }
+      if (fault && kioskCustomer?.order?.status === 'done' && !sawCCTV) {
+        chapter = 4;
         const task = office();
         if (task) return task;
       }
+      if (day.t < cctvArrivalUntil) return cue('A customer is walking in on CCTV. They’re here for Click & Collect.');
       if (p.order()) {
-        chapter = p.order().kind === 'replen' ? 5 : p.order().kind === 'hold' ? 4 : fault ? 2 : 1;
+        chapter = p.order().kind === 'replen' ? 6 : p.order().kind === 'hold' ? 5 : p.order() === kioskCustomer?.order ? 3 : fault ? 2 : 1;
         return workOrder();
       }
       if (carton && !carton.done && carton.by === p.id) {
-        chapter = 4;
+        chapter = 5;
         if (p.state() === 'paqty') return cue('One confirmation shelves the whole carton. ' + confirm() + '.', '#scEnter');
         return shelfGuide(carton.loc, true);
       }
@@ -262,16 +282,16 @@
         chapter = 1;
         return scannerMenu(1, 'Today Picking', 'list');
       }
-      chapter = 4;
+      if (kioskCustomer.order.status !== 'done') { chapter = 3; return scannerMenu(1, 'Today Picking', 'list'); }
+      chapter = 5;
+      if (!collector.order) return meet(collector);
+      if (collector.order.status !== 'done') return scannerMenu(1, 'Today Picking', 'list');
       if (!carton) deliverCarton();
       if (!carton.done) {
         const g = world.goodsin[carton.src];
         return scannerMenu(0, 'Putaway', 'pa', walk('Goods in is where delivery arrives. Scan the carton on the glowing cage.', objectBox(g.obj), g.stand));
       }
-      if (!collector) collector = day.send('collect', { code: holdSpot.code, surname: day.hold[holdSpot.code].surname });
-      if (!collector.order) return meet(collector);
-      if (collector.order.status !== 'done') return scannerMenu(1, 'Today Picking', 'list');
-      chapter = 5;
+      chapter = 6;
       const replen = day.orders.find(o => o.kind === 'replen');
       if (replen?.status !== 'done') return scannerMenu(2, 'Shop floor replen', 'list');
       day.released = day.plan.length; day.check();
@@ -288,7 +308,7 @@
           const a = path[j - 1], b = path[j], len = distance(a, b);
           while (along < len && i < trail.children.length) {
             const dot = trail.children[i++]; dot.visible = true;
-            dot.position.set(a.x + (b.x - a.x) * along / len, 0.035, a.y + (b.y - a.y) * along / len);
+            dot.position.set(a.x + (b.x - a.x) * along / len, 0.43, a.y + (b.y - a.y) * along / len);
             along += 0.55;
           }
           along -= len;
@@ -306,7 +326,7 @@
       tickIn = 0.10;
       current = nextCue();
       if (!current) return false;
-      const title = fullTour ? (chapter + 1) + '/6 · ' + chapters[chapter] : lesson === 'kiosk' ? 'Till practice · Kiosk & cash' : lesson === 'holding' ? 'Warehouse practice · Holding area' : 'Till practice · CrashFix';
+      const title = fullTour ? (chapter + 1) + '/' + chapters.length + ' · ' + chapters[chapter] : lesson === 'kiosk' ? 'Till practice · Kiosk & cash' : lesson === 'holding' ? 'Warehouse practice · Holding area' : 'Till practice · CrashFix';
       if ($('guideChapter').textContent !== title) $('guideChapter').textContent = title;
       if ($('guideTask').textContent !== current.text) $('guideTask').textContent = current.text;
       let target = current.selector && document.querySelector(current.selector);

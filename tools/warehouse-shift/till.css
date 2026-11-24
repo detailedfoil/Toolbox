@@ -435,3 +435,6 @@
 .tl .tl-kb .pad-on{background:#ffd34d !important;color:#1a1d22 !important}
 
 .fu-delivery.picked:disabled{background:#115231;color:#fff;border-color:#093b21;opacity:1;cursor:default}
+
+.tl-portrait-tip{display:none;margin:0;padding:4px 8px;background:#e4edfa;color:#18314e;font:600 12px/1.25 system-ui;text-align:center}
+@media (orientation:landscape){.tl-portrait-tip:not([hidden]){display:block}}

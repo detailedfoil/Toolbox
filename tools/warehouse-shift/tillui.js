@@ -182,6 +182,11 @@
   function create(o) {
     const el = o.el, Till = o.Till, world = o.world, touch = !!o.touch, sfx = o.sfx || (() => {});
     el.innerHTML = HTML;
+    const portraitTip = document.createElement('p');
+    portraitTip.className = 'tl-portrait-tip';
+    portraitTip.textContent = 'Turn your phone upright for more room at the till.';
+    portraitTip.hidden = !touch;
+    el.querySelector('.tl-chrome').after(portraitTip);
     const q = (s) => el.querySelector(s), qa = (s) => Array.from(el.querySelectorAll(s));
     const V = {};
     qa('[data-v]').forEach((n) => { V[n.dataset.v] = n; });
@@ -284,6 +289,8 @@
     function scanFloor(s, line) {
       if (line.scanning || line.done) return;
       line.scanning = true;
+      say(line.say);
+      if (S.open) o.floorHandoff?.(line.say);
       later(1000, () => {
         if (S.session !== s) return;
         sfx('beep');
@@ -413,7 +420,7 @@
       }
       if (!k.mine) { s.slips++; if (o.onSlip) o.onSlip(); sfx('bad'); say("That's not mine. " + s.kiosk.sayName); return; }
       s.lines = k.lines.map((l) => ({ floor: l.floor, shortage: l.shortage, reply: l.reply, kind: 'code', item: l.item, qty: l.qty, accept: [l.item.code], done: !l.floor, clue: "It's " + l.item.code.split('').join(' ') + '.',
-        say: 'I had ' + l.item.code + ' on my kiosk order.', qtySay: l.qty > 1 ? l.qty + ' of them.' : '', next: '' }));
+        say: l.floor ? l.say : 'I had ' + l.item.code + ' on my kiosk order.', qtySay: l.qty > 1 ? l.qty + ' of them.' : '', next: '' }));
       s.basket = k.lines.map((l, i) => { const p = product(l.item.code); return { code: l.item.code, name: p ? p.name : l.item.name, qty: l.qty, price: p ? p.price : Till.price(l.item), avail: l.shortage ? 0 : Till.avail(l.item), item: l.item, status: 'ok', line: i }; });
       s.cur = s.lines.length; s.ready = true; s.stage = 'ordering';
       renderBasket(); show('order'); sfx('good');
@@ -1091,7 +1098,7 @@
       close() { if (!S.open) return; S.open = false; hideKb(); padMark(null); el.hidden = true; },
       // a controller's button (up, down, left, right, a, b, x, y, rt, lb, rb); usePad(false) when it's put down
       pad,
-      usePad(on) { if (S.pad === !!on) return; S.pad = !!on; if (!on) { padMark(null); hideKb(); } kbModes(); },
+      usePad(on) { if (S.pad === !!on) return; S.pad = !!on; portraitTip.hidden = !touch || S.pad; if (!on) { padMark(null); hideKb(); } kbModes(); },
       // a till customer has walked up: cust from Till.makeCustomer, lines from Till.makeOrder
       // opts: kind ('till' or 'kiosk'), kiosk (Till.makeKiosk: today's kiosk orders), pay (Till.payment)
       serve(cust, lines, colour, opts) {
