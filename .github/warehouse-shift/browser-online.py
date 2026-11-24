@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import TimeoutError, sync_playwright
 
 ORIGIN = "http://127.0.0.1:8000"
 GAME = ORIGIN + "/tools/warehouse-shift.html"
@@ -43,7 +43,10 @@ def shared_shift(browser, errors):
     host.locator("#nameIn").fill("Morgan")
     host.locator("#onlineBtn").click()
     host.locator("#hostRoom").click()
-    host.locator("#roomBtn").wait_for()
+    try:
+        host.locator("#roomBtn").wait_for()
+    except TimeoutError as error:
+        raise AssertionError(f"Host room failed: {host.locator('#roomMessage').text_content()}; page errors: {errors}") from error
     code = host.locator("#roomBtn").text_content()[:6]
     host.evaluate("for (const job of __shift.prio()) job.on = false")
     guest = open_game(browser, errors, phone=True)
@@ -309,10 +312,11 @@ if __name__ == "__main__":
                   "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"])
         errors = []
         try:
-            shared_shift(browser, errors)
-            split_shift(browser, errors)
             recorded_solo_shift(browser, errors)
             tutorial_shift(browser, errors)
+            print("Chromium solo playtest and tutorial passed.", flush=True)
+            shared_shift(browser, errors)
+            split_shift(browser, errors)
             assert not errors, errors
             print("Rendered host and touch guest, shelf relocation, phone rotation, two-controller split screen and solo playtest export passed.")
         finally:
