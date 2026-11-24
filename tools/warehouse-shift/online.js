@@ -131,7 +131,7 @@
         if (p) { clearTimeout(p.timer); this.pending.delete(m.id); p.resolve(m.result); }
       }
     }
-    hostPaused() { return document.hidden || !!this.hooks.isPaused?.(); }
+    hostPaused() { return document.hidden; }
     setPaused(value) {
       this.paused = !!value;
       this.hooks.status(this.paused ? 'The host has paused. Waiting for them to resume…' : '');

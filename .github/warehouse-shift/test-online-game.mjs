@@ -248,25 +248,41 @@ test('mouse clicks use highlighted targets and the keyboard steps and chooses bl
   key('Digit2', '2'); key('Digit2', '2');
   assert.equal(order.status, 'taken');
 
-  key('Escape'); assert.ok(!$('pauseCover').hidden);
+  $('menuBtn').click();
+  assert.ok(!$('pauseCover').hidden);
   assert.equal(locked, null);
+  const pausedAt = day.t;
+  s.tick(0.5);
+  assert.equal(day.t, pausedAt, 'the menu pauses the solo shift');
   $('resumeShift').click();
   assert.equal(locked, view);
+
   p.openPc();
   assert.equal(locked, null);
   key('Escape', 'Escape', w.document.activeElement);
-  assert.ok(p.pcOpen() && !$('pauseCover').hidden);
-  $('resumeShift').click();
-  assert.ok(p.pcOpen());
-  p.closePc();
+  assert.ok(!p.pcOpen() && $('pauseCover').hidden);
   assert.equal(locked, view);
+  key('Escape'); assert.ok(!$('pauseCover').hidden);
+  key('Escape'); assert.ok($('pauseCover').hidden);
+
+  const pad = button => p.readPad({
+    axes: [0, 0, 0, 0],
+    buttons: Array.from({ length: 16 }, (_, i) => ({ pressed: i === button }))
+  }, 0.016);
+  p.openPc();
+  pad(9); assert.ok(!p.pcOpen() && $('pauseCover').hidden);
+  pad(); pad(9); assert.ok(!$('pauseCover').hidden);
+  pad(); pad(0); assert.ok($('pauseCover').hidden);
+  pad(); pad(5); assert.ok(!p.D.scConfirm.hidden, 'RB opens the blue scanner buttons');
+  pad(); pad(1); assert.ok(p.D.scConfirm.hidden);
+
   p.till.open(1);
   w.document.exitPointerLock();
   key('Escape', 'Escape', p.till.el);
-  assert.ok(p.till.isOpen() && !$('pauseCover').hidden);
-  $('resumeShift').click();
-  assert.ok(p.till.isOpen());
-  p.closeTill();
+  assert.ok(!p.till.isOpen() && $('pauseCover').hidden);
+  p.till.open(1);
+  w.document.exitPointerLock();
+  pad(); pad(9); assert.ok(!p.till.isOpen() && $('pauseCover').hidden);
   assert.equal(locked, view);
 
   locked = view;
@@ -658,6 +674,15 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
     Object.defineProperty(host.w.document, 'hidden', { configurable: true, value: hidden });
     host.w.document.dispatchEvent(new host.w.Event('visibilitychange'));
   };
+  const menuTime = day.t;
+  host.$('menuBtn').click();
+  phone.$('menuBtn').click();
+  assert.ok(!host.$('pauseCover').hidden && !phone.$('pauseCover').hidden);
+  assert.match(host.$('menuStatus').textContent, /still running/);
+  await until(() => day.t > menuTime + 0.5, 'shift time to advance while the online menus are open');
+  assert.ok(guests.every(g => g.$('onlineCover').hidden), 'the host’s menu does not block guests');
+  host.$('resumeShift').click();
+  phone.$('resumeShift').click();
   visibility(true);
   await until(() => guests.every(g => !g.$('onlineCover').hidden && /paused/.test(g.$('roomMessage').textContent)), 'host tab to pause every guest');
   visibility(false);

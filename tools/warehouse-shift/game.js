@@ -2006,7 +2006,7 @@
       function pcKey(e) {
         if (e.repeat && !(e.code === 'ArrowUp' || e.code === 'ArrowDown')) return;
         if (e.code === 'KeyU') pcTab(!pc.shop);
-        else if (pc.shop && ['Escape', 'KeyF', 'Backspace'].includes(e.code)) closePc();
+        else if (pc.shop && ['KeyF', 'Backspace'].includes(e.code)) closePc();
         else if (pc.shop && e.code === 'Tab') {
           const buttons = Array.from(pc.el.querySelectorAll('button:enabled')).filter(b => b.getClientRects().length);
           const index = buttons.indexOf(document.activeElement);
@@ -2020,7 +2020,7 @@
         else if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') pcToggle();
         else if (e.code === 'BracketLeft' || e.code === 'PageUp') pcShift(-1);
         else if (e.code === 'BracketRight' || e.code === 'PageDown') pcShift(1);
-        else if (e.code === 'Escape' || e.code === 'Tab' || e.code === 'KeyF' || e.code === 'Backspace') closePc();
+        else if (e.code === 'Tab' || e.code === 'KeyF' || e.code === 'Backspace') closePc();
         else return;
         e.preventDefault();
       }
@@ -2353,6 +2353,7 @@
           if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false); else if (hit(1) && cover.id === 'pauseCover') setPaused(false);
           return;
         }
+        if (hit(9)) { useMenu(P); return; }
         if (pc.open) {
           still();
           const d = steer(true);
@@ -2360,13 +2361,13 @@
           if (pc.shop) {
             if (d === 'up' || d === 'down') shopMove(d === 'up' ? -1 : 1);
             if (hit(0)) pc.el.querySelectorAll('.ws-shop button')[pc.shopSel].click();
-            if (hit(1) || hit(9)) closePc();
+            if (hit(1)) closePc();
             return;
           }
           if (d === 'up' || d === 'down') pcMove(d === 'up' ? -1 : 1);
           if (hit(2)) pcPreset(0, now[6]); if (hit(3)) pcPreset(1, now[6]);
           if (hit(0)) pcToggle(); if (hit(4)) pcShift(-1); if (hit(5)) pcShift(1);
-          if (hit(1) || hit(9)) closePc();
+          if (hit(1)) closePc();
           return;
         }
         if (till.isOpen()) {
@@ -2375,7 +2376,6 @@
           if (d) till.pad(d);
           if (hit(0)) till.pad('a'); if (hit(1)) till.pad('b'); if (hit(2)) till.pad('x'); if (hit(3)) till.pad('y');
           if (hit(6)) till.pad('tabL'); if (hit(7)) till.pad('tabR'); if (hit(4)) till.pad('rt'); if (hit(5)) till.pad('rb');
-          if (hit(9)) closeTill();
           return;
         }
         if (!active) return;
@@ -2389,7 +2389,7 @@
         if (hit(4)) toggleStep();
         if (hit(3)) { cancelBlueAction(); useHint(); }
         if (hit(0)) { if (!D.scConfirm.hidden && !D.scConfirmQuickPick.hidden) D.scConfirmQuickPick.click(); else { SFX.key(); enter(); } }
-        if (hit(9)) toggleBlue(P);
+        if (hit(5)) toggleBlue(P);
         if (hit(8)) showHelp(true);
         const d = steer(false);
         if (d === 'up' || d === 'left') page(-1); else if (d === 'down' || d === 'right') page(1);
@@ -2696,6 +2696,7 @@
       if (isPaused() === on) return;
       pauseCover.hidden = !on;
       if (on) {
+        $('menuStatus').textContent = online?.room() ? 'The online shift is still running.' : 'Shift paused.';
         focusBeforePause = document.activeElement;
         for (const p of players) p.keysClear();
         stickId = null;
@@ -2711,13 +2712,22 @@
       playtestActivity();
       dirty = true;
     }
+    function canUseMenu() {
+      return active && !online?.panel() && $('endCover').hidden && $('dayCover').hidden;
+    }
+    function useMenu(p) {
+      if (!canUseMenu()) return;
+      if (p?.tillOpen()) p.closeTill();
+      else if (p?.pcOpen()) p.closePc();
+      else setPaused(!isPaused());
+    }
+    $('menuBtn').addEventListener('click', () => useMenu(kbPlayer() || players[0]));
     $('resumeShift').addEventListener('click', () => setPaused(false));
     window.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
-        if (!$('helpCover').hidden) showHelp(false);
-        else if (active && !online?.panel() && $('endCover').hidden && $('dayCover').hidden) {
-          if (!e.repeat) setPaused(!isPaused());
-        } else return;
+        if (!$('helpCover').hidden) { if (!e.repeat) showHelp(false); }
+        else if (canUseMenu()) { if (!e.repeat) useMenu(kbPlayer()); }
+        else return;
       } else if (!isPaused() || (e.target === $('resumeShift') && ['Enter', ' '].includes(e.key))) return;
       e.preventDefault();
       e.stopPropagation();
@@ -3081,7 +3091,7 @@
       announceDayEvent();
       canvas.focus({ preventScroll: true });
       if (navigator.userActivation?.isActive) restoreMouse(kbPlayer());
-      if (!tutorial && !touch) for (const p of players) p.toast(p.kb ? 'Esc pauses the shift' : 'Your controller: RT scans, A is Enter');
+      if (!tutorial && !touch) for (const p of players) p.toast(p.kb ? 'Esc opens the menu' : 'Your controller: RT scans, A is Enter');
       dirty = true;
     }
     function startSolo() {
@@ -3244,7 +3254,7 @@
     }
     function worldStep(dt) {
       let changed = false;
-      if (online?.frozen() || (isPaused() && !guest())) return false;
+      if (online?.frozen() || (isPaused() && !online?.room())) return false;
       runTimers(dt);
       if (active && day && !guest()) {
         if (tutorial) day.t += dt;
@@ -3353,7 +3363,7 @@
     if (window.ShiftOnlineGame && window.ShiftOnline && window.ShiftOnlineDay) {
       online = window.ShiftOnlineGame.attach({
         $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
-        catalogue: World.hash(JSON.stringify(cat.items)), isPaused, day: () => day, epoch: () => dayNo,
+        catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
         kit, missingScanners, canGreetAt, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; syncShiftXP(); },
