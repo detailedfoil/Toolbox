@@ -21,12 +21,12 @@ Open [the game page](../warehouse-shift.html) through the Toolbox site and sign 
 
 ## Playable tutorial
 
-**Play tutorial → First shift** starts a separate solo practice shift. Follow the gold floor trail around walls, the direction arrow and the glow on the actual object. Fusion, the scanner and the Manager PC outline the next control. The guide updates from what the player actually does. There is no timed reading or Next button.
+**Play tutorial → First shift** starts a separate solo practice shift. Follow the floating gold trail around walls, the direction arrow and the glow on the actual object. Fusion, the scanner and the Manager PC outline the next control. The guide updates from what the player actually does. There is no timed reading or Next button.
 
 1. Walk to the staff side of the trade counter. The Service Champ indicator appears there. Ring the service bell, greet the waiting customer and use their till.
-2. In Fusion, enter their surname and postcode, match their extra detail, enter the warehouse line and wait for the shop-floor scan and take card payment. One line is a shop-floor purchase.
-3. Claim their order in Today Picking, follow the location code and scan a unit. A staged scanner failure interrupts the pick. Swap the scanner at the office dock. Return to the shelf, finish the quantity and hand over the same order. Return to the Manager PC to spend 100 practice XP, then look at CCTV.
-4. After the customer handover, a practice carton arrives at goods in. Use Putaway. Take a kick stool to the high destination, scan the location and confirm the carton. Greet a click-and-collect customer, scan the named OC tote in holding and hand it over.
+2. In Fusion, enter their surname and postcode, match their extra detail, add one item by SKU, find a second item in CrashFix, set one out-of-stock line to TCND, remove a declined item, and watch the shop-floor item scan in. Take card payment.
+3. Claim their order in Today Picking, follow the location code and scan a unit. A staged scanner failure interrupts the pick. Swap the scanner at the office dock. Return to the shelf, finish the quantity and hand over the same order. Serve the next customer’s kiosk order and hand it over. Return to the Manager PC to spend 100 practice XP on Sam’s customer picks. When you look at CCTV, watch the Click & Collect customer arrive.
+4. Greet the Click & Collect customer, scan the named OC tote and hand it over. A practice carton then arrives at goods in. Use Putaway and take a kick stool to the high destination, scan the location and confirm the carton.
 5. Open Shop floor replen, squat to pick the replacement and restock the middle shelf. Face the front door and lock up to complete training. Normal career shifts also allow skipping replen.
 6. **Kiosk, TCND & cash** is a separate repeatable till exercise covering kiosk selection, changing an unavailable line to TCND and giving change. **CrashFix lookup** teaches searching by description, copying a matching code, returning to Fusion, removing a declined out-of-stock extra, and paying. **Holding-area picks** lets the player store a lowercase-c order in any empty OC spot and fetch that same tote when its customer arrives.
 
@@ -52,7 +52,7 @@ The wall clock normally moves from 07:00 to 20:00 as delivery is put away. On a 
 
 ### Shop floor replen
 
-On shifts with till sales, customers buy 2–4 extra units from the shop floor. The till waits one second, beeps, then adds the item one second later with a dark green **Picked** label. The customer already has it. Sam can serve these sales too. The customer already has those units. Payment adds the replacements to **Shop floor replen** on the scanner main menu. Collection-only shifts have no shop-floor sales.
+On shifts with till sales, customers buy 2–4 extra units from the shop floor. The customer says they brought something from the shop floor, without naming the product. The till waits one second, beeps, then adds the item one second later with a dark green **Picked** label. Sam can serve these sales too. The customer’s line is voiced when the device offers a local English voice and sound is enabled. Payment adds the replacements to **Shop floor replen** on the scanner main menu. Collection-only shifts have no shop-floor sales.
 
 The scanner shows **Shop floor full** until a sale creates work. Open **Pick replen**, select the batch and scan the warehouse locations as usual. Take the completed tote to the middle shelving unit on the shop floor, face it and use **Restock shelf**. Sales made while someone is picking start another batch. In co-op each batch belongs to one picker. Restocking awards **10 XP per unit** at the shelf. Lock-up is available when the normal shift work is finished. Skipping outstanding replen forfeits its XP.
 
@@ -74,6 +74,8 @@ Squat for bottom shelves. High shelves require **Step** on a red kick stool or t
 6. Only warehouse items for collection today go on the customer pick list. A TCND line ends at payment and creates no next-day task. The sale creates a pick order and the customer waits near the counter gap. Anyone on the shift can pick and hand it over.
 
 ### Sam, service bells, and scanner problems
+
+Sam waits near holding and goods in when idle. Once he is till trained, assigned to tills and the tills are open, he waits behind the counter when there are no other jobs.
 
 Sam is a physical coworker with a trolley. He shares pending work, avoids entering an aisle already occupied by a player, and may block an aisle when he parks to pick. The Manager PC in the office controls which jobs he does and their priority. Enable only the jobs you want him to take. Delivery is trained and enabled by default.
 
@@ -98,13 +100,13 @@ A mixed shift has a 25% chance of one randomly selected event. The start banner 
 | Delivery cancelled | No delivery. Customer handovers move the wall clock, and customer waits gain extra weight in the score. |
 | Website down | Fewer customers and click and collect only. |
 | Fusion down | Tills close. The branch handles click and collect only. |
-| Sam is on light duties | Sam can serve on tills and fetch orders already in the holding area. His usual training still applies. |
+| Sam is on light duties | Sam can serve on tills and fetch orders already in the holding area. This shift event requires Sam’s till training. His usual job assignments and training still apply. |
 
 ## Controls
 
 | Input | Move and look | Work |
 | --- | --- | --- |
-| Phone or tablet | Left thumbstick moves, with a larger deflection to jog. Drag the view to look. Both orientations are supported. | Tap labels to scan or use the scanner buttons. Use **Squat**, **Take stool**, **Step**, **Greet**, and **Use till** when shown. Fusion uses the device keyboard or its optional on-screen keyboard. |
+| Phone or tablet | Left thumbstick moves, with a larger deflection to jog. Drag the view to look. Both orientations are supported. | Tap labels to scan or use the scanner buttons. Use **Squat**, **Take stool**, **Step**, **Greet**, and **Use till** when shown. Fusion uses the device keyboard or its optional on-screen keyboard. The till suggests rotating upright for touch controls in landscape. |
 | Keyboard and mouse | WASD to move, Shift to jog. Click the view for mouse look, Esc to release it. | Click or F to scan or use the aimed action, Enter or Space to confirm, C to squat, V to step, H/F4 for Hint, Up/Down for the pick list, Tab for Function, Backspace for Back. |
 | Controller | Left stick moves and jogs, right stick looks. | RT scans, A confirms, B goes back, X squats, LB steps, Y hints, D-pad moves through the pick list, Start opens Function. In Fusion, D-pad highlights, A presses, B deletes, LT selects Fusion, RT selects CrashFix, LB confirms, Y asks again, and Start leaves. |
 

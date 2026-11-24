@@ -120,6 +120,15 @@
       if (audio.ctx) { if (audio.ctx.state === 'suspended') audio.ctx.resume(); return; }
       try { audio.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio.ctx = null; }
     }
+    function speakFloorHandoff(text) {
+      if (!audio.on || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+      const voices = window.speechSynthesis.getVoices().filter(v => v.localService);
+      const voice = voices.find(v => v.lang === 'en-GB') || voices.find(v => v.lang.startsWith('en'));
+      if (!voice) return;
+      const utterance = new window.SpeechSynthesisUtterance(text);
+      utterance.voice = voice;
+      window.speechSynthesis.speak(utterance);
+    }
     function tone(freq, at, dur, type, vol, slide) {
       const c = audio.ctx; if (!c || !audio.on) return;
       const t0 = c.currentTime + (at || 0), o = c.createOscillator(), g = c.createGain();
@@ -600,7 +609,8 @@
     function newDay() {
       if (guest()) return;
       const old = day;
-      const event = mode === 0 ? Day.rollEvent(Math.random) : null;
+      const rolled = mode === 0 ? Day.rollEvent(Math.random) : null;
+      const event = rolled === 'lightDuties' && !trained.queue ? null : rolled;
       const shiftId = globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
       day = Day.create({ world, World, Till, requests, shiftId, scannerTier, digitalTier, firstDay: dayNo === 0, mode: MODES[mode][0], event, env: dayEnv, hold: old ? old.hold : null, ...(tutorial ? tutorial.dayOptions : {}) });
       if (tutorial) tutorial.prepare(day);
@@ -635,6 +645,8 @@
     const cartonGeo = new T.BoxGeometry(0.42, 0.3, 0.32), cartonMat = new T.MeshLambertMaterial({ color: 0xc49a64 });
     const samTillFree = () => !taken.has(SPOTS[SPOTS.length - 1]);
     const crewEnv = {
+      standTill: () => tillAssigned() && day?.tillsOpen(),
+      floorHandoff: (b, text) => { if (nearestPlayer(b.x, b.y) < 4) speakFloorHandoff(text); },
       board: () => {
         if (!(day && active)) return { orders: [], queue: [], bell: [], greet: [], prio: [], delivery: 0, early: [] };
         const on = samPrio.filter(j => trained[j.id] && j.on).map(j => j.id);
@@ -2100,6 +2112,7 @@
 
       const till = window.ShiftTillUI.create({
         el: D.till, world, Till, touch,
+        floorHandoff: speakFloorHandoff,
         sfx: (n) => { const f = { key: SFX.key, beep: SFX.scan, good: SFX.pick, bad: SFX.bad, talk: SFX.talk, approved: SFX.approved, drawer: SFX.drawer, coin: SFX.coin, done: SFX.chime }[n]; if (f) f(); },
         onClose: () => closeTill(),
         onComplete: (info) => tillComplete(info),
@@ -2875,7 +2888,7 @@
         tutorial = window.ShiftTutorial.create({
           lesson: button.dataset.lesson, $, world, World, Till, Crew, S, T, player: me1, tills, touch,
           covered: () => tillCover().includes(me1.id), bellRung: () => bellCount > 0,
-          trained: () => Object.keys(trained).length > 1 || scannerTier > 1 || digitalTier > 1 || Object.values(kit).some(k => k.owned),
+          trained: () => !!trained.cust,
           finish(summary) {
             active = false;
             if (locked()) document.exitPointerLock();

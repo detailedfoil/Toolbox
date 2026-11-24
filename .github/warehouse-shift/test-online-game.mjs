@@ -276,6 +276,25 @@ test('greeted customers walk to separate tills, wait for a free one and can be s
   assert.equal(fourth.ready, true);
 });
 
+test('Sam waits near holding until till-trained, and only then can roll light duties', async t => {
+  const { $, s } = await game(t, { online: false, event: 'lightDuties' });
+  $('startBtn').click();
+  const sam = s.crew[0], day = s.day();
+  assert.equal(day.event, null);
+  day.wait = Infinity;
+  s.prio().find(job => job.id === 'delivery').on = false;
+  const near = spot => Math.hypot(sam.x - spot.x, sam.y - spot.y) < 0.85;
+  s.tick(30);
+  assert.ok(near(sam.waitSpot) && !sam.atTill, 'untrained Sam waits by holding');
+  day.credit('p1', 'till-training-test', 150);
+  openShop({ s }).querySelector('[data-training="queue"]').click();
+  s.players[0].closePc();
+  s.tick(30);
+  assert.ok(near(sam.post) && sam.atTill, 'trained Sam covers his till when idle');
+  s.newDay();
+  assert.equal(s.day().event, 'lightDuties');
+});
+
 test('the parked tote closes the aisle until Sam leaves, and idle stools have half-size walking bounds', async t => {
   const { $, s } = await game(t, { online: false });
   $('startBtn').click();

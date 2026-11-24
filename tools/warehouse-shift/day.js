@@ -446,7 +446,7 @@
     for (var i = 0; i < this.world.items.length; i++) {
       var item = this.world.items[(start + i) % this.world.items.length];
       if (!item.loc || item.size === 'B' || used.has(item.code) || this.World.room(item) < qty) continue;
-      var intro = ["I picked this up off the shop-floor shelf.", "I've brought this over from the shop floor.", "Got this one off the shelf out front."];
+      var intro = ["Here you go. I picked this up off the shop-floor shelf.", "I'm handing this over from the shop floor.", "And this too, please. I got it off the shelf out front."];
       var say = intro[Math.floor(this.floorRandom() * intro.length)];
       var line = { floor: true, kind: 'code', item, qty, accept: [item.code], say, clue: say, qtySay: qty > 1 ? qty + ' of these, please.' : '' };
       var shortage = lines.findIndex(l => l.shortage);

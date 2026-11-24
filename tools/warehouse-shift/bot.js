@@ -268,7 +268,9 @@
     this.custSpot = { x: tx, y: c.y1 + 0.42 };
     var st = w.objects.find(function (x) { return x.kind === 'totes'; });
     this.toteSpot = st ? { x: (st.x0 + st.x1) / 2, y: st.y1 + 0.42, yaw: Math.PI, alts: [{ x: st.x0 - 0.42, y: (st.y0 + st.y1) / 2, yaw: Math.PI / 2 }] } : null;
-    var s = o.start || this.post;
+    var hold = w.holding;
+    this.waitSpot = hold ? { x: hold.front + 0.85, y: (hold.y0 + hold.y1) / 2, yaw: -Math.PI / 2 } : this.post;
+    var s = o.start || this.waitSpot;
     this.x = s.x; this.y = s.y; this.yaw = s.yaw || 0;
     this.speed = 0; this.moving = false; this.turning = 0;
     this.trolley = { x: this.x + Math.sin(this.yaw) * TROLLEY.ahead, y: this.y + Math.cos(this.yaw) * TROLLEY.ahead, theta: this.yaw, d: TROLLEY.ahead, phi: this.yaw };
@@ -566,13 +568,13 @@
 
   /* ---------- the shift: whatever needs doing most, one job after another ---------- */
   Bot.prototype.life = function* () {
-    if (!this.started) { this.started = true; yield* this.walkTo(this.post); }
     for (;;) {
       var job = this.choose();
-      if (!job) { // nothing to do: back at the till, an eye on the scanner
-        if (!this.atPost()) yield* this.walkTo(this.post);
-        this.atTill = this.till;
-        if (Math.abs(ang(this.yaw)) > 0.05) yield* this.face(0);
+      if (!job) {
+        var standTill = this.emit('standTill'), spot = standTill ? this.post : this.waitSpot;
+        if (Math.hypot(this.x - spot.x, this.y - spot.y) >= 0.6) yield* this.walkTo(spot);
+        this.atTill = standTill && this.atPost() ? this.till : null;
+        if (Math.abs(ang(this.yaw - spot.yaw)) > 0.05) yield* this.face(spot.yaw);
         yield this.T(PACE.look);
         continue;
       }
@@ -740,12 +742,12 @@
       if (this.slip()) { yield this.T(0.8, 1.4); this.cSay(this.pick(SAY.notMine) + ' ' + c.kiosk.sayName); yield this.T(2.0, 4.0); }
       this.cSay(this.pick(SAY.mine));
       const floor = lines.find(l => l.floor);
-      if (floor) { yield 1; this.emit('sfx', 'scan'); yield 1; }
+      if (floor) { this.cSay(floor.say); this.emit('floorHandoff', floor.say); yield 1; this.emit('sfx', 'scan'); yield 1; }
       yield this.T(1.0, 2.0);
     } else {
       for (var i = 0; i < lines.length; i++) {
         var ln = lines[i], find = PACE[ln.kind] || PACE.describe;
-        if (ln.floor) { yield 1; this.emit('sfx', 'scan'); yield 1; continue; }
+        if (ln.floor) { this.cSay(ln.say); this.emit('floorHandoff', ln.say); yield 1; this.emit('sfx', 'scan'); yield 1; continue; }
         if (i) { this.say(this.pick(SAY.more)); yield this.T(PACE.reply); }
         this.cSay({ text: ((ln.next ? ln.next + ' ' : '') + ln.say).trim(), quote: ln.quote, hint: ln.hint, qty: ln.qtySay });
         yield this.T(find); // found on CrashFix, its code copied: the customer says straight away if it's right
