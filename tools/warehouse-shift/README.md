@@ -47,7 +47,7 @@ The wall clock normally moves from 07:00 to 20:00 as delivery is put away. On a 
 - **A4821 2:3 CK** means order A4821, two locations, three units, with a click-and-collect customer waiting. A lowercase **c** is a pick for the holding area. A line with neither suffix is normally a paid till order.
 - The scanner shows one location, SKU, and quantity at a time. Face the shelf and scan once per unit. Press **Enter** to commit the line and advance. Use **Hint** to highlight the target. A completed customer tote goes to the trade counter, where **Enter** hands it over.
 - For a holding-area **c** pick, scan any free **OC** spot to put the tote away. If the customer arrives before the pick is finished, the task can change to a counter handover. For a bag already in holding, go to the displayed OC spot, scan the bag, and take it to the counter.
-- In **Putaway**, scan the top carton on a goods-in cage or pallet. Take it to the destination shown on the scanner, scan the shelf, and press **Enter** once to shelve the carton. When empty-handed in Putaway, **Quick Pick** lets you take the top waiting customer pick if offered.
+- In **Putaway**, scan the top carton on a goods-in cage or pallet. Take it to the destination shown on the scanner, scan the shelf, and press **Enter** once to shelve the carton. To stop carrying a carton, press **Back**, walk it back to Goods In and scan the glowing original cage or pallet. That returns it to the delivery and opens the scanner main menu. Press **Back** again while returning it to resume putaway. Sam finishes the cartons he takes. When empty-handed in Putaway, **Quick Pick** lets you take the top waiting customer pick if offered.
 - For blue scanner actions with a confirmation step, the first press enlarges the available choices together. Press the action you want to confirm it. The keyboard shortcuts are **1** for Function, **2** for Hint and **3** for Quick Pick. **4** is reserved for a future blue button.
 
 ### Shop floor replen
@@ -124,7 +124,7 @@ Upgrades are available mid-shift at **Manager PC → Upgrades**. The prices belo
 
 | Upgrade | XP | Effect |
 | --- | --- | --- |
-| Sam speed tiers 2–5 | 100, 150, 225, 350 | Sam starts at 80% of his original pace. Each tier adds 10 percentage points, so Tier 3 matches the original pace and Tier 5 reaches 120%. The upgrade immediately speeds up movement and job actions. Online co-op uses the host's tier. |
+| Sam speed tiers 2–5 | 100, 150, 225, 350 | The shop displays 100% speed at Tier 1 and bonuses of +10%, +20%, +30% and +40% for Tiers 2–5. The labels leave the actual movement and job speeds at 80%, 90%, 100%, 110% and 120% of the original pace. Online co-op uses the host's tier. |
 | Scanner name label | 150 | Adds your badge name to your scanner and caps future Sam mix-ups at one per shift. |
 | Kickstool shoes | 350 | Lets you use Step without carrying a stool. |
 | Scanner reliability tiers 2–5 | 125, 225, 350, 500 | Changes next solo or hosted shift's disconnect cap from 5 at tier 1 to 4, 3, 2, then 1. |
@@ -138,7 +138,7 @@ Regular career data is per browser profile and site origin. In [game.js](game.js
 
 Tick **Record playtest**, play normally, lock the front door, and click **Copy playtest summary**. If clipboard access is blocked, copy from the selectable text field. Copy each day's result before advancing to the next day. The recorder keeps the current session in memory and does not send the report anywhere.
 
-The `warehouse-shift-playtest-v1` JSON includes starting progression, planned picks and cartons, player and Sam tasks, customer arrivals and sales, scanner crashes and swaps, XP and purchases, Sam’s speed tier, and the final score. Each event has elapsed real time, active foreground time, and simulation time. Backgrounding and opening help or the end-of-shift overlay are marked separately. Thinking time, navigation, and interruptions by other work count as foreground activity. Menu time is separated in the recorder and the simulation can continue behind an overlay.
+The `warehouse-shift-playtest-v1` JSON includes starting progression, planned picks and cartons, player and Sam tasks, customer arrivals and sales, scanner crashes and swaps, carton returns, XP and purchases, Sam’s speed tier, and the final score. Each event has elapsed real time, active foreground time, and simulation time. Backgrounding and opening help or the end-of-shift overlay are marked separately. Thinking time, navigation, and interruptions by other work count as foreground activity. Menu time is separated in the recorder and the simulation can continue behind an overlay.
 
 The planned balance work is to tune a typical solo player toward **about 85% of paid upgrade tiers by the end of Day 7**. **Mas** is a proposed automated test player and has yet to be implemented. The intended inputs are a fresh Day 1 report and one later, busier shift. Use those timings to model slower, typical, and efficient players over repeatable runs using the real workload, XP, upgrade and Sam rules. Count each paid tier separately and compare what the player can actually buy in an allowed sequence.
 

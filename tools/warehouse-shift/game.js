@@ -931,7 +931,7 @@
       if (D.tag) D.tag.textContent = P.name;
       const figB = { x: me.x, y: me.y, yaw: 0, speed: 0, turning: 0, lookT: 0, beam: 0 };
       let lastYaw = me.yaw;
-      const carryPose = () => state === 'deliver' || state === 'hold' ? 'tote' : state === 'pato' || state === 'paqty' ? 'box' : null;
+      const carryPose = () => state === 'deliver' || state === 'hold' ? 'tote' : carton ? 'box' : null;
       P.poseFig = (dt) => {
         figB.x = me.x; figB.y = me.y; figB.yaw = me.yaw + Math.PI; figB.speed = me.speed;
         figB.turning = Math.abs(me.yaw - lastYaw) / Math.max(dt, 0.001); lastYaw = me.yaw;
@@ -1105,6 +1105,9 @@
           const n = day ? day.deliveryLeft().length : 0;
           if (day?.event === 'failedDelivery') L.push(['Putaway'], ['Delivery cancelled', 'warn']);
           else L.push(['Putaway'], ['Goods In', 'warn'], [n ? 'Scan a carton' : 'All put away', 'big'], [n ? plural(n, 'carton', 'cartons') + ' left' : 'Nothing left', 'gap dim'], ['on the cages', 'dim'], ['and pallets', 'dim']);
+        } else if (state === 'pareturn') {
+          const source = world.goodsin[carton.src].kind;
+          L.push(['Putaway'], ['Return carton', 'warn'], ['Goods In', 'big'], ['Scan the original', 'gap dim'], [source, 'dim'], ['Back to resume', 'gap']);
         } else if (state === 'pato' || state === 'paqty') {
           L.push(['Putaway'], ['Take to', 'warn'], [carton.loc.code, 'big'], [carton.item.code, 'gap'], [short(carton.item.name)], ['Qty: ' + carton.qty, 'gap']);
           L.push(state === 'paqty' ? ['Press Enter', 'gap ok'] : ['Scan the location', 'gap dim']);
@@ -1294,9 +1297,22 @@
         return best;
       }
       async function scanGoods(nx, ny) {
+        if (pending) return;
         const h = goodsHit(nx, ny);
         if (!h) { say('Scan a carton on a cage or pallet', 'dim'); SFX.miss(); return; }
-        if (h.dist > REACH + 0.5) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
+        if (h.dist > Day.GOODS_REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
+        if (state === 'pareturn') {
+          const d = carton;
+          if (h.g.i !== d.src) { say('Scan the original cage or pallet', 'warn'); SFX.miss(); return; }
+          const ok = guest() ? await remote(() => day.paReturn(d, h.g.i)) : day.paReturn(d, P.id, h.g.i, me);
+          if (!ok || carton !== d) return;
+          carton = null; hint.until = 0; msg = null;
+          state = 'home'; homeSel = 0;
+          SFX.scan(); flash(false);
+          banner('Carton returned', 'Available in Goods In', 1800);
+          renderScanner(); dirty = true;
+          return;
+        }
         const d = guest() ? await remote(() => day.paTake(h.g.i)) : day && day.paTake(h.g.i, P.id);
         if (!d) { say('Nothing left on that one', 'warn'); SFX.miss(); return; }
         carton = d; slips = 0; hint.until = 0;
@@ -1359,9 +1375,9 @@
         aim = h && h.dist <= REACH ? h : null;
         D.cross.classList.toggle('reach', !!aim);
         if (aim && (state === 'scan' || state === 'qty' || state === 'pato' || state === 'paqty')) { S.setBox(S.aimBox, S.locBox(aim.loc), 0.012); S.aimBox.visible = true; }
-        else if (state === 'pa') {
+        else if (state === 'pa' || state === 'pareturn') {
           const g = goodsHit(c[0], c[1]);
-          if (g && g.dist <= REACH + 0.5) { S.setBox(S.aimBox, goodsBox(g.g), 0.02); S.aimBox.visible = true; D.cross.classList.add('reach'); } else S.aimBox.visible = false;
+          if (g && g.dist <= Day.GOODS_REACH && (state === 'pa' || g.g.i === carton.src)) { S.setBox(S.aimBox, goodsBox(g.g), 0.02); S.aimBox.visible = true; D.cross.classList.add('reach'); } else S.aimBox.visible = false;
         }
         else if (state === 'hold' || state === 'put') {
           const hh = holdHit(c[0], c[1]);
@@ -1386,7 +1402,7 @@
         if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } return; }
         if ((doorOn || greetC || bellOn || pcOn) && idleState() && useAction()) return;
         if (nearTill && (idleState() || tillHit(nx, ny))) { openTill(); return; }
-        if (state === 'pa') { scanGoods(nx, ny); return; }
+        if (state === 'pa' || state === 'pareturn') { scanGoods(nx, ny); return; }
         if (state === 'pato' || state === 'paqty') { scanPaLoc(nx, ny); return; }
         if (state === 'home') { say('Choose with the arrows, then Enter', 'dim'); SFX.miss(); return; }
         if (state === 'list' || state === 'end') { const n = scannerList().length; say(n ? 'Press Enter to start a pick' : 'No picks yet', 'dim'); SFX.miss(); return; }
@@ -1459,9 +1475,9 @@
         }
         renderScanner();
       }
-      // no backing out of an order once it's started (detailedfoil): Back only puts the last item back
+      // Back puts the last picked item back or offers to return a delivery carton.
       function back() {
-        if (P.scannerMissing) return;
+        if (P.scannerMissing || pending) return;
         if (blueAction) { cancelBlueAction(); return; }
         if (!D.scMenu.hidden) { menu(false); return; }
         if (state === 'qty' && Number(typed) > 0) {
@@ -1474,13 +1490,20 @@
           return;
         }
         if (state === 'list' || state === 'pa') { SFX.key(); homeSel = state === 'pa' ? 0 : homeSel === 2 ? 2 : 1; state = 'home'; renderScanner(); return; }
-        if (state === 'scan' || state === 'qty' || state === 'hold' || state === 'put' || state === 'deliver' || state === 'pato' || state === 'paqty') { say('Finish task', 'err', 1800); SFX.bad(); flash(true); }
+        if (state === 'pato' || state === 'paqty' || state === 'pareturn') {
+          state = state === 'pareturn' ? 'pato' : 'pareturn';
+          shut(); hint.until = 0; msg = null;
+          SFX.key(); renderScanner(); dirty = true;
+          return;
+        }
+        if (state === 'scan' || state === 'qty' || state === 'hold' || state === 'put' || state === 'deliver') { say('Finish task', 'err', 1800); SFX.bad(); flash(true); }
       }
       function digit() { if (state === 'qty' || state === 'scan') { say('Scan the location for each one', 'warn'); SFX.miss(); } }
       function enter() {
         if (P.scannerMissing || blueAction || !D.scMenu.hidden) return;
         if (state === 'home') openHome(homeSel);
         else if (state === 'pa') { say(day && day.deliveryLeft().length ? 'Scan a carton at goods in' : 'No delivery left', 'warn'); SFX.miss(); }
+        else if (state === 'pareturn') { say('Scan the original cage or pallet', 'warn'); SFX.miss(); }
         else if (state === 'pato') { say('Scan the location first', 'warn'); SFX.miss(); }
         else if (state === 'paqty') paConfirm();
         else if (state === 'list') startPick();
@@ -1563,6 +1586,7 @@
       function useHint() {
         if (P.scannerMissing) return;
         if (state === 'restock') { toast('Face the middle shelving unit on the shop floor'); return; }
+        if (state === 'pareturn') { toast('Goods in: scan the glowing cage or pallet'); return; }
         if (state === 'pa') {
           const left = day ? day.deliveryLeft() : [];
           if (!left.length) { toast('No delivery left', ''); return; }
@@ -1610,6 +1634,11 @@
       // the glow in this player's view (the glow and the aim box are one each, shared: set just before each view is drawn)
       function applyHint() {
         S.glow.visible = false; S.signGlow.visible = false;
+        if (state === 'pareturn' && !P.scannerMissing) {
+          S.setBox(S.glow, goodsBox(world.goodsin[carton.src]), 0.05);
+          S.glowMat.opacity = 0.55; S.glow.visible = true;
+          return;
+        }
         if (!(hint.until > performance.now())) return;
         const pulse = 0.5 + 0.5 * Math.sin(hint.t * 6.5);
         S.glowMat.opacity = 0.28 + 0.5 * pulse;
@@ -2721,14 +2750,14 @@
     function renderShop(root) {
       for (const btn of root.querySelectorAll('[data-sam-speed]')) {
         const cost = samSpeedPrices[samSpeedTier - 1];
-        const nextSpeed = samSpeeds[samSpeedTier];
+        const bonus = tier => '+' + (samSpeeds[tier - 1] - samSpeeds[0]) + '%';
         btn.dataset.samSpeed = samSpeedTier;
         btn.disabled = !!guest() || !cost || availableXP() < cost;
         btn.textContent = guest() ? 'Host manages Sam' : cost
-          ? 'Tier ' + (samSpeedTier + 1) + ' · ' + nextSpeed + '% · ' + cost + ' XP'
+          ? 'Tier ' + (samSpeedTier + 1) + ' · ' + bonus(samSpeedTier + 1) + ' speed · ' + cost + ' XP'
           : 'Fully upgraded';
         root.querySelector('[data-status="sam-speed"]').textContent = guest() ? '' :
-          samSpeedStatus() + ' · ' + samSpeeds[samSpeedTier - 1] + '% speed';
+          samSpeedStatus() + ' · ' + (samSpeedTier === 1 ? '100%' : bonus(samSpeedTier)) + ' speed';
       }
       for (const btn of root.querySelectorAll('[data-reliability]')) {
         const cost = reliabilityPrices[scannerTier - 1];
