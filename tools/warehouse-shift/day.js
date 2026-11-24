@@ -488,6 +488,7 @@
     if (this.over || !o || o.kind !== 'replen' || o.by !== who || o.status !== 'picked' || !this.atReplenShelf(pose)) return false;
     o.status = 'done'; o.doneBy = who;
     this.credit(who, 'replen-' + o.id, 10 * o.units);
+    this.check();
     this.emit('changed', o);
     return true;
   };
@@ -748,13 +749,7 @@
     return { id: this.shiftId, rows, score, baseXP: this.baseXP, bonus, coverBonus, xp: this.baseXP + bonus + coverBonus };
   };
   Day.prototype.lock = function () {
-    if (this.phase !== 'lock') return false;
-    for (const o of this.orders) {
-      if (o.kind === 'replen' && (o.status === 'listed' || o.status === 'taken')) {
-        for (const l of o.lines) l.item.reserved -= l.qty;
-      }
-      if (o.kind === 'replen' && o.status !== 'done') { o.status = 'skipped'; o.by = null; }
-    }
+    if (this.phase !== 'lock' || this.orders.some(o => o.kind === 'replen' && o.status !== 'done')) return false;
     this.phase = 'done'; this.over = true; this.report = this.shiftReport();
     this.emit('locked');
     this.emit('over');
@@ -807,7 +802,7 @@
     }
     if (this.phase === 'closed') { if (this.orders.some(left)) return; this.open(); return; }
     if (this.phase !== 'open') return;
-    if (this.orders.some(function (o) { return o.kind !== 'replen' && o.status !== 'done'; })) return;
+    if (this.orders.some(function (o) { return o.status !== 'done'; })) return;
     if (this.present().length) return;
     if (this.delivery.some(function (d) { return !d.done; })) return; // the delivery has to be away first
     this.phase = 'lock'; this.emit('closing');

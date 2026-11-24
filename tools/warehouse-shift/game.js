@@ -643,7 +643,7 @@
       dayNo++; bellCust = null; bellCount = 0; nextBellCheck = 0;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
       S.delivery.set(day.delivery);
-      for (const p of players) p.newDay();
+      for (const p of players) { p.newDay(); if (old) p.startInOffice(); }
       dirty = true;
     }
     function announceDayEvent() {
@@ -1231,6 +1231,18 @@
         renderScanner();
       };
       P.queueChanged = function () { if (idleState()) renderScanner(); callOver(); };
+      P.startInOffice = () => {
+        const office = world.rooms.find(room => room.name === 'Office');
+        const seat = Number(P.id.slice(1)) - 1;
+        Object.assign(me, { x: office.x0 + 0.6 + (seat % 2) * 0.68, y: office.y0 + 0.98 + Math.floor(seat / 2) * 0.62,
+          yaw: 0, pitch: 0, vx: 0, vy: 0, speed: 0, step: false, squat: false });
+        P.keysClear();
+        D.squatBtn.setAttribute('aria-pressed', 'false');
+        D.squatBtn.firstChild.textContent = 'Squat';
+        stepBtnSync();
+        placeStool();
+        applyCam();
+      };
       P.newDay = function () { if (state === 'end' || state === 'idle') { state = 'home'; homeSel = 1; order = null; } sel = 0; selId = null; renderScanner(); };
       P.deliveryChanged = function () { if (state === 'pa' || state === 'home') renderScanner(); };
       P.dayOver = function () { if (order?.kind === 'replen') { shut(); order = null; carry = null; hint.until = 0; } if (!order && !carton) state = 'end'; renderScanner(); };
@@ -1912,10 +1924,7 @@
         D.root.appendChild(el);
         el.addEventListener('click', (e) => {
           const b = e.target.closest('button'); if (!b) return;
-          if (b.hasAttribute('data-kit')) { purchase(b.dataset.kit); return; }
-          for (const id of ['samSpeed', 'digital', 'reliability']) {
-            if (id in b.dataset) { purchase(id, Number(b.dataset[id])); return; }
-          }
+          if (buyFromShop(b)) return;
           const i = +b.dataset.i, a = b.dataset.pc;
           initAudio();
           if (a === 'shop' || a === 'jobs') { pcTab(a === 'shop'); return; }
@@ -2333,6 +2342,13 @@
         const cover = ['pauseCover', 'helpCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
         if (cover) {
           still();
+          if (cover.id === 'dayCover' && !$('dayUpgrades').hidden) {
+            const buttons = [...cover.querySelectorAll('button:enabled')].filter(b => !b.closest('[hidden]'));
+            const dir = steer(true), i = buttons.indexOf(document.activeElement);
+            if (dir && buttons.length) buttons[(i + (dir === 'up' || dir === 'left' ? buttons.length - 1 : 1) + buttons.length) % buttons.length].focus();
+            if (hit(0)) (buttons[i] || buttons[0])?.click();
+            return;
+          }
           if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false); else if (hit(1) && cover.id === 'pauseCover') setPaused(false);
           return;
         }
@@ -2733,6 +2749,14 @@
     const spentOnSamSpeed = () => samSpeedPrices.slice(0, samSpeedTier - 1).reduce((sum, cost) => sum + cost, 0);
     const availableXP = () => careerXP() - spentOnDigital() - spentOnReliability() - kitSpend() - spentOnSamSpeed();
     const samSpeedStatus = () => 'Sam speed · Tier ' + samSpeedTier + '/' + samSpeeds.length;
+    function buyFromShop(button) {
+      if (button.disabled) return false;
+      if (button.hasAttribute('data-kit')) { purchase(button.dataset.kit); return true; }
+      for (const id of ['samSpeed', 'digital', 'reliability']) {
+        if (id in button.dataset) { purchase(id, Number(button.dataset[id])); return true; }
+      }
+      return false;
+    }
     function renderShop(root) {
       for (const btn of root.querySelectorAll('[data-sam-speed]')) {
         const cost = samSpeedPrices[samSpeedTier - 1];
@@ -2771,6 +2795,10 @@
     }
     function careerView() {
       renderStartCareer();
+      if (!$('dayUpgrades').hidden) {
+        renderShop($('dayUpgrades'));
+        $('upgradeBalance').textContent = availableXP() + ' XP available' + (guest() ? ' · Waiting for the host to start the next day' : '');
+      }
       $('dayTraining').textContent = availableXP() + ' XP available at the Manager PC';
       for (const p of players) {
         p.D.xpBalance.textContent = availableXP() + ' XP';
@@ -2915,6 +2943,8 @@
       SFX.dayEnd();
       for (const p of players) p.dayOver();
       later(1.2, () => {
+        $('dayCover').hidden = false;
+        for (const p of players) { p.closePc(); p.closeTill(); }
         if (locked()) document.exitPointerLock();
         const box = $('dayStats');
         box.replaceChildren();
@@ -2926,19 +2956,38 @@
           box.appendChild(el);
         }
         $('playtestResult').hidden = !playtestSummary;
-        $('nextDayBtn').hidden = !!guest();
+        $('dayResults').hidden = false;
+        $('dayNext').hidden = false;
+        $('dayUpgrades').hidden = true;
+        $('nextDayBtn').hidden = true;
         $('dayTitle').textContent = guest() ? 'All picks clear · waiting for the host' : 'All picks clear';
-        $('dayCover').hidden = false;
+        $('dayNext').focus();
       });
     }
+    $('dayNext').addEventListener('click', () => {
+      const panel = $('dayUpgrades');
+      if ($('dayCover').hidden || !day.over) return;
+      if (!panel.querySelector('.ws-shop')) {
+        panel.appendChild($('upgradeShop').content.cloneNode(true));
+        panel.querySelector('.ws-shop').hidden = false;
+        panel.addEventListener('click', e => { const b = e.target.closest('button'); if (b) buyFromShop(b); });
+      }
+      $('dayResults').hidden = $('dayNext').hidden = true;
+      panel.hidden = false;
+      $('nextDayBtn').hidden = !!guest();
+      careerView();
+      (panel.querySelector('button:enabled') || $('nextDayBtn')).focus();
+    });
     $('nextDayBtn').addEventListener('click', () => {
-      if (guest()) return;
+      if (guest() || !day.over || $('dayCover').hidden || $('dayUpgrades').hidden) return;
+      $('dayUpgrades').hidden = true;
       $('dayCover').hidden = true;
       for (const p of players) { const st = p.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; }
       newDay();
       startPlaytest();
       for (const p of players) p.start();
       announceDayEvent();
+      restoreMouse(kbPlayer());
     });
     $('fullBtn').hidden = !(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
     function fullScreen(on) {
@@ -3297,7 +3346,7 @@
         clearDayView() {
           timers.length = 0; for (const f of figs) if (!f.free) freeFig(f);
           for (const t of tills) showScreen(t, null);
-          $('dayCover').hidden = true;
+          $('dayCover').hidden = $('dayUpgrades').hidden = true;
         }
       });
     }

@@ -74,6 +74,11 @@ test('on a cancelled delivery day only completing customer orders advances the c
     day.gone(customer);
     assert.equal(day.clockMinute(), 420 + Math.floor(780 * (day.released / day.total)));
   }
+  for (const batch of day.orders.filter(o => o.kind === 'replen')) {
+    day.take(batch, 'p1'); day.picked(batch);
+    const shelf = day.world.replenShelf;
+    assert.ok(day.restock(batch, 'p1', { x: shelf.x1, y: shelf.y0 }));
+  }
   assert.equal(day.clockMinute(), 1200);
   assert.equal(day.phase, 'lock');
   assert.equal(day.lock(), true);

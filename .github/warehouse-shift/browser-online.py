@@ -252,6 +252,7 @@ def recorded_solo_shift(browser, errors):
     page.locator("#copyPlaytest").tap()
     page.get_by_text("Select and copy the summary below.").wait_for()
     assert json.loads(page.locator("#playtestReport").input_value()) == summary
+    page.locator("#dayNext").tap()
     page.locator("#nextDayBtn").tap()
     page.evaluate("__shift.day().phase = 'lock'; __shift.day().lock()")
     page.locator("#copyPlaytest").tap()

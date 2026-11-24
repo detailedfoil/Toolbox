@@ -111,7 +111,7 @@ test('a paid kiosk basket must belong to the serving player and match the custom
   assert.equal(d.list().length, 1);
 });
 
-test('guests share replen batches, deposit only at the shop shelf and can skip a later batch', () => {
+test('guests share replen batches, deposit only at the shop shelf and must restock every batch to lock up', () => {
   const d = fresh(), ctx = context(), shelf = world.replenShelf;
   const items = world.items.filter(it => it.loc && W.room(it) >= 2).slice(0, 3);
   const sale = item => d.makeOrder('replen', [{ item, qty: 1 }], null, false);
@@ -132,10 +132,20 @@ test('guests share replen batches, deposit only at the shop shelf and can skip a
   assert.ok(act('p2', 'restock'));
   assert.equal(act('p2', 'restock'), false);
   assert.equal(d.baseXP, 20);
-  d.phase = 'lock'; assert.ok(d.lock());
-  assert.equal(later.status, 'skipped');
-  assert.equal(items[2].reserved, reserved - 1);
-  assert.equal(d.baseXP, 20);
+  d.plan.length = d.released;
+  d.delivery.forEach(carton => carton.done = true);
+  d.check();
+  assert.equal(d.phase, 'open');
+  assert.equal(d.lock(), false);
+  assert.equal(items[2].reserved, reserved);
+  assert.ok(d.take(later, 'p1'));
+  d.picked(later);
+  d.check();
+  assert.equal(d.lock(), false);
+  assert.ok(d.restock(later, 'p1', ctx.pose));
+  assert.equal(d.phase, 'lock');
+  assert.ok(d.lock());
+  assert.equal(d.baseXP, 30);
 });
 
 test('delivery locations and shelf stock survive a move, a late join and a new day', () => {
@@ -216,7 +226,7 @@ test('shift score rewards timely work, counts abandoned customers and reallocate
 
 test('the host scores each completed human action once and sends the same result to a guest', () => {
   const d = fresh();
-  d.shiftId = 'test-shift'; d.walkinTill = 0;
+  d.shiftId = 'test-shift'; d.walkinTill = 0; d.floorTarget = 0;
   const c = d.send('kiosk');
   d.arrived(c);
   assert.ok(d.greet(c, 'p2')); assert.equal(d.greet(c, 'p2'), false);
