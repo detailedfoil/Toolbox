@@ -497,6 +497,7 @@
       floor.item.reserved -= floor.qty;
       this.makeOrder('replen', [floor], null, false);
     }
+    this.emit('salePaid', c, c.by);
     c.order = o; c.state = 'waiting'; c.by = null; c.ready = false;
     this.emit('step', c);
     return o;

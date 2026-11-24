@@ -249,7 +249,7 @@
         call() {
           const t = till(); if (!t || day.customers.some(c => c.by === who)) return false;
           const c = g.claimAtTill(t, who); if (!c) return false;
-          g.screen(t, null); g.callTo(c, t, () => g.checkScannerMixup(c, who)); return true;
+          g.screen(t, null); g.callTo(c, t); return true;
         },
         bell: () => g.ringBell(who)
       });
