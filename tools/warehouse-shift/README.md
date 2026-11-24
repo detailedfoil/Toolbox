@@ -35,11 +35,13 @@ Exit tutorial (controller: hold View and press Menu), completion, or reloading r
 ## A shift from opening to lock-up
 
 1. The shop opens automatically. Day 1 brings about a third of the usual delivery and customers. A standard later day has 15–25 planned picks, including holding-area work, and normally 11–16 delivery cartons.
-2. Greet customers, handle till sales and collections, pick orders from the shared list, and work the delivery between orders. Customer arrivals depend on queue capacity, outstanding work, and delivery progress.
+2. Greet customers, handle till sales and collections, pick orders from the shared list, and work the delivery between orders. One customer can arrive at opening. Shelving half the cartons releases roughly half the day’s customers. The last customers can arrive with one carton left, as queue capacity and outstanding work allow. Holding-area picks do not use customer slots. Cancelled-delivery days use normal queue pacing throughout.
 3. Complete every outstanding order, put the delivery away, and clear the waiting customers. **All done** directs you to lock the front door. Face it and use **Lock door**.
 4. The lock-up screen shows the team score, XP, and individual shift stats. **Start the next day** advances the current session with the same career. In online co-op the host advances the day.
 
 The wall clock normally moves from 07:00 to 20:00 as delivery is put away. On a cancelled-delivery day it follows completed customer work. The simulation timer and the wall clock are separate.
+
+Fusion gives each customer and each search-result account a unique email within the shift. People with different first names can share a postal address.
 
 ### Scanner and picking
 

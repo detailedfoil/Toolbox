@@ -72,6 +72,7 @@
     this.tillShare = (100 - digital.collection) / 100;
     this.walkinTill = o.walkinTill === undefined ? this.tillShare : o.walkinTill;
     this.canTill = !!(this.requests && this.requests.need && this.requests.need.length);
+    this.customerDirectory = { emails: new Set(), residents: new Set() };
     this.t = 0; this.nextId = 1; this.used = {};
     this.orders = []; this.customers = []; this.owners = []; this.log = [];
     this.phase = 'closed';                 // closed (c picks, before opening), open, lock (everything's done: waiting for you to lock the front door), done
@@ -563,7 +564,7 @@
   Day.prototype.tillCust = function (c, kind) {
     var Till = this.Till;
     c.kind = kind;
-    c.cust = c.cust || Till.makeCustomer(this.r); c.pay = Till.payment(this.r);
+    c.cust = c.cust || Till.makeCustomer(this.r, this.customerDirectory); c.pay = Till.payment(this.r);
     c.kiosk = Till.makeKiosk(this.world, this.r, c.cust);
     if (kind === 'till') { // the kiosk list is everyone else's
       c.kiosk.list.splice(c.kiosk.mine, 1); c.kiosk.mine = -1;
@@ -659,20 +660,21 @@
   };
 
   /* ---------- the director: when the next pick comes ---------- */
-  // customer flow follows the delivery (detailedfoil, 21 Nov 2026): the further the day's picks are ahead of the
-  // delivery being put away, the longer the wait for the next one, and past a point no more come until it catches up,
-  // so the delivery and the picks finish around the same time
-  Day.prototype.lag = function () {
-    var n = this.delivery.length;
-    if (!n || !this.plan.length) return 0;
-    var done = this.delivery.filter(function (x) { return x.done; }).length;
-    return this.released / this.plan.length - done / n;
+  Day.prototype.customerDue = function () {
+    var cartons = this.delivery.length;
+    var shelved = this.delivery.filter(d => d.done).length;
+    if (!cartons || shelved >= Math.max(1, cartons - 1)) return true;
+    // Requeued visits already have an arrival against their original slot.
+    var arrived = this.customers.length - (this.plan.length - this.total);
+    var remaining = this.plan.slice(this.released).filter(kind => kind !== 'c').length;
+    var budget = Math.max(1, Math.round((arrived + remaining) * shelved / cartons));
+    return arrived < budget;
   };
   Day.prototype.customerLimit = function () { return Math.max(MAX_IN, this.emit('playerCount') || 0); };
   Day.prototype.canStart = function (k) {
-    if (this.lag() > 0.4) return false;
     if (this.projected() >= MAX_LIST) return false;
     if (k === 'c') return this.room() > 0;
+    if (!this.customerDue()) return false;
     if (k === 'collect') return this.present().length < this.customerLimit() && !!this.collectable();
     return this.present().length < this.customerLimit();
   };
@@ -687,7 +689,7 @@
     if (this.phase === 'closed') return 0.4 + 0.8 * this.r();
     var L = Math.min(4, this.projected()), r = (this.r() + this.r()) / 2;
     var lo = [4, 12, 20, 30, 40][L], hi = [9, 26, 40, 55, 70][L];
-    return (lo + (hi - lo) * r) * (this.lag() > 0.15 ? 2 : 1) * (this.event === 'sale' ? 0.75 : 1);
+    return (lo + (hi - lo) * r) * (this.event === 'sale' ? 0.75 : 1);
   };
   // the c picks are all in the holding area: the shop opens by itself (detailedfoil: no unlocking, only locking up at the end)
   Day.prototype.open = function () {
@@ -769,6 +771,10 @@
     this.wait -= dt;
     if (this.wait <= 0 && left) {
       var k = this.plan[this.released];
+      if (k !== 'c' && this.room() > 0 && !this.customerDue()) {
+        var holding = this.plan.indexOf('c', this.released + 1);
+        if (holding >= 0) { this.plan[holding] = k; k = this.plan[this.released] = 'c'; }
+      }
       if (k === 'c' && this.room() <= 0) { // the holding area's full: something else first
         for (var j = this.released + 1; j < this.plan.length; j++) if (this.plan[j] !== 'c') { this.plan[this.released] = this.plan[j]; this.plan[j] = 'c'; k = this.plan[this.released]; break; }
         // only c picks left and nowhere to put them: a customer comes for a bag instead, which makes room

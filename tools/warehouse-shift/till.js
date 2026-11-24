@@ -66,7 +66,8 @@
 
   // the customer and the other people a search might turn up: maybe someone at the same address with the same
   // surname (then the customer says their first name), others with the surname elsewhere, neighbours
-  function makeCustomer(r) {
+  function makeCustomer(r, directory) {
+    directory = directory || { emails: new Set(), residents: new Set() };
     var surname = pick(r, SURNAMES), c = person(r, surname), trade = pick(r, TRADES);
     c.postcode = postcode(r); c.address = address(r); c.trade = trade[0];
     c.org = trade[1] && r() < 0.6 ? (r() < 0.5 ? surname + ' ' + trade[1] : c.first[0] + surname[0] + ' ' + trade[1]) : '';
@@ -84,6 +85,19 @@
     var m = 1 + Math.floor(r() * 3);
     for (var j = 0; j < m; j++) { // neighbours
       var nb = person(r, pick(r, SURNAMES.filter(function (s) { return s !== surname; }))); nb.postcode = c.postcode; nb.address = address(r); nb.trade = 'DIY'; nb.org = ''; db.push(nb);
+    }
+    for (var record of db) {
+      var parts = record.email.split('@'), suffix = 2;
+      while (directory.emails.has(record.email)) record.email = parts[0] + '.' + suffix++ + '@' + parts[1];
+      directory.emails.add(record.email);
+      // A household can share an address, but its members need distinct first names.
+      var resident = record.first + '/' + record.postcode + '/';
+      while (directory.residents.has(resident + record.address) ||
+             (record === c && c.twin && directory.residents.has(db[1].first + '/' + c.postcode + '/' + record.address))) {
+        record.address = record.address.replace(/\d+/, number => Number(number) + 1);
+      }
+      directory.residents.add(resident + record.address);
+      if (record === c && c.twin) db[1].address = c.address;
     }
     c.db = db;
     // after a search they give a third detail so you can tell them apart in the results: first name, email or door
