@@ -193,9 +193,7 @@
 
   <template id="upgradeShop">
     <section class="ws-shop" hidden aria-label="Upgrades">
-      <div class="ws-shop-row"><div><strong>Sam training · Till service</strong><small>Sam can greet customers and serve them at the tills.</small></div><button type="button" data-training="queue"></button></div>
-      <div class="ws-shop-row"><div><strong>Sam training · Customer picks</strong><small>Sam can pick waiting customers’ orders and fetch their click &amp; collect bags.</small></div><button type="button" data-training="cust"></button></div>
-      <div class="ws-shop-row"><div><strong>Sam training · Holding area picks</strong><small>Sam can pick orders to store in the holding area for later collection.</small></div><button type="button" data-training="hold"></button></div>
+      <div class="ws-shop-row"><div><strong>Sam speed</strong><small>Sam walks and works faster on every job. Tier 3 matches his original pace.</small><span data-status="sam-speed"></span></div><button type="button" data-sam-speed></button></div>
       <div class="ws-shop-row"><div><strong>Scanner reliability</strong><small>Reduce scanner disconnects from your next hosted or solo shift.</small><span data-status="reliability"></span></div><button type="button" data-reliability></button></div>
       <div class="ws-shop-row"><div><strong>Digital First Upgrades</strong><small>Bring in more click &amp; collects from your next hosted or solo shift. Tier 1 includes kiosk tablets.</small><span data-status="digital"></span></div><button type="button" data-digital></button></div>
       <div class="ws-shop-row"><div><strong>Scanner name label</strong><small>Put your name on your scanner. Sam can take it by mistake at most once per shift.</small></div><button type="button" data-kit="label"></button></div>
@@ -209,7 +207,7 @@
       <p>For hands-on practice, choose <b>Play tutorial</b> on the home screen. Follow the floor markers and the amber outline on the next control.</p>
       <p>Lock up to earn a team score out of 1,000. Quick greetings, short customer waits, prompt picks and speedy putaway all count. The timers use playing time. A missed delivery puts more weight on customer waits.</p>
       <p>Human teammates share 5 XP per greeting, 15 per sale, 10 per confirmed pick line, 10 per finished order and 10 per shelved carton. Once you contribute, team work XP is saved as you play. Spend it at the office Manager PC under Upgrades. Lock-up adds a shift bonus of up to 25%. Work done while a teammate or Sam stands at a till earns 5% extra XP, including its share of the shift bonus. Standing cover counts as contributing. Service Champ XP is rounded across the shift and saved on this device.</p>
-      <p>Sam starts on delivery. Train him for till service, customer picks or holding area picks under Upgrades on the Manager PC. Each skill costs 100 XP and can be assigned alongside his other skills. Online shifts use the host’s training. Two saved job lists unlock at 350 lifetime XP.</p>
+      <p>Sam starts with all four jobs enabled. He serves customers first, then picks customer orders and holding-area orders, then puts away delivery. Buy speed upgrades under Upgrades on the Manager PC. Online shifts use the host’s Sam speed. Two saved job lists unlock at 350 lifetime XP.</p>
       <div class="ws-cols2">
         <div>
           <h2>The pick list</h2>
@@ -238,7 +236,7 @@
           </ul>
           <h2>Sam</h2>
           <ul>
-            <li><b>Sam</b> works from the same list, at the same pace as a person. What Sam does first is set on the <b>PC on the manager's desk</b> in the office: tick or untick each job (customer picks, the queue, holding area picks, the delivery) and move them up or down. Unticked jobs are yours.</li>
+            <li><b>Sam</b> works from the same list, at his current speed tier. What Sam does first is set on the <b>PC on the manager's desk</b> in the office: tick or untick each job (till service, customer picks, holding-area picks, delivery) and move them up or down. Unticked jobs are yours.</li>
             <li>If a customer has waited about six seconds and Sam is within reach, he rings the <b>service bell</b>. Ring it yourself to call for help on tills. Everyone in co-op hears it, and Sam prioritises a waiting till customer when assigned to the queue.</li>
             <li>Sam pushes a <b>trolley</b>. While they pick it blocks the aisle, so you can't get past. Sam won't go down an aisle you're in.</li>
             <li>Sam can take your scanner by mistake while you serve customers at the till. Expect 2–4 mix-ups per shift with an unlabelled scanner and 0–1 with a name label. You find out after payment. Close the till, then walk up to Sam to get yours back.</li>
@@ -318,13 +316,13 @@
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=94c162952b"></script>
 <script src="warehouse-shift/day.js?v=70032d23db"></script>
-<script src="warehouse-shift/bot.js?v=aa9e2acfb8"></script>
+<script src="warehouse-shift/bot.js?v=f7080fd594"></script>
 <script src="warehouse-shift/tillui.js?v=3f7ddea1d4"></script>
 <script src="warehouse-shift/online-day.js?v=89a6bd6c48"></script>
 <script src="warehouse-shift/online.js?v=cdcf8996c8"></script>
-<script src="warehouse-shift/online-game.js?v=3867371ebc"></script>
+<script src="warehouse-shift/online-game.js?v=70cc248c0b"></script>
 <script src="warehouse-shift/playtest.js?v=223d2eb3db"></script>
-<script src="warehouse-shift/tutorial.js?v=b88b72e347"></script>
-<script src="warehouse-shift/game.js?v=e85b00c31b"></script>
+<script src="warehouse-shift/tutorial.js?v=56530cb60c"></script>
+<script src="warehouse-shift/game.js?v=ef702010e9"></script>
 </body>
 </html>

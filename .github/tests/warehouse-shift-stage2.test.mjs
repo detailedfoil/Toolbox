@@ -10,6 +10,7 @@ import { REPO, loadModule } from './load.mjs';
 const W = loadModule('tools/warehouse-shift/world.js');
 const Till = loadModule('tools/warehouse-shift/till.js');
 const Day = loadModule('tools/warehouse-shift/day.js');
+const Crew = loadModule('tools/warehouse-shift/bot.js');
 const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO, f), 'utf8'));
 const world = W.build(read('tools/warehouse-shift/data/catalogue.json'));
 const requests = read('tools/warehouse-shift/data/requests.json');
@@ -80,17 +81,28 @@ test('customers give their surname first, then postcode, then (after a search) f
   assert.ok(src.indexOf("say(\"Surname's \" + s.cust.surname + '.')") < src.indexOf("say(\"Postcode's \" + s.cust.postcode + '.')"), 'surname before postcode');
 });
 
-test('Sam: waits 4 s for a pick to be his, doing nothing else, and walks to the till before saying hello', () => {
+test('Sam serves customers first and gives players a four-second head start on picks', () => {
   const day = Day.create({ world, World: W, Till, requests, rand: W.rng(2), env: {}, walkinTill: 0 });
   day.phase = 'open';
   const o = day.makeOrder('ck', W.order(world, W.rng(5), 1), null, true);
   assert.equal(day.listEarly().length, 1);
   assert.equal(day.listLate().length, 0);
+  const till = world.objects.find(obj => obj.kind === 'till');
+  const waiting = {}, holding = { kind: 'c' };
+  const board = { early: [o], orders: [holding], queue: [waiting], delivery: 1 };
+  const sam = Crew.create({ world, World: W, Till, till, env: { board: () => board } });
+  assert.equal(sam.choose().serve, waiting);
+  board.queue = [];
+  assert.equal(sam.choose(), null, 'Sam leaves the new customer pick to players briefly');
   day.t += 4.5;
   assert.equal(day.listEarly().length, 0);
   assert.equal(day.listLate().length, 1);
-  void o;
+  board.early = []; board.orders = [holding, o];
+  assert.equal(sam.choose().pick, o);
+  board.orders = [holding];
+  assert.equal(sam.choose().pick, holding);
+  board.orders = [];
+  assert.equal(sam.choose().putaway, true);
   const bot = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/bot.js'), 'utf8');
-  assert.match(bot, /if \(b\.early && b\.early\.length\) return null/);
   assert.match(bot, /job\.greet\) \{[^\n]*\n\s*if \(!this\.atPost\(\)\) yield\* this\.walkTo\(this\.post\)/);
 });
