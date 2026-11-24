@@ -281,6 +281,7 @@
       if (s.ready && problem) { say(problem); return; }
       const ln = s.lines[s.cur];
       if (!ln || ln.floor) return;
+      if (ln.tutorialResolve && ln.done) { say(ln.reply); return; }
       ln.asked = (ln.asked || 0) + 1;
       if (ln.asked >= 2 && !ln.clued) { ln.clued = true; s.slips++; if (o.onSlip) o.onSlip(); say({ text: ln.clue }); return; }
       sayRequest(true);
@@ -454,6 +455,13 @@
       drawing = true;
       try { drawBasket(); } finally { drawing = false; }
     }
+    function showAvailability(tr, row) {
+      const count = row.tcnd && row.avail === 0 ? (row.nextDayStock ??= 50 + Math.floor(Math.random() * 951)) : row.avail;
+      const out = count === 0;
+      tr.classList.toggle('out-of-stock', out);
+      tr.cells[2].classList.toggle('out', out);
+      tr.cells[2].textContent = count;
+    }
     function drawBasket() {
       const s = S.session, rows = s ? s.basket : [];
       qa('tr.fu-line').forEach((tr) => { if (tr.parentNode) tr.parentNode.removeChild(tr); });
@@ -466,6 +474,7 @@
         const status = picked ? 'Picked' : r.tcnd ? 'TCND' : 'Today';
         tr.innerHTML = '<td>' + esc(r.code) + '</td><td><input class="fu-q" ' + (picked ? 'disabled ' : '') + 'data-row="' + i + '" value="' + r.qty + '" maxlength="3" autocomplete="off" inputmode="' + (osk() ? 'none' : 'numeric') + '"></td><td class="' + (r.avail ? '' : 'out') + '">' + r.avail +
           '</td><td class="d">' + esc(r.name) + '</td><td><button type="button" class="fu-delivery' + (picked ? ' picked" disabled' : '"') + ' data-delivery="' + i + '" aria-label="Delivery for ' + esc(r.code) + ', ' + status + '" aria-pressed="' + !!r.tcnd + '">' + status + '</button></td><td>1</td><td>' + (r.price / 100).toFixed(2) + '</td><td>' + (r.price * r.qty / 100).toFixed(2) + '</td><td><button type="button" class="fu-del" ' + (picked ? 'disabled ' : '') + 'data-del="' + i + '" aria-label="Remove line">&times;</button></td>';
+        showAvailability(tr, r);
         body.appendChild(tr);
       });
       V.count.textContent = String(rows.length);
@@ -474,7 +483,12 @@
     }
     function addLine() {
       const s = S.session;
-      if (s?.lines[s.cur]?.floor) return;
+      const current = s?.lines[s.cur];
+      if (current?.floor) return;
+      if (current?.tutorialResolve && current.done) {
+        fuMsg('Resolve the out-of-stock line before adding the next item.');
+        return;
+      }
       const code = F.part.value.toUpperCase().replace(/[\s-]/g, '').replace(/O/g, '0');
       const qtyText = F.qty.value.trim();
       if (!code) { fuMsg('Type a part number first.'); sfx('bad'); return; }
@@ -531,10 +545,18 @@
       if (ln.shortage) say(ln.reply);
       else if (quiet) say(pick(['Lovely.', 'Cheers.', 'Nice one.', 'Ta.']));
       else say(pick(RIGHT));
-      const next = s.lines.findIndex((l) => !l.done);
-      if (next < 0) { s.cur = s.lines.length; s.ready = true; if (!ln.shortage) later(1100, () => say(pick(["That's everything. I'll pay now.", "That's the lot, cheers.", "That's all I need. How much is that?"]))); }
-      else if (s.lines[next].floor) { s.cur = next; scanFloor(s, s.lines[next]); }
-      else { s.cur = next; later(quiet ? 900 : 1300, () => sayRequest(false)); }
+      if (!ln.tutorialResolve && !advanceRequest(s, quiet ? 900 : 1300) && !ln.shortage) {
+        later(1100, () => say(pick(["That's everything. I'll pay now.", "That's the lot, cheers.", "That's all I need. How much is that?"])));
+      }
+    }
+    function advanceRequest(s, delay) {
+      const next = s.lines.findIndex(l => !l.done);
+      s.ready = next < 0;
+      s.cur = s.ready ? s.lines.length : next;
+      if (s.ready) return false;
+      if (s.lines[next].floor) scanFloor(s, s.lines[next]);
+      else later(delay, () => { if (S.session === s && s.cur === next) sayRequest(false); });
+      return true;
     }
     function removeRow(row) {
       const s = S.session;
@@ -544,7 +566,12 @@
       s.basket.splice(i, 1);
       if (row.status === 'ok' && row.line >= 0) { // they still need that one
         const ln = s.lines[row.line];
-        if (ln.shortage === 'decline') { say("Cheers, just the rest for me then."); renderBasket(); return; }
+        if (ln.shortage === 'decline') {
+          say("Cheers, just the rest for me then.");
+          renderBasket();
+          if (ln.tutorialResolve && s.cur === row.line) advanceRequest(s, 900);
+          return;
+        }
         ln.done = false; s.ready = false;
         s.cur = s.lines.findIndex((l) => !l.done);
         say('Hang on, I still need that one.');
@@ -892,12 +919,16 @@
       const krow = t.closest('.fu-tab tbody tr[data-k]'); if (krow) { S.ksel = +krow.dataset.k; sfx('key'); renderKiosk(); return; }
       const delivery = t.closest('[data-delivery]');
       if (delivery && S.session?.stage === 'ordering') {
-        const row = S.session.basket[+delivery.dataset.delivery];
+        const s = S.session, row = s.basket[+delivery.dataset.delivery];
         row.tcnd = !row.tcnd;
         delivery.textContent = row.tcnd ? 'TCND' : 'Today';
         delivery.setAttribute('aria-pressed', String(row.tcnd));
         delivery.setAttribute('aria-label', 'Delivery for ' + row.code + ', ' + delivery.textContent);
-        sfx('key'); return;
+        showAvailability(delivery.closest('tr'), row);
+        sfx('key');
+        const line = s.lines[row.line];
+        if (row.tcnd && s.cur === row.line && line?.tutorialResolve && line.shortage === 'tcnd' && line.done) advanceRequest(s, 900);
+        return;
       }
       const del = t.closest('[data-del]'); if (del) { const s = S.session; if (s && s.basket[+del.dataset.del]) { sfx('key'); removeRow(s.basket[+del.dataset.del]); } return; }
       const cp = t.closest('[data-copy]'); if (cp) { copyCode(cp.dataset.copy); return; }

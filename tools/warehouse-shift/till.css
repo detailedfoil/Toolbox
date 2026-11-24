@@ -130,6 +130,8 @@
 .fu-line.qty td{background:#fff1c2}
 .fu-line.wrong td{background:#fde0de;color:#9b1b1b}
 .fu-line.wrong td.d{text-decoration:line-through}
+.fu-line.out-of-stock td{background:#ffc9c5;color:#871c17}
+.fu-line.out-of-stock .fu-q{background:#ffe3e0;border-color:#a83a34;color:#871c17}
 .fu-line td.out{color:#c62828;font-weight:700}
 .fu-q{width:46px;height:26px;padding:0 5px;border:1px solid #8a8a8a;border-radius:3px;background:#fff;font:15px Arial,sans-serif;outline:none}
 /* a line with the wrong quantity: its Qty box is the one to change (detailedfoil) */

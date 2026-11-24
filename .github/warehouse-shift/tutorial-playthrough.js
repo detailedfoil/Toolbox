@@ -106,6 +106,16 @@ window.playTutorial = async function (lesson) {
       const correct = p.till.guideView().results.indexOf(c.cust);
       click('[data-v=rows] [data-i="' + correct + '"]'); click('[data-act=select]');
     }
+    async function giveCashChange() {
+      const drawer = p.till.session().cash;
+      click('[data-dr="5000"]'); await text('Too much'); click('[data-act=drstart]');
+      while (true) {
+        const left = drawer.due - drawer.hand.reduce((n,a) => n+a,0);
+        if (!left) break;
+        click('[data-dr="' + ShiftTill.DENOMS.find(n=>n<=left) + '"]');
+      }
+      await text('Give change'); click('[data-act=drgive]');
+    }
     await identify(c, lesson === 'tour');
     if (lesson === 'kiosk') {
       await text('Kiosk Orders'); click('[data-go=kiosk]');
@@ -127,25 +137,27 @@ window.playTutorial = async function (lesson) {
         field('[data-f=part]',l.item.code); await text('Qty');
         const n = field('[data-f=qty]',l.qty);
         n.dispatchEvent(new KeyboardEvent('keydown',{ key:'Enter',bubbles:true,cancelable:true }));
+        if (l.shortage === 'tcnd') {
+          await text('TCND');
+          const control = find('[data-delivery="2"]'), row = control.closest('tr');
+          if (!row.classList.contains('out-of-stock') || row.cells[2].textContent !== '0') throw Error('Expected a red zero-stock row');
+          click('[data-delivery="2"]');
+          const stock = Number(row.cells[2].textContent);
+          if (row.classList.contains('out-of-stock') || stock < 50 || stock > 1000) throw Error('Expected next-day availability');
+          click('[data-delivery="2"]');
+          if (!row.classList.contains('out-of-stock') || row.cells[2].textContent !== '0') throw Error('Today should restore zero stock');
+          click('[data-delivery="2"]');
+          if (Number(row.cells[2].textContent) !== stock) throw Error('Next-day availability should stay stable');
+        } else if (l.shortage === 'decline') {
+          await text('Remove');
+          if (find('.fu-delivery.picked')) throw Error('Floor scan started before removing the declined item');
+          click(lesson === 'tour' ? '[data-del="3"]' : '[data-del="1"]');
+        }
       }
     }
-    if (lesson === 'tour') {
-      await text('TCND'); click('[data-delivery="2"]');
-      await text('Remove'); click('[data-del="3"]');
-    }
-    if (lesson === 'catalogue') { await text('Remove'); click('[data-del="1"]'); }
     await text('Pay & Go'); click('[data-go=pay]');
     await text('payment method'); click('[data-act=' + c.pay.how + ']');
-    if (lesson === 'kiosk') {
-      const drawer = p.till.session().cash;
-      click('[data-dr="5000"]'); await text('Too much'); click('[data-act=drstart]');
-      while (true) {
-        const left = drawer.due - drawer.hand.reduce((n,a) => n+a,0);
-        if (!left) break;
-        click('[data-dr="' + ShiftTill.DENOMS.find(n=>n<=left) + '"]');
-      }
-      await text('Give change'); click('[data-act=drgive]');
-    }
+    if (lesson === 'kiosk') await giveCashChange();
     await text('Payment accepted'); click('[data-scr=done] [data-act=leave]');
     if (c.order.lines.length !== (lesson === 'tour' ? 2 : 1)) throw Error('Unexpected warehouse pick list after payment');
     if (lesson === 'tour') {
@@ -169,7 +181,7 @@ window.playTutorial = async function (lesson) {
       await text('Kiosk Orders'); click('[data-go=kiosk]');
       click('[data-v=krows] [data-k="' + kiosk.kiosk.mine + '"]'); click('[data-act=kselect]');
       await text('Pay & Go'); click('[data-go=pay]');
-      await text('payment method'); click('[data-act=card]');
+      await text('payment method'); click('[data-act=cash]'); await giveCashChange();
       await text('Payment accepted'); click('[data-scr=done] [data-act=leave]');
       menu(1); key('Enter'); shelf(p.activeLine().loc); key('f'); key('Enter'); hand();
       const pc=w.pc; walk(pc.x,pc.desk.y0-.48); aim(pc.x,pc.y,1.05); await interact('Use PC');
