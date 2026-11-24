@@ -15,7 +15,7 @@ async function until(check, what) {
   const limit = Date.now() + 8000;
   while (!check()) { if (Date.now() > limit) assert.fail('Timed out waiting for ' + what); await pause(30); }
 }
-async function game(t, { online = true, phone = false, installed = false, loadPhotos = false, event = null, storage = {} } = {}) {
+async function game(t, { online = true, phone = false, installed = false, loadPhotos = false, event = null, storage = {}, speech = null } = {}) {
   const w = new JSDOM(page, { runScripts: 'outside-only', pretendToBeVisual: true,
     url: origin + '/Toolbox/tools/warehouse-shift.html' + (online ? '?relay=' + relay : '') }).window;
 
@@ -25,7 +25,11 @@ async function game(t, { online = true, phone = false, installed = false, loadPh
   w.innerWidth = phone ? 844 : 1280; w.innerHeight = phone ? 390 : 720;
   for (const [key, value] of Object.entries(storage)) w.localStorage.setItem(key, value);
   w.localStorage.setItem('toolbox.signedIn.area20', 'STEPHEN');
-  w.localStorage.setItem('ws-helped', '1'); w.localStorage.setItem('ws-sound', 'off');
+  w.localStorage.setItem('ws-helped', '1'); w.localStorage.setItem('ws-sound', speech ? 'on' : 'off');
+  if (speech) {
+    w.speechSynthesis = speech;
+    w.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
+  }
   w.fetch = async url => new Response(readFileSync(path.join(base, String(url).split('?')[0])));
   const sockets = [];
   w.WebSocket = class extends WebSocket {
@@ -76,6 +80,40 @@ function openShop(device) {
   assert.equal(pc.querySelector('.ws-shop').hidden, false);
   return pc;
 }
+
+test('character voices read English dialogue and can be muted without muting game sounds', async t => {
+  const calls = [];
+  const speech = {
+    getVoices: () => [{ lang: 'en-GB', localService: true }, { lang: 'en-IE', localService: true }],
+    speak: utterance => calls.push(utterance),
+    cancel: () => calls.push(null)
+  };
+  const { $, s, w } = await game(t, { online: false, speech });
+  $('startBtn').click();
+  const p = s.players[0], sam = s.crew[0], day = s.day();
+  day.plan.length = 0;
+  Object.assign(s.me, { x: sam.x, y: sam.y });
+  sam.say('Excuse me, please.');
+  assert.equal(calls.at(-1).lang, 'en-GB');
+  const cust = day.send('till');
+  p.till.open(1);
+  p.till.serve(cust.cust, cust.lines, '#246', { dayCust: cust, hello: 'Hello, I would like to order.' });
+  assert.equal(calls.at(-1).text, 'Hello, I would like to order.');
+  assert.equal(calls.at(-1).lang, 'en-IE');
+  sam.say('I can take the next order.');
+  assert.equal(calls.at(-1).lang, 'en-IE', 'nearby chatter does not interrupt the customer at the till');
+  p.closeTill();
+  assert.equal(calls.at(-1), null, 'stepping away stops the till speech');
+  p.menu(true);
+  p.D.scMenu.querySelector('[data-k="8"]').click();
+  assert.equal(w.localStorage.getItem('ws-voices'), 'off');
+  assert.equal(w.localStorage.getItem('ws-sound'), 'on');
+  assert.equal($('voicesOn').checked, false);
+  const count = calls.length;
+  sam.say('I will be by holding.');
+  assert.equal(calls.length, count);
+  assert.equal(sam.log.at(-1).text, 'I will be by holding.');
+});
 
 test('the normal game starts solo and local split-screen without opening a socket', async t => {
   for (const split of [false, true]) {
