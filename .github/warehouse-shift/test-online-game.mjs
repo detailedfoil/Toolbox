@@ -84,7 +84,8 @@ function openShop(device) {
 test('character voices read English dialogue and can be muted without muting game sounds', async t => {
   const calls = [];
   const speech = {
-    getVoices: () => [{ lang: 'en-GB', localService: true }, { lang: 'en-IE', localService: true }],
+    getVoices: () => [{ lang: 'en-GB', localService: true }, { lang: 'en-IE', localService: true },
+      { lang: 'fr-FR', localService: true }, { lang: 'fi-FI', localService: true }],
     speak: utterance => calls.push(utterance),
     cancel: () => calls.push(null)
   };
@@ -102,6 +103,12 @@ test('character voices read English dialogue and can be muted without muting gam
   assert.equal(calls.at(-1).lang, 'en-IE');
   sam.say('I can take the next order.');
   assert.equal(calls.at(-1).lang, 'en-IE', 'nearby chatter does not interrupt the customer at the till');
+  for (const [id, lang] of [[3, 'fr-FR'], [6, 'fi-FI']]) {
+    const hello = 'Could I collect my order, please?';
+    p.till.serve(cust.cust, cust.lines, '#246', { dayCust: { id }, hello });
+    assert.equal(calls.at(-1).lang, lang);
+    assert.equal(calls.at(-1).text, hello, 'the foreign-language voice still reads English');
+  }
   p.closeTill();
   assert.equal(calls.at(-1), null, 'stepping away stops the till speech');
   p.menu(true);

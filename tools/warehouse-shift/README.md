@@ -110,7 +110,7 @@ A mixed shift has a 25% chance of one randomly selected event. The start banner 
 | Keyboard and mouse | WASD to move, Shift to jog. Click the view for mouse look, Esc to release it. | Click or F to scan or use the aimed action, Enter or Space to confirm, C to squat, V to step, H/F4 for Hint, Up/Down for the pick list, Tab for Function, Backspace for Back. |
 | Controller | Left stick moves and jogs, right stick looks. | RT scans, A confirms, B goes back, X squats, LB steps, Y hints, D-pad moves through the pick list, Start opens Function. In Fusion, D-pad highlights, A presses, B deletes, LT selects Fusion, RT selects CrashFix, LB confirms, Y asks again, and Start leaves. |
 
-**Character voices** on the start screen and **Function → Voices** during a shift toggle spoken dialogue independently of scan sounds and other effects. The **Sound** toggle mutes both. Voices and captions cover customers and Sam, with local English voices and varied accents where available. Captions stay in English and remain visible with voices disabled.
+**Character voices** on the start screen and **Function → Voices** during a shift toggle spoken dialogue independently of scan sounds and other effects. The **Sound** toggle mutes both. Sam and customers speak English. Every third customer uses an installed local voice intended for another language when available. The selection starts with French and Finnish if installed. The original English words are sent to the voice unchanged. Captions stay in English and remain visible with voices disabled.
 
 The scanner's **Function** menu also has sound, look speed, help, practice pick mix, and Remove Sam/Bring Sam back. Practice mix is unavailable during a shift event. Online guests share the host's mix and Sam settings.
 
