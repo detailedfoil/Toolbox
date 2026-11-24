@@ -274,11 +274,11 @@ test('greeted customers walk to separate tills, wait for a free one and can be s
   aimAtCustomer(target.x, counter.y0 - 0.7);
   assert.equal($('tillBtn').textContent.trim(), 'GreetF');
   assert.equal($('tillBtn').hidden, false);
-  assert.match(player.D.scNote.textContent, /say hello/);
+  assert.equal(player.D.scNote.textContent, 'Waiting to be served');
   for (const [x, y] of [[target.x, counter.y1 + 0.2], [counter.x0 - 0.1, counter.y0 - 0.7]]) {
     aimAtCustomer(x, y);
     assert.ok($('tillBtn').hidden || !$('tillBtn').textContent.startsWith('Greet'));
-    assert.doesNotMatch(player.D.scNote.textContent, /say hello/);
+    assert.doesNotMatch(player.D.scNote.textContent, /Waiting to be served|Greet the next customer/);
   }
   assert.ok(day.greet(first, 'p2'));
   assert.equal(day.greet(second, 'p2'), false);

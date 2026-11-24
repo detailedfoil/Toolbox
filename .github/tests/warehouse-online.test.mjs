@@ -276,8 +276,28 @@ test('scanner faults interrupt a held order after random working time and respec
       assert.equal(d.swapScanner('p2', world.start), false);
       assert.equal(d.swapScanner('p2', front), true);
       assert.equal(d.swapScanner('p2', front), false);
+      if (next !== undefined) {
+        d.tick(59);
+        assert.equal(d.faultSchedule[0], next, 'the replacement has 60 seconds of protection');
+        d.tick(1);
+        order.status = 'picked';
+        d.tick(next + 1);
+        assert.equal(d.faultSchedule[0], next, 'a collected order can be handed over safely');
+        order.status = 'taken';
+      }
     }
     d.tick(600);
     assert.equal(faults.length, 6 - tier);
   }
+});
+
+test('the counter queue uses arrival time even when customers reach it out of spawn order', () => {
+  const d = Day.create({ world, World: W, Till, requests, rand: W.rng(321) });
+  const later = d.send('till'), earlier = d.send('kiosk');
+  d.t = 3; d.arrived(earlier);
+  d.t = 8; d.arrived(later);
+  assert.deepEqual(d.ungreeted(), [earlier, later]);
+  assert.equal(d.greet(later, 'p1'), true);
+  assert.equal(d.greet(earlier, 'p2'), true);
+  assert.deepEqual(d.queue(), [earlier, later]);
 });

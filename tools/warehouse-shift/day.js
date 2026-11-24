@@ -84,6 +84,7 @@
     this.baseXP = 0;
     this.coveredXP = 0;
     this.offlineScanners = new Set();
+    this.scannerProtectedUntil = new Map();
     const mixupRandom = this.World.rng(this.World.hash((this.shiftId || '') + '/scanner mix-ups'));
     const nextMixupGap = () => 1 + Math.floor(mixupRandom() * (this.firstDay ? 2 : 3));
     this.scannerMixups = {
@@ -130,13 +131,15 @@
 
   Day.prototype.checkScannerFault = function (dt) {
     if (this.phase !== 'open' || !this.faultSchedule.length) return;
-    const holders = (this.emit('scannerHolders') || []).filter(who => !this.offlineScanners.has(who));
+    const holders = (this.emit('scannerHolders') || []).filter(who =>
+      !this.offlineScanners.has(who) && (this.scannerProtectedUntil.get(who) ?? 0) < this.t);
     const working = holders.filter(who =>
-      this.orders.some(order => order.by === who && (order.status === 'taken' || order.status === 'picked')) ||
+      this.orders.some(order => order.by === who && order.status === 'taken') ||
       this.delivery.some(carton => carton.by === who && !carton.done));
     if (!working.length) return;
-    // Count shift time with a scanner job underway. Idle, missing and failed scanners pause the countdown.
-    this.faultSchedule[0] -= dt;
+    // Count shift time when at least one working scanner is eligible to disconnect.
+    const firstEligible = Math.min(...working.map(who => this.scannerProtectedUntil.get(who) ?? 0));
+    this.faultSchedule[0] -= Math.min(dt, this.t - firstEligible);
     if (this.faultSchedule[0] > 0) return;
     this.faultSchedule.shift();
     const who = this.pick(working);
@@ -151,7 +154,10 @@
   };
   Day.prototype.swapScanner = function (who, pos) {
     const swapped = this.atScannerDock(pos) && this.offlineScanners.delete(who);
-    if (swapped) this.emit('playtest', 'scanner.swap', { who });
+    if (swapped) {
+      this.scannerProtectedUntil.set(who, this.t + 60);
+      this.emit('playtest', 'scanner.swap', { who });
+    }
     return swapped;
   };
 
@@ -310,7 +316,7 @@
   };
   Day.prototype.present = function () { return this.customers.filter(function (c) { return c.state !== 'gone' && c.state !== 'leaving'; }); };
   // till customers at the counter that nobody is serving yet
-  Day.prototype.queue = function () { return this.customers.filter(function (c) { return c.state === 'counter' && !c.by; }); };
+  Day.prototype.queue = function () { return this.customers.filter(c => c.state === 'counter' && !c.by).sort((a, b) => a.here - b.here); };
   // picks nobody has started for a while: Sam only takes a pick after it has sat on the list for 15 s, and never serves
   // a till customer, so what you serve and pick is yours (detailedfoil, 19 Nov 2026)
   var LATE_PICK = 4;  // 4 s (detailedfoil, 21 Nov 2026; it was 5)
@@ -318,7 +324,7 @@
   // picks on the list that Sam will take once they've sat 4 s: he waits at his till for them and does nothing else
   Day.prototype.listEarly = function () { var t = this.t; return this.list().filter(function (o) { return t - o.t <= LATE_PICK; }); };
   // customers at the counter nobody has said hello to yet, the one waiting longest first
-  Day.prototype.ungreeted = function () { return this.customers.filter(function (c) { return c.state === 'greet'; }); };
+  Day.prototype.ungreeted = function () { return this.customers.filter(c => c.state === 'greet').sort((a, b) => a.here - b.here); };
   Day.prototype.makeOrder = function (kind, lines, cust, counts, extra) {
     var World = this.World;
     lines = (lines || []).filter(function (l) { return l.item && l.item.loc && World.room(l.item) >= 1; }).map(function (l) {

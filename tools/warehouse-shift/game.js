@@ -1075,7 +1075,7 @@
         D.toteCount.textContent = (state === 'deliver' || state === 'restock' || state === 'put' ? order.lines.length : cur) + '/' + order.lines.length;
       }
       const suffix = (o) => (o.kind === 'c' ? ' c' : o.kind === 'till' ? '' : ' CK');
-      let greetArea = false;
+      let greetArea = false, customerStatus = '';
       function renderList(showMsg) {
         const list = scannerList();
         if (selId !== null) { const i = list.findIndex((o) => o.id === selId); if (i >= 0) sel = i; }
@@ -1094,7 +1094,8 @@
         if (showMsg) { note = msg.text; cls = msg.cls || 'warn'; }
         else if (state === 'end') { note = 'Day done'; cls = 'ok'; }
         else if (day && day.phase === 'lock') note = 'All done: lock the front door';
-        else if (greetArea && day?.canGreet(P.id) && day.ungreeted().length) note = 'Customer waiting: say hello';
+        else if (customerStatus) note = customerStatus;
+        else if (greetArea && day?.canGreet(P.id) && day.ungreeted().length) note = 'Greet the next customer';
         else if (day && day.queue().length && !P.tillCust) note = 'Till customer waiting';
         else if (homeSel !== 2 && day && !list.length && day.deliveryLeft().length) note = 'No picks: put the delivery away';
         D.scNote.textContent = note; D.scNote.className = 'sc-note ' + cls; D.scNote.hidden = !note;
@@ -1161,7 +1162,8 @@
         let note = '', cls = 'warn';
         if (showMsg) { note = msg.text; cls = msg.cls || 'warn'; }
         else if (day && day.phase === 'lock') note = 'All done: lock the front door';
-        else if (greetArea && day?.canGreet(P.id) && day.ungreeted().length) note = 'Customer waiting: say hello';
+        else if (customerStatus) note = customerStatus;
+        else if (greetArea && day?.canGreet(P.id) && day.ungreeted().length) note = 'Greet the next customer';
         else if (day && day.queue().length && !P.tillCust) note = 'Till customer waiting';
         else if (day && day.list().length) note = 'Picks waiting';
         D.scNote.textContent = note; D.scNote.className = 'sc-note ' + cls; D.scNote.hidden = !note;
@@ -1787,6 +1789,7 @@
         let best = null, g = null, dr = null, br = false, pcx = false, st = null, dock = false, box = null, bestAng = 9;
         const inGreetArea = active && canGreetAt(me);
         const changedGreetArea = greetArea !== inGreetArea;
+        let nextInLine = null, nextStatus = '', statusAngle = 0.3;
         greetArea = inGreetArea;
         const behind = me.y < counter.y0 + 0.05 && me.y > counter.y0 - 1.75;
         const take = (a, lim, fn, b) => { if (a.ang < lim && a.ang < bestAng) { bestAng = a.ang; best = null; g = null; dr = null; br = false; pcx = false; st = null; fn(); box = b; } };
@@ -1798,12 +1801,27 @@
               if (a.d < 2.4) take(a, 0.16, () => { best = t; }, { x: tillX(t), y: (t.y0 + t.y1) / 2, z0: 1.0, z1: 1.34, w: t.x1 - t.x0, d: t.y1 - t.y0 });
             }
           }
-          // Greet only from the till area: within about 1.6 m (along the counter) of one of the tills (detailedfoil, 21 Nov 2026)
-          if (day?.canGreet(P.id) && greetArea) {
-            for (const c of day.ungreeted()) {
-              if (!c.fig) continue;
-              const px = c.fig.group.position.x, py = c.fig.group.position.z, a = aimAt(px, py, 1.2);
-              if (a.d < 3.2) take(a, 0.3, () => { g = c; }, { x: px, y: py, z0: 0, z1: 1.95, w: 0.75, d: 0.55 });
+          if (greetArea && day) {
+            if (day.canGreet(P.id)) {
+              for (const c of day.ungreeted()) {
+                if (!c.fig) continue;
+                const px = c.fig.group.position.x, py = c.fig.group.position.z, a = aimAt(px, py, 1.2);
+                if (a.d >= 3.2) continue;
+                const outline = { x: px, y: py, z0: 0, z1: 1.95, w: 0.75, d: 0.55 };
+                // Direct aim lets the player choose. A wider aim at the line defaults to the longest wait.
+                if (!nextInLine && a.ang < 0.55) nextInLine = { c, outline };
+                take(a, 0.3, () => { g = c; }, outline);
+              }
+            }
+            for (const c of day.customers) {
+              if (!c.fig || !['greet', 'counter', 'waiting'].includes(c.state)) continue;
+              const { x, z } = c.fig.group.position, a = aimAt(x, z, 1.2);
+              if (a.d >= 3.2 || a.ang >= statusAngle) continue;
+              statusAngle = a.ang;
+              if (c.state === 'greet') nextStatus = 'Waiting to be served';
+              else if (c.state === 'counter') nextStatus = 'Waiting to order';
+              else if (c.order?.kind !== 'till') nextStatus = 'Waiting for collection';
+              else nextStatus = c.order.status === 'picked' ? 'Paid · awaiting handover' : 'Paid · awaiting pick';
             }
           }
           if (day && day.phase === 'lock') {
@@ -1834,6 +1852,13 @@
             if (!dock && a.d < 2.0) take(a, 0.32, () => { pcx = true; }, { x: q.x, y: q.y, z0: 0.86, z1: 1.24, w: 0.58, d: 0.08 });
           }
         }
+        if (!box && nextInLine && !tutorial) {
+          g = nextInLine.c;
+          box = nextInLine.outline;
+          nextStatus = 'Waiting to be served';
+        }
+        const statusChanged = customerStatus !== nextStatus;
+        customerStatus = nextStatus;
         let shelf = false;
         if (state === 'restock' && !P.scannerMissing && day.atReplenShelf(me)) {
           const unit = world.replenShelf;
@@ -1845,7 +1870,7 @@
         const old = (shelfOn ? 'replen' : '') + (dockOn ? 'dock' : '') + (nearTill ? 't' + tills.indexOf(nearTill) : '') + (greetC ? 'g' + greetC.id : '') + (doorOn || '') + (bellOn ? 'b' : '') + (pcOn ? 'p' : '') + (stoolOn ? 's' + stoolOn.id : '');
         shelfOn = shelf; dockOn = dock; nearTill = best; greetC = g; doorOn = dr; bellOn = br; pcOn = pcx; stoolOn = st;
         if (key === old) {
-          if (changedGreetArea && idleState()) renderScanner();
+          if ((changedGreetArea || statusChanged) && idleState()) renderScanner();
           return;
         }
         dirty = true;
