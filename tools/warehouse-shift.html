@@ -47,7 +47,7 @@
     <span class="ws-order ws-chip-done" id="orderChip" data-el="orderChip"><span>Orders done</span> <b id="doneCount" data-el="doneCount">0</b></span>
     <span class="ws-order" id="toteChip" data-el="toteChip" title="Lines in the tote"><svg viewBox="0 0 24 16" width="20" height="14" aria-hidden="true"><path d="M1 3h22l-2 12H3z" fill="#2e66b5" stroke="#9cc0ff" stroke-width="1.2"/><path d="M5 6h14" stroke="#9cc0ff" stroke-width="1.2"/></svg><b id="toteCount" data-el="toteCount">0</b></span>
   </div>
-  <button class="ws-squat ws-step" id="stepBtn" data-el="stepBtn" type="button" aria-pressed="false" hidden>Step<small>V</small></button>
+  <button class="ws-squat ws-step" id="stepBtn" data-el="stepBtn" type="button" aria-pressed="false" hidden>Step<small>Space</small></button>
   <button class="ws-squat" id="squatBtn" data-el="squatBtn" type="button" aria-pressed="false" hidden>Squat<small>C</small></button>
   <button class="ws-tillbtn" id="tillBtn" data-el="tillBtn" type="button" hidden>Use till<small>F</small></button>
   <section class="sc" id="scanner" data-el="scanner" hidden aria-label="Scanner">
@@ -72,11 +72,11 @@
           <button class="sc-ico" id="scUp" data-el="scUp" type="button" aria-label="Up"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 11l-11 12h7v13h8V23h7z" fill="#fff"/></svg></button>
           <button class="sc-ico" id="scDown" data-el="scDown" type="button" aria-label="Down"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 37l11-12h-7V12h-8v13h-7z" fill="#fff"/></svg></button>
         </div>
-        <button class="sc-hint" id="scHint" data-el="scHint" type="button"><span>&lt;F4&gt;</span><span>Hint</span></button>
-        <button class="sc-hint sc-quick-pick" id="scQuickPick" data-el="scQuickPick" type="button" hidden>Quick Pick</button>
+        <button class="sc-hint" id="scHint" data-el="scHint" type="button">Hint (2)</button>
+        <button class="sc-hint sc-quick-pick" id="scQuickPick" data-el="scQuickPick" type="button" hidden>Quick Pick (3)</button>
         <div class="sc-picked" id="scPicked" data-el="scPicked">Picked : <span class="val" id="scQty" data-el="scQty"></span><span class="sc-cur line" id="scCur" data-el="scCur"></span></div>
         <div class="sc-keys">
-          <button class="sc-k sc-fn" id="scFn" data-el="scFn" type="button">Function</button>
+          <button class="sc-k sc-fn" id="scFn" data-el="scFn" type="button">Function (1)</button>
           <button class="sc-k sc-scan" id="scScan" data-el="scScan" type="button">Scan</button>
           <button class="sc-k sc-enter" id="scEnter" data-el="scEnter" type="button">Enter</button>
         </div>
@@ -99,9 +99,9 @@
         </div>
         <div class="sc-menu" id="scMenu" data-el="scMenu" hidden></div>
         <div class="sc-confirm" id="scConfirm" data-el="scConfirm" role="group" aria-label="Scanner options" hidden>
-          <button class="sc-k sc-fn" data-el="scConfirmFn" type="button">Function</button>
-          <button class="sc-k sc-fn" data-el="scConfirmHint" type="button" hidden>Hint</button>
-          <button class="sc-k sc-fn" data-el="scConfirmQuickPick" type="button" hidden>Quick Pick</button>
+          <button class="sc-k sc-fn" data-el="scConfirmFn" type="button">Function (1)</button>
+          <button class="sc-k sc-fn" data-el="scConfirmHint" type="button" hidden>Hint (2)</button>
+          <button class="sc-k sc-fn" data-el="scConfirmQuickPick" type="button" hidden>Quick Pick (3)</button>
         </div>
         <div class="sc-flash" id="scFlash" data-el="scFlash"></div>
       </div>
@@ -215,7 +215,7 @@
             <li>Your scanner can disconnect mid-job. If it shows <b>Server connection issue</b>, go to the <b>office</b>. Face the charging dock beside the manager’s PC and use <b>Swap scanner</b>. Your replacement keeps your task and quantities and is protected for 60 seconds of shift time. Once the final line is confirmed, you can hand over the order without another disconnect.</li>
             <li>The scanner opens on its <b>Main Menu</b>: <b>Putaway</b> or <b>Today Picking</b>. Back goes back to it.</li>
             <li>The scanner lists today's picks: <b>A4821 2:3 CK</b> is order A4821, 2 locations, 3 items. <b>CK</b>: a click and collect customer is at the counter. <b>c</b>: nobody's here yet, it goes in the holding area. Nothing after it: bought at the till, the customer's waiting.</li>
-            <li>Up and down choose an order, <b>Enter</b> (or <b>Space</b>) starts it. Once started it's yours: Back says <b>Finish task</b>.</li>
+            <li>Up and down choose an order, <b>Enter</b> starts it. Once started it's yours: Back says <b>Finish task</b>.</li>
             <li>A full day is <b>15 to 25 picks</b>, plus the <b>delivery</b>. Day one has about a third of the usual delivery and customers. It ends when they're all done, the delivery's away and nobody's waiting: then lock the front door.</li>
           </ul>
           <h2>Picking</h2>
@@ -268,7 +268,7 @@
           <h2>Controller</h2>
           <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>LB</b> step on the stool, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
           <h2>Computer</h2>
-          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or <kbd>F</kbd> scan, <kbd>Space</kbd> (or <kbd>Enter</kbd>) next, <kbd>C</kbd> squat, <kbd>V</kbd> step on the stool, <kbd>H</kbd> hint</li><li><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose on the pick list</li><li><kbd>Tab</kbd> opens the scanner's Function menu. Choose <b>Voices</b> to mute character speech.</li></ul>
+          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or press <kbd>F</kbd> to interact with the outlined target or scan. <kbd>Enter</kbd> confirms, <kbd>C</kbd> squats, and <kbd>Space</kbd> steps onto or off a kick stool</li><li><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose on the pick list</li><li>Blue buttons use <kbd>1</kbd> Function, <kbd>2</kbd> Hint and <kbd>3</kbd> Quick Pick when available. Press once to show the options, then press the number of the option you want. <kbd>Tab</kbd> opens Function directly.</li></ul>
         </div>
       </div>
       <div class="ws-row"><button class="ws-go" id="helpClose" type="button">Got it</button></div>
@@ -323,6 +323,6 @@
 <script src="warehouse-shift/online-game.js?v=70cc248c0b"></script>
 <script src="warehouse-shift/playtest.js?v=223d2eb3db"></script>
 <script src="warehouse-shift/tutorial.js?v=56530cb60c"></script>
-<script src="warehouse-shift/game.js?v=5fc1b738d1"></script>
+<script src="warehouse-shift/game.js?v=10d2cea4ab"></script>
 </body>
 </html>

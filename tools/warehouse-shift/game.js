@@ -1378,9 +1378,9 @@
       }
       function shut() { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; }
       function scanAt(nx, ny, useAimedObject = false) {
-        if (useAimedObject && (stoolOn || pcOn) && useAction()) return;
-        if (P.scannerMissing) { if (!useAction() && nearTill) openTill(); return; }
         if (blueAction) return;
+        if (useAimedObject && useAction()) return;
+        if (P.scannerMissing) { useAction(); return; }
         if (order?.kind === 'replen' && doorOn && useAction()) return;
         if (state === 'restock') { restock(); return; }
         if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } return; }
@@ -1845,6 +1845,7 @@
           const unit = world.replenShelf;
           const x = Math.max(unit.x0, Math.min(unit.x1, me.x)), y = Math.max(unit.y0, Math.min(unit.y1, me.y));
           shelf = aimAt(x, y, 1.2).ang < 0.8;
+          if (shelf) box = { x: (unit.x0 + unit.x1) / 2, y: (unit.y0 + unit.y1) / 2, z0: 0, z1: unit.z1, w: unit.x1 - unit.x0, d: unit.y1 - unit.y0 };
         }
         aimedBox = box;
         const key = (shelf ? 'replen' : '') + (dock ? 'dock' : '') + (best ? 't' + tills.indexOf(best) : '') + (g ? 'g' + g.id : '') + (dr || '') + (br ? 'b' : '') + (pcx ? 'p' : '') + (st ? 's' + st.id : '');
@@ -1883,6 +1884,7 @@
         if (stoolOn) { takeStool(); return true; }
         if (bellOn) { if (guest()) remote(() => online.bell()); else ringBell(P.id); return true; }
         if (pcOn) { openPc(); return true; }
+        if (nearTill) { openTill(); return true; }
         return false;
       }
       /* ---------- kick stools (detailedfoil, 21 Nov 2026) ---------- */
@@ -2284,7 +2286,7 @@
       }
       for (const [button, enlarged, run] of blueOptions) {
         button.addEventListener('click', () => {
-          if (!P.playing() || button.hidden) return;
+          if (!P.playing() || P.scannerMissing || button.hidden) return;
           initAudio();
           SFX.key();
           if (!D.scMenu.hidden && button === D.scFn) { menu(false); return; }
@@ -2295,13 +2297,17 @@
           enlarged.focus({ preventScroll: true });
         });
         enlarged.addEventListener('click', () => {
-          if (D.scConfirm.hidden || !P.playing() || button.hidden) return;
+          if (D.scConfirm.hidden || !P.playing() || P.scannerMissing || button.hidden) return;
           blueAction = button;
           cancelBlueAction();
           run();
         });
       }
-      press(D.tillBtn, () => { if (!useAction()) openTill(); });
+      P.blueKey = number => {
+        const option = blueOptions[number - 1];
+        if (option) option[D.scConfirm.hidden ? 0 : 1].click();
+      };
+      press(D.tillBtn, useAction);
       press(D.scKbd, () => { SFX.key(); toast(state === 'list' ? 'Up and down choose, Enter starts the pick' : 'No typing: scan the location once for each item'); });
       press(D.scUp, () => page(-1)); press(D.scDown, () => page(1));
       press(D.scPrev, () => page(-1)); press(D.scNext, () => page(1));
@@ -2438,7 +2444,7 @@
       P.beforeRender = () => {
         if (active) updateAim(); else S.aimBox.visible = false;
         // the outline of what you could use right now (yellow; the white one is for shelves)
-        if (active && aimedBox && !S.aimBox.visible) { S.setBox(S.aimBox, aimedBox, 0.03); S.aimBox.visible = true; S.aimBox.material.color.set(0xffd400); }
+        if (P.playing() && aimedBox) { S.setBox(S.aimBox, aimedBox, 0.03); S.aimBox.visible = true; S.aimBox.material.color.set(0xffd400); }
         else S.aimBox.material.color.set(0xffffff);
         applyHint();
         tutorial?.drawGlow();
@@ -2582,10 +2588,15 @@
       if (!kp || !kp.playing()) return;
       initAudio();
       if (e.pointerType === 'mouse') {
-        if (!locked() && !mouseDrag) { lockMouse(); e.preventDefault(); return; }
-        if (locked()) { if (e.button === 0) { const c = kp.centre(); kp.scanAt(c[0], c[1]); } e.preventDefault(); return; }
+        if (e.button !== 0) return;
+        if (!locked() && !mouseDrag) {
+          // A target can already be lined up after closing a screen or looking with the keyboard.
+          if (!kp.D.scConfirm.hidden || !kp.D.scMenu.hidden || !kp.useAction()) lockMouse();
+          e.preventDefault(); return;
+        }
+        if (locked()) { kp.scanAt(...kp.centre(), true); e.preventDefault(); return; }
       }
-      if (split) return; // touch is for one player
+      if (split && e.pointerType !== 'mouse') return; // touch is for one player
       try { canvas.setPointerCapture(e.pointerId); } catch (x) { /* fine */ }
       looks.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now() });
     });
@@ -2604,7 +2615,9 @@
       looks.delete(e.pointerId);
       if (e.type === 'pointerup' && Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < 10 && performance.now() - p.t < 450) { // a tap: scan what's there
         const kp = kbPlayer();
-        if (kp) { const c = canvasNdc(kp, e); kp.scanAt(c[0], c[1]); }
+        if (!kp?.playing()) return;
+        if (e.pointerType === 'mouse') kp.scanAt(...kp.centre(), true);
+        else kp.scanAt(...canvasNdc(kp, e));
       }
     };
     canvas.addEventListener('pointerup', lookEnd); canvas.addEventListener('pointercancel', lookEnd);
@@ -2639,7 +2652,8 @@
         if (e.key === 'Escape' || e.key === 'Tab') { p.menu(false); e.preventDefault(); return; }
       }
       if (!D.scConfirm.hidden && e.key === 'Escape') { p.back(); e.preventDefault(); return; }
-      if (([D.scHint, D.scQuickPick, D.scFn].includes(e.target) || D.scConfirm.contains(e.target)) && (e.key === 'Enter' || e.key === ' ')) {
+      const stepWithSpace = e.code === 'Space' && !D.stepBtn.hidden && D.scConfirm.hidden && D.scMenu.hidden;
+      if (!stepWithSpace && ([D.scHint, D.scQuickPick, D.scFn].includes(e.target) || D.scConfirm.contains(e.target)) && (e.key === 'Enter' || e.key === ' ')) {
         if (e.repeat) e.preventDefault();
         return;
       }
@@ -2648,13 +2662,20 @@
       if (KEYMAP[e.code]) { p.input.keys.add(KEYMAP[e.code]); e.preventDefault(); return; }
       if (e.key === 'Shift') { p.input.run(true); return; }
       if (e.repeat) return;
-      if (/^[0-9]$/.test(e.key)) { p.digit(e.key); e.preventDefault(); return; }
+      if (/^[0-9]$/.test(e.key)) {
+        if (/^[1-4]$/.test(e.key)) p.blueKey(Number(e.key));
+        else p.digit(e.key);
+        e.preventDefault(); return;
+      }
       switch (e.code) {
         case 'KeyF': { const c = p.centre(); p.scanAt(c[0], c[1], true); e.preventDefault(); break; }
         case 'KeyC': p.toggleSquat(); break;
         case 'KeyV': p.toggleStep(); break;
         case 'KeyH': case 'F4': p.useHint(); e.preventDefault(); break;
-        case 'Enter': case 'NumpadEnter': case 'Space': SFX.key(); p.enter(); e.preventDefault(); break;
+        case 'Space': case 'Enter': case 'NumpadEnter':
+          if (stepWithSpace) p.toggleStep();
+          else { SFX.key(); p.enter(); }
+          e.preventDefault(); break;
         case 'Backspace': p.back(); e.preventDefault(); break;
         case 'Tab': case 'KeyM': SFX.key(); p.menu(D.scMenu.hidden); e.preventDefault(); break;
         case 'PageUp': case 'BracketLeft': p.page(-1); break;
