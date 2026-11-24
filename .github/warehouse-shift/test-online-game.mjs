@@ -436,6 +436,25 @@ test('greeted customers walk to separate tills, wait for a free one and can be s
   assert.equal(fourth.ready, true);
 });
 
+test('lock-up opens stats, then upgrades and a new shift in the office', async t => {
+  const { $, w, s } = await game(t, { online: false, storage: { 'ws-shift-xp/saved': '400' } });
+  $('startBtn').click();
+  const first = s.day();
+  first.phase = 'lock'; assert.ok(first.lock());
+  s.tick(1.5);
+  assert.ok(!$('dayResults').hidden && $('dayUpgrades').hidden);
+  $('nextDayBtn').click(); assert.equal(s.day(), first);
+  $('dayNext').click();
+  const upgrade = $('dayUpgrades').querySelector('[data-reliability]');
+  upgrade.click();
+  assert.match($('dayUpgrades').querySelector('[data-status="reliability"]').textContent, /Tier 2/);
+  $('nextDayBtn').click();
+  assert.notEqual(s.day(), first);
+  assert.equal(s.day().faultSchedule.length, 4);
+  const office = s.world.rooms.find(r => r.name === 'Office');
+  assert.ok(s.me.x > office.x0 && s.me.x < office.x1 && s.me.y > office.y0 && s.me.y < office.y1);
+});
+
 test('fresh Sam covers tills when idle on light duties', async t => {
   const { $, s } = await game(t, { online: false, event: 'lightDuties' });
   $('startBtn').click();
@@ -790,6 +809,11 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   assert.equal(guestShop.querySelector('[data-sam-speed]').disabled, true);
   assert.equal(guestShop.querySelector('[data-sam-speed]').textContent, 'Host manages Sam');
   picker.s.players[0].closePc();
+  for (const batch of day.orders.filter(o => o.kind === 'replen' && o.status === 'listed')) {
+    day.take(batch, 'p1'); day.picked(batch);
+    const shelf = day.world.replenShelf;
+    assert.ok(day.restock(batch, 'p1', { x: shelf.x1, y: shelf.y0 }));
+  }
   day.phase = 'lock'; assert.equal(day.lock(), true);
   await until(() => !host.$('dayCover').hidden && guests.every(g => !g.$('dayCover').hidden), 'end of day screens');
   const receipt = 'ws-shift-xp/' + day.shiftId;
@@ -806,6 +830,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   assert.equal(picker.$('careerXP').textContent, beforeReconnect);
   const previous = s.day();
   assert.equal(previous.report.id, day.shiftId);
+  for (const device of [host, ...guests]) device.$('dayNext').click();
   assert.equal(host.$('nextDayBtn').hidden, false);
   assert.ok(guests.every(g => g.$('nextDayBtn').hidden));
   picker.$('nextDayBtn').click();

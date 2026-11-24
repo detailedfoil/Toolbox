@@ -102,7 +102,7 @@
       for (const [code, parcel] of Object.entries(replica.hold)) if (reset || oldHold[code]?.num !== parcel?.num) S.hold.set(code, parcel);
       S.delivery.set(replica.delivery);
       tills.forEach((t, i) => { const o = replica.orders.find(o => o.id === s.screens[i]); if (g.screenOf(t) !== (o || null)) g.screen(t, o); });
-      if (reset) p.newDay();
+      if (reset) { p.newDay(); if (newDay && s.epoch > 1) p.startInOffice(); }
       else for (const o of replica.orders) {
         if (!before.has(o.id) && o.status === 'listed') p.listed(o);
         else if (before.get(o.id) !== o.status || p.order() === o) p.changed(o);

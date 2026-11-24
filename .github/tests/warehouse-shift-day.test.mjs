@@ -68,6 +68,7 @@ function runDay(seed, opts = {}) {
   while (T < (opts.minutes || 60) * 60 && !day.over) {
     T += dt;
     for (let i = timers.length - 1; i >= 0; i--) if (timers[i].t <= T) { const f = timers[i].f; timers.splice(i, 1); f(); }
+    finishReplen(day);
     day.tick(dt);
     bot.update(dt, [{ id: -1, x: 1, y: 0.9, r: 0.22 }]);
     if (opts.you !== false) {
@@ -99,6 +100,18 @@ function runDay(seed, opts = {}) {
   return out;
 }
 
+// Complete player-only replen in the simulated shifts that exercise Sam's workload.
+function finishReplen(day) {
+  if (day.released < day.plan.length || day.present().length || day.delivery.some(d => !d.done) ||
+      day.orders.some(o => o.kind !== 'replen' && o.status !== 'done')) return;
+  const shelf = day.world.replenShelf;
+  for (const batch of day.orders.filter(o => o.kind === 'replen' && o.status === 'listed')) {
+    day.take(batch, 'p1');
+    day.picked(batch);
+    day.restock(batch, 'p1', { x: shelf.x1, y: shelf.y0 });
+  }
+}
+
 const days = [14, 31, 43].map((s) => runDay(s, { digitalTier: 3 }));
 const alone = runDay(5, { you: false, mode: 'pick' }); // Sam never serves a till customer, so on their own the day has click and collects only
 
@@ -111,7 +124,7 @@ test('a day is 15 to 25 picks, the shop is open from the start (no morning c pic
     assert.equal(day.orders.filter((o) => o.counts).length, day.total, 'every pick counts');
     assert.equal(day.first, 0, 'no c picks before opening');
     if (d !== alone) assert.ok(day.orders.filter((o) => o.kind === 'c').length >= 3, 'c picks come in during the day');
-    assert.ok(day.orders.every((o) => o.status === 'done' || (o.kind === 'replen' && o.status === 'skipped')), 'every order finished');
+    assert.ok(day.orders.every((o) => o.status === 'done'), 'every order finished');
     assert.equal(day.present().length, 0, 'nobody left waiting');
     assert.ok(d.T > 6 * 60 && d.T < 55 * 60, 'about a shift: ' + (d.T / 60).toFixed(1) + ' min');
     // the door: nobody comes in before it's unlocked, and the day only ends after it's locked
@@ -362,7 +375,7 @@ function soloDay(seed, prio = ['cust', 'queue', 'hold', 'delivery']) {
   const choose = bot.choose.bind(bot);
   bot.choose = function () { const j = choose(); if (j && j.cat && first.length < 400) first.push({ cat: j.cat, b: benv.board() }); return j; };
   const dt = 0.05;
-  while (T < 90 * 60 && !day.over) { T += dt; for (let i = timers.length - 1; i >= 0; i--) if (timers[i].t <= T) { const f = timers[i].f; timers.splice(i, 1); f(); } day.tick(dt); bot.update(dt, [{ id: -1, x: 1, y: 0.9, r: 0.22 }]); }
+  while (T < 90 * 60 && !day.over) { T += dt; for (let i = timers.length - 1; i >= 0; i--) if (timers[i].t <= T) { const f = timers[i].f; timers.splice(i, 1); f(); } finishReplen(day); day.tick(dt); bot.update(dt, [{ id: -1, x: 1, y: 0.9, r: 0.22 }]); }
   const tot = Object.values(bot.busyT).reduce((a, b) => a + b, 0), share = {};
   for (const k of ['cust', 'queue', 'hold', 'delivery']) share[k] = (bot.busyT[k] || 0) / tot;
   return { day, bot, share, T, first };
