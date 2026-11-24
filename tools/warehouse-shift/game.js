@@ -290,7 +290,15 @@
       if (playtest) recordPlaytest('sam.jobs', { jobs: samJobs() });
     }
     let bellCust = null, bellCount = 0, nextBellCheck = 0;
-    function bellQueue() { if (bellCust?.state !== 'counter') bellCust = null; return bellCust ? [bellCust] : []; }
+    function bellQueue() {
+      if (bellCust && bellCust.state !== 'greet' && bellCust.state !== 'counter') bellCust = null;
+      return bellCust ? [bellCust] : [];
+    }
+    function requestTillHelp() {
+      if (!crew.length || !tillAssigned() || !day.tillsOpen() || bellQueue().length) return;
+      bellCust = day.queue()[0] || day.ungreeted()[0] || null;
+      if (bellCust) bellCust.helpCalled = true;
+    }
     function showBell() {
       tone(784, 0, 0.48, 'sine', 0.1);
       tone(622, 0.28, 0.65, 'sine', 0.1);
@@ -302,15 +310,10 @@
       bellCount++;
       showBell();
     }
-    function ringBell(who) {
+    function ringBell() {
       if (day?.phase !== 'open') return false;
       announceBell();
-      // Ring for help even when Sam is assigned elsewhere.
-      if (crew.length && tillAssigned() && !bellQueue().length) {
-        if (!day.queue().length) day.greet(day.ungreeted()[0], who);
-        bellCust = day.queue()[0] || null;
-      }
-      if (bellCust) bellCust.helpCalled = true;
+      requestTillHelp();
       return true;
     }
     function checkServiceBell() {
@@ -322,6 +325,7 @@
       if (!waiting.length) return;
       for (const c of waiting) c.helpCalled = true;
       announceBell();
+      requestTillHelp();
     }
     const CY = counter.y1 + 0.42, MID = counter.y1 + 0.95;
     // places at the counter: across from each till (the last is Sam's)
@@ -665,17 +669,22 @@
     }
     const pulling = new Set(); // boxes moving forward or back
     const cartonGeo = new T.BoxGeometry(0.42, 0.3, 0.32), cartonMat = new T.MeshLambertMaterial({ color: 0xc49a64 });
-    const samTillFree = () => !taken.has(SPOTS[SPOTS.length - 1]);
+    const samTillFree = c => {
+      const atTill = taken.get(SPOTS[SPOTS.length - 1]);
+      return !atTill || atTill === c;
+    };
     const crewEnv = {
       standTill: () => tillAssigned() && day?.tillsOpen(),
       board: () => {
         if (!(day && active)) return { orders: [], queue: [], bell: [], greet: [], prio: [], delivery: 0, early: [] };
-        const on = samJobs();
-        // the queue: till customers who've waited a few seconds with nobody coming to serve them
-        const q = on.includes('queue') ? day.queue().filter((c) => c.greeter === 'Sam' || day.t - c.greeted > 5) : [];
-        const greet = on.includes('queue') ? day.ungreeted().filter(c => day.t - c.here > 2) : [];
-        return { orders: day.listLate().filter((o) => day.samCanPick(o)), queue: samTillFree() ? q : [],
-          bell: samTillFree() && on.includes('queue') ? bellQueue() : [], greet, prio: on,
+        const on = samJobs(), serveTills = on.includes('queue') && day.tillsOpen();
+        const waiting = serveTills ? day.queue().filter(samTillFree) : [];
+        const ungreeted = on.includes('queue') ? day.ungreeted() : [];
+        const queue = waiting.filter(c => c.greeter === 'Sam' || day.t - c.greeted > 5);
+        const greet = ungreeted.filter(c => day.t - c.here > 2);
+        return { orders: day.listLate().filter(o => day.samCanPick(o)), queue, greet, prio: on,
+          bell: serveTills ? bellQueue().filter(samTillFree) : [],
+          tillPending: waiting.length > 0 || (serveTills && samTillFree() && ungreeted.length > 0),
           delivery: day.event === 'lightDuties' ? 0 : day.deliveryLeft().length,
           early: day.listEarly().filter((o) => day.samCanPick(o) && on.includes(o.kind === 'c' ? 'hold' : 'cust')) };
       },
@@ -690,7 +699,7 @@
       paPut(b, d) { if (b.fig.held) { b.fig.carry.remove(b.fig.held); b.fig.held = null; } day.paPut(d, b.name); dirty = true; },
       greet: (b, c) => { if (day && tillAssigned()) day.greet(c, b.name); },
       take: (b, o) => !!day && day.take(o, b.name),
-      serve(b, c) { if (!day || !samTillFree() || !day.serve(c, b.name)) return false; showScreen(b.till, null); callTo(c, b.till); return true; },
+      serve(b, c) { if (!day || !tillAssigned() || !samTillFree(c) || !day.serve(c, b.name)) return false; showScreen(b.till, null); callTo(c, b.till); return true; },
       picked: (b, o) => day.picked(o),
       holdFree: () => (day ? day.freeSpots() : []),
       reserve: (b, code) => !!day && day.reserve(code, b.name),
@@ -1837,7 +1846,7 @@
           return true;
         }
         if (stoolOn) { takeStool(); return true; }
-        if (bellOn) { if (guest()) remote(() => online.bell()); else ringBell(P.id); return true; }
+        if (bellOn) { if (guest()) remote(() => online.bell()); else ringBell(); return true; }
         if (pcOn) { openPc(); return true; }
         if (nearTill) { openTill(); return true; }
         return false;

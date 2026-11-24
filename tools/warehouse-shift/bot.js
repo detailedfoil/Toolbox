@@ -610,11 +610,13 @@
   var PRIO = ['queue', 'cust', 'hold', 'delivery'];
   Bot.prototype.choose = function () {
     var b = this.emit('board') || {}, orders = b.orders || [], queue = b.queue || [], prio = b.prio || PRIO;
+    const called = b.bell?.[0];
+    if (called) return called.state === 'greet' ? { greet: called } : { serve: called, cat: 'queue' };
     if (b.greet?.length) return { greet: b.greet[0] };
-    if (b.bell && b.bell.length) return { serve: b.bell[0], cat: 'queue' };
     for (const job of prio) {
       if (job === 'queue') {
         if (queue.length) return { serve: queue[0], cat: 'queue' };
+        if (b.tillPending) return null; // Give the player time to help before taking lower-priority work.
       } else if (job === 'delivery') {
         if (b.delivery > 0) return { putaway: true, cat: 'delivery' };
       } else {
@@ -886,6 +888,8 @@
     var g = w.goodsin[srcs[0]];
     yield* this.walkTo(g.stand);
     yield this.T(PACE.label);
+    // Priorities may change while walking to Goods In. Recheck before claiming a carton.
+    if (!this.choose()?.putaway) return;
     var d = this.emit('paTake', g.i);
     if (!d) return; // someone took the last one
     var sl = g.slots[d.slot], low = sl.z0 < 0.4;
