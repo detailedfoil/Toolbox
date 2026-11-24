@@ -21,7 +21,7 @@ function fakeCanvas(w, h) {
 }
 function loadCCTV() {
   const made = [];
-  const sandbox = { document: { createElement: () => { const c = fakeCanvas(1024, 600); made.push(c); return c; } }, Math, Date, String };
+  const sandbox = { document: { createElement: () => { const c = fakeCanvas(1024, 600); made.push(c); return c; } }, Math, String };
   sandbox.window = sandbox;
   vm.runInNewContext(read('tools/warehouse-shift/cctv.js'), sandbox, { filename: 'cctv.js' });
   return sandbox.ShiftCCTV;
@@ -49,10 +49,10 @@ test('the map is landscape: tills along the bottom, door at the top, waiting to 
     { x: counter.x1 - 0.5, y: counter.y1 + 0.5, state: 'wait' }, { x: counter.x0 + 3, y: counter.y1 + 0.4, state: 'till' },
     { x: counter.x0 + 3, y: counter.y0 - 0.5, staff: true, label: 'Sam' }, { x: 5, y: 5, staff: true, label: 'Far away in the warehouse' }
   ];
-  const n = cam.draw({ people, now: new Date(2026, 10, 21, 9, 5, 7) });
+  const n = cam.draw({ people, time: '13:30' });
   assert.deepEqual({ ...n }, { queue: 2, till: 1, wait: 1, staff: 1 });
   const texts = cv.g.texts.map((t) => t.t);
-  assert.ok(texts.includes('CAM 01  SHOP FLOOR') && texts.includes('21/11  09:05:07'));
+  assert.ok(texts.includes('CAM 01  SHOP FLOOR') && texts.includes('13:30'));
   assert.ok(!texts.some((t) => /Waiting to be served|to greet|Staff on the floor/.test(t)), 'no count panel any more');
   assert.ok(texts.includes('S'), 'staff are shown by their initial');
 });

@@ -5,7 +5,7 @@
    labelled; every customer is a dot in their own shirt colour, ringed by what they're doing, and staff (players and Sam)
    are navy squares with their initial.
    Shared, no three.js: create({ canvas, world, zones }) draws the still parts once; draw(data) draws a frame.
-   data = { people: [{ x, y, staff, state: 'queue'|'greet'|'till'|'wait'|'walk', colour: '#rrggbb', label }], now: Date } */
+   data = { people: [{ x, y, staff, state: 'queue'|'greet'|'till'|'wait'|'walk', colour: '#rrggbb', label }], time: 'HH:MM' } */
 (function (root) {
   'use strict';
   const FONT = 'system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif';
@@ -80,16 +80,14 @@
 
     function draw(data) {
       g.drawImage(still, 0, 0);
-      const now = data.now || new Date();
       // the top line
       const ty = HEAD / 2;
       g.fillStyle = '#e8f1f5'; g.font = px(32); g.textAlign = 'left'; g.textBaseline = 'middle';
       g.fillText('CAM 01  SHOP FLOOR', PAD, ty);
-      const hh = (n) => String(n).padStart(2, '0');
       g.textAlign = 'right'; g.font = '700 ' + Math.round(32 * K) + 'px ui-monospace,Menlo,Consolas,monospace';
-      g.fillText(hh(now.getDate()) + '/' + hh(now.getMonth() + 1) + '  ' + hh(now.getHours()) + ':' + hh(now.getMinutes()) + ':' + hh(now.getSeconds()), W - PAD, ty);
-      if (now.getSeconds() % 2 === 0) { g.fillStyle = '#ff3b30'; g.fillRect(W - PAD - 407 * K, ty - 7 * K, 14 * K, 14 * K); }
-      g.fillStyle = '#ff6b6b'; g.font = px(26); g.textAlign = 'right'; g.fillText('REC', W - PAD - 340 * K, ty + K);
+      g.fillText(data.time, W - PAD, ty);
+      g.fillStyle = '#ff3b30'; g.fillRect(W - PAD - 210 * K, ty - 7 * K, 14 * K, 14 * K);
+      g.fillStyle = '#ff6b6b'; g.font = px(26); g.fillText('REC', W - PAD - 134 * K, ty + K);
       // people: customers first, staff on top
       const people = (data.people || []).filter((p) => inShop(p.x, p.y));
       const counts = { queue: 0, till: 0, wait: 0, staff: 0 };

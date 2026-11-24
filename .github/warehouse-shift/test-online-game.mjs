@@ -47,7 +47,7 @@ async function game(t, { online = true, phone = false, installed = false, loadPh
   const blank = () => {}, gradient = () => ({ addColorStop: blank });
   w.HTMLCanvasElement.prototype.getContext = () => new Proxy({ measureText: s => ({ width: String(s).length * 8 }),
     createRadialGradient: gradient, createLinearGradient: gradient }, { get: (o, k) => o[k] || blank });
-  let lastCCTV = [];
+  let lastCCTV = { people: [] };
   for (const script of w.document.scripts) {
     const asset = script.getAttribute('src')?.split('?')[0]; if (!asset || asset.startsWith('../')) continue;
     w.eval(readFileSync(path.join(base, asset), 'utf8'));
@@ -56,7 +56,7 @@ async function game(t, { online = true, phone = false, installed = false, loadPh
       const create = w.ShiftCCTV.create;
       w.ShiftCCTV.create = options => {
         const cctv = create(options);
-        return { ...cctv, draw(frame) { lastCCTV = frame.people; return cctv.draw(frame); } };
+        return { ...cctv, draw(frame) { lastCCTV = frame; return cctv.draw(frame); } };
       };
     }
     if (asset.endsWith('three.min.js')) {
@@ -69,7 +69,7 @@ async function game(t, { online = true, phone = false, installed = false, loadPh
     }
   }
   await until(() => w.__shift, 'warehouse to load: ' + $('msgText').textContent);
-  return { w, $, s: w.__shift, sockets, cctv: () => lastCCTV };
+  return { w, $, s: w.__shift, sockets, cctv: () => lastCCTV.people, cctvTime: () => lastCCTV.time };
 }
 
 function openShop(device) {
@@ -453,9 +453,23 @@ test('greeted customers walk to separate tills, wait for a free one and can be s
 });
 
 test('lock-up opens stats, then upgrades and a new shift in the office', async t => {
-  const { $, w, s } = await game(t, { online: false, storage: { 'ws-shift-xp/saved': '400' } });
+  const { $, s, cctvTime } = await game(t, { online: false, storage: { 'ws-shift-xp/saved': '400' } });
   $('startBtn').click();
   const first = s.day();
+  const clock = s.players[0].D.scTime;
+  assert.equal(clock.textContent, '07:00');
+  for (const job of s.prio()) job.on = false;
+  s.players[0].startInOffice();
+  s.tick(0.3);
+  assert.equal(cctvTime(), '07:00');
+  first.delivery[0].done = true;
+  s.tick(0.3);
+  assert.notEqual(clock.textContent, '07:00', 'putaway advances the scanner clock');
+  assert.equal(cctvTime(), clock.textContent);
+  for (const carton of first.delivery) carton.done = true;
+  s.tick(0.3);
+  assert.equal(clock.textContent, '20:00');
+  assert.equal(cctvTime(), '20:00');
   first.phase = 'lock'; assert.ok(first.lock());
   s.tick(1.5);
   assert.ok(!$('dayResults').hidden && $('dayUpgrades').hidden);
@@ -466,6 +480,9 @@ test('lock-up opens stats, then upgrades and a new shift in the office', async t
   assert.match($('dayUpgrades').querySelector('[data-status="reliability"]').textContent, /Tier 2/);
   $('nextDayBtn').click();
   assert.notEqual(s.day(), first);
+  s.tick(0.3);
+  assert.equal(clock.textContent, '07:00');
+  assert.equal(cctvTime(), '07:00');
   assert.equal(s.day().faultSchedule.length, 4);
   const office = s.world.rooms.find(r => r.name === 'Office');
   assert.ok(s.me.x > office.x0 && s.me.x < office.x1 && s.me.y > office.y0 && s.me.y < office.y1);

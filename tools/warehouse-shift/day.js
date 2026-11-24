@@ -120,12 +120,13 @@
   Day.prototype.tillsOpen = function () { return this.event !== 'website' && this.event !== 'fusion'; };
   Day.prototype.samCanPick = function (o) { return this.event !== 'lightDuties' || o.kind === 'hold'; };
   Day.prototype.clockMinute = function () {
+    if (this.over) return 20 * 60;
     var progress;
     if (this.event === 'failedDelivery') {
       progress = this.done / this.total;
     } else {
       var delivery = this.delivery;
-      progress = delivery.length ? delivery.reduce(function (done, d) { return done + Number(d.done); }, 0) / delivery.length : 1;
+      progress = delivery.length ? delivery.reduce(function (done, d) { return done + Number(d.done); }, 0) / delivery.length : 0;
     }
     return 7 * 60 + Math.floor(Math.min(1, progress) * 13 * 60);
   };
