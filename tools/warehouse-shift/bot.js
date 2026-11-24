@@ -307,10 +307,11 @@
   };
 
   /* ---------- each frame ---------- */
-  Bot.prototype.update = function (dt, others) {
+  Bot.prototype.update = function (dt, others, rate = 1) {
     others = others || [];
     this.others = others;
     this.t += dt;
+    dt *= rate;
     if (this.beam > 0) this.beam -= dt;
     if (this.lookT > 0) this.lookT -= dt;
     this.move(dt, others);
@@ -601,21 +602,23 @@
     var p = this.post;
     return Math.hypot(this.x - p.x, this.y - p.y) < 0.6 && !this.walking;
   };
-  // what Sam does first is set on the manager's PC (detailedfoil, 20 Nov 2026): board().prio lists the ticked jobs, top
-  // first: cust (a pick a customer is waiting for: CK, till orders, bag collections), queue (the next customer at the
-  // till), hold (a c pick for the holding area), delivery (putting a carton of the delivery away). A customer waiting
-  // for a hello, and one the service bell was rung for, always come first.
-  var PRIO = ['cust', 'queue', 'hold', 'delivery'];
+  // The Manager PC supplies enabled jobs in priority order. Greetings and service-bell calls take precedence.
+  var PRIO = ['queue', 'cust', 'hold', 'delivery'];
   Bot.prototype.choose = function () {
-    var b = this.emit('board') || {}, orders = b.orders || [], queue = b.queue || [], prio = b.prio || PRIO, i, k;
-    if (b.greet && b.greet.length) return { greet: b.greet[0] }; // a customer's been waiting at the counter for a hello
+    var b = this.emit('board') || {}, orders = b.orders || [], queue = b.queue || [], prio = b.prio || PRIO;
+    if (b.greet?.length) return { greet: b.greet[0] };
     if (b.bell && b.bell.length) return { serve: b.bell[0], cat: 'queue' };
-    for (k = 0; k < prio.length; k++) {
-      var p = prio[k];
-      if (p === 'cust') { for (i = 0; i < orders.length; i++) if (orders[i].kind !== 'c') return { pick: orders[i], cat: 'cust' }; }
-      else if (p === 'queue') { if (queue.length) return { serve: queue[0], cat: 'queue' }; }
-      else if (p === 'hold') { for (i = 0; i < orders.length; i++) if (orders[i].kind === 'c') return { pick: orders[i], cat: 'hold' }; }
-      else if (p === 'delivery') { if (b.early && b.early.length) return null; if (b.delivery > 0) return { putaway: true, cat: 'delivery' }; } // a pick is about to be his: wait at the till for it, nothing else
+    for (const job of prio) {
+      if (job === 'queue') {
+        if (queue.length) return { serve: queue[0], cat: 'queue' };
+      } else if (job === 'delivery') {
+        if (b.delivery > 0) return { putaway: true, cat: 'delivery' };
+      } else {
+        const matches = o => job === (o.kind === 'c' ? 'hold' : 'cust');
+        const order = orders.find(matches);
+        if (order) return { pick: order, cat: job };
+        if (b.early?.some(matches)) return null; // Give players first claim before starting a lower priority job.
+      }
     }
     return null;
   };

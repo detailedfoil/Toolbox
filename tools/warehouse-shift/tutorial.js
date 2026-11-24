@@ -83,7 +83,7 @@
     return cue('The basket is ready. Choose Pay & Go.', '[data-go="pay"]');
   }
 
-  function create({ lesson, $, world, World, Till, Crew, S, T, player: p, tills, touch, covered, bellRung, trained, finish }) {
+  function create({ lesson, $, world, World, Till, Crew, S, T, player: p, tills, touch, covered, bellRung, upgraded, finish }) {
     const fullTour = lesson === 'tour', me = p.me, D = p.D;
     const chapters = ['Trade counter', 'Warehouse pick', 'Scanner dock', 'Kiosk order', 'Office upgrades & CCTV', 'Goods in & holding', 'Replen & lock-up'];
     const nav = new Crew.Nav(world);
@@ -208,11 +208,11 @@
       return shelfGuide(p.activeLine().loc, false);
     }
     function office() {
-      if (!p.pcOpen() && !trained()) return walk('Order handed over. Go back to the office and open the glowing Manager PC.', box(pc.x, pc.y, 1.08, 0.63, 0.12, 0.42), point(pc.x, pc.desk.y0 - 0.48), 'Use PC');
+      if (!p.pcOpen() && !upgraded()) return walk('Order handed over. Go back to the office and open the glowing Manager PC.', box(pc.x, pc.y, 1.08, 0.63, 0.12, 0.42), point(pc.x, pc.desk.y0 - 0.48), 'Use PC');
       if (p.pcOpen()) {
-        if (trained()) return cue('Purchase complete. Close the Manager PC.', '.ws-pc-x');
-        if (D.root.querySelector('.ws-shop').hidden) return cue('Sam starts on delivery. Open Upgrades to train him for customer picks.', '[data-pc="shop"]');
-        return cue('Spend your 100 practice XP on Sam’s customer picks.', '[data-training="cust"]');
+        if (upgraded()) return cue('Purchase complete. Close the Manager PC.', '.ws-pc-x');
+        if (D.root.querySelector('.ws-shop').hidden) return cue('Open Upgrades to make Sam faster.', '[data-pc="shop"]');
+        return cue('Spend your 100 practice XP on Sam’s speed upgrade.', '[data-sam-speed]');
       }
 
       if (!sawCCTV) {

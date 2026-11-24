@@ -322,23 +322,14 @@ test('greeted customers walk to separate tills, wait for a free one and can be s
   assert.equal(fourth.ready, true);
 });
 
-test('Sam waits near holding until till-trained, and only then can roll light duties', async t => {
+test('fresh Sam covers tills when idle on light duties', async t => {
   const { $, s } = await game(t, { online: false, event: 'lightDuties' });
   $('startBtn').click();
   const sam = s.crew[0], day = s.day();
-  assert.equal(day.event, null);
+  assert.equal(day.event, 'lightDuties');
   day.wait = Infinity;
-  s.prio().find(job => job.id === 'delivery').on = false;
-  const near = spot => Math.hypot(sam.x - spot.x, sam.y - spot.y) < 0.85;
-  s.tick(30);
-  assert.ok(near(sam.waitSpot) && !sam.atTill, 'untrained Sam waits by holding');
-  day.credit('p1', 'till-training-test', 150);
-  openShop({ s }).querySelector('[data-training="queue"]').click();
-  s.players[0].closePc();
-  s.tick(30);
-  assert.ok(near(sam.post) && sam.atTill, 'trained Sam covers his till when idle');
-  s.newDay();
-  assert.equal(s.day().event, 'lightDuties');
+  s.tick(40);
+  assert.ok(Math.hypot(sam.x - sam.post.x, sam.y - sam.post.y) < 0.85 && sam.atTill);
 });
 
 test('the parked tote closes the aisle until Sam leaves, and idle stools have half-size walking bounds', async t => {
@@ -478,7 +469,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   bellButton.dispatchEvent(new phone.w.Event('pointerdown', { bubbles: true }));
   await until(() => [host, ...guests].every(g => g.$('bannerTitle').textContent === 'Ding dong' &&
     g.$('bannerText').textContent === 'Help needed on tills' &&
-    /Sam isn't till trained yet.*100 XP/.test(g.s.players[0].D.bannerDetail.textContent)),  'phone bell press to reach all four players');
+    g.s.players[0].D.bannerDetail.hidden),  'phone bell press to reach all four players');
   const stoolId = host.s.world.stools[0].id;
   const aimAtStool = g => {
     const s = g.s, stool = s.world.stools.find(v => v.id === stoolId);
@@ -644,6 +635,8 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   await until(() => Number(picker.w.localStorage.getItem(liveCredit)) === day.baseXP + Math.round(day.coveredXP * 0.05), 'guest to bank live team XP');
   const guestShop = openShop(picker);
   assert.equal(guestShop.querySelector('[data-pc="jobs"]').disabled, true);
+  assert.equal(guestShop.querySelector('[data-sam-speed]').disabled, true);
+  assert.equal(guestShop.querySelector('[data-sam-speed]').textContent, 'Host manages Sam');
   picker.s.players[0].closePc();
   day.phase = 'lock'; assert.equal(day.lock(), true);
   await until(() => !host.$('dayCover').hidden && guests.every(g => !g.$('dayCover').hidden), 'end of day screens');
@@ -699,7 +692,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   await until(() => guests.every(g => !g.$('onlineCover').hidden && /host left/.test(g.$('roomMessage').textContent)), 'room to end for everyone');
 });
 
-test('split-screen banks till-cover XP and buys separate Sam skills mid-shift', async t => {
+test('split-screen banks till-cover XP and buys Sam speed tiers mid-shift', async t => {
   const { $, w, s } = await game(t, { online: false });
   $('twoBtn').click(); s.join({ kind: 'kb' }); s.join({ kind: 'pad', pad: 0 }); $('joinGo').click();
   const [p, worker] = s.players;
@@ -713,14 +706,14 @@ test('split-screen banks till-cover XP and buys separate Sam skills mid-shift', 
   assert.ok(d.firstDay);
   assert.ok(d.delivery.length >= 4 && d.delivery.length <= 5);
   const jobsOn = () => Array.from(s.prio().filter(j => j.on), j => j.id);
-  assert.deepEqual(jobsOn(), ['delivery']);
+  assert.deepEqual(jobsOn(), ['queue', 'cust', 'hold', 'delivery']);
 
-  // A fresh Sam neither greets nor serves, even after the bell.
+  // A fresh Sam can greet and ring the bell.
   d.plan.length = 0;
   const c = d.send('till');
   d.arrived(c);
   d.t += 6;
-  assert.equal(s.crew[0].choose()?.greet, undefined);
+  assert.equal(s.crew[0].choose().greet, c);
   const sam = s.crew[0], bell = s.world.bell;
   const originalUpdate = sam.update;
   sam.update = () => false;
@@ -730,7 +723,7 @@ test('split-screen banks till-cover XP and buys separate Sam skills mid-shift', 
   assert.equal(c.helpCalled, undefined);
   Object.assign(sam, { x: bell.x, y: bell.y - 0.8 });
   s.tick(0.3);
-  assert.match(p.D.bannerDetail.textContent, /100 XP on the Manager PC/);
+  assert.equal(p.D.bannerDetail.hidden, true);
   assert.equal(c.state, 'greet');
 
   Object.assign(sam, { x: bell.x, y: bell.y - 4 });
@@ -748,16 +741,20 @@ test('split-screen banks till-cover XP and buys separate Sam skills mid-shift', 
   const key = 'ws-shift-xp/' + d.shiftId;
   assert.equal(Number(w.localStorage.getItem(key)), 955);
   const pc = openShop({ s });
-  const buy = id => pc.querySelector('[data-training="' + id + '"]').click();
-  buy('queue'); buy('queue');
-  assert.equal(p.D.xpBalance.textContent, '855 XP');
-  assert.deepEqual(jobsOn(), ['queue', 'delivery']);
-  assert.equal(s.crew[0].choose().greet, c, 'till training lets Sam greet immediately');
-  buy('hold');
-  assert.deepEqual(jobsOn(), ['queue', 'hold', 'delivery']);
-  buy('cust');
-  assert.deepEqual(jobsOn(), ['cust', 'queue', 'hold', 'delivery']);
-  assert.equal(worker.D.xpBalance.textContent, '655 XP');
+  const speedUpgrade = pc.querySelector('[data-sam-speed]');
+  let rate;
+  sam.update = (dt, others, speed) => { rate = speed; };
+  s.tick(0.1);
+  assert.equal(rate, 0.8);
+  for (const [speed, remaining] of [[0.9, 855], [1, 705], [1.1, 480], [1.2, 130]]) {
+    speedUpgrade.click();
+    s.tick(0.1);
+    assert.equal(rate, speed);
+    assert.equal(worker.D.xpBalance.textContent, remaining + ' XP');
+  }
+  assert.ok(speedUpgrade.disabled);
+  assert.equal(w.localStorage.getItem('ws-sam-speed'), '5');
+  assert.deepEqual(jobsOn(), ['queue', 'cust', 'hold', 'delivery']);
   p.closePc();
 
   d.phase = 'lock'; d.lock();
@@ -780,31 +777,27 @@ test('split-screen banks till-cover XP and buys separate Sam skills mid-shift', 
   assert.equal(JSON.parse(w.localStorage.getItem('ws-sam-preset-0'))[0].id, 'delivery');
   const storage = Object.fromEntries(Object.entries(w.localStorage));
   const reopened = await game(t, { online: false, storage });
-  assert.match(reopened.$('careerXP').textContent, /4\/4 skills/);
+  assert.match(reopened.$('careerXP').textContent, /Sam speed · Tier 5\/5/);
   assert.equal(reopened.s.prio().filter(j => j.on).length, 4);
 });
 
-test('paid job slots become skills based on saved priorities without changing XP', async t => {
+test('old Sam training purchases are refunded without duplicating XP across reloads', async t => {
   const oldJobs = ['hold', 'delivery', 'queue', 'cust'].map(id => ({ id, on: id === 'queue' || id === 'delivery' }));
   const { $, w, s } = await game(t, { online: false, storage: {
-    'ws-sam-prio': JSON.stringify(oldJobs), 'ws-sam-job-slots': '2', 'ws-shift-xp/prior': '500'
+    'ws-sam-prio': JSON.stringify(oldJobs), 'ws-sam-job-slots': '2',
+    'ws-sam-training': '{"queue":"legacy","hold":"paid"}',
+    'ws-kit-label': '1', 'ws-shift-xp/prior': '500'
   } });
+  assert.match($('careerXP').textContent, /Tier 1\/5.*350 XP available/);
   $('startBtn').click();
-  const pc = openShop({ s });
-  assert.equal(pc.querySelector('[data-training="queue"]').textContent, 'Trained');
-  assert.match($('careerXP').textContent, /2\/4 skills.*400 XP available/);
-  s.players[0].closePc();
-  const bell = s.world.bell;
-  Object.assign(s.me, { x: bell.x, y: bell.y - 0.9, yaw: Math.PI, pitch: Math.atan2(bell.z - s.me.eye, 0.9) });
-  s.applyCam();
-  s.players[0].D.tillBtn.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
-  assert.equal($('bannerTitle').textContent, 'Ding dong');
-  assert.equal(s.players[0].D.bannerDetail.hidden, true);
-  openShop({ s }).querySelector('[data-training="hold"]').click();
-  assert.match($('careerXP').textContent, /3\/4 skills.*300 XP available/);
+  assert.deepEqual(Array.from(s.prio(), job => [job.id, job.on]), [
+    ['queue', true], ['cust', true], ['hold', true], ['delivery', true]
+  ]);
+  openShop({ s }).querySelector('[data-sam-speed]').click();
+  assert.match($('careerXP').textContent, /Tier 2\/5.*250 XP available/);
   const saved = Object.fromEntries(Object.entries(w.localStorage));
   const reopened = await game(t, { online: false, storage: saved });
-  assert.match(reopened.$('careerXP').textContent, /3\/4 skills.*300 XP available/);
+  assert.match(reopened.$('careerXP').textContent, /Tier 2\/5.*250 XP available/);
 });
 
 test('kickstool shoes and a named scanner spend earned XP once and work on a phone after relaunch', async t => {
@@ -813,7 +806,7 @@ test('kickstool shoes and a named scanner spend earned XP once and work on a pho
   const buy = id => first.w.document.querySelector('[data-kit="' + id + '"]').click();
   buy('label'); buy('shoes'); buy('shoes');
   assert.match(first.$('careerXP').textContent, /0 XP available/);
-  assert.ok(first.w.document.querySelector('[data-training="queue"]').disabled);
+  assert.ok(first.w.document.querySelector('[data-sam-speed]').disabled);
   const { $, s, w } = await game(t, { online: false, phone: true, storage: Object.fromEntries(Object.entries(first.w.localStorage)) });
   $('nameIn').value = 'JO'; $('nameIn').dispatchEvent(new w.Event('input'));
   $('startBtn').click();
@@ -874,7 +867,7 @@ test('Digital First upgrades spend shared XP, persist, and apply when the next s
   upgrade.click();
   assert.equal(initial.w.localStorage.getItem('ws-digital-first'), '3');
   assert.ok(upgrade.disabled, 'the remaining 50 XP cannot buy another tier');
-  assert.ok(pc.querySelector('[data-training="queue"]').disabled, 'Digital First spends the same XP as Sam training');
+  assert.ok(pc.querySelector('[data-sam-speed]').disabled, 'Digital First spends the same XP as Sam speed upgrades');
 
   const saved = Object.fromEntries(Object.entries(initial.w.localStorage));
   const reopened = await game(t, { online: false, phone: true, storage: saved });

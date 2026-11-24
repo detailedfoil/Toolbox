@@ -14,7 +14,7 @@ Open [the game page](../warehouse-shift.html) through the Toolbox site and sign 
 | --- | --- |
 | **Continue** | Starts a solo session with the career XP, purchased upgrades, and Sam settings saved in this browser. The session begins at Day 1. The unfinished shift and current day number are held in the page while it is open. |
 | **New game** | Shows “This will delete all progress and start completely fresh.” **Back** keeps the career. **Continue** in the warning clears it and starts Day 1 at 0 XP. Sign-in, badge name, sound, and control preferences are retained. |
-| **Record playtest** | Changes the primary button to **Start playtest**. Starts a separate solo session at Day 1 with 0 XP, default equipment, and Sam on delivery. Earned XP and purchases carry into the next day in the same session. The regular career is left intact. |
+| **Record playtest** | Changes the primary button to **Start playtest**. Starts a separate solo session at Day 1 with 0 XP, default equipment, and Sam at Tier 1 with all four jobs enabled. Earned XP and purchases carry into the next day in the same session. The regular career is left intact. |
 | **Two players** | Starts side-by-side local split screen on a supported desktop-sized display. Join with two controllers, or a controller and keyboard/mouse. |
 | **Online co-op** | Host or enter another host's six-character room code. Each device controls one player. |
 | **Install game** / **Check for updates** | Installs the PWA if the browser supports it, or checks for a newer game bundle. |
@@ -25,7 +25,7 @@ Open [the game page](../warehouse-shift.html) through the Toolbox site and sign 
 
 1. Walk to the staff side of the trade counter. The Service Champ indicator appears there. Ring the service bell, greet the waiting customer and use their till.
 2. In Fusion, enter their surname and postcode, match their extra detail, add one item by SKU, find a second item in CrashFix, set one out-of-stock line to TCND, remove a declined item, and watch the shop-floor item scan in. Resolve each shortage as soon as the customer responds to it. Take card payment.
-3. Claim their order in Today Picking, follow the location code and scan a unit. A staged scanner failure interrupts the pick. Swap the scanner at the office dock. Return to the shelf, finish the quantity and hand over the same order. Serve the next customer’s kiosk order, take cash and give change, then hand it over. Return to the Manager PC to spend 100 practice XP on Sam’s customer picks. When you look at CCTV, watch the Click & Collect customer arrive.
+3. Claim their order in Today Picking, follow the location code and scan a unit. A staged scanner failure interrupts the pick. Swap the scanner at the office dock. Return to the shelf, finish the quantity and hand over the same order. Serve the next customer’s kiosk order, take cash and give change, then hand it over. Return to the Manager PC to spend 100 practice XP on Sam’s Tier 2 speed upgrade. When you look at CCTV, watch the Click & Collect customer arrive.
 4. Greet the Click & Collect customer, scan the named OC tote and hand it over. A practice carton then arrives at goods in. Use Putaway and take a kick stool to the high destination, scan the location and confirm the carton.
 5. Open Shop floor replen, squat to pick the replacement and restock the middle shelf. Face the front door and lock up to complete training. Normal career shifts also allow skipping replen.
 6. **Kiosk, TCND & cash** is a separate repeatable till exercise covering kiosk selection, changing an unavailable line to TCND and giving change. **CrashFix lookup** teaches searching by description, copying a matching code, returning to Fusion, removing a declined out-of-stock extra, and paying. **Holding-area picks** lets the player store a lowercase-c order in any empty OC spot and fetch that same tote when its customer arrives.
@@ -75,11 +75,11 @@ Squat for bottom shelves. High shelves require **Step** on a red kick stool or t
 
 ### Sam, service bells, and scanner problems
 
-Sam waits near holding and goods in when idle. Once he is till trained, assigned to tills and the tills are open, he waits behind the counter when there are no other jobs.
+Sam waits near holding and goods in when idle. When assigned to tills and the tills are open, he waits behind the counter when there are no other jobs.
 
-Sam is a physical coworker with a trolley. He shares pending work, avoids entering an aisle already occupied by a player, and may block an aisle when he parks to pick. The Manager PC in the office controls which jobs he does and their priority. Enable only the jobs you want him to take. Delivery is trained and enabled by default.
+Sam is a physical coworker with a trolley. He shares pending work, avoids entering an aisle already occupied by a player, and may block an aisle when he parks to pick. The Manager PC in the office controls which jobs he does and their priority. All four jobs start enabled. The default priority is till service, customer picks, lowercase **c** picks for holding, then delivery. Untick or reorder jobs at any time. Greetings and service-bell requests get immediate priority when till service is enabled. Players get a short head start on new picks.
 
-Sam rings the service bell when a customer has gone unattended for about six seconds and he is within reach on the staff side. You can also ring it. Sam prioritises the waiting till customer when trained and assigned to tills. If he needs training, the bell message points to the 100 XP upgrade.
+Sam rings the service bell when a customer has gone unattended for about six seconds and he is within reach on the staff side. You can also ring it. Sam prioritises the waiting till customer when assigned to tills.
 
 | Scanner problem | Trigger | Recovery |
 | --- | --- | --- |
@@ -100,7 +100,7 @@ A mixed shift has a 25% chance of one randomly selected event. The start banner 
 | Delivery cancelled | No delivery. Customer handovers move the wall clock, and customer waits gain extra weight in the score. |
 | Website down | Fewer customers and click and collect only. |
 | Fusion down | Tills close. The branch handles click and collect only. |
-| Sam is on light duties | Sam can serve on tills and fetch orders already in the holding area. This shift event requires Sam’s till training. His usual job assignments and training still apply. |
+| Sam is on light duties | Sam can serve on tills and fetch orders already in the holding area. His usual job assignments and speed still apply. |
 
 ## Controls
 
@@ -124,7 +124,7 @@ Upgrades are available mid-shift at **Manager PC → Upgrades**. The prices belo
 
 | Upgrade | XP | Effect |
 | --- | --- | --- |
-| Sam's till service, customer picks, holding-area picks | 100 each | Unlocks that job immediately. Delivery is included. The host's training is used in online co-op. |
+| Sam speed tiers 2–5 | 100, 150, 225, 350 | Sam starts at 80% of his original pace. Each tier adds 10 percentage points, so Tier 3 matches the original pace and Tier 5 reaches 120%. The upgrade immediately speeds up movement and job actions. Online co-op uses the host's tier. |
 | Scanner name label | 150 | Adds your badge name to your scanner and caps future Sam mix-ups at one per shift. |
 | Kickstool shoes | 350 | Lets you use Step without carrying a stool. |
 | Scanner reliability tiers 2–5 | 125, 225, 350, 500 | Changes next solo or hosted shift's disconnect cap from 5 at tier 1 to 4, 3, 2, then 1. |
@@ -132,13 +132,13 @@ Upgrades are available mid-shift at **Manager PC → Upgrades**. The prices belo
 
 At 350 lifetime earned XP, **Cover tills** and **Clear delivery** job presets unlock on the Manager PC. The unlock uses lifetime XP. Purchases use available XP after deducting previous spend.
 
-Regular career data is per browser profile and site origin. In [game.js](game.js), XP receipts are stored under `ws-shift-xp/`, with separate keys for purchases, Sam jobs, presets and lifetime stats. Preserve existing receipts and the legacy training migration when changing saves or prices. The new-game reset marks older tabs so their stale career writes cannot restore cleared progress. A guest can spend their own XP on personal kit. Branch-wide effects come from the host.
+Regular career data is per browser profile and site origin. In [game.js](game.js), XP receipts are stored under `ws-shift-xp/`, with separate keys for purchases, Sam jobs, presets and lifetime stats. Previous Sam training and job slot costs are returned to available XP by removing those deductions. Existing saves start at Tier 1 with all four jobs enabled in the new default order. Saved presets stay available. Preserve the XP receipts and other purchases when updating saves or prices. The new-game reset marks older tabs so their stale career writes cannot restore cleared progress. A guest can spend their own XP on personal kit. Branch-wide effects come from the host.
 
 ## Playtest recording and balance
 
 Tick **Record playtest**, play normally, lock the front door, and click **Copy playtest summary**. If clipboard access is blocked, copy from the selectable text field. Copy each day's result before advancing to the next day. The recorder keeps the current session in memory and does not send the report anywhere.
 
-The `warehouse-shift-playtest-v1` JSON includes starting progression, planned picks and cartons, player and Sam tasks, customer arrivals and sales, scanner crashes and swaps, XP and purchases, and the final score. Each event has elapsed real time, active foreground time, and simulation time. Backgrounding and opening help or the end-of-shift overlay are marked separately. Thinking time, navigation, and interruptions by other work count as foreground activity. Menu time is separated in the recorder and the simulation can continue behind an overlay.
+The `warehouse-shift-playtest-v1` JSON includes starting progression, planned picks and cartons, player and Sam tasks, customer arrivals and sales, scanner crashes and swaps, XP and purchases, Sam’s speed tier, and the final score. Each event has elapsed real time, active foreground time, and simulation time. Backgrounding and opening help or the end-of-shift overlay are marked separately. Thinking time, navigation, and interruptions by other work count as foreground activity. Menu time is separated in the recorder and the simulation can continue behind an overlay.
 
 The planned balance work is to tune a typical solo player toward **about 85% of paid upgrade tiers by the end of Day 7**. **Mas** is a proposed automated test player and has yet to be implemented. The intended inputs are a fresh Day 1 report and one later, busier shift. Use those timings to model slower, typical, and efficient players over repeatable runs using the real workload, XP, upgrade and Sam rules. Count each paid tier separately and compare what the player can actually buy in an allowed sequence.
 

@@ -185,7 +185,7 @@ window.playTutorial = async function (lesson) {
       await text('Payment accepted'); click('[data-scr=done] [data-act=leave]');
       menu(1); key('Enter'); shelf(p.activeLine().loc); key('f'); key('Enter'); hand();
       const pc=w.pc; walk(pc.x,pc.desk.y0-.48); aim(pc.x,pc.y,1.05); await interact('Use PC');
-      await text('Open Upgrades'); click('[data-pc=shop]'); await text('100 practice XP'); click('[data-training=cust]');
+      await text('Open Upgrades'); click('[data-pc=shop]'); await text('100 practice XP'); click('[data-sam-speed]');
       await text('Close the Manager PC'); click('.ws-pc-x');
       await text('CCTV');
       const cam=w.objects.find(o=>o.kind==='cctv'), cy=mid(cam.y0,cam.y1);

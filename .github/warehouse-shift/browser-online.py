@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import TimeoutError, sync_playwright
 
 ORIGIN = "http://127.0.0.1:8000"
 GAME = ORIGIN + "/tools/warehouse-shift.html"
@@ -43,7 +43,10 @@ def shared_shift(browser, errors):
     host.locator("#nameIn").fill("Morgan")
     host.locator("#onlineBtn").click()
     host.locator("#hostRoom").click()
-    host.locator("#roomBtn").wait_for()
+    try:
+        host.locator("#roomBtn").wait_for()
+    except TimeoutError as error:
+        raise AssertionError(f"Host room failed: {host.locator('#roomMessage').text_content()}; page errors: {errors}") from error
     code = host.locator("#roomBtn").text_content()[:6]
     host.evaluate("for (const job of __shift.prio()) job.on = false")
     guest = open_game(browser, errors, phone=True)
@@ -215,8 +218,8 @@ def recorded_solo_shift(browser, errors):
       s.players[0].openPc();
     }""")
     page.locator('[data-pc="shop"]').tap()
-    page.locator('[data-training="queue"]').tap()
-    assert page.locator('[data-training="queue"]').inner_text() == "Trained"
+    page.locator('[data-sam-speed]').tap()
+    assert "Tier 3" in page.locator('[data-sam-speed]').inner_text()
     page.locator(".ws-pc-x").tap()
     page.evaluate("""() => {
       const s = __shift;
@@ -235,7 +238,8 @@ def recorded_solo_shift(browser, errors):
     assert summary["start"]["day"] == 1 and summary["start"]["touchControls"]
     assert summary["start"]["progression"] == {
         "xpAvailable": 0, "xpCareer": 0, "scannerTier": 1, "digitalTier": 1, "equipment": [],
-        "sam": {"enabled": True, "skills": ["delivery"], "jobs": ["delivery"]}
+        "sam": {"enabled": True, "speedTier": 1, "skills": ["queue", "cust", "hold", "delivery"],
+                "jobs": ["queue", "cust", "hold", "delivery"]}
     }
     assert summary["timing"]["menuBreakSeconds"] >= 0.2
     assert summary["result"]["xpEarned"] >= 20 and summary["result"]["sam"]["delivery"] >= 1
@@ -255,7 +259,7 @@ def recorded_solo_shift(browser, errors):
     day_two = json.loads(page.locator("#playtestReport").input_value())["start"]
     assert day_two["day"] == 2
     assert day_two["progression"] == summary["result"]["progression"]
-    assert day_two["progression"]["sam"]["skills"] == ["delivery", "queue"]
+    assert day_two["progression"]["sam"]["speedTier"] == 2
     assert page.evaluate("""keys => Object.fromEntries(Object.keys(localStorage)
       .filter(key => keys.includes(key) || key.startsWith('ws-shift-xp/'))
       .map(key => [key, localStorage.getItem(key)]))""", list(saved_career)) == saved_career
@@ -308,10 +312,11 @@ if __name__ == "__main__":
                   "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"])
         errors = []
         try:
-            shared_shift(browser, errors)
-            split_shift(browser, errors)
             recorded_solo_shift(browser, errors)
             tutorial_shift(browser, errors)
+            print("Chromium solo playtest and tutorial passed.", flush=True)
+            shared_shift(browser, errors)
+            split_shift(browser, errors)
             assert not errors, errors
             print("Rendered host and touch guest, shelf relocation, phone rotation, two-controller split screen and solo playtest export passed.")
         finally:
