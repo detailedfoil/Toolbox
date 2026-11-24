@@ -131,8 +131,7 @@ def shared_shift(browser, errors):
             enlarged = guest.locator('[data-el="scConfirmFn"]')
             assert enlarged.bounding_box()["height"] > original_height
             enlarged.tap()
-            assert guest.locator("#scMenu").is_visible()
-            guest.locator("#scBack").tap()
+            assert enlarged.is_hidden()
             guest.evaluate("""() => {
               const s=__shift, q=s.world.pc;
               Object.assign(s.me,{x:q.x,y:q.y-0.9,yaw:Math.PI,pitch:Math.atan2(1.05-s.me.eye,0.9)});

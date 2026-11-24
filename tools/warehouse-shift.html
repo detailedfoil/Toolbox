@@ -14,7 +14,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=2a01b4a329">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=c3abcf9eb3">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=d41e2f9dbf">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -72,11 +72,11 @@
           <button class="sc-ico" id="scUp" data-el="scUp" type="button" aria-label="Up"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 11l-11 12h7v13h8V23h7z" fill="#fff"/></svg></button>
           <button class="sc-ico" id="scDown" data-el="scDown" type="button" aria-label="Down"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 37l11-12h-7V12h-8v13h-7z" fill="#fff"/></svg></button>
         </div>
-        <button class="sc-hint" id="scHint" data-el="scHint" type="button">Hint (2)</button>
-        <button class="sc-hint sc-quick-pick" id="scQuickPick" data-el="scQuickPick" type="button" hidden>Quick Pick (3)</button>
+        <button class="sc-hint" id="scHint" data-el="scHint" type="button">&lt;1&gt; Hint</button>
+        <button class="sc-hint sc-quick-pick" id="scQuickPick" data-el="scQuickPick" type="button" hidden>&lt;2&gt; Quick Pick</button>
         <div class="sc-picked" id="scPicked" data-el="scPicked">Picked : <span class="val" id="scQty" data-el="scQty"></span><span class="sc-cur line" id="scCur" data-el="scCur"></span></div>
         <div class="sc-keys">
-          <button class="sc-k sc-fn" id="scFn" data-el="scFn" type="button">Function (1)</button>
+          <button class="sc-k sc-fn" id="scFn" data-el="scFn" type="button">Function</button>
           <button class="sc-k sc-scan" id="scScan" data-el="scScan" type="button">Scan</button>
           <button class="sc-k sc-enter" id="scEnter" data-el="scEnter" type="button">Enter</button>
         </div>
@@ -97,11 +97,10 @@
           <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
           <button type="button" data-k="back" class="pb" aria-label="Delete">&#x232B;</button><button type="button" data-k="0">0</button><button type="button" data-k="enter" class="pe" aria-label="Enter">&#x21B5;</button>
         </div>
-        <div class="sc-menu" id="scMenu" data-el="scMenu" hidden></div>
         <div class="sc-confirm" id="scConfirm" data-el="scConfirm" role="group" aria-label="Scanner options" hidden>
-          <button class="sc-k sc-fn" data-el="scConfirmFn" type="button">Function (1)</button>
-          <button class="sc-k sc-fn" data-el="scConfirmHint" type="button" hidden>Hint (2)</button>
-          <button class="sc-k sc-fn" data-el="scConfirmQuickPick" type="button" hidden>Quick Pick (3)</button>
+          <button class="sc-k sc-fn" data-el="scConfirmFn" type="button">Function</button>
+          <button class="sc-k sc-fn" data-el="scConfirmHint" type="button" hidden>&lt;1&gt; Hint</button>
+          <button class="sc-k sc-fn" data-el="scConfirmQuickPick" type="button" hidden>&lt;2&gt; Quick Pick</button>
         </div>
         <div class="sc-flash" id="scFlash" data-el="scFlash"></div>
       </div>
@@ -200,6 +199,12 @@
       <div class="ws-shop-row"><div><strong>Kickstool shoes</strong><small>Use Step to reach high shelves anywhere, even when your stool is across the warehouse.</small></div><button type="button" data-kit="shoes"></button></div>
     </section>
   </template>
+  <div class="ws-cover" id="pauseCover" role="dialog" aria-modal="true" aria-labelledby="pauseTitle" hidden>
+    <div class="ws-card">
+      <h1 id="pauseTitle">Paused</h1>
+      <div class="ws-row"><button class="ws-go" id="resumeShift" type="button">Resume</button></div>
+    </div>
+  </div>
   <div class="ws-cover" id="helpCover" hidden>
     <div class="ws-card">
       <button class="ws-x" id="helpX" type="button" aria-label="Close">&times;</button>
@@ -267,9 +272,9 @@
           <h2>Phone</h2>
           <ul><li>Left thumb: walk (push further to jog)</li><li>Drag the view to look round</li><li>Tap a label to scan it</li><li>Tap <b>Squat</b> for low shelves. For high shelves, face a red kick stool and tap <b>Take stool</b>. Carry it to the shelf and tap <b>Step</b></li></ul>
           <h2>Controller</h2>
-          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>LB</b> step on the stool, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: the Function menu</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
+          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>LB</b> step on the stool, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: enlarge the blue scanner buttons</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
           <h2>Computer</h2>
-          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse, <kbd>Esc</kbd> lets go</li><li>Click or press <kbd>F</kbd> to interact with the outlined target or scan. <kbd>Enter</kbd> confirms, <kbd>C</kbd> squats, and <kbd>Space</kbd> steps onto or off a kick stool</li><li><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose on the pick list</li><li>Blue buttons use <kbd>1</kbd> Function, <kbd>2</kbd> Hint and <kbd>3</kbd> Quick Pick when available. Press once to show the options, then press the number of the option you want. <kbd>Tab</kbd> opens Function directly.</li></ul>
+          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse. <kbd>Esc</kbd> pauses, including in Fusion and on the Manager PC</li><li>Click or press <kbd>F</kbd> to interact with the outlined target or scan. <kbd>Enter</kbd> confirms, <kbd>C</kbd> squats, and <kbd>Space</kbd> steps onto or off a kick stool</li><li>Scroll the scanner with the mouse wheel or <kbd>&uarr;</kbd><kbd>&darr;</kbd>. Right-click or <kbd>Backspace</kbd> goes back on the scanner</li><li>Press <kbd>Tab</kbd> or Function to enlarge the blue scanner buttons. Use <kbd>1</kbd> for Hint and <kbd>2</kbd> for Quick Pick when shown. Press a number again if you used it to enlarge the buttons.</li></ul>
         </div>
       </div>
       <div class="ws-row"><button class="ws-go" id="helpClose" type="button">Got it</button></div>
@@ -320,10 +325,10 @@
 <script src="warehouse-shift/bot.js?v=9d62b24377"></script>
 <script src="warehouse-shift/tillui.js?v=077455184d"></script>
 <script src="warehouse-shift/online-day.js?v=544c2990cd"></script>
-<script src="warehouse-shift/online.js?v=cdcf8996c8"></script>
-<script src="warehouse-shift/online-game.js?v=b415f121fa"></script>
+<script src="warehouse-shift/online.js?v=fa94d39a5a"></script>
+<script src="warehouse-shift/online-game.js?v=7a8691642d"></script>
 <script src="warehouse-shift/playtest.js?v=223d2eb3db"></script>
 <script src="warehouse-shift/tutorial.js?v=10d2db7eac"></script>
-<script src="warehouse-shift/game.js?v=00efc53293"></script>
+<script src="warehouse-shift/game.js?v=5b31b2024e"></script>
 </body>
 </html>

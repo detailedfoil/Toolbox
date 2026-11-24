@@ -284,7 +284,7 @@
           else if (!started) { p.me.x += (slot - 1) * 0.52; if (g.blocked(p.me.x, p.me.y)) p.me.x = world.start.x; p.applyCam(); }
         },
         roster(slots) { roomSize = slots.length; roomBtn.textContent = net.room + ' · ' + roomSize + '/4'; },
-        status, started: start, epoch: g.epoch, snapshot, apply, draw, frame, pose, peerPose, action, release,
+        status, started: start, isPaused: g.isPaused, epoch: g.epoch, snapshot, apply, draw, frame, pose, peerPose, action, release,
         ended(reason) {
           status(reason); $('leaveRoom').hidden = true; controls.hidden = started; $('roomBack').hidden = false;
           $('roomBack').textContent = started ? 'Return to title' : 'Back';
