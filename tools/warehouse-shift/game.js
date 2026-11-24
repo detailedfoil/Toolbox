@@ -143,8 +143,10 @@
     }
     function speakDialogue(line, speaker, owner, priority = 0) {
       if (!audio.on || !audio.voices || document.hidden || !synthesizer || !window.SpeechSynthesisUtterance) return;
+      if (!priority && players.some(p => p.tillOpen())) return;
       if (speaking && speaking.priority > priority) return;
-      const text = [line.text, line.quote, line.hint, line.qty].filter(Boolean).join(' ');
+      let text = [line.text, line.quote, line.hint, line.qty].filter(Boolean).join(' ');
+      if (line.sku) text = text.replace(/\b[a-z0-9]+\b/gi, word => word === line.sku ? word.split('').join(' ') : word);
       if (!text) return;
       const accents = ['en-GB', 'en-IE', 'en-AU', 'en-US', 'en-NZ', 'en-CA', 'en-ZA', 'en-IN'];
       const voices = synthesizer.getVoices().filter(v => v.localService);
@@ -657,7 +659,8 @@
     // aisle someone's already in.
     const crew = [];
     function crewSound(b, name) {
-      const d = nearestPlayer(b.x, b.y), open = players.some((p) => p.tillOpen()), v = Math.max(0, 1 - d / 14) * (open ? 0.35 : 0.6);
+      if (players.some(p => p.tillOpen())) return;
+      const d = nearestPlayer(b.x, b.y), v = Math.max(0, 1 - d / 14) * 0.6;
       if (v < 0.03) return;
       if (name === 'scan') tone(2730, 0, 0.085, 'square', 0.05 * v);
       else if (name === 'bad') { tone(196, 0, 0.13, 'sawtooth', 0.06 * v); tone(156, 0.16, 0.2, 'sawtooth', 0.06 * v); }
@@ -1188,19 +1191,21 @@
           }, 750);
         }, 900);
       }
+      let scannerTaken = false;
+      const syncScannerRecovery = () => { D.scannerRecovery.hidden = !scannerTaken || !active || P.tillOpen(); };
       P.scannerMissing = false;
       P.scannerFault = false;
       P.syncScanner = (taken, offline = false) => {
         const missing = taken || offline, wasOffline = P.scannerFault;
-        if (P.scannerMissing === missing && wasOffline === offline) return;
-        if (taken || (P.scannerMissing && !wasOffline && !offline)) {
+        if (scannerTaken === taken && wasOffline === offline) return;
+        if (scannerTaken !== taken) {
           recordPlaytest(taken ? 'scanner.taken-by-sam' : 'scanner.returned-by-sam', { who: P.id });
         }
         clearTimeout(faultTimer);
-        P.scannerMissing = missing; P.scannerFault = offline;
+        scannerTaken = taken; P.scannerMissing = missing; P.scannerFault = offline;
         D.scannerFault.hidden = !offline; D.scScreen.hidden = offline;
         D.scanner.hidden = taken || !active;
-        D.scannerRecovery.hidden = !taken;
+        syncScannerRecovery();
         if (missing) {
           cancelBlueAction(); D.scMenu.hidden = true; hint.until = 0;
           if (offline) showScannerCrash();
@@ -2058,7 +2063,9 @@
         me.vx = me.vy = me.speed = 0;
         SFX.key();
         cancelBlueAction();
+        if (speaking?.priority === 0) stopVoice();
         till.open(tills.indexOf(nearTill) + 1);
+        syncScannerRecovery();
         recordPlaytest('till.open', { who: P.id });
         callOver();
         D.say.hidden = true;
@@ -2098,6 +2105,7 @@
       function closeTill() {
         if (!till || !till.isOpen()) return;
         till.close();
+        syncScannerRecovery();
         stopVoice(P);
         recordPlaytest('till.close', { who: P.id });
         // not talking yet: back in the queue for whoever's free
@@ -2180,7 +2188,7 @@
         cancelBlueAction();
         generation++; pending = false; keys.clear(); shut(); hint.until = 0; carton = order = carry = null;
         state = 'idle'; typed = ''; full = false; cur = 0; msg = null; viewLine = -1;
-        D.scMenu.hidden = true; till.close(); till.clear(); P.tillCust = null;
+        D.scMenu.hidden = true; till.close(); stopVoice(P); syncScannerRecovery(); till.clear(); P.tillCust = null;
       };
 
       /* ---------- speech bubbles: Sam and the customers, only when near and nothing tall is in the way ---------- */
@@ -2437,7 +2445,7 @@
       };
       P.afterRender = (now) => { placeSay(); placeBubs(now); };
       P.start = () => { if (state === 'idle') state = day && day.over ? 'end' : 'list'; renderScanner(); };
-      P.show = () => { D.scanner.hidden = P.scannerMissing && !P.scannerFault; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; stepBtnSync(); };
+      P.show = () => { syncScannerRecovery(); D.scanner.hidden = P.scannerMissing && !P.scannerFault; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; stepBtnSync(); };
       // things the controls and the tests use
       Object.assign(P, { banner, scanAt, enter, back, page, digit, useHint, toggleSquat, openTill, closeTill, countOne, confirmQty, handOver, hitAt, holdHit, scanHold, scanPut, tapRow,
         scannerPage: () => homeSel, activeLine: () => order?.lines[cur], state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });

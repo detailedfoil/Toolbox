@@ -155,7 +155,10 @@ window.playTutorial = async function (lesson) {
         }
       }
     }
-    await text('Pay & Go'); click('[data-go=pay]');
+    await text('Pay & Go');
+    await wait(() => find('.tl-now')?.textContent.includes("That's everything.") &&
+      find('.tl-now').textContent.toLowerCase().includes(c.pay.how), 'customer says how they will pay');
+    click('[data-go=pay]');
     await text('payment method'); click('[data-act=' + c.pay.how + ']');
     if (lesson === 'kiosk') await giveCashChange();
     await text('Payment accepted'); click('[data-scr=done] [data-act=leave]');

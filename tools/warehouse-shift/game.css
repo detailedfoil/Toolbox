@@ -23,7 +23,6 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-banner.show{opacity:1;transform:translate(-50%,0) scale(1)}
 .ws-banner.bell{z-index:20;width:max-content;max-width:calc(100% - 24px);box-sizing:border-box}
 .ws-scanner-recovery{position:absolute;z-index:21;left:50%;bottom:max(88px,22%);transform:translateX(-50%);width:max-content;max-width:min(360px,calc(100% - 28px));box-sizing:border-box;padding:8px 12px;border:1px solid #ffd34d;border-radius:12px;background:#0b1022;color:#dbe4f0;font:14px/1.35 system-ui,sans-serif;text-align:center;pointer-events:none}
-.ws-scanner-recovery strong{display:block;color:#ffd34d}
 .ws-banner b{display:block;font-size:22px;color:#ffd34d;letter-spacing:.02em}
 .ws-banner span{font-size:14px;color:#dbe4f0}
 .ws-banner small{display:block;margin-top:4px;color:#dbe4f0;font:12px/1.35 system-ui,sans-serif}

@@ -298,7 +298,11 @@
   Bot.prototype.slip = function () { if (this.rand() < SLIP) { this.slips++; this.stats.slips++; return true; } return false; };
   Bot.prototype.pick = function (list) { return list[Math.floor(this.rand() * list.length)]; };
   Bot.prototype.emit = function (name, a, b, c) { var f = this.env[name]; if (typeof f === 'function') return f.call(this.env, this, a, b, c); return undefined; };
-  Bot.prototype.say = function (text) { this.emit('say', 'me', { text: text }); this.log.push({ t: this.t, who: 'me', text: text }); };
+  Bot.prototype.say = function (line) {
+    if (typeof line === 'string') line = { text: line };
+    this.emit('say', 'me', line);
+    this.log.push({ t: this.t, who: 'me', text: line.text });
+  };
   // what a customer says (c: the customer, or the one at the till)
   Bot.prototype.cSay = function (line, c) {
     if (typeof line === 'string') line = { text: line };
@@ -752,7 +756,7 @@
         var ln = lines[i], find = PACE[ln.kind] || PACE.describe;
         if (ln.floor) { this.cSay(ln.say); yield 1; this.emit('sfx', 'scan'); yield 1; continue; }
         if (i) { this.say(this.pick(SAY.more)); yield this.T(PACE.reply); }
-        this.cSay({ text: ((ln.next ? ln.next + ' ' : '') + ln.say).trim(), quote: ln.quote, hint: ln.hint, qty: ln.qtySay });
+        this.cSay({ text: ((ln.next ? ln.next + ' ' : '') + ln.say).trim(), quote: ln.quote, hint: ln.hint, qty: ln.qtySay, sku: ln.kind === 'code' ? ln.item.code : undefined });
         yield this.T(find); // found on CrashFix, its code copied: the customer says straight away if it's right
         if (this.slip()) { // the wrong one first
           this.cSay(this.pick(SAY.wrong));
@@ -768,7 +772,7 @@
     // Pay & Go
     var shortage = lines.find(l => l.shortage);
     if (shortage) {
-      this.say("We've got none of " + shortage.item.code + " today.");
+      this.say({ text: "We've got none of " + shortage.item.code + " today.", sku: shortage.item.code });
       yield this.T(PACE.reply);
       this.cSay(shortage.reply);
       yield this.T(PACE.add);
