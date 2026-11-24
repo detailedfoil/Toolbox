@@ -830,12 +830,16 @@ test('split-screen banks till-cover XP and buys Sam speed tiers mid-shift', asyn
   assert.equal(Number(w.localStorage.getItem(key)), 955);
   const pc = openShop({ s });
   const speedUpgrade = pc.querySelector('[data-sam-speed]');
+  const speedStatus = pc.querySelector('[data-status="sam-speed"]');
+  assert.match(speedStatus.textContent, /100% speed/);
   let rate;
   sam.update = (dt, others, speed) => { rate = speed; };
   s.tick(0.1);
   assert.equal(rate, 0.8);
-  for (const [speed, remaining] of [[0.9, 855], [1, 705], [1.1, 480], [1.2, 130]]) {
+  for (const [speed, remaining, label] of [[0.9, 855, '+10%'], [1, 705, '+20%'], [1.1, 480, '+30%'], [1.2, 130, '+40%']]) {
+    assert.ok(speedUpgrade.textContent.includes(label + ' speed'));
     speedUpgrade.click();
+    assert.ok(speedStatus.textContent.includes(label + ' speed'));
     s.tick(0.1);
     assert.equal(rate, speed);
     assert.equal(worker.D.xpBalance.textContent, remaining + ' XP');
@@ -943,6 +947,50 @@ test('a phone buys scanner reliability, swaps at the office and keeps its delive
   p.D.tillBtn.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
   assert.ok(p.D.scannerFault.hidden && !p.D.scScreen.hidden);
   assert.equal(s.state(), 'pato'); assert.equal(held.by, 'p1');
+});
+
+test('Back lets a phone player return a carton only by scanning its original source', async t => {
+  const { s, $, w } = await game(t, { phone: true, online: false });
+  $('startBtn').click();
+  for (const job of s.prio()) job.on = false;
+  const p = s.players[0], day = s.day();
+  p.page(-1); s.enter();
+
+  const scanFrom = (g, distance = 0.35) => {
+    const cage = g.obj, x = g.x, y = cage.y1 + distance;
+    Object.assign(s.me, { x, y, yaw: 0, pitch: Math.atan2(cage.z1 / 2 - s.me.eye, y - (cage.y0 + cage.y1) / 2) });
+    s.applyCam(); s.cam.updateMatrixWorld();
+    p.D.scScan.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
+  };
+  const pressBack = () => p.D.scBack.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
+  const original = s.world.goodsin[day.deliveryLeft()[0].src];
+  scanFrom(original);
+  assert.equal(s.state(), 'pato');
+  const carton = day.delivery.find(d => d.by === p.id);
+  assert.ok(carton);
+
+  pressBack();
+  assert.match(p.D.scText.textContent, /Return carton/);
+  p.beforeRender();
+  assert.ok(s.S.glow.visible, 'the source glows during the return');
+  assert.equal(carton.by, p.id);
+  pressBack(); assert.equal(s.state(), 'pato');
+  pressBack();
+  scanFrom(original, 3);
+  assert.equal(carton.by, p.id, 'a distant scan cannot return the carton');
+  scanFrom(s.world.goodsin.find(g => g !== original && g.kind === original.kind));
+  assert.equal(carton.by, p.id, 'the wrong cage or pallet cannot accept it');
+
+  scanFrom(original);
+  assert.equal(s.state(), 'home');
+  assert.equal(carton.by, null);
+  assert.equal(day.baseXP, 0);
+  assert.equal(p.stats.putaway, 0);
+  assert.equal($('bannerTitle').textContent, 'Carton returned');
+  s.enter();
+  scanFrom(original);
+  assert.equal(s.state(), 'pato');
+  assert.equal(carton.by, p.id, 'the same carton is available again');
 });
 
 test('Digital First upgrades spend shared XP, persist, and apply when the next shift starts', async t => {

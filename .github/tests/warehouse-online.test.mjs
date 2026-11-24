@@ -64,6 +64,28 @@ test('cartons return to goods in on disconnect and another player can finish one
   assert.equal(command(d, 'p3', 'paPut', { id }, ctx), false);
 });
 
+test('returning a carton requires its owner at the original cage and awards no XP', () => {
+  const d = fresh(), ctx = context(), source = world.goodsin[d.delivery[0].src];
+  const carton = d.paTake(source.i, 'p2');
+  const args = { id: carton.id, src: source.i };
+  const { slot, loc } = carton;
+  assert.equal(command(d, 'p2', 'paReturn', args, ctx), false, 'the player must carry it back');
+  Object.assign(ctx.pose, source.stand);
+  assert.equal(command(d, 'p3', 'paReturn', args, ctx), false, 'another player cannot return it');
+  assert.equal(command(d, 'p2', 'paReturn', { ...args, src: source.i + 1 }, ctx), false, 'the source must match');
+  assert.equal(command(d, 'p2', 'paReturn', args, ctx), true);
+  assert.equal(command(d, 'p2', 'paReturn', args, ctx), false, 'retries cannot return the same carton twice');
+  assert.equal(d.baseXP, 0);
+  assert.equal(carton.item.loc, null);
+  assert.equal(carton.slot, slot);
+  assert.equal(carton.loc, loc);
+  assert.equal(command(d, 'p3', 'paTake', { src: source.i }, ctx), carton.id);
+  const samCarton = d.paTake(source.i, 'Sam') || d.paTake(undefined, 'Sam');
+  assert.ok(samCarton);
+  assert.equal(command(d, 'Sam', 'paReturn', { id: samCarton.id, src: samCarton.src }, ctx), false);
+  assert.equal(samCarton.by, 'Sam');
+});
+
 test('a paid kiosk basket must belong to the serving player and match the customer request', () => {
   const d = fresh(), c = d.send('kiosk'), ctx = context();
   c.state = 'counter'; d.serve(c, 'p3'); c.ready = true; c.at = {};

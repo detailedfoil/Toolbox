@@ -82,6 +82,7 @@
     handOver(o) { return this.request('handOver', { id: o.id }); }
     paTake(src) { return this.request('paTake', { src }).then(id => this.delivery.find(d => d.id === id)); }
     paPut(d) { return this.request('paPut', { id: d.id }); }
+    paReturn(d, src) { return this.request('paReturn', { id: d.id, src }); }
     greet(c) { return this.request('greet', { id: c.id }); }
     lock() { return this.request('lock', {}); }
     tillDone(c, info) { return this.request('tillDone', { id: c.id, lines: lines(info.lines), how: info.how, change: info.change }).then(id => this.orders.find(o => o.id === id)); }
@@ -149,6 +150,8 @@
         if (holding() || !g || !near(g.stand.x, g.stand.y, 4)) return false;
         return day.paTake(a.src, who)?.id || false;
       }
+      case 'paReturn':
+        return day.paReturn(day.delivery.find(d => d.id === a.id), who, a.src, ctx.pose);
       case 'paPut': {
         const d = day.delivery.find(d => d.id === a.id);
         return !!(d && atLoc(d.loc) && day.paPut(d, who));

@@ -280,6 +280,10 @@
       }
       if (carton && !carton.done && carton.by === p.id) {
         chapter = 5;
+        if (p.state() === 'pareturn') {
+          const g = world.goodsin[carton.src];
+          return walk('Scan the glowing cage or pallet to return the carton. Back resumes putaway.', objectBox(g.obj), g.stand);
+        }
         if (p.state() === 'paqty') return cue('One confirmation shelves the whole carton. ' + confirm() + '.', '#scEnter');
         return shelfGuide(carton.loc, true);
       }

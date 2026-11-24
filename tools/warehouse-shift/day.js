@@ -263,6 +263,21 @@
     this.emit('delivery', top);
     return top;
   };
+  // A player can return an unfinished carton only at the source it came from.
+  const GOODS_REACH = 2.55;
+  Day.prototype.paReturn = function (d, who, src, pos) {
+    if (!who || who === 'Sam' || !d || d.done || d.by !== who || d.src !== src || !this.delivery.includes(d)) return false;
+    const source = this.world.goodsin[src]?.obj;
+    if (!source || !Number.isFinite(pos?.x) || !Number.isFinite(pos?.y)) return false;
+    const dx = Math.max(source.x0 - pos.x, 0, pos.x - source.x1);
+    const dy = Math.max(source.y0 - pos.y, 0, pos.y - source.y1);
+    if (Math.hypot(dx, dy) > GOODS_REACH) return false;
+    d.by = null;
+    delete d.takenAt;
+    this.emit('playtest', 'carton.return', { who, carton: d.id });
+    this.emit('delivery', d);
+    return true;
+  };
   Day.prototype.paPut = function (d, who) {
     if (!d || d.done || d.by !== who) return false;
     d.done = true; d.doneBy = who; d.finishedAt = this.t;
@@ -815,7 +830,7 @@
   };
 
   function create(o) { var d = new Day(o); return d; }
-  var api = { create: create, Day: Day, DELIVERY: DELIVERY, TOTAL: TOTAL, MAX_LIST: MAX_LIST, MAX_IN: MAX_IN, MODES: MODES, EVENTS: EVENTS, DIGITAL_FIRST: DIGITAL_FIRST, rollEvent: rollEvent };
+  var api = { create: create, GOODS_REACH: GOODS_REACH, Day: Day, DELIVERY: DELIVERY, TOTAL: TOTAL, MAX_LIST: MAX_LIST, MAX_IN: MAX_IN, MODES: MODES, EVENTS: EVENTS, DIGITAL_FIRST: DIGITAL_FIRST, rollEvent: rollEvent };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ShiftDay = api;
 })(typeof window !== 'undefined' ? window : this);

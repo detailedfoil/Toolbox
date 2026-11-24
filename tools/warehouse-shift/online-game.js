@@ -225,7 +225,7 @@
     function action(slot, op, args) {
       const who = 'p' + slot, pos = peers.get(slot), day = g.day(), till = () => tills[locks.get(who)];
       if (op === 'swapScanner') return day.swapScanner(who, pos);
-      if ((day.offlineScanners.has(who) || g.missingScanners.has(who)) && ['take', 'line', 'restock', 'fetch', 'putAway', 'handOver', 'paTake', 'paPut'].includes(op)) return false;
+      if ((day.offlineScanners.has(who) || g.missingScanners.has(who)) && ['take', 'line', 'restock', 'fetch', 'putAway', 'handOver', 'paTake', 'paPut', 'paReturn'].includes(op)) return false;
       if (op === 'takeStool' || op === 'dropStool') {
         const stool = world.stools.find(s => s.id === args.id);
         if (!stool) return false;
