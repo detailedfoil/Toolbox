@@ -147,9 +147,22 @@
       const text = [line.text, line.quote, line.hint, line.qty].filter(Boolean).join(' ');
       if (!text) return;
       const accents = ['en-GB', 'en-IE', 'en-AU', 'en-US', 'en-NZ', 'en-CA', 'en-ZA', 'en-IN'];
-      const voices = synthesizer.getVoices().filter(v => v.localService && /^en(?:-|$)/i.test(v.lang));
+      const voices = synthesizer.getVoices().filter(v => v.localService);
+      const language = voice => voice.lang.toLowerCase().split(/[-_]/)[0];
+      const english = voices.filter(v => language(v) === 'en');
       const preferred = accents[speaker % accents.length];
-      const voice = voices.find(v => v.lang === preferred) || (speaker ? voices[speaker % voices.length] : voices.find(v => v.lang === 'en-GB')) || voices[0];
+      let voice = english.find(v => v.lang === preferred) || english[speaker % english.length];
+      if (speaker && (speaker % 3 === 0 || !voice)) {
+        // Use one voice per language so devices with several French voices still get variety.
+        const available = new Map();
+        for (const option of voices) {
+          const code = language(option);
+          if (code && code !== 'en' && !available.has(code)) available.set(code, option);
+        }
+        const languages = [...new Set(['fr', 'fi', 'es', 'de', 'sv', 'it', 'pl', 'ja', ...available.keys()])];
+        const alternate = languages.map(code => available.get(code)).filter(Boolean);
+        if (alternate.length) voice = alternate[(Math.ceil(speaker / 3) - 1) % alternate.length];
+      }
       if (!voice) return;
       stopVoice();
       const utterance = new window.SpeechSynthesisUtterance(text);
