@@ -219,6 +219,21 @@ test('greeted customers walk to separate tills, wait for a free one and can be s
   const customers = Array.from({ length: 4 }, () => day.send('kiosk'));
   s.tick(20);
   const [first, second, third, fourth] = customers;
+  const counter = s.world.counter, target = first.fig.group.position, player = s.players[0];
+  function aimAtCustomer(x, y) {
+    Object.assign(s.me, { x, y, yaw: Math.atan2(x - target.x, y - target.z),
+      pitch: Math.atan2(1.2 - s.me.eye, Math.hypot(x - target.x, y - target.z)) });
+    s.applyCam();
+  }
+  aimAtCustomer(target.x, counter.y0 - 0.7);
+  assert.equal($('tillBtn').textContent.trim(), 'GreetF');
+  assert.equal($('tillBtn').hidden, false);
+  assert.match(player.D.scNote.textContent, /say hello/);
+  for (const [x, y] of [[target.x, counter.y1 + 0.2], [counter.x0 - 0.1, counter.y0 - 0.7]]) {
+    aimAtCustomer(x, y);
+    assert.ok($('tillBtn').hidden || !$('tillBtn').textContent.startsWith('Greet'));
+    assert.doesNotMatch(player.D.scNote.textContent, /say hello/);
+  }
   assert.ok(day.greet(first, 'p2'));
   assert.equal(day.greet(second, 'p2'), false);
   assert.ok(day.greet(second, 'p3'));
@@ -235,18 +250,24 @@ test('greeted customers walk to separate tills, wait for a free one and can be s
   day.scannerMixups.unlabelled.until = 1;
   s.applyCam(); await s.openTill();
   assert.equal($('scanner').hidden, true);
-  assert.equal($('bannerTitle').textContent, 'Sam has your scanner');
+  const recovery = player.D.scannerRecovery;
+  assert.equal(recovery.hidden, false);
+  assert.match(recovery.textContent, /Finish serving and close the till, then walk up to Sam/);
+  player.banner('Other shift message');
+  assert.equal(recovery.hidden, false);
   assert.equal(s.till.session().dayCust, first);
   assert.equal(first.by, 'p1');
   assert.ok(day.canGreet('p2'));
   assert.equal(day.serve(first, 'Sam'), false);
   assert.equal(day.serve(second, 'p1'), false);
   s.closeTill();
+  assert.equal(recovery.hidden, false);
   const sam = s.crew[0];
   s.me.x = sam.x; s.me.y = sam.y;
   s.tick(0.1);
   assert.equal($('scanner').hidden, false);
   assert.equal($('bannerTitle').textContent, 'Scanner returned');
+  assert.equal(recovery.hidden, true);
   day.tillDone(first, first.kiosk.list[first.kiosk.mine].lines);
   s.tick(9);
   assert.equal(fourth.at, till);
@@ -485,7 +506,8 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   day.scannerMixups.labelled.limit = day.scannerMixups.labelled.until = 1;
   host.s.tick(6);
   await until(() => guests[2].$('scanner').hidden, 'guest cashier to lose their scanner');
-  assert.ok([host, ...guests.slice(0, 2)].every(g => !g.$('scanner').hidden));
+  assert.equal(cashier.players[0].D.scannerRecovery.hidden, false);
+  assert.ok([host, ...guests.slice(0, 2)].every(g => !g.$('scanner').hidden && g.s.players[0].D.scannerRecovery.hidden));
   await until(() => cashier.till.stage() === 'details', 'customer to walk to the guest till');
   const ui = cashier.till.debug, session = cashier.till.session();
   assert.equal(session.cust.third.say, customer.cust.third.say);
@@ -532,6 +554,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   cashier.me.x = host.s.crew[0].x; cashier.me.y = host.s.crew[0].y;
   cashier.applyCam();
   await until(() => !guests[2].$('scanner').hidden, 'guest to collect their scanner from Sam');
+  assert.equal(cashier.players[0].D.scannerRecovery.hidden, true);
   assert.ok(host.s.crew[0].log.some(line => /name/.test(line.text)), 'Sam notices the name on the guest scanner');
   // Reserve the fetched bag's OC slot until the tote actually crosses the counter.
   day.mode = 'hold';

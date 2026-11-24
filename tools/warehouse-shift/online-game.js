@@ -240,8 +240,7 @@
       return wire.command(day, who, op, args, {
         needsStep: g.needsStep,
         pose: pos, progress, items, screen: g.screen, doorX: g.doorX, till,
-        canGreet: () => pos.y < world.counter.y0 + 0.05 && pos.y > world.counter.y0 - 1.75 &&
-          tills.some(t => Math.abs((t.x0 + t.x1) / 2 - pos.x) < 1.6),
+        canGreet: () => g.canGreetAt(pos),
         give(o) { const tote = orderLoad(o); if (o.cust?.fig) g.give(o.cust, tote, g.handX(pos.x)); else S.dropTote(tote); },
         open(i) {
           return Number.isInteger(i) && open(who, i, pos);
