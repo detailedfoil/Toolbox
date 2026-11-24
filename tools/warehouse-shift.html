@@ -25,7 +25,7 @@
   <canvas id="view" tabindex="0" aria-label="The warehouse"></canvas>
 
   <div class="ws-top" id="topBar" hidden>
-    <a class="ws-btn" href="../index.html" aria-label="Back to the Toolbox" title="Back to the Toolbox">&larr;</a>
+    <button class="ws-btn" id="menuBtn" type="button" aria-haspopup="dialog">Menu</button>
     <button class="ws-btn" id="fullBtn" type="button" aria-label="Full screen" title="Full screen">&#x26F6;</button>
     <button class="ws-btn room-badge" id="roomBtn" type="button" aria-label="Room details" hidden></button>
     <button class="ws-btn" id="helpBtn" type="button" aria-label="How to play" title="How to play">?</button>
@@ -201,7 +201,8 @@
   </template>
   <div class="ws-cover" id="pauseCover" role="dialog" aria-modal="true" aria-labelledby="pauseTitle" hidden>
     <div class="ws-card">
-      <h1 id="pauseTitle">Paused</h1>
+      <h1 id="pauseTitle">Main menu</h1>
+      <p id="menuStatus"></p>
       <div class="ws-row"><button class="ws-go" id="resumeShift" type="button">Resume</button></div>
     </div>
   </div>
@@ -209,6 +210,7 @@
     <div class="ws-card">
       <button class="ws-x" id="helpX" type="button" aria-label="Close">&times;</button>
       <h1>How to play</h1>
+      <p>Open <b>Menu</b> to pause a local shift. In online co-op, the shift continues while the menu is open. Choose <b>Resume</b> to return.</p>
       <p>For hands-on practice, choose <b>Play tutorial</b> on the home screen. Follow the floor markers and the amber outline on the next control.</p>
       <p>Lock up to see the day’s stats and team score out of 1,000. Choose <b>Next</b> for upgrades, then <b>Start Next Day</b> to begin in the office. Quick greetings, short customer waits, prompt picks and speedy putaway all count. The timers use playing time. A missed delivery puts more weight on customer waits.</p>
       <p>Human teammates share 5 XP per greeting, 15 per sale, 10 per confirmed pick line, 10 per finished order and 10 per shelved carton. Once you contribute, team work XP is saved as you play. Spend it at the office Manager PC under Upgrades. Lock-up adds a shift bonus of up to 25%. Work done while a teammate or Sam stands at a till earns 5% extra XP, including its share of the shift bonus. Standing cover counts as contributing. Service Champ XP is rounded across the shift and saved on this device.</p>
@@ -272,9 +274,9 @@
           <h2>Phone</h2>
           <ul><li>Left thumb: walk (push further to jog)</li><li>Drag the view to look round</li><li>Tap a label to scan it</li><li>Tap <b>Squat</b> for low shelves. For high shelves, face a red kick stool and tap <b>Take stool</b>. Carry it to the shelf and tap <b>Step</b></li></ul>
           <h2>Controller</h2>
-          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>LB</b> step on the stool, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>Start</b>: enlarge the blue scanner buttons</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
+          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>LB</b> step on the stool, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>RB</b> enlarges the blue scanner buttons. <b>Start</b> opens the main menu or closes the computer you’re using.</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
           <h2>Computer</h2>
-          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse. <kbd>Esc</kbd> pauses, including in Fusion and on the Manager PC</li><li>Click or press <kbd>F</kbd> to interact with the outlined target or scan. Click empty space to use scanner <kbd>Enter</kbd>. <kbd>C</kbd> squats, and <kbd>Space</kbd> steps onto or off a kick stool</li><li>Scroll the scanner with the mouse wheel or <kbd>&uarr;</kbd><kbd>&darr;</kbd>. Right-click or <kbd>Backspace</kbd> goes back on the scanner</li><li>Press <kbd>Tab</kbd> or Function to enlarge the blue scanner buttons. Use <kbd>1</kbd> for Hint and <kbd>2</kbd> for Quick Pick when shown. Press a number again if you used it to enlarge the buttons.</li></ul>
+          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse. <kbd>Esc</kbd> opens the main menu or closes the computer you’re using</li><li>Click or press <kbd>F</kbd> to interact with the outlined target or scan. Click empty space to use scanner <kbd>Enter</kbd>. <kbd>C</kbd> squats, and <kbd>Space</kbd> steps onto or off a kick stool</li><li>Scroll the scanner with the mouse wheel or <kbd>&uarr;</kbd><kbd>&darr;</kbd>. Right-click or <kbd>Backspace</kbd> goes back on the scanner</li><li>Press <kbd>Tab</kbd> or Function to enlarge the blue scanner buttons. Use <kbd>1</kbd> for Hint and <kbd>2</kbd> for Quick Pick when shown. Press a number again if you used it to enlarge the buttons.</li></ul>
         </div>
       </div>
       <div class="ws-row"><button class="ws-go" id="helpClose" type="button">Got it</button></div>
@@ -285,7 +287,7 @@
     <div class="ws-card">
       <h1>End of shift</h1>
       <div id="endStats"></div>
-      <div class="ws-row"><button class="ws-go" id="keepBtn" type="button">Keep picking</button><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div>
+      <div class="ws-row"><button class="ws-go" id="keepBtn" type="button">Keep picking</button></div>
     </div>
   </div>
 
@@ -305,11 +307,11 @@
       </div>
       </section>
       <section id="dayUpgrades" hidden><h1>Upgrades</h1><p id="upgradeBalance"></p></section>
-      <div class="ws-row"><button class="ws-go" id="dayNext" type="button">Next</button><button class="ws-go" id="nextDayBtn" type="button" hidden>Start Next Day</button><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div>
+      <div class="ws-row"><button class="ws-go" id="dayNext" type="button">Next</button><button class="ws-go" id="nextDayBtn" type="button" hidden>Start Next Day</button></div>
     </div>
   </div>
 
-  <div class="ws-cover" id="msg" hidden><div class="ws-card"><p id="msgText"></p><div class="ws-row"><a class="ws-alt" href="../index.html" style="display:grid;place-items:center;text-decoration:none">Back to the Toolbox</a></div></div></div>
+  <div class="ws-cover" id="msg" hidden><div class="ws-card"><p id="msgText"></p></div></div>
 </main>
 <span id="guideArrow" class="guide-arrow" aria-hidden="true" hidden>➜</span>
 <aside id="shiftGuide" class="shift-guide" aria-label="Tutorial" hidden>
@@ -327,10 +329,10 @@
 <script src="warehouse-shift/bot.js?v=8924548ae2"></script>
 <script src="warehouse-shift/tillui.js?v=077455184d"></script>
 <script src="warehouse-shift/online-day.js?v=544c2990cd"></script>
-<script src="warehouse-shift/online.js?v=fa94d39a5a"></script>
-<script src="warehouse-shift/online-game.js?v=a929cafc17"></script>
+<script src="warehouse-shift/online.js?v=d393194ce9"></script>
+<script src="warehouse-shift/online-game.js?v=784ff29610"></script>
 <script src="warehouse-shift/playtest.js?v=223d2eb3db"></script>
 <script src="warehouse-shift/tutorial.js?v=0ac2d6d364"></script>
-<script src="warehouse-shift/game.js?v=f5d6fd1615"></script>
+<script src="warehouse-shift/game.js?v=8ade8b0b39"></script>
 </body>
 </html>

@@ -345,7 +345,7 @@ test('controllers: a controller belongs to one player, does everything on the sc
   assert.match(game, /players\.some\(\(p\) => p\.padIndex === gp\.index\)/, 'a controller already someone\'s is left alone');
   assert.match(game, /const prev = padPrev, hit = \(i\) => now\[i\] && !prev\[i\];/, 'a press is a button that wasn\'t down last time');
   for (const [what, re] of [['RT scans', /if \(hit\(7\)\) \{ initAudio\(\); const c = centreNdc\(\); scanAt/], ['A confirms Quick Pick or Enter', /if \(hit\(0\)\) \{ if [^\n]+ D\.scConfirmQuickPick\.click\(\); else \{ SFX\.key\(\); enter\(\); \}/],
-    ['B is Back', /if \(hit\(1\)\) back\(\);/], ['X squats', /if \(hit\(2\)\) toggleSquat\(\);/], ['Y is Hint', /if \(hit\(3\)\) \{ cancelBlueAction\(\); useHint\(\); \}/], ['Start enlarges the blue buttons', /if \(hit\(9\)\) toggleBlue\(P\);/]]) assert.match(game, re, what);
+    ['B is Back', /if \(hit\(1\)\) back\(\);/], ['X squats', /if \(hit\(2\)\) toggleSquat\(\);/], ['Y is Hint', /if \(hit\(3\)\) \{ cancelBlueAction\(\); useHint\(\); \}/], ['RB enlarges the blue buttons', /if \(hit\(5\)\) toggleBlue\(P\);/]]) assert.match(game, re, what);
   const ui = fs.readFileSync(path.join(REPO, 'tools/warehouse-shift/tillui.js'), 'utf8');
   assert.match(ui, /function pad\(act\)/);
   assert.match(game, /if \(hit\(6\)\) till\.pad\('tabL'\); if \(hit\(7\)\) till\.pad\('tabR'\);/, 'at the till LT and RT switch tabs');
