@@ -233,7 +233,10 @@ test('mouse clicks use highlighted targets and the keyboard steps and chooses bl
   const scroll = deltaY => view.dispatchEvent(new w.WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true }));
   scroll(100); assert.equal(p.scannerPage(), 1);
   scroll(-100); assert.equal(p.scannerPage(), 0);
-  key('Enter');
+  s.me.pitch = 1.3;
+  s.applyCam();
+  pointer('pointerdown');
+  assert.equal(s.state(), 'pa', 'empty-space click confirms the scanner home choice');
   key('Space', ' ', p.D.scFn);
   assert.ok(s.me.step, 'Space steps even after a blue shortcut leaves a button focused');
   key('Space', ' '); assert.ok(!s.me.step);
@@ -267,6 +270,19 @@ test('mouse clicks use highlighted targets and the keyboard steps and chooses bl
   assert.equal(locked, view);
 
   locked = view;
+  const loc = order.lines[0].loc;
+  Object.assign(s.me, { squat: true, step: true });
+  const shelfX = (loc.x0 + loc.x1) / 2;
+  aimFrom(shelfX, loc.face.front + loc.face.out * 0.65, shelfX, loc.face.front, (loc.z0 + loc.z1) / 2);
+  s.cam.updateMatrixWorld();
+  assert.ok(s.hitAt(...p.centre()), 'the crosshair hits a shelf label');
+  pointer('pointerdown');
+  assert.equal(s.state(), 'qty', 'a click scans the location under the crosshair');
+  s.me.pitch = 1.3;
+  s.applyCam();
+  s.cam.updateMatrixWorld();
+  pointer('pointerdown');
+  assert.equal(s.state(), 'deliver', 'empty-space click confirms the scanned line');
   const customer = day.send('kiosk');
   s.tick(20);
   const pos = customer.fig.group.position, y = s.world.counter.y0 - 0.7;
@@ -274,7 +290,7 @@ test('mouse clicks use highlighted targets and the keyboard steps and chooses bl
   assert.match(p.D.tillBtn.textContent, /Greet/);
   pointer('pointerdown');
   assert.notEqual(customer.state, 'greet', 'a locked mouse click greets during an active pick');
-  assert.equal(order.status, 'taken');
+  assert.equal(order.status, 'picked');
 
   locked = null;
   w.document.dispatchEvent(new w.Event('pointerlockerror'));

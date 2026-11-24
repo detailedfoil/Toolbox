@@ -1288,10 +1288,10 @@
         }
         return best;
       }
-      async function scanGoods(nx, ny) {
+      async function scanGoods(nx, ny, onMiss) {
         if (pending) return;
         const h = goodsHit(nx, ny);
-        if (!h) { say('Scan a carton on a cage or pallet', 'dim'); SFX.miss(); return; }
+        if (!h) { if (onMiss) return onMiss(); say('Scan a carton on a cage or pallet', 'dim'); SFX.miss(); return; }
         if (h.dist > Day.GOODS_REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (state === 'pareturn') {
           const d = carton;
@@ -1313,9 +1313,9 @@
         banner('Putaway', d.item.code + ': take it to ' + d.loc.code, 2200);
         renderScanner(); dirty = true;
       }
-      function scanPaLoc(nx, ny) {
+      function scanPaLoc(nx, ny, onMiss) {
         const h = hitAt(nx, ny);
-        if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
+        if (!h) { if (onMiss) return onMiss(); say('No barcode there', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
         if (needsStep(h.loc) && !me.step) { say('Too high: step up', 'warn'); toast(P.stool || kit.shoes.owned ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
@@ -1385,7 +1385,7 @@
         if (tr) { tr.target = out ? 1 : 0; if (out) { openTray = tr; SFX.slide(); } }
       }
       function shut() { if (openTray) openTray.target = 0; if (pulled) pulled.pullTarget = 0; }
-      function scanAt(nx, ny, useAimedObject = false) {
+      function scanAt(nx, ny, useAimedObject = false, onMiss) {
         if (blueAction) return;
         if (useAimedObject && useAction()) return;
         if (P.scannerMissing) { useAction(); return; }
@@ -1394,15 +1394,16 @@
         if (state === 'deliver') { if (atCounter) handOver(); else { say('Take it to the counter', 'warn'); SFX.miss(); } return; }
         if ((doorOn || greetC || bellOn || pcOn) && idleState() && useAction()) return;
         if (nearTill && (idleState() || tillHit(nx, ny))) { openTill(); return; }
-        if (state === 'pa' || state === 'pareturn') { scanGoods(nx, ny); return; }
-        if (state === 'pato' || state === 'paqty') { scanPaLoc(nx, ny); return; }
+        if (state === 'pa' || state === 'pareturn') { scanGoods(nx, ny, onMiss); return; }
+        if (state === 'pato' || state === 'paqty') { scanPaLoc(nx, ny, onMiss); return; }
+        if (onMiss && (state === 'home' || state === 'list')) { onMiss(); return; }
         if (state === 'home') { say('Choose with the arrows, then Enter', 'dim'); SFX.miss(); return; }
         if (state === 'list' || state === 'end') { const n = scannerList().length; say(n ? 'Press Enter to start a pick' : 'No picks yet', 'dim'); SFX.miss(); return; }
-        if (state === 'hold') { scanHold(nx, ny); return; }
-        if (state === 'put') { scanPut(nx, ny); return; }
+        if (state === 'hold') { scanHold(nx, ny, onMiss); return; }
+        if (state === 'put') { scanPut(nx, ny, onMiss); return; }
         if (state !== 'scan' && state !== 'qty') return;
         const h = hitAt(nx, ny);
-        if (!h) { say('No barcode there', 'dim'); SFX.miss(); return; }
+        if (!h) { if (onMiss) return onMiss(); say('No barcode there', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         if (h.loc.z0 < LOW && !me.squat) { say('Squat down to scan it', 'warn'); toast(touch ? 'Too low: squat down' : 'Too low: squat (C)'); SFX.bad(); flash(true); return; }
         if (needsStep(h.loc) && !me.step) { say('Too high: step up', 'warn'); toast(P.stool || kit.shoes.owned ? 'Too high: Step up' : 'Too high: take a kick stool (end of the row)'); SFX.bad(); flash(true); return; }
@@ -1526,9 +1527,9 @@
       function tapRow(i) { if (state === 'home') { if (i === homeSel) openHome(i); else { SFX.key(); homeSel = i; renderScanner(); } return; } if (state !== 'list') return; if (i === sel) { SFX.key(); enter(); return; } const list = scannerList(); if (!list[i]) return; SFX.key(); sel = i; selId = list[i].id; renderScanner(); }
 
       /* ---------- the holding area: fetching a bag, putting a c pick away ---------- */
-      async function scanHold(nx, ny) {
+      async function scanHold(nx, ny, onMiss) {
         const h = holdHit(nx, ny);
-        if (!h) { say('Scan the tote', 'dim'); SFX.miss(); return; }
+        if (!h) { if (onMiss) return onMiss(); say('Scan the tote', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH + 0.4) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         const sp = h.sp, p = day.hold[sp.code];
         S.setBox(S.aimBox, spotBox(sp), 0.012); S.aimBox.visible = true;
@@ -1549,9 +1550,9 @@
         S.aimBox.visible = false;
         renderScanner(); dirty = true;
       }
-      async function scanPut(nx, ny) {
+      async function scanPut(nx, ny, onMiss) {
         const h = holdHit(nx, ny);
-        if (!h) { say('Scan an OC label', 'dim'); SFX.miss(); return; }
+        if (!h) { if (onMiss) return onMiss(); say('Scan an OC label', 'dim'); SFX.miss(); return; }
         if (h.dist > REACH + 0.4) { say('Too far away', 'warn'); toast('Get closer to scan'); SFX.miss(); return; }
         const sp = h.sp;
         S.setBox(S.aimBox, spotBox(sp), 0.012); S.aimBox.visible = true;
@@ -2554,6 +2555,10 @@
 
     const looks = new Map();
     const locked = () => document.pointerLockElement === canvas;
+    function clickWorld(p) {
+      const [x, y] = p.centre();
+      p.scanAt(x, y, true, () => { SFX.key(); p.enter(); });
+    }
     function lockMouse() { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (x) { /* not allowed */ } }
     canvas.addEventListener('pointerdown', (e) => {
       const kp = kbPlayer();
@@ -2568,7 +2573,7 @@
           if (kp.playing()) lockMouse();
           e.preventDefault(); return;
         }
-        if (locked()) { kp.scanAt(...kp.centre(), true); e.preventDefault(); return; }
+        if (locked()) { clickWorld(kp); e.preventDefault(); return; }
       }
       if (split && e.pointerType !== 'mouse') return; // touch is for one player
       try { canvas.setPointerCapture(e.pointerId); } catch (x) { /* fine */ }
@@ -2590,7 +2595,7 @@
       if (e.type === 'pointerup' && Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < 10 && performance.now() - p.t < 450) { // a tap: scan what's there
         const kp = kbPlayer();
         if (!kp?.playing()) return;
-        if (e.pointerType === 'mouse') kp.scanAt(...kp.centre(), true);
+        if (e.pointerType === 'mouse') clickWorld(kp);
         else kp.scanAt(...canvasNdc(kp, e));
       }
     };
