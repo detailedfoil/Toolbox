@@ -98,3 +98,52 @@ test('on light duties Sam can serve and fetch bags while players do warehouse wo
   assert.equal(day.paTake(null, 'Sam'), null);
   assert.ok(day.paTake(null, 'p1'));
 });
+
+test('putaway paces customer arrivals while holding picks and replacement visits can still start', () => {
+  const day = fresh(null, { delivery: 10 });
+  day.plan = ['ck', 'ck', 'c', ...Array(8).fill('ck')];
+  day.total = day.plan.length;
+  function runDirector() {
+    for (let tick = 0; tick < 20; tick++) {
+      day.tick(100);
+      for (const customer of day.customers) customer.state = 'gone';
+      for (const order of day.orders) order.status = 'done';
+    }
+  }
+  runDirector();
+  assert.equal(day.customers.length, 1);
+  assert.equal(day.orders.filter(order => order.kind === 'c').length, 1);
+  day.customers[0].state = 'greet';
+  day.giveUp(day.customers[0]);
+  runDirector();
+  assert.equal(day.customers.length, 2);
+  for (const carton of day.delivery.slice(0, 5)) carton.done = true;
+  runDirector();
+  assert.equal(day.clockMinute(), 13 * 60 + 30);
+  assert.equal(day.customers.length - 1, 5);
+  for (const carton of day.delivery.slice(5, 9)) carton.done = true;
+  runDirector();
+  assert.equal(day.customers.length - 1, 10);
+  assert.equal(day.phase, 'open');
+  day.delivery.at(-1).done = true;
+  day.tick(1);
+  assert.equal(day.clockMinute(), 20 * 60);
+  assert.equal(day.phase, 'lock');
+});
+
+test('repeated Fusion identities get distinct emails across accounts and customer visits', () => {
+  const day = fresh(null);
+  const seen = new Set(), residents = new Set();
+  for (let i = 0; i < 10; i++) {
+    day.r = W.rng(842);
+    const { cust } = day.send('kiosk');
+    for (const record of cust.db) {
+      assert.ok(!seen.has(record.email));
+      seen.add(record.email);
+      const resident = [record.first, record.postcode, record.address].join('/');
+      assert.ok(!residents.has(resident));
+      residents.add(resident);
+    }
+    if (cust.third.kind === 'email') assert.ok(cust.third.say.includes(cust.email));
+  }
+});
