@@ -602,15 +602,15 @@
     var p = this.post;
     return Math.hypot(this.x - p.x, this.y - p.y) < 0.6 && !this.walking;
   };
-  // The Manager PC supplies enabled jobs in priority order. A service-bell call jumps the queue.
+  // The Manager PC supplies enabled jobs in priority order. Greetings and service-bell calls take precedence.
   var PRIO = ['queue', 'cust', 'hold', 'delivery'];
   Bot.prototype.choose = function () {
     var b = this.emit('board') || {}, orders = b.orders || [], queue = b.queue || [], prio = b.prio || PRIO;
+    if (b.greet?.length) return { greet: b.greet[0] };
     if (b.bell && b.bell.length) return { serve: b.bell[0], cat: 'queue' };
     for (const job of prio) {
       if (job === 'queue') {
         if (queue.length) return { serve: queue[0], cat: 'queue' };
-        if (b.greet?.length) return { greet: b.greet[0] };
       } else if (job === 'delivery') {
         if (b.delivery > 0) return { putaway: true, cat: 'delivery' };
       } else {
