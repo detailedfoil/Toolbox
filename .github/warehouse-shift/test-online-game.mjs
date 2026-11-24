@@ -305,7 +305,7 @@ test('Quick Pick confirms the top customer pick only when doing putaway empty-ha
   button.click();
   assert.equal($('scConfirm').hidden, false);
   assert.deepEqual(Array.from(options.querySelectorAll('button:not([hidden])'), option => option.textContent),
-    ['Function (1)', 'Hint (2)', 'Quick Pick (3)']);
+    ['Function', '<1> Hint', '<2> Quick Pick']);
   assert.equal(collect.status, 'listed');
   assert.equal(s.players[0].stats.hints, 0);
   hint.click();

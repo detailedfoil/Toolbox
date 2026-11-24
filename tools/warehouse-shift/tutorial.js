@@ -236,7 +236,6 @@
       if (!$('helpCover').hidden) return cue('Close How to play to return to the tutorial.', '#helpX');
       if (!$('endCover').hidden) return cue('Choose Keep playing to return to the tutorial.', '#keepBtn');
       if (p.tillOpen()) return fusionCue(p.till, Till, lesson, p.padIndex !== null ? 'press LB' : 'press Enter');
-      if (!D.scMenu.hidden) return cue('Choose Close to return to your scanner task.', '#scMenu [data-k="0"]');
       if (!D.scConfirm.hidden) return cue('The blue choices expand together. Press Back to return to your task.', '#scBack');
       if (p.pcOpen() && !(fullTour && customer?.order?.status === 'done' && !sawCCTV)) return cue('Close the Manager PC to continue the tour.', '.ws-pc-x');
       if (lesson === 'holding') {
