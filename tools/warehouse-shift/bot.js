@@ -610,11 +610,13 @@
   var PRIO = ['queue', 'cust', 'hold', 'delivery'];
   Bot.prototype.choose = function () {
     var b = this.emit('board') || {}, orders = b.orders || [], queue = b.queue || [], prio = b.prio || PRIO;
+    const called = b.bell?.[0];
+    if (called) return called.state === 'greet' ? { greet: called } : { serve: called, cat: 'queue' };
     if (b.greet?.length) return { greet: b.greet[0] };
-    if (b.bell && b.bell.length) return { serve: b.bell[0], cat: 'queue' };
     for (const job of prio) {
       if (job === 'queue') {
         if (queue.length) return { serve: queue[0], cat: 'queue' };
+        if (b.tillPending) return null; // Give the player time to help before taking lower-priority work.
       } else if (job === 'delivery') {
         if (b.delivery > 0) return { putaway: true, cat: 'delivery' };
       } else {

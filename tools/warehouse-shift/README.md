@@ -79,7 +79,7 @@ Squat for bottom shelves. High shelves require **Step** on a red kick stool or t
 
 Sam waits near holding and goods in when idle. When assigned to tills and the tills are open, he waits behind the counter when there are no other jobs.
 
-Sam is a physical coworker with a trolley. He shares pending work, avoids entering an aisle already occupied by a player, and may block an aisle when he parks to pick. The Manager PC in the office controls which jobs he does and their priority. All four jobs start enabled. The default priority is till service, customer picks, lowercase **c** picks for holding, then delivery. Untick or reorder jobs at any time. Greetings and service-bell requests get immediate priority when till service is enabled. Players get a short head start on new picks.
+Sam is a physical coworker with a trolley. He shares pending work, avoids entering an aisle already occupied by a player, and may block an aisle when he parks to pick. The Manager PC in the office controls which jobs he does and their priority. All four jobs start enabled. The default priority is till service, customer picks, lowercase **c** picks for holding, then delivery. Untick or reorder jobs at any time. When till service is enabled, a service-bell call takes priority on Sam’s next job. Sam shelves the carton he’s carrying and checks priorities again before scanning another one. If a waiting customer has priority over delivery, Sam gives the player a short chance to help before serving them. Players get a short head start on new picks.
 
 Sam rings the service bell when a customer has gone unattended for about six seconds and he is within reach on the staff side. You can also ring it. Sam prioritises the waiting till customer when assigned to tills.
 

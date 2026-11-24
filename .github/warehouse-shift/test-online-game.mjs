@@ -488,6 +488,43 @@ test('Sam rings once after six seconds when within reach and skips customers alr
   assert.ok(s.players.every(p => p.D.bannerTitle.textContent === 'Picking'));
 });
 
+test('Sam checks for waiting customers before claiming another delivery carton', async t => {
+  for (const { ring, carrying } of [{ ring: false, carrying: true }, { ring: true, carrying: true }, { ring: true, carrying: false }]) {
+    const { $, w, s } = await game(t, { online: false });
+    $('startBtn').click();
+    const day = s.day(), sam = s.crew[0], bell = s.world.bell;
+    day.plan.length = 0;
+    day.mode = 'kiosk';
+    const inProgress = () => carrying ? day.delivery.some(d => d.by === 'Sam') : sam.jobs.includes('putaway');
+    for (let i = 0; i < 200 && !inProgress(); i++) s.tick(0.2);
+    assert.ok(inProgress(), 'Sam is already heading to Goods In or shelving');
+    const carton = day.delivery.find(d => d.by === 'Sam');
+    assert.equal(!!carton, carrying);
+    const customer = day.send('kiosk');
+    day.arrived(customer);
+    if (ring) {
+      const oldPose = { ...s.me };
+      Object.assign(s.me, { x: bell.x, y: bell.y - 0.9, yaw: Math.PI, pitch: Math.atan2(bell.z - s.me.eye, 0.9) });
+      s.applyCam();
+      const button = s.players[0].D.tillBtn;
+      assert.match(button.textContent, /Ring bell/);
+      button.dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
+      assert.equal(s.bell(), customer, 'the bell can call Sam for an ungreeted customer');
+      assert.equal(customer.state, 'greet');
+      Object.assign(s.me, oldPose);
+      s.applyCam();
+    } else {
+      day.greet(customer, 'p1');
+    }
+    for (let i = 0; i < 700 && customer.by !== 'Sam'; i++) {
+      s.tick(0.2);
+      assert.ok(!day.delivery.some(d => d !== carton && d.by === 'Sam'), 'Sam has not claimed another carton');
+    }
+    if (carton) assert.ok(carton.done, 'Sam finishes the carton already in hand');
+    assert.equal(customer.by, 'Sam', 'Sam serves the waiting customer');
+  }
+});
+
 test('the wall clock follows shelved cartons from 07:00 to 20:00', async t => {
   const { $, s } = await game(t, { online: false });
   $('startBtn').click();
