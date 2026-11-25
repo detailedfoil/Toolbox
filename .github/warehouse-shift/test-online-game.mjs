@@ -249,40 +249,47 @@ test('mouse clicks use highlighted targets and the keyboard steps and chooses bl
   assert.equal(order.status, 'taken');
 
   $('menuBtn').click();
-  assert.ok(!$('pauseCover').hidden);
+  assert.ok(!$('startCover').hidden);
   assert.equal(locked, null);
+  assert.equal($('startBtn').textContent, 'Continue');
+  assert.equal($('tutorialBtn').closest('#startCover'), $('startCover'));
+  w.confirm = () => false;
+  $('tutorialBtn').click();
+  assert.ok(!$('startCover').hidden && $('lessonCover').hidden);
   const pausedAt = day.t;
   s.tick(0.5);
   assert.equal(day.t, pausedAt, 'the menu pauses the solo shift');
-  $('resumeShift').click();
+  $('startBtn').click();
+  assert.equal(s.day(), day);
+  assert.equal(s.order(), order);
   assert.equal(locked, view);
 
   p.openPc();
   assert.equal(locked, null);
   key('Escape', 'Escape', w.document.activeElement);
-  assert.ok(!p.pcOpen() && $('pauseCover').hidden);
+  assert.ok(!p.pcOpen() && $('startCover').hidden);
   assert.equal(locked, view);
-  key('Escape'); assert.ok(!$('pauseCover').hidden);
-  key('Escape'); assert.ok($('pauseCover').hidden);
+  key('Escape'); assert.ok(!$('startCover').hidden);
+  key('Escape'); assert.ok($('startCover').hidden);
 
   const pad = button => p.readPad({
     axes: [0, 0, 0, 0],
     buttons: Array.from({ length: 16 }, (_, i) => ({ pressed: i === button }))
   }, 0.016);
   p.openPc();
-  pad(9); assert.ok(!p.pcOpen() && $('pauseCover').hidden);
-  pad(); pad(9); assert.ok(!$('pauseCover').hidden);
-  pad(); pad(0); assert.ok($('pauseCover').hidden);
+  pad(9); assert.ok(!p.pcOpen() && $('startCover').hidden);
+  pad(); pad(9); assert.ok(!$('startCover').hidden);
+  pad(); pad(0); assert.ok($('startCover').hidden);
   pad(); pad(5); assert.ok(!p.D.scConfirm.hidden, 'RB opens the blue scanner buttons');
   pad(); pad(1); assert.ok(p.D.scConfirm.hidden);
 
   p.till.open(1);
   w.document.exitPointerLock();
   key('Escape', 'Escape', p.till.el);
-  assert.ok(!p.till.isOpen() && $('pauseCover').hidden);
+  assert.ok(!p.till.isOpen() && $('startCover').hidden);
   p.till.open(1);
   w.document.exitPointerLock();
-  pad(); pad(9); assert.ok(!p.till.isOpen() && $('pauseCover').hidden);
+  pad(); pad(9); assert.ok(!p.till.isOpen() && $('startCover').hidden);
   assert.equal(locked, view);
 
   locked = view;
@@ -677,12 +684,16 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const menuTime = day.t;
   host.$('menuBtn').click();
   phone.$('menuBtn').click();
-  assert.ok(!host.$('pauseCover').hidden && !phone.$('pauseCover').hidden);
+  assert.ok(!host.$('startCover').hidden && !phone.$('startCover').hidden);
   assert.match(host.$('menuStatus').textContent, /still running/);
   await until(() => day.t > menuTime + 0.5, 'shift time to advance while the online menus are open');
   assert.ok(guests.every(g => g.$('onlineCover').hidden), 'the host’s menu does not block guests');
-  host.$('resumeShift').click();
-  phone.$('resumeShift').click();
+  host.$('onlineBtn').click();
+  assert.match(host.$('roomMessage').textContent, /You are hosting/);
+  host.$('roomBack').click();
+  assert.ok(!host.$('startCover').hidden && host.$('onlineCover').hidden);
+  host.$('startBtn').click();
+  phone.$('startBtn').click();
   visibility(true);
   await until(() => guests.every(g => !g.$('onlineCover').hidden && /paused/.test(g.$('roomMessage').textContent)), 'host tab to pause every guest');
   visibility(false);
@@ -1017,6 +1028,34 @@ test('split-screen banks till-cover XP and buys Sam speed tiers mid-shift', asyn
   const reopened = await game(t, { online: false, storage });
   assert.match(reopened.$('careerXP').textContent, /Sam speed · Tier 5\/5/);
   assert.equal(reopened.s.prio().filter(j => j.on).length, 4);
+});
+
+test('player walk upgrades change actual movement immediately and persist separately from Sam', async t => {
+  const { $, w, s } = await game(t, { online: false, storage: { 'ws-shift-xp/prior': '825' } });
+  $('startBtn').click();
+  const p = s.players[0];
+  function measurePace() {
+    Object.assign(p.me, { ...s.world.start, yaw: 0, vx: 0, vy: 0 });
+    p.input.keys.add('f');
+    p.update(1 / 9, w.performance.now());
+    p.keysClear();
+    return p.me.speed;
+  }
+  const percentages = [100, 107.5, 115, 122.5, 130];
+  for (const [i, percent] of percentages.entries()) {
+    assert.ok(Math.abs(measurePace() - 3.1 * percent / 100) < 0.00001);
+    const pc = openShop({ s });
+    assert.ok(pc.querySelector('[data-status="player-speed"]').textContent.includes(percent + '% pace'));
+    const btn = pc.querySelector('[data-player-speed]');
+    if (i === 4) assert.ok(btn.disabled);
+    else { assert.ok(!btn.disabled); btn.click(); }
+    p.closePc();
+  }
+  assert.equal(p.D.xpBalance.textContent, '0 XP');
+  assert.equal(w.localStorage.getItem('ws-sam-speed'), null);
+  const reopened = await game(t, { online: false, storage: { ...w.localStorage } });
+  reopened.$('startBtn').click();
+  assert.match(openShop(reopened).querySelector('[data-status="player-speed"]').textContent, /130%/);
 });
 
 test('old Sam training purchases are refunded without duplicating XP across reloads', async t => {

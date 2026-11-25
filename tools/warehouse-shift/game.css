@@ -99,7 +99,6 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 
 /* overlays */
 .ws-cover{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:16px;touch-action:pan-y;background:radial-gradient(ellipse at 50% 35%,#1b2a44 0%,#0d1117 70%);overflow:auto}
-#pauseCover{z-index:70}
 .ws-card{position:relative;width:min(560px,100%);max-height:100%;overflow:auto;touch-action:pan-y;padding:22px 22px 18px;border-radius:20px;background:#151b26;border:1px solid #2a3344;box-shadow:0 10px 40px #0009}
 .ws-card h1{margin:0 0 4px;font-size:1.7rem;letter-spacing:-.01em}
 .ws-card h2{margin:16px 0 6px;font-size:1rem;color:#ffd34d}
@@ -118,7 +117,7 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-load{text-align:center;color:#c3cede}
 .ws-load b{display:block;margin-bottom:6px;font-size:1.3rem;color:#fff}
 #endCover{background:#0d1117c4;backdrop-filter:blur(3px)}
-#startCover{background:linear-gradient(180deg,#0d1117aa 0%,#0d111766 45%,#0d1117cc 100%);backdrop-filter:blur(2px)}
+#startCover{z-index:70;background:linear-gradient(180deg,#0d1117aa 0%,#0d111766 45%,#0d1117cc 100%);backdrop-filter:blur(2px)}
 #startCover .ws-card{background:#151b26ee}
 .ws-reset-dialog{width:min(420px,calc(100% - 32px));color:#fff}
 .ws-reset-dialog::backdrop{background:#080c14c4;backdrop-filter:blur(3px)}
@@ -252,7 +251,7 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-pc-keys{margin:6px 14px 0;font-size:12px;color:#5a6472}
 .ws-pc-close{display:block;margin:10px 14px 14px auto;padding:9px 22px;border:0;border-radius:6px;background:#c8191f;color:#fff;font-weight:800;font-size:15px;cursor:pointer}
 
-#onlineCover{z-index:32}
+#onlineCover{z-index:71}
 #roomControls label{display:block;margin-top:1rem;font-weight:700}
 #roomControls .ws-row{margin-top:.4rem}
 #roomCode{width:8em;padding:.55em;color:#fff;background:#0c1522;border:1px solid #8395a9;border-radius:.45em;font:700 1.1rem monospace;letter-spacing:.12em;text-transform:uppercase;user-select:text}

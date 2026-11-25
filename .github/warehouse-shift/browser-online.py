@@ -176,12 +176,23 @@ def split_shift(browser, errors):
       return __shift.split() && a.padIndex===0 && b.padIndex===1 && a.view.x===0 &&
         a.view.x+a.view.w===b.view.x && a.view.y===b.view.y;
     }""")
+    page.evaluate("window.currentShift = __shift.day()")
+    page.keyboard.press("Escape")
+    assert page.locator("#startCover").is_visible()
+    assert page.get_by_role("button", name="Play tutorial").is_visible()
+    page.get_by_role("button", name="Continue", exact=True).click()
+    assert page.evaluate("__shift.split() && __shift.day() === currentShift")
+    page.keyboard.press("Escape")
+    page.once("dialog", lambda dialog: dialog.accept())
+    page.locator("#tutorialBtn").click()
+    page.locator("#lessonCover").wait_for()
+    assert page.evaluate("!__shift.split() && !__shift.day()")
     page.context.close()
 
 
 def recorded_solo_shift(browser, errors):
     saved_career = {
-        "ws-shift-xp/regular": "442", "ws-scanner-reliability": "2", "ws-digital-first": "2",
+        "ws-shift-xp/regular": "442", "ws-scanner-reliability": "2", "ws-digital-first": "2", "ws-player-speed": "2",
         "ws-kit-label": "1", "ws-sam": "off", "ws-sam-job-slots": "2",
         "ws-sam-preset-0": "[]",
         "ws-sam-training": json.dumps({"delivery": "included", "cust": "paid"}),
@@ -198,7 +209,7 @@ def recorded_solo_shift(browser, errors):
     page.locator("#startBtn").tap()
     page.locator("#menuBtn").tap()
     page.wait_for_timeout(200)
-    page.locator("#resumeShift").tap()
+    page.locator("#startBtn").tap()
     page.evaluate("""() => {
       const s = __shift, day = s.day(), carton = day.paTake(undefined, 'p1');
       day.faultSchedule = [0.1]; s.tick(0.2);
@@ -237,7 +248,7 @@ def recorded_solo_shift(browser, errors):
     summary = json.loads(page.evaluate("window.copiedPlaytest"))
     assert summary["start"]["day"] == 1 and summary["start"]["touchControls"]
     assert summary["start"]["progression"] == {
-        "xpAvailable": 0, "xpCareer": 0, "scannerTier": 1, "digitalTier": 1, "equipment": [],
+        "xpAvailable": 0, "xpCareer": 0, "scannerTier": 1, "digitalTier": 1, "playerSpeedTier": 1, "equipment": [],
         "sam": {"enabled": True, "speedTier": 1, "skills": ["queue", "cust", "hold", "delivery"],
                 "jobs": ["queue", "cust", "hold", "delivery"]}
     }
@@ -286,6 +297,13 @@ def recorded_solo_shift(browser, errors):
     }""", list(saved_career))
     page.evaluate("__shift.day().credit('p1', 'fresh-work', 10)")
     assert page.evaluate("localStorage.getItem('ws-shift-xp/' + __shift.day().shiftId)") is not None
+    old_shift = page.evaluate("__shift.day().shiftId")
+    page.locator("#menuBtn").tap()
+    page.locator("#newGameBtn").tap()
+    page.locator("#confirmNewGame").tap()
+    page.wait_for_function("old => window.__shift?.day() && __shift.day().shiftId !== old", arg=old_shift)
+    assert page.locator("#startCover").is_hidden()
+    assert page.evaluate("__shift.players[0].D.xpBalance.textContent") == "0 XP"
     page.context.close()
 
 
