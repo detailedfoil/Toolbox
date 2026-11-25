@@ -585,6 +585,39 @@ test('Sam rings once after six seconds when within reach and skips customers alr
   assert.ok(s.players.every(p => p.D.bannerTitle.textContent === 'Picking'));
 });
 
+test('Sam calls for help from his own till while serving another customer', async t => {
+  const { $, s } = await game(t, { online: false });
+  $('startBtn').click();
+  const day = s.day(), sam = s.crew[0], banner = s.players[0].D.bannerTitle;
+  day.plan.length = 0;
+  day.mode = 'kiosk';
+  Object.assign(sam, sam.post);
+  assert.ok(Math.hypot(sam.x - s.world.bell.x, sam.y - s.world.bell.y) > 1.35);
+
+  const first = day.send('kiosk');
+  day.arrived(first);
+  day.greet(first, 'Sam');
+  for (let i = 0; i < 80 && !first.ready; i++) s.tick(0.2);
+  assert.ok(first.ready);
+  assert.equal(sam.cust, first);
+  assert.equal(first.state, 'serving');
+
+  const waiting = day.send('kiosk');
+  day.arrived(waiting);
+  s.tick(5.5);
+  assert.notEqual(banner.textContent, 'Ding dong');
+  s.tick(0.8);
+  assert.equal(banner.textContent, 'Ding dong');
+  assert.equal(s.bell(), waiting);
+  assert.equal(sam.cust, first, 'Sam stays with the customer he is serving');
+  assert.equal(first.state, 'serving');
+  assert.equal(waiting.state, 'greet');
+
+  s.players[0].banner('Picking', '', 1500);
+  s.tick(0.7);
+  assert.equal(banner.textContent, 'Picking', 'Sam only calls once for the same wait');
+});
+
 test('Sam checks for waiting customers before claiming another delivery carton', async t => {
   for (const { ring, carrying } of [{ ring: false, carrying: true }, { ring: true, carrying: true }, { ring: true, carrying: false }]) {
     const { $, w, s } = await game(t, { online: false });

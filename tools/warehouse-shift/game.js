@@ -330,7 +330,9 @@
       if (!crew.length || day.phase !== 'open' || day.t < nextBellCheck) return;
       nextBellCheck = day.t + 0.2;
       const bell = world.bell;
-      if (!crew.some(b => b.y <= bell.y && Math.hypot(b.x - bell.x, b.y - bell.y) <= 1.35)) return;
+      // Sam can call from his till without leaving the customer he is serving.
+      if (!crew.some(b => b.cust?.state === 'serving' ||
+          (b.y <= bell.y && Math.hypot(b.x - bell.x, b.y - bell.y) <= 1.35))) return;
       const waiting = day.customers.filter(c => !c.helpCalled && (c.state === 'greet' || c.state === 'counter') && day.t - c.here >= 6);
       if (!waiting.length) return;
       for (const c of waiting) c.helpCalled = true;
