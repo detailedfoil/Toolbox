@@ -94,6 +94,7 @@ RULES = {
     "swapMin": 3,          # units each way for a run to be a swap
     "swapBonus": 0.5,      # swapped units count 1.5
     "lowBonus": 0.5,       # units to a store that's nearly out count 1.5 (when choosing)
+    "zeroBonus": 2.0,      # units to a store with NONE of it count 3 (when choosing)
     "traffic": 1.0, "roadFactor": 1.3, "startMin": 4, "minPerMile": 1.6,
     "steps": [30, 120, 5],
 }
@@ -214,11 +215,16 @@ def main():
     TXN = np.array([s[2] for s in STORES], float)
     share = TXN / TXN.sum()
     day = (0.5 * SLD + 0.5 * np.outer(share, SLD.sum(axis=0))) / dayv
+    # A store with none of a product has sold none lately because it had none, not because nobody wants it:
+    # for those it's treated as selling like the area does for its size (full transactions share, not half).
+    zero = STK == 0
+    day = np.where(zero, np.maximum(day, np.outer(share, SLD.sum(axis=0)) / dayv), day)
     need7 = day * RULES["horizon"]
     sur = np.floor(np.maximum(0, STK - RULES["keep"] * need7) + 1e-9)
     need = np.ceil(np.maximum(0, need7 - STK) - 1e-9)
     need[need < RULES["minShort"]] = 0
     urgent = np.minimum(need, np.ceil(np.maximum(0, RULES["lowDays"] * day - STK) - 1e-9))
+    urgent = np.where(zero, need, urgent)             # nothing in stock: everything it's short counts as urgent
     low = (STK < RULES["lowDays"] * day) | (STK == 0)
 
     mins = drive_minutes()
@@ -262,7 +268,7 @@ def main():
         lo, hi = np.zeros(nv), np.zeros(nv)
         hi[:nx] = ub
         for k, (r, i) in enumerate(zs):
-            c[nx + k] = -RULES["lowBonus"]
+            c[nx + k] = -(RULES["zeroBonus"] if zero[r, i] else RULES["lowBonus"])
             hi[nx + k] = urgent[r, i]
         for k, (a, b) in enumerate(P if fixed else []):
             c[ny0 + k] = RULES["hourCost"] * hours(mins[a, b])

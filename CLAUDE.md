@@ -151,7 +151,7 @@ explain changes in plain English and say what they'll see.
     place are in its `STORES` list: update the transactions with the files. The rules (top of the script, copied into the
     file as `rules`, which `plan.js` reads): demand = half own sales, half transactions share of area sales; a store gives
     what's over 125% of its own 7 days, gets up to 7 days (only if 2 or more short); a run must be 8+ units and 5+ units a
-    van hour (drive + 30 min handling); swapped units and units to a store under 2 days count 1.5 when choosing; an hour
+    van hour (drive + 30 min handling); swapped units and units to a store under 2 days count 1.5 when choosing, units to a store with NONE of that product count 3 and everything it's short is urgent, and its demand is the full transactions share, not half, since it sold none because it had none (25 Nov 2026, detailedfoil); a second sales file after the incentive's reset is added on with `--more-sold FILE --more-days N`, a product only in the later file counts only its own days, and `LEAVE_OUT` in make-plans.py drops a product (Fatmax tape); an hour
     of van costs 10 units (it was 5: plans jumped about as the slider moved). Drive times (20 Nov 2026) are real road
     times: `.github/stock-swaps/drive-times.mjs` runs on GitHub (workflow `stock-drive-times.yml`, by hand or on a push to
     the script; the sandbox can't reach a router) and saves `data/drive.json` from the OSRM car router (no live traffic);
