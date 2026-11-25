@@ -280,7 +280,7 @@ def recorded_solo_shift(browser, errors):
     page.wait_for_function("!!window.__shift", timeout=100_000)
     assert "442 career XP" in page.locator("#careerXP").inner_text()
     page.get_by_role("button", name="New game", exact=True).tap()
-    dialog = page.get_by_role("dialog")
+    dialog = page.get_by_role("dialog", name="Start a new game?")
     assert dialog.get_by_text("This will delete all progress and start completely fresh.").is_visible()
     dialog.get_by_role("button", name="Back", exact=True).tap()
     assert not dialog.is_visible()
