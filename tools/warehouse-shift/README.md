@@ -8,11 +8,11 @@ Warehouse Shift is a first-person warehouse and trade-counter simulator inside [
 
 ## Start here
 
-Open [the game page](../warehouse-shift.html) through the Toolbox site and sign in with the existing Warehouse Shift account. Choose **Play tutorial** for a guided first shift. **How to play** opens the reference guide.
+Open [the game page](../warehouse-shift.html) through the Toolbox site and sign in with the existing Warehouse Shift account. Choose **Play tutorial** for a guided first shift. This guide covers the controls and shift rules.
 
 | Home screen action | What happens |
 | --- | --- |
-| **Continue** | Starts a solo session with the career XP, purchased upgrades, and Sam settings saved in this browser. The session begins at Day 1. The unfinished shift and current day number are held in the page while it is open. |
+| **Continue** | During a shift, returns you to the same players, position and work in progress. From a fresh launch, starts a solo session with the career XP, purchased upgrades, and Sam settings saved in this browser. The session begins at Day 1. The unfinished shift and current day number are held in the page while it is open. |
 | **New game** | Shows “This will delete all progress and start completely fresh.” **Back** keeps the career. **Continue** in the warning clears it and starts Day 1 at 0 XP. Sign-in, badge name, sound, and control preferences are retained. |
 | **Record playtest** | Changes the primary button to **Start playtest**. Starts a separate solo session at Day 1 with 0 XP, default equipment, and Sam at Tier 1 with all four jobs enabled. Earned XP and purchases carry into the next day in the same session. The regular career is left intact. |
 | **Two players** | Starts side-by-side local split screen on a supported desktop-sized display. Join with two controllers, or a controller and keyboard/mouse. |
@@ -68,6 +68,8 @@ Squat for bottom shelves. High shelves require **Step** on a red kick stool or t
 
 ### Serving a customer
 
+Fusion shows how many units are available today after other orders’ reservations. If the full quantity is unavailable, set the line to **TCND** for tomorrow. The game checks current stock again when payment is confirmed. A sale with only next-day or shop-floor items completes at the till, and any shop-floor replacements still go to the replen list.
+
 1. Stand behind the tills and face the queue. **Greet** defaults to the longest-waiting customer within reach and in view. Aim directly at another customer to greet them first. Opening a free till with nobody assigned also calls the longest-waiting customer. Look at a nearby customer from the till area to see their status on the idle scanner, including **Waiting to order** and **Paid · awaiting pick**. A click-and-collect customer generates a warehouse pick or a holding-area collection. For a customer ordering or paying, follow them to an available till and press **Use till**. The till nearest the counter gap is Sam's.
 2. In **Fusion**, enter the customer's surname and postcode, press **Search**, and use the third detail they give you to choose the matching result.
 3. For a kiosk customer, open **Kiosk Orders**, find the name they used, and select the order to populate the basket. For a walk-in order, enter the item code and quantity. If they give a description, search **CrashFix**, open results to inspect the details, and copy a suitable item's code into Fusion. **Ask again** repeats the request and can give a clue.
@@ -108,13 +110,13 @@ A mixed shift has a 25% chance of one randomly selected event. The start banner 
 
 | Input | Move and look | Work |
 | --- | --- | --- |
-| Phone or tablet | Left thumbstick moves, with a larger deflection to jog. Drag the view to look. Both orientations are supported. | Tap labels to scan or use the scanner buttons. Use **Squat**, **Take stool**, **Step**, **Greet**, and **Use till** when shown. Fusion uses the device keyboard or its optional on-screen keyboard. The till suggests rotating upright for touch controls in landscape. |
-| Keyboard and mouse | WASD to move, Shift to jog. Click the view for mouse look. Esc opens the main menu or closes the computer you’re using. Closing Fusion or the Manager PC captures the mouse again. | Left-click or F to use the outlined object or greet a highlighted customer. They also scan targets under the crosshair. Left-click with no interaction or scan target under the crosshair acts like scanner **Enter**. Enter confirms scanner actions, C squats, and Space steps onto or off a held kick stool or kickstool shoes. Space also confirms scanner actions when neither is available. Up/Down or the wheel scrolls the scanner. 1 and 2 select blue buttons, Tab enlarges them, and right-click or Backspace goes back. |
-| Controller | Left stick moves and jogs, right stick looks. | RT scans, A confirms, B goes back, X squats, LB steps, Y hints, D-pad moves through the pick list, RB enlarges the blue buttons. Start opens the main menu or closes the computer you’re using. With them enlarged, A confirms Quick Pick if available, Y uses Hint, and B closes them. In Fusion, D-pad highlights, A presses, B deletes, LT selects Fusion, RT selects CrashFix, LB confirms, Y asks again, and Start leaves. |
+| Phone or tablet | Left thumbstick moves. Push farther to walk faster. Drag the view to look. Both orientations are supported. | Tap labels to scan or use the scanner buttons. Use **Squat**, **Take stool**, **Step**, **Greet**, and **Use till** when shown. Fusion uses the device keyboard or its optional on-screen keyboard. The till suggests rotating upright for touch controls in landscape. |
+| Keyboard and mouse | WASD walks at your current player speed tier. Click the view for mouse look. Esc opens the main menu or closes the computer you’re using. Closing Fusion or the Manager PC captures the mouse again. | Left-click or F to use the outlined object or greet a highlighted customer. They also scan targets under the crosshair. Left-click with no interaction or scan target under the crosshair acts like scanner **Enter**. Enter confirms scanner actions, C squats, and Space steps onto or off a held kick stool or kickstool shoes. Space also confirms scanner actions when neither is available. Up/Down or the wheel scrolls the scanner. 1 and 2 select blue buttons, Tab enlarges them, and right-click or Backspace goes back. |
+| Controller | Left stick controls walking pace, right stick looks. | RT scans, A confirms, B goes back, X squats, LB steps, Y hints, D-pad moves through the pick list, RB enlarges the blue buttons. Start opens the main menu or closes the computer you’re using. Disconnecting a controller clears its movement and look inputs. With the blue buttons enlarged, A confirms Quick Pick if available, Y uses Hint, and B closes them. In Fusion, D-pad highlights, A presses, B deletes, LT selects Fusion, RT selects CrashFix, LB confirms, Y asks again, and Start leaves. |
 
 **Character voices** on the start screen toggles spoken dialogue independently of scan sounds and other effects. The **Sound** toggle mutes both. Character dialogue plays at half volume. Sam and customers speak English. Every third customer uses an installed local voice intended for another language when available. The selection starts with French and Finnish if installed. Dialogues stay in English. SKU codes are read aloud one character at a time, and captions keep the original code. While a till is open, only the customer at the player’s till is voiced and Sam’s work sounds are muted. Captions remain visible with voices disabled.
 
-The top-left **Menu** button, **Esc**, and controller **Start** open the main menu. Choose **Resume** to return to the shift. The overlay pauses solo and split-screen shifts. Online shifts continue for everyone while the menu is open, including when the host opens it. If Fusion or the Manager PC is open, the first press closes it. Press again to open the menu.
+The top-left **Menu** button, **Esc**, and controller **Start** open the full Warehouse Shift title screen, including your stats, badge and settings. Choose **Continue** to return to the current shift. Opening training or switching game modes asks before leaving the shift. During online play, **Online co-op** shows the current room. The overlay pauses solo and split-screen shifts. Online shifts continue for everyone while the menu is open, including when the host opens it. If Fusion or the Manager PC is open, the first press closes it. Press again to open the menu.
 
 ## Career, XP, and upgrades
 
@@ -126,6 +128,7 @@ Upgrades are available mid-shift at **Manager PC → Upgrades**. The prices belo
 
 | Upgrade | XP | Effect |
 | --- | --- | --- |
+| Player walk speed tiers 2–5 | 100, 150, 225, 350 | Tier 1 starts at the former sprint pace. Tiers 2–5 walk at 107.5%, 115%, 122.5% and 130% of that pace. Purchases apply immediately to both split-screen players and to your own player in online co-op. Crouched movement keeps its usual pace. |
 | Sam speed tiers 2–5 | 100, 150, 225, 350 | The shop displays 100% speed at Tier 1 and bonuses of +10%, +20%, +30% and +40% for Tiers 2–5. The labels leave the actual movement and job speeds at 80%, 90%, 100%, 110% and 120% of the original pace. Online co-op uses the host's tier. |
 | Scanner name label | 150 | Adds your badge name to your scanner and caps future Sam mix-ups at one per shift. |
 | Kickstool shoes | 350 | Lets you use Step without carrying a stool. |
@@ -140,7 +143,7 @@ Regular career data is per browser profile and site origin. In [game.js](game.js
 
 Tick **Record playtest**, play normally, lock the front door, and click **Copy playtest summary**. If clipboard access is blocked, copy from the selectable text field. Copy each day's result before advancing to the next day. The recorder keeps the current session in memory and does not send the report anywhere.
 
-The `warehouse-shift-playtest-v1` JSON includes starting progression, planned picks and cartons, player and Sam tasks, customer arrivals and sales, scanner crashes and swaps, carton returns, XP and purchases, Sam’s speed tier, and the final score. Each event has elapsed real time, active foreground time, and simulation time. Backgrounding and opening help or the end-of-shift overlay are marked separately. Thinking time, navigation, and interruptions by other work count as foreground activity. Menu time is separated in the recorder and the simulation can continue behind an overlay.
+The `warehouse-shift-playtest-v1` JSON includes starting progression, planned picks and cartons, player and Sam tasks, customer arrivals and sales, scanner crashes and swaps, carton returns, XP and purchases, Sam’s speed tier, and the final score. Each event has elapsed real time, active foreground time, and simulation time. Backgrounding and opening the main menu or the end-of-shift overlay are marked separately. Thinking time, navigation, and interruptions by other work count as foreground activity. Menu time is separated in the recorder and the simulation can continue behind an overlay.
 
 The planned balance work is to tune a typical solo player toward **about 85% of paid upgrade tiers by the end of Day 7**. **Mas** is a proposed automated test player and has yet to be implemented. The intended inputs are a fresh Day 1 report and one later, busier shift. Use those timings to model slower, typical, and efficient players over repeatable runs using the real workload, XP, upgrade and Sam rules. Count each paid tier separately and compare what the player can actually buy in an allowed sequence.
 
@@ -150,7 +153,7 @@ The game is a static HTML/CSS/JavaScript app. It loads a local copy of Three.js 
 
 | File | Responsibility |
 | --- | --- |
-| [`../warehouse-shift.html`](../warehouse-shift.html) and [`game.css`](game.css) | Page, start/lock-up screens, scanner, upgrade shop, controls and in-game help. |
+| [`../warehouse-shift.html`](../warehouse-shift.html) and [`game.css`](game.css) | Page, start/lock-up screens, scanner, upgrade shop, controls and the main menu. |
 | [`game.js`](game.js) | Input, rendering loop, player and scanner state, collisions, till entry, Sam integration, saving and XP shop, audio, and playtest hooks. |
 | [`day.js`](day.js) | Authoritative shift simulation, customer director, order ownership, stock changes, delivery, scoring, XP and scanner schedules. Exports a pure game core usable from Node. |
 | [`world.js`](world.js), [`scene.js`](scene.js) and [`cctv.js`](cctv.js) | Warehouse geometry, stock and location model, Three.js scene, product photos, and office CCTV. |

@@ -799,10 +799,12 @@
       yield this.T(1.5, 3.0);
     }
     // paid for: onto the pick list, for whoever gets to it first
-    this.emit('tillDone', c, paidLines);
-    this.say(this.pick(SAY.going));
-    yield this.T(0.6, 1.2);
-    this.cSay(this.pick(SAY.wait), c);
+    const order = this.emit('tillDone', c, paidLines);
+    if (!order || order.lines.length) {
+      this.say(this.pick(SAY.going));
+      yield this.T(0.6, 1.2);
+      this.cSay(this.pick(SAY.wait), c);
+    }
     this.log.push({ t: this.t, done: 'till', kind: c.kind, took: this.t - t0, slips: this.slips - s0 });
   };
 

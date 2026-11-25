@@ -25,7 +25,7 @@ async function game(t, { online = true, phone = false, installed = false, loadPh
   w.innerWidth = phone ? 844 : 1280; w.innerHeight = phone ? 390 : 720;
   for (const [key, value] of Object.entries(storage)) w.localStorage.setItem(key, value);
   w.localStorage.setItem('toolbox.signedIn.area20', 'STEPHEN');
-  w.localStorage.setItem('ws-helped', '1'); w.localStorage.setItem('ws-sound', speech ? 'on' : 'off');
+  w.localStorage.setItem('ws-sound', speech ? 'on' : 'off');
   if (speech) {
     w.speechSynthesis = speech;
     w.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
@@ -249,40 +249,47 @@ test('mouse clicks use highlighted targets and the keyboard steps and chooses bl
   assert.equal(order.status, 'taken');
 
   $('menuBtn').click();
-  assert.ok(!$('pauseCover').hidden);
+  assert.ok(!$('startCover').hidden);
   assert.equal(locked, null);
+  assert.equal($('startBtn').textContent, 'Continue');
+  assert.equal($('tutorialBtn').closest('#startCover'), $('startCover'));
+  w.confirm = () => false;
+  $('tutorialBtn').click();
+  assert.ok(!$('startCover').hidden && $('lessonCover').hidden);
   const pausedAt = day.t;
   s.tick(0.5);
   assert.equal(day.t, pausedAt, 'the menu pauses the solo shift');
-  $('resumeShift').click();
+  $('startBtn').click();
+  assert.equal(s.day(), day);
+  assert.equal(s.order(), order);
   assert.equal(locked, view);
 
   p.openPc();
   assert.equal(locked, null);
   key('Escape', 'Escape', w.document.activeElement);
-  assert.ok(!p.pcOpen() && $('pauseCover').hidden);
+  assert.ok(!p.pcOpen() && $('startCover').hidden);
   assert.equal(locked, view);
-  key('Escape'); assert.ok(!$('pauseCover').hidden);
-  key('Escape'); assert.ok($('pauseCover').hidden);
+  key('Escape'); assert.ok(!$('startCover').hidden);
+  key('Escape'); assert.ok($('startCover').hidden);
 
   const pad = button => p.readPad({
     axes: [0, 0, 0, 0],
     buttons: Array.from({ length: 16 }, (_, i) => ({ pressed: i === button }))
   }, 0.016);
   p.openPc();
-  pad(9); assert.ok(!p.pcOpen() && $('pauseCover').hidden);
-  pad(); pad(9); assert.ok(!$('pauseCover').hidden);
-  pad(); pad(0); assert.ok($('pauseCover').hidden);
+  pad(9); assert.ok(!p.pcOpen() && $('startCover').hidden);
+  pad(); pad(9); assert.ok(!$('startCover').hidden);
+  pad(); pad(0); assert.ok($('startCover').hidden);
   pad(); pad(5); assert.ok(!p.D.scConfirm.hidden, 'RB opens the blue scanner buttons');
   pad(); pad(1); assert.ok(p.D.scConfirm.hidden);
 
   p.till.open(1);
   w.document.exitPointerLock();
   key('Escape', 'Escape', p.till.el);
-  assert.ok(!p.till.isOpen() && $('pauseCover').hidden);
+  assert.ok(!p.till.isOpen() && $('startCover').hidden);
   p.till.open(1);
   w.document.exitPointerLock();
-  pad(); pad(9); assert.ok(!p.till.isOpen() && $('pauseCover').hidden);
+  pad(); pad(9); assert.ok(!p.till.isOpen() && $('startCover').hidden);
   assert.equal(locked, view);
 
   locked = view;
@@ -677,12 +684,16 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const menuTime = day.t;
   host.$('menuBtn').click();
   phone.$('menuBtn').click();
-  assert.ok(!host.$('pauseCover').hidden && !phone.$('pauseCover').hidden);
+  assert.ok(!host.$('startCover').hidden && !phone.$('startCover').hidden);
   assert.match(host.$('menuStatus').textContent, /still running/);
   await until(() => day.t > menuTime + 0.5, 'shift time to advance while the online menus are open');
   assert.ok(guests.every(g => g.$('onlineCover').hidden), 'the host’s menu does not block guests');
-  host.$('resumeShift').click();
-  phone.$('resumeShift').click();
+  host.$('onlineBtn').click();
+  assert.match(host.$('roomMessage').textContent, /You are hosting/);
+  host.$('roomBack').click();
+  assert.ok(!host.$('startCover').hidden && host.$('onlineCover').hidden);
+  host.$('startBtn').click();
+  phone.$('startBtn').click();
   visibility(true);
   await until(() => guests.every(g => !g.$('onlineCover').hidden && /paused/.test(g.$('roomMessage').textContent)), 'host tab to pause every guest');
   visibility(false);
@@ -1019,6 +1030,34 @@ test('split-screen banks till-cover XP and buys Sam speed tiers mid-shift', asyn
   assert.equal(reopened.s.prio().filter(j => j.on).length, 4);
 });
 
+test('player walk upgrades change actual movement immediately and persist separately from Sam', async t => {
+  const { $, w, s } = await game(t, { online: false, storage: { 'ws-shift-xp/prior': '825' } });
+  $('startBtn').click();
+  const p = s.players[0];
+  function measurePace() {
+    Object.assign(p.me, { ...s.world.start, yaw: 0, vx: 0, vy: 0 });
+    p.input.keys.add('f');
+    p.update(1 / 9, w.performance.now());
+    p.keysClear();
+    return p.me.speed;
+  }
+  const percentages = [100, 107.5, 115, 122.5, 130];
+  for (const [i, percent] of percentages.entries()) {
+    assert.ok(Math.abs(measurePace() - 3.1 * percent / 100) < 0.00001);
+    const pc = openShop({ s });
+    assert.ok(pc.querySelector('[data-status="player-speed"]').textContent.includes(percent + '% pace'));
+    const btn = pc.querySelector('[data-player-speed]');
+    if (i === 4) assert.ok(btn.disabled);
+    else { assert.ok(!btn.disabled); btn.click(); }
+    p.closePc();
+  }
+  assert.equal(p.D.xpBalance.textContent, '0 XP');
+  assert.equal(w.localStorage.getItem('ws-sam-speed'), null);
+  const reopened = await game(t, { online: false, storage: { ...w.localStorage } });
+  reopened.$('startBtn').click();
+  assert.match(openShop(reopened).querySelector('[data-status="player-speed"]').textContent, /130%/);
+});
+
 test('old Sam training purchases are refunded without duplicating XP across reloads', async t => {
   const oldJobs = ['hold', 'delivery', 'queue', 'cust'].map(id => ({ id, on: id === 'queue' || id === 'delivery' }));
   const { $, w, s } = await game(t, { online: false, storage: {
@@ -1167,3 +1206,87 @@ for (const lesson of ['tour', 'kiosk', 'catalogue', 'holding']) {
     assert.equal(sockets.length, 0);
   });
 }
+
+test('unplugging the last controller clears both sticks and it can reconnect', async t => {
+  const { $, s, w } = await game(t, { online: false });
+  assert.equal($('howBtn'), null);
+  assert.equal($('helpBtn'), null);
+  assert.ok($('tutorialBtn'));
+  $('startBtn').click();
+  const p = s.players[0];
+  const pad = { index: 0, connected: true, axes: [.8, -.8, .8, 0],
+    buttons: Array.from({ length: 17 }, () => ({ pressed: false })) };
+  let pads = [pad];
+  w.navigator.getGamepads = () => pads;
+  s.pollPads(.016);
+  assert.ok(p.input.stick.x > 0 && p.input.look.x > 0);
+  pads = [null]; s.pollPads(.016);
+  assert.equal(p.input.stick.x, 0);
+  assert.equal(p.input.look.x, 0);
+  pads = [pad]; s.pollPads(.016);
+  assert.equal(p.padIndex, 0);
+  assert.ok(p.input.stick.x > 0 && p.input.look.x > 0);
+});
+
+test('two open sessions add their picks to the same lifetime totals', async t => {
+  const first = await game(t, { online: false }), second = await game(t, { online: false });
+  const shared = first.w.localStorage;
+  Object.defineProperty(second.w, 'localStorage', { value: shared });
+  async function confirmLine({ s, $, w }) {
+    $('startBtn').click();
+    for (const job of s.prio()) job.on = false;
+    const item = s.world.items.find(it => it.loc?.face.area === 'BAA' && it.loc.z0 > .45 && it.loc.z1 < 1.8 && w.ShiftWorld.room(it) > 0);
+    const order = s.day().makeOrder('ck', [{ item, qty: 1 }]);
+    s.enter(); s.enter();
+    assert.equal(s.order(), order);
+    const l = item.loc;
+    Object.assign(s.me, { x: (l.x0 + l.x1) / 2, y: l.face.front + l.face.out * .65,
+      yaw: l.face.out > 0 ? 0 : Math.PI, pitch: Math.atan2((l.z0 + l.z1) / 2 - s.me.eye, .65) });
+    s.applyCam(); s.cam.updateMatrixWorld(); s.scanAt(...s.players[0].centre());
+    assert.ok(s.full()); await s.confirmQty();
+  }
+  await confirmLine(first);
+  await confirmLine(second);
+  assert.equal(JSON.parse(shared.getItem('ws-stats-v1')).lines, 2);
+  const stale = await game(t, { online: false });
+  Object.defineProperty(stale.w, 'localStorage', { value: shared });
+  shared.setItem('ws-career-reset', 'reset-in-another-tab');
+  shared.removeItem('ws-stats-v1');
+  await confirmLine(stale);
+  assert.equal(shared.getItem('ws-stats-v1'), null);
+});
+
+test('Fusion returns a card sale to the basket if the last units are reserved during payment', async t => {
+  const { $, s, w } = await game(t, { online: false });
+  $('startBtn').click();
+  const day = s.day();
+  day.plan.length = 0; day.mode = 'kiosk'; day.floorTarget = 0;
+  for (const job of s.prio()) job.on = false;
+  const item = day.world.items.find(it => it.loc && w.ShiftWorld.room(it) >= 2);
+  item.stock = 2;
+  const customer = day.send('kiosk');
+  const kiosk = customer.kiosk.list[customer.kiosk.mine];
+  kiosk.lines = [{ item, qty: 2 }];
+  customer.pay = { how: 'card', say: 'Card, please.' };
+  day.arrived(customer); day.greet(customer, 'p1'); s.tick(8);
+  const till = customer.at;
+  Object.assign(s.me, { x: (till.x0 + till.x1) / 2, y: s.world.counter.y0 - .7, yaw: Math.PI,
+    pitch: Math.atan2(1.15 - s.me.eye, (till.y0 + till.y1) / 2 - (s.world.counter.y0 - .7)) });
+  s.applyCam(); await s.openTill();
+  await until(() => s.till.stage() === 'details', 'the customer to reach Fusion');
+  const ui = s.till.debug, session = s.till.session();
+  ui.F.no.value = session.cust.no; ui.search(); ui.select();
+  ui.openKiosk(); ui.S.ksel = session.kiosk.mine; ui.kioskSelect();
+  assert.equal(session.basket[0].avail, 2);
+  ui.goPay(); ui.payCard();
+  day.makeOrder('ck', [{ item, qty: 2 }]);
+  await until(() => s.till.stage() === 'ordering', 'Fusion to return to the basket');
+  assert.equal(customer.order, null);
+  assert.match(s.till.el.querySelector('.fu-line.out-of-stock').textContent, new RegExp(item.code));
+  s.till.el.querySelector('[data-delivery="0"]').click();
+  assert.equal(s.till.el.querySelector('.fu-line.out-of-stock'), null);
+  ui.goPay(); ui.payCard();
+  await until(() => s.till.stage() === 'done', 'TCND payment to finish');
+  assert.equal(customer.order.status, 'done');
+  assert.ok(!day.list().includes(customer.order));
+});

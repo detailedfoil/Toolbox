@@ -333,3 +333,29 @@ test('the counter queue uses arrival time even when customers reach it out of sp
   assert.equal(d.greet(earlier, 'p2'), true);
   assert.deepEqual(d.queue(), [earlier, later]);
 });
+
+test('checkout reserves the full paid quantity or sends the sale back to Fusion', () => {
+  const local = W.build(cat);
+  const d = Day.create({ world: local, World: W, Till, requests, rand: W.rng(23), delivery: 0 });
+  const item = local.items.find(it => it.loc && W.room(it) >= 3);
+  item.stock = 3;
+  const first = d.send('till'), second = d.send('till');
+  const line = { item, qty: 3 };
+  assert.deepEqual(d.checkout(first, [{ item, qty: 10 }]), { shortage: { code: item.code, available: 3 } });
+  assert.equal(d.orders.length, 0);
+  assert.equal(d.checkout(first, [line]).order.lines[0].qty, 3);
+  second.lines = [line];
+  second.state = 'serving'; second.by = 'p2'; second.ready = true; second.at = {};
+  second.pay = { how: 'card' };
+  const ctx = { items: new Map([[item.code, item]]), till: () => second.at, screen: () => {} };
+  const args = { id: second.id, how: 'card', lines: [{ sku: item.code, qty: 3 }] };
+  assert.deepEqual(command(d, 'p2', 'tillDone', args, ctx), { shortage: { code: item.code, available: 0 } });
+  assert.equal(second.order, null);
+  assert.equal(second.state, 'serving');
+  args.lines[0].tcnd = true;
+  assert.equal(command(d, 'p2', 'tillDone', args, ctx), second.order.id);
+  assert.equal(second.order.status, 'done');
+  assert.equal(second.state, 'leaving');
+  assert.equal(d.list().length, 1);
+  assert.equal(item.reserved, 3);
+});

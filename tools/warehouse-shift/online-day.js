@@ -85,7 +85,7 @@
     paReturn(d, src) { return this.request('paReturn', { id: d.id, src }); }
     greet(c) { return this.request('greet', { id: c.id }); }
     lock() { return this.request('lock', {}); }
-    tillDone(c, info) { return this.request('tillDone', { id: c.id, lines: lines(info.lines), how: info.how, change: info.change }).then(id => this.orders.find(o => o.id === id)); }
+    tillDone(c, info) { return this.request('tillDone', { id: c.id, lines: lines(info.lines), how: info.how, change: info.change }).then(result => result?.shortage ? result : { order: this.orders.find(o => o.id === result) }); }
   }
 
   // A lost connection returns a picked tote to the list. Restore its units and reservations
@@ -170,7 +170,7 @@
           if (!line) return false;
           const i = remaining.findIndex(l => l.qty === line.qty && (l.accept || [l.item.code]).includes(line.sku));
           const item = ctx.items.get(line.sku);
-          if (i < 0 || !item || (line.tcnd ?? false) !== (remaining[i].shortage === 'tcnd')) return false;
+          if (i < 0 || !item || (remaining[i].shortage === 'tcnd' && !line.tcnd) || (line.tcnd && remaining[i].floor)) return false;
           remaining.splice(i, 1); basket.push({ item, qty: line.qty, tcnd: line.tcnd });
         }
         if (a.how !== c.pay.how) return false;
@@ -178,8 +178,10 @@
           const total = basket.reduce((sum, l) => sum + day.Till.price(l.item) * l.qty, 0);
           if (a.change !== day.Till.tender(total, c.pay) - total) return false;
         }
-        const result = day.tillDone(c, basket, { till: c.at });
-        ctx.screen(c.at, result); return result.id;
+        const result = day.checkout(c, basket, { till: c.at });
+        if (result.shortage) return result;
+        ctx.screen(c.at, result.order.lines.length ? result.order : null);
+        return result.order.id;
       }
       case 'bell': return near(day.world.bell.x, day.world.bell.y, 3) && ctx.bell();
       case 'lock': return near(ctx.doorX, day.world.D - 0.4, 3) && day.lock();

@@ -14,7 +14,7 @@
 <link rel="manifest" href="warehouse-shift.webmanifest">
 <link rel="icon" href="warehouse-shift/icon-192.png">
 <link rel="apple-touch-icon" href="warehouse-shift/icon-192.png">
-<link rel="stylesheet" href="warehouse-shift/game.css?v=c3abcf9eb3">
+<link rel="stylesheet" href="warehouse-shift/game.css?v=cf0a610784">
 <link rel="stylesheet" href="warehouse-shift/till.css?v=d41e2f9dbf">
 <script src="../auth-data.js?v=e5129f12b8"></script>
 <script src="../auth.js?v=7348a17dd9"></script>
@@ -25,10 +25,9 @@
   <canvas id="view" tabindex="0" aria-label="The warehouse"></canvas>
 
   <div class="ws-top" id="topBar" hidden>
-    <button class="ws-btn" id="menuBtn" type="button" aria-haspopup="dialog">Menu</button>
+    <button class="ws-btn" id="menuBtn" type="button" aria-haspopup="dialog" aria-controls="startCover">Menu</button>
     <button class="ws-btn" id="fullBtn" type="button" aria-label="Full screen" title="Full screen">&#x26F6;</button>
     <button class="ws-btn room-badge" id="roomBtn" type="button" aria-label="Room details" hidden></button>
-    <button class="ws-btn" id="helpBtn" type="button" aria-label="How to play" title="How to play">?</button>
   </div>
 
   <!-- one player's own things; split screen (PC) copies this for player 2 -->
@@ -116,12 +115,13 @@
     <div class="ws-load"><b>Warehouse Shift</b><span id="loadText">Loading the warehouse&hellip;</span><div class="ws-meter"><div id="loadBar"></div></div></div>
   </div>
 
-  <div class="ws-cover" id="startCover" hidden>
+  <div class="ws-cover" id="startCover" role="dialog" aria-labelledby="startTitle" hidden>
     <div class="ws-card">
-      <h1>Warehouse Shift</h1>
+      <h1 id="startTitle">Warehouse Shift</h1>
       <p>First shift? Walk the branch and serve your first customer with a guide. You can practise at your own pace.</p>
       <button class="ws-alt guide-launch" id="tutorialBtn" type="button">Play tutorial</button>
       <div id="startStats"></div>
+      <p class="ws-small" id="menuStatus" hidden></p>
       <p class="ws-small" id="careerXP"></p>
       <label class="ws-name">Name on your badge <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Trainee" enterkeyhint="done"></label>
       <div class="ws-row">
@@ -129,7 +129,6 @@
         <button class="ws-alt" id="newGameBtn" type="button">New game</button>
         <button class="ws-alt" id="twoBtn" type="button" hidden>Two players</button>
         <button class="ws-alt" id="onlineBtn" type="button" hidden>Online co-op</button>
-        <button class="ws-alt" id="howBtn" type="button">How to play</button>
         <button class="ws-alt" id="installBtn" type="button" hidden>Install game</button>
         <button class="ws-alt" id="updBtn" type="button">Check for updates</button>
       </div>
@@ -193,96 +192,13 @@
   <template id="upgradeShop">
     <section class="ws-shop" hidden aria-label="Upgrades">
       <div class="ws-shop-row"><div><strong>Sam speed</strong><small>Sam walks and works faster on every job. Bonuses are shown from the starting tier.</small><span data-status="sam-speed"></span></div><button type="button" data-sam-speed></button></div>
+      <div class="ws-shop-row"><div><strong>Player walk speed</strong><small>Walk faster on this device. Each tier adds 7.5% of your starting pace.</small><span data-status="player-speed"></span></div><button type="button" data-player-speed></button></div>
       <div class="ws-shop-row"><div><strong>Scanner reliability</strong><small>Reduce scanner disconnects from your next hosted or solo shift.</small><span data-status="reliability"></span></div><button type="button" data-reliability></button></div>
       <div class="ws-shop-row"><div><strong>Digital First Upgrades</strong><small>Bring in more click &amp; collects from your next hosted or solo shift. Tier 1 includes kiosk tablets.</small><span data-status="digital"></span></div><button type="button" data-digital></button></div>
       <div class="ws-shop-row"><div><strong>Scanner name label</strong><small>Put your name on your scanner. Sam can take it by mistake at most once per shift.</small></div><button type="button" data-kit="label"></button></div>
       <div class="ws-shop-row"><div><strong>Kickstool shoes</strong><small>Use Step to reach high shelves anywhere, even when your stool is across the warehouse.</small></div><button type="button" data-kit="shoes"></button></div>
     </section>
   </template>
-  <div class="ws-cover" id="pauseCover" role="dialog" aria-modal="true" aria-labelledby="pauseTitle" hidden>
-    <div class="ws-card">
-      <h1 id="pauseTitle">Main menu</h1>
-      <p id="menuStatus"></p>
-      <div class="ws-row"><button class="ws-go" id="resumeShift" type="button">Resume</button></div>
-    </div>
-  </div>
-  <div class="ws-cover" id="helpCover" hidden>
-    <div class="ws-card">
-      <button class="ws-x" id="helpX" type="button" aria-label="Close">&times;</button>
-      <h1>How to play</h1>
-      <p>Open <b>Menu</b> to pause a local shift. In online co-op, the shift continues while the menu is open. Choose <b>Resume</b> to return.</p>
-      <p>For hands-on practice, choose <b>Play tutorial</b> on the home screen. Follow the floor markers and the amber outline on the next control.</p>
-      <p>Lock up to see the day’s stats and team score out of 1,000. Choose <b>Next</b> for upgrades, then <b>Start Next Day</b> to begin in the office. Quick greetings, short customer waits, prompt picks and speedy putaway all count. The timers use playing time. A missed delivery puts more weight on customer waits.</p>
-      <p>Human teammates share 5 XP per greeting, 15 per sale, 10 per confirmed pick line, 10 per finished order and 10 per shelved carton. Once you contribute, team work XP is saved as you play. Spend it at the office Manager PC under Upgrades. Lock-up adds a shift bonus of up to 25%. Work done while a teammate or Sam stands at a till earns 5% extra XP, including its share of the shift bonus. Standing cover counts as contributing. Service Champ XP is rounded across the shift and saved on this device.</p>
-      <p>Sam starts with all four jobs enabled. He serves customers first, then picks customer orders and holding-area orders, then puts away delivery. Buy speed upgrades under Upgrades on the Manager PC. Online shifts use the host’s Sam speed. Two saved job lists unlock at 350 lifetime XP.</p>
-      <div class="ws-cols2">
-        <div>
-          <h2>The pick list</h2>
-          <ul>
-            <li>Your scanner can disconnect mid-job. If it shows <b>Server connection issue</b>, go to the <b>office</b>. Face the charging dock beside the manager’s PC and use <b>Swap scanner</b>. Your replacement keeps your task and quantities and is protected for 60 seconds of shift time. Once the final line is confirmed, you can hand over the order without another disconnect.</li>
-            <li>The scanner opens on its <b>Main Menu</b>: <b>Putaway</b> or <b>Today Picking</b>. Back goes back to it.</li>
-            <li>The scanner lists today's picks: <b>A4821 2:3 CK</b> is order A4821, 2 locations, 3 items. <b>CK</b>: a click and collect customer is at the counter. <b>c</b>: nobody's here yet, it goes in the holding area. Nothing after it: bought at the till, the customer's waiting.</li>
-            <li>Up and down choose an order, <b>Enter</b> starts it. Once started it's yours: Back says <b>Finish task</b>.</li>
-            <li>A full day is <b>15 to 25 picks</b>, plus the <b>delivery</b>. Day one has about a third of the usual delivery and customers. It ends when they're all done, the delivery's away and nobody's waiting: then lock the front door.</li>
-          </ul>
-          <h2>Picking</h2>
-          <ul>
-            <li>The scanner shows one location at a time: the <b>location</b>, the SKU, the product and how many.</li>
-            <li>Walk to it, look at it and press <b>Scan</b> (or tap it) <b>once for each item</b>: Qty 3 is three scans. Then press <b>Enter</b> for the next location.</li>
-            <li>Then take the tote to the <b>trade counter</b> and press Enter: its customer comes over for it.</li>
-            <li>A <b>c</b> pick goes in the <b>holding area</b> by goods in: scan the label of any empty OC spot.</li>
-            <li>Some click and collects are already bagged in the holding area: the line on the scanner gives the <b>OC location</b> (big green label) and surname. Scan that tote, then take the bag to the counter.</li>
-            <li>Bottom shelves are low: <b>squat</b> to scan them. The high ones (AA shelf 13 and up, BA shelf 7 and up, the top BB level): <b>take a red kick stool</b> from the end of a row, carry it into the aisle and <b>Step</b> up. Stuck? <b>Hint</b> makes the location glow.</li>
-          </ul>
-          <h2>Putaway</h2>
-          <ul>
-            <li>When a customer brings something from the shop floor, the till beeps and adds it automatically as <b>Picked</b>. On the scanner, choose <b>Shop floor replen</b>, pick the replacements and use <b>Restock shelf</b> at the middle shop-floor unit. Each unit earns 10 XP there. Finish every replen batch before locking the front door.</li>
-            <li>The delivery waits at <b>goods in</b> on the roll cages and pallets. With no picks to do, choose <b>Putaway</b>.</li>
-            <li>Look at a cage or pallet and <b>Scan</b>: you take a carton and the scanner says where it goes. Scan that location, then <b>Enter</b> to put it on the shelf.</li>
-            <li>To stop putaway, press <b>Back</b>, carry the carton back to Goods In and scan its original cage or pallet. Sam finishes the cartons he takes.</li>
-            <li>Putting cartons away advances the clock and brings in customers. By halfway through delivery, roughly half can arrive. The final customers can arrive with one carton left. The scanner, CCTV and wall clock all show shift time from 07:00 to 20:00. If the delivery is cancelled, time advances as you hand orders to customers.</li>
-          </ul>
-          <h2>Sam</h2>
-          <ul>
-            <li><b>Sam</b> works from the same list, at his current speed tier. What Sam does first is set on the <b>PC on the manager's desk</b> in the office: tick or untick each job (till service, customer picks, holding-area picks, delivery) and move them up or down. Unticked jobs are yours.</li>
-            <li>If a customer has waited about six seconds and Sam is within reach, he rings the <b>service bell</b>. Ring it yourself to call for help on tills. Everyone in co-op hears it. If till service is enabled, Sam finishes shelving any carton he’s carrying, then helps the waiting customer before scanning another carton.</li>
-            <li>Sam pushes a <b>trolley</b>. While they pick it blocks the aisle, so you can't get past. Sam won't go down an aisle you're in.</li>
-            <li>Sam can take your scanner by mistake while you serve customers at the till. Expect 2–4 mix-ups per shift with an unlabelled scanner and 0–1 with a name label. The message appears after you close the till. Walk up to Sam to get yours back.</li>
-          </ul>
-          <h2>At the till</h2>
-          <p><b>Service Champ +5% XP</b> applies to work done while someone covers the staff area behind the counter, even while they move.</p>
-          <ul>
-            <li>Face the queue and press <b>Greet</b> for the longest-waiting customer within view and reach. Aim directly at someone else to greet them first. The idle scanner shows the status of customers you look at near the tills. Customers ordering at the till walk to a free till, or wait in line until one opens. Follow them and press <b>Use till</b> (or Scan). You can greet one till customer at a time. Another player or Sam can take over by serving them. The till by the gap is Sam's.</li>
-            <li>Enter their <b>surname</b>, then their <b>postcode</b> in Fusion’s Identify Customer. Press <b>Search</b>, listen for their third detail, then select the matching record.</li>
-            <li>Sent it from the <b>kiosk</b>? They tell you the name they used: open <b>Kiosk Orders</b>, pick theirs, Select, and the basket fills itself.</li>
-            <li>They ask for one thing at a time: a <b>code</b>, or the product’s name with a detail such as its size or brand. Find it on the <b>CrashFix</b> tab (tap a result to read its description) and tap its code to copy it: the customer says straight away if it's the one. Any product that fits counts.</li>
-            <li>Back on the <b>Fusion</b> tab, type the part number and quantity, Enter. Wrong quantity? Type the right one in that line's Qty box. <b>Ask again</b> repeats what they want, twice gives a clue.</li>
-            <li>If a line shows <b>Avail 0</b>, listen to the customer. Want it tomorrow? Press the green <b>Today</b> button to switch it to orange <b>TCND</b>. If they decline, use <b>×</b> to remove that line. Only today's warehouse items go on the customer pick.</li>
-            <li>When they've got everything: <b>Pay &amp; Go</b>, then <b>Card</b> or <b>Cash</b>, whichever they say. The order goes on the pick list (its number stays on the till's screen) and the customer waits by the gap at the end of the counter.</li>
-            <li>For cash, check the change due. Tap the notes and coins in the drawer, then <b>Give change</b>. Exact money completes the sale automatically.</li>
-            <li>On a phone, Fusion uses the phone's keyboard; the keyboard button at the top swaps to an on-screen one.</li>
-          </ul>
-          <h2>Reading a location</h2>
-          <ul>
-            <li><b>AAB-03-07-02</b>: area AAB, bay 03, shelf 07, position 02. The area is on the end of the racking.</li>
-            <li>Bay 01 is at the centre aisle end. Shelf 01 is the bottom. Positions count from the left as you face the shelf.</li>
-            <li>Trays hold 2 positions (4 in AAA), listed on the label with the back one on top.</li>
-            <li>Right side, front to back: AAA to AAE (trays), then BAA to BAG. Left side, BBA at the front to BBJ at the back (bulky). Picks go up the right, then down the left from BBJ to BBA.</li>
-          </ul>
-        </div>
-        <div>
-          <h2>Phone</h2>
-          <ul><li>Left thumb: walk (push further to jog)</li><li>Drag the view to look round</li><li>Tap a label to scan it</li><li>Tap <b>Squat</b> for low shelves. For high shelves, face a red kick stool and tap <b>Take stool</b>. Carry it to the shelf and tap <b>Step</b></li></ul>
-          <h2>Controller</h2>
-          <ul><li>Left stick walk (push right out to jog), right stick look</li><li><b>RT</b> scan, <b>A</b> Enter, <b>B</b> Back, <b>X</b> squat, <b>LB</b> step on the stool, <b>Y</b> hint</li><li>D-pad: up and down the pick list</li><li><b>RB</b> enlarges the blue scanner buttons. <b>Start</b> opens the main menu or closes the computer you’re using.</li><li>At the till: the d-pad moves the highlight, <b>A</b> presses (a box brings up the keyboard), <b>B</b> deletes, <b>LT</b>/<b>RT</b> switch tabs (LT Fusion, RT CrashFix), <b>LB</b> Enter, <b>Y</b> Ask again, <b>Start</b> leaves</li></ul>
-          <h2>Computer</h2>
-          <ul><li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, <kbd>Shift</kbd> jog</li><li>Click to look with the mouse. <kbd>Esc</kbd> opens the main menu or closes the computer you’re using</li><li>Click or press <kbd>F</kbd> to interact with the outlined target or scan. Click empty space to use scanner <kbd>Enter</kbd>. <kbd>C</kbd> squats, and <kbd>Space</kbd> steps onto or off a kick stool</li><li>Scroll the scanner with the mouse wheel or <kbd>&uarr;</kbd><kbd>&darr;</kbd>. Right-click or <kbd>Backspace</kbd> goes back on the scanner</li><li>Press <kbd>Tab</kbd> or Function to enlarge the blue scanner buttons. Use <kbd>1</kbd> for Hint and <kbd>2</kbd> for Quick Pick when shown. Press a number again if you used it to enlarge the buttons.</li></ul>
-        </div>
-      </div>
-      <div class="ws-row"><button class="ws-go" id="helpClose" type="button">Got it</button></div>
-    </div>
-  </div>
-
   <div class="ws-cover" id="endCover" hidden>
     <div class="ws-card">
       <h1>End of shift</h1>
@@ -325,14 +241,14 @@
 <script src="warehouse-shift/scene.js?v=2d0914744c"></script>
 <script src="product-search/search.js?v=4cb4264a3c"></script>
 <script src="warehouse-shift/till.js?v=6541044df7"></script>
-<script src="warehouse-shift/day.js?v=fd21d92eaf"></script>
-<script src="warehouse-shift/bot.js?v=8924548ae2"></script>
-<script src="warehouse-shift/tillui.js?v=077455184d"></script>
-<script src="warehouse-shift/online-day.js?v=544c2990cd"></script>
+<script src="warehouse-shift/day.js?v=e5838bfe75"></script>
+<script src="warehouse-shift/bot.js?v=8183465369"></script>
+<script src="warehouse-shift/tillui.js?v=0271233b60"></script>
+<script src="warehouse-shift/online-day.js?v=454a4c6926"></script>
 <script src="warehouse-shift/online.js?v=d393194ce9"></script>
-<script src="warehouse-shift/online-game.js?v=784ff29610"></script>
+<script src="warehouse-shift/online-game.js?v=7d678d1ea1"></script>
 <script src="warehouse-shift/playtest.js?v=223d2eb3db"></script>
-<script src="warehouse-shift/tutorial.js?v=0ac2d6d364"></script>
-<script src="warehouse-shift/game.js?v=8ade8b0b39"></script>
+<script src="warehouse-shift/tutorial.js?v=a02b84532a"></script>
+<script src="warehouse-shift/game.js?v=d839b0fb89"></script>
 </body>
 </html>
