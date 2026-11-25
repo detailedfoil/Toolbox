@@ -262,7 +262,7 @@
       if (msg === lastStatus) return;
       lastStatus = msg;
       if (msg) {
-        p.keysClear(); if (document.pointerLockElement) document.exitPointerLock();
+        p.keysClear(); g.releaseMouse();
         panel.hidden = false; controls.hidden = true; show(msg);
       } else panel.hidden = true;
     }
@@ -312,7 +312,7 @@
       net = null; lastStatus = null; panel.hidden = true; $('startCover').hidden = false;
     };
     roomBtn.onclick = () => {
-      if (document.pointerLockElement) document.exitPointerLock();
+      g.releaseMouse();
       controls.hidden = true; panel.hidden = false;
       show('Room ' + net.room + ' · ' + roomSize + '/4 players. ' + (net.host ? 'You are hosting this shift.' : 'You are Player ' + net.slot + '.'));
     };

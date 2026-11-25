@@ -160,6 +160,21 @@ def shared_shift(browser, errors):
     guest.context.close()
 
 
+def desktop_mouse_capture(browser, errors):
+    page = open_game(browser, errors, online=False)
+    page.locator("#startBtn").click()
+    page.wait_for_function("document.pointerLockElement === view")
+    page.evaluate("window.currentShift = __shift.day()")
+    for _ in range(4):
+        page.keyboard.press("Escape")
+        page.locator("#startCover").wait_for(state="visible")
+        page.locator("#startBtn").click()
+        page.wait_for_function("document.pointerLockElement === view")
+        assert page.locator("#startCover").is_hidden()
+        assert page.evaluate("__shift.day() === currentShift")
+    page.context.close()
+
+
 def split_shift(browser, errors):
     page = open_game(browser, errors, online=False)
     assert page.locator("#onlineBtn").is_visible()
@@ -331,6 +346,7 @@ if __name__ == "__main__":
                   "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"])
         errors = []
         try:
+            desktop_mouse_capture(browser, errors)
             recorded_solo_shift(browser, errors)
             tutorial_shift(browser, errors)
             print("Chromium solo playtest and tutorial passed.", flush=True)

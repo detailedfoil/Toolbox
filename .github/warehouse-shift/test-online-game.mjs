@@ -197,8 +197,10 @@ test('mouse clicks use highlighted targets and the keyboard steps and chooses bl
   day.plan.length = 0;
   let locked = null;
   Object.defineProperty(w.document, 'pointerLockElement', { get: () => locked });
-  view.requestPointerLock = () => { locked = view; };
-  w.document.exitPointerLock = () => { locked = null; };
+  const lockChanged = () => w.document.dispatchEvent(new w.Event('pointerlockchange'));
+  const capture = () => { locked = view; lockChanged(); };
+  view.requestPointerLock = capture;
+  w.document.exitPointerLock = () => { locked = null; lockChanged(); };
   const pointer = (type, button = 0) => {
     const event = new w.MouseEvent(type, { button, bubbles: true, cancelable: true });
     Object.defineProperty(event, 'pointerType', { value: 'mouse' });
@@ -263,6 +265,26 @@ test('mouse clicks use highlighted targets and the keyboard steps and chooses bl
   assert.equal(s.day(), day);
   assert.equal(s.order(), order);
   assert.equal(locked, view);
+
+  // Browsers release pointer lock asynchronously, even if Continue is pressed immediately.
+  const exit = w.document.exitPointerLock;
+  w.document.exitPointerLock = () => {};
+  key('Escape');
+  $('startBtn').click();
+  assert.ok($('startCover').hidden);
+  exit();
+  assert.ok($('startCover').hidden, 'a delayed release must not reopen the menu');
+  assert.equal(locked, view, 'Continue must recapture after the delayed release');
+  w.document.exitPointerLock = exit;
+
+  // A rejected capture must not make the view permanently stay in drag mode.
+  key('Escape');
+  view.requestPointerLock = () => w.document.dispatchEvent(new w.Event('pointerlockerror'));
+  $('startBtn').click();
+  assert.equal(locked, null);
+  view.requestPointerLock = capture;
+  pointer('pointerdown'); pointer('pointerup');
+  assert.equal(locked, view, 'clicking the view can retry a rejected capture');
 
   p.openPc();
   assert.equal(locked, null);

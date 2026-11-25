@@ -2017,7 +2017,7 @@
       function openPc() {
         if (!pc.el) pcBuild();
         pc.el.querySelector('output').textContent = '';
-        if (P === kbPlayer() && locked()) document.exitPointerLock();
+        if (P === kbPlayer()) releaseMouse();
         keys.clear(); stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; me.vx = me.vy = 0;
         recordPlaytest('manager-pc.open', { who: P.id });
         pc.open = true; pc.sel = 0; pc.el.hidden = false; SFX.key(); pcTab(!!guest());
@@ -2067,7 +2067,7 @@
           if (!ok) { toast('Till unavailable'); return; }
           nearTill = target;
         }
-        if (P === kbPlayer() && locked()) document.exitPointerLock();
+        if (P === kbPlayer()) releaseMouse();
         keys.clear(); stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0;
         if (P.onTill) P.onTill();
         me.vx = me.vy = me.speed = 0;
@@ -2601,7 +2601,25 @@
       const [x, y] = p.centre();
       p.scanAt(x, y, true, () => { SFX.key(); p.enter(); });
     }
-    function lockMouse() { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (x) { /* not allowed */ } }
+    let mouseDrag = false;
+    let hadPointerLock = false, releasingMouse = false, recaptureMouse = false;
+    function releaseMouse() {
+      recaptureMouse = false;
+      if (!locked() || releasingMouse) return;
+      releasingMouse = true;
+      document.exitPointerLock();
+    }
+    function mouseLockFailed() {
+      if (locked() || mouseDrag || !kbPlayer()?.playing()) return;
+      mouseDrag = true;
+      kbPlayer().toast('Click the view to capture the mouse, or drag to look round');
+    }
+    function lockMouse() {
+      if (navigator.userActivation?.isActive === false) return;
+      if (releasingMouse) { recaptureMouse = true; return; }
+      if (locked()) return;
+      try { canvas.requestPointerLock()?.catch(mouseLockFailed); } catch { mouseLockFailed(); }
+    }
     canvas.addEventListener('pointerdown', (e) => {
       const kp = kbPlayer();
       if (joining) { join({ kind: 'kb' }); e.preventDefault(); return; }
@@ -2637,7 +2655,10 @@
       if (e.type === 'pointerup' && Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < 10 && performance.now() - p.t < 450) { // a tap: scan what's there
         const kp = kbPlayer();
         if (!kp?.playing()) return;
-        if (e.pointerType === 'mouse') clickWorld(kp);
+        if (e.pointerType === 'mouse') {
+          clickWorld(kp);
+          if (kp.playing() && !locked()) lockMouse();
+        }
         else kp.scanAt(...canvasNdc(kp, e));
       }
     };
@@ -2657,19 +2678,29 @@
       p.page(Math.sign(e.deltaY));
       e.preventDefault();
     }, { passive: false });
-    let mouseDrag = false; // if the mouse can't be captured, dragging looks round instead
-    document.addEventListener('pointerlockerror', () => { mouseDrag = true; const kp = kbPlayer(); if (kp) kp.toast('Drag with the mouse to look round'); });
-    let hadPointerLock = false;
+    document.addEventListener('pointerlockerror', mouseLockFailed);
     document.addEventListener('pointerlockchange', () => {
       const hasPointerLock = locked();
-      if (hadPointerLock && !hasPointerLock && kbPlayer()?.playing()) setPaused(true);
+      const lostPointerLock = hadPointerLock && !hasPointerLock;
       hadPointerLock = hasPointerLock;
+      const p = kbPlayer();
+      if (hasPointerLock) {
+        mouseDrag = false;
+        if (!p?.playing()) releaseMouse();
+      } else if (releasingMouse) {
+        // Continue can be clicked before the browser finishes releasing the mouse.
+        releasingMouse = false;
+        if (recaptureMouse) {
+          recaptureMouse = false;
+          restoreMouse(p);
+        }
+      } else if (lostPointerLock && p?.playing()) setPaused(true);
       dirty = true;
     });
     function restoreMouse(p) {
       if (!p || p !== kbPlayer() || !p.playing() || touch) return;
       canvas.focus({ preventScroll: true });
-      if (!locked()) lockMouse();
+      lockMouse();
     }
     function toggleBlue(p) {
       const D = p.D;
@@ -2746,7 +2777,7 @@
         stickId = null;
         stickHome();
         looks.clear();
-        if (locked()) document.exitPointerLock();
+        releaseMouse();
         renderStartCareer();
         $('startBtn').focus({ preventScroll: true });
       } else {
@@ -2946,7 +2977,7 @@
       $('scoreUnlock').hidden = !unlocked;
     }
     function endShift() {
-      if (locked()) document.exitPointerLock();
+      releaseMouse();
       const st = me1.stats, mins = Math.max(1, Math.round((Date.now() - st.since) / 60000));
       statsHtml($('endStats'), [[st.orders, 'orders'], [st.lines, 'lines picked'], [st.units, 'units'], [st.perfect, 'perfect picks'], [st.wrong, 'wrong scans'], [mins + ' min', 'on shift']]);
       $('endCover').hidden = false;
@@ -3009,7 +3040,7 @@
         $('dayCover').hidden = false;
         if (isPaused()) setPaused(false);
         for (const p of players) { p.closePc(); p.closeTill(); }
-        if (locked()) document.exitPointerLock();
+        releaseMouse();
         const box = $('dayStats');
         box.replaceChildren();
         for (const p of players) {
@@ -3112,7 +3143,7 @@
           upgraded: () => samSpeedTier >= 2,
           finish(summary) {
             active = false;
-            if (locked()) document.exitPointerLock();
+            releaseMouse();
             me1.keysClear();
             $('shiftGuide').hidden = true; $('lessonEnd').hidden = false;
             $('lessonResult').textContent = summary; $('lessonHome').focus(); layout();
@@ -3437,7 +3468,7 @@
     /* ---------- warm up behind the loading bar, then show the start screen ---------- */
     if (window.ShiftOnlineGame && window.ShiftOnline && window.ShiftOnlineDay) {
       online = window.ShiftOnlineGame.attach({
-        $, world, World, Day, S, switchMode, maxWalkSpeed: walkSpeed(playerPaces.length), p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
+        $, world, World, Day, S, switchMode, releaseMouse, maxWalkSpeed: walkSpeed(playerPaces.length), p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
         kit, missingScanners, canGreetAt, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
