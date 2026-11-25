@@ -43,7 +43,7 @@
       const who = 'p' + slot, stool = world.stools.find(s => s.by === who);
       peers.set(slot, { name, shoes: data.shoes === true, label: data.label === true,
         step: (!!stool || data.shoes === true) && !!data.step,
-        atTill: locks.has(who) && !!data.atTill, x: data.x, y: data.y, yaw: data.yaw % (2 * Math.PI), speed: Math.max(0, Math.min(3.2, data.speed)), squat: !!data.squat, shelf: items.has(data.shelf) ? data.shelf : null });
+        atTill: locks.has(who) && !!data.atTill, x: data.x, y: data.y, yaw: data.yaw % (2 * Math.PI), speed: Math.max(0, Math.min(g.maxWalkSpeed, data.speed)), squat: !!data.squat, shelf: items.has(data.shelf) ? data.shelf : null });
       return true;
     }
     function release(slot, freshSeat = false) {
@@ -294,11 +294,19 @@
       $('roomBack').hidden = false; status('Connecting…'); net.connect(mode, mode === 'join' ? input : null);
     }
     $('onlineBtn').hidden = false;
-    $('onlineBtn').onclick = () => { $('startCover').hidden = true; panel.hidden = false; controls.hidden = false; show('Share one shift with up to three other players. Keep the host’s game tab open.'); };
+    $('onlineBtn').onclick = () => {
+      if (started) { roomBtn.click(); $('roomBack').focus(); return; }
+      if (g.switchMode('onlineBtn')) return;
+      $('startCover').hidden = true; panel.hidden = false; controls.hidden = false; show('Share one shift with up to three other players. Keep the host’s game tab open.');
+    };
     $('hostRoom').onclick = () => connect('create'); $('joinRoom').onclick = () => connect('join');
     $('roomCode').addEventListener('keydown', e => { if (e.key === 'Enter') connect('join'); });
     $('roomBack').onclick = () => {
-      if (started && !net?.ended && net?.ready && !net.paused && net.hostPresent) { panel.hidden = true; return; }
+      if (started && !net?.ended && net?.ready && !net.paused && net.hostPresent) {
+        panel.hidden = true;
+        if (!$('startCover').hidden) $('onlineBtn').focus();
+        return;
+      }
       if (net && !net.ended) net.leave();
       if (started) { location.reload(); return; }
       net = null; lastStatus = null; panel.hidden = true; $('startCover').hidden = false;

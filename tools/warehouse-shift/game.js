@@ -252,10 +252,14 @@
       } catch (e) { /* use the defaults */ }
       return defaultPriority(defaults);
     }
+    const playerSpeedKey = 'ws-player-speed';
+    const playerPaces = [100, 107.5, 115, 122.5, 130];
+    const walkSpeed = tier => 3.1 * playerPaces[tier - 1] / 100;
+    let playerSpeedTier = 1;
     const samSpeedKey = 'ws-sam-speed';
     const samJobsKey = 'ws-sam-jobs-v2';
     const samSpeeds = [80, 90, 100, 110, 120];
-    const samSpeedPrices = [100, 150, 225, 350];
+    const speedPrices = [100, 150, 225, 350];
     let samSpeedTier = 1;
     let samPrio = loadPriority(samJobsKey, PRIO_DEFAULT);
     const kit = {
@@ -277,6 +281,8 @@
         if (Number.isInteger(savedTier) && savedTier > scannerTier && savedTier <= 5) scannerTier = savedTier;
         const savedDigital = Number(localStorage.getItem(digitalKey));
         if (Number.isInteger(savedDigital) && savedDigital > digitalTier && savedDigital <= digitalTiers.length) digitalTier = savedDigital;
+        const savedPlayerSpeed = Number(localStorage.getItem(playerSpeedKey));
+        if (Number.isInteger(savedPlayerSpeed) && savedPlayerSpeed > playerSpeedTier && savedPlayerSpeed <= playerPaces.length) playerSpeedTier = savedPlayerSpeed;
         const savedSpeed = Number(localStorage.getItem(samSpeedKey));
         if (Number.isInteger(savedSpeed) && savedSpeed > samSpeedTier && savedSpeed <= samSpeeds.length) samSpeedTier = savedSpeed;
       } catch (e) { /* keep the session's upgrades */ }
@@ -975,8 +981,7 @@
       /* ---------- walking ---------- */
       const keys = new Set();
       const stickIn = { x: 0, y: 0 }, lookIn = { x: 0, y: 0 };
-      let running = false;
-      P.input = { keys, stick: stickIn, look: lookIn, run: (on) => { running = on; } };
+      P.input = { keys, stick: stickIn, look: lookIn };
       function stepMove(dt) {
         let f = -stickIn.y, s = stickIn.x, turn = 0;
         if (keys.has('f')) f += 1; if (keys.has('b')) f -= 1; if (keys.has('l')) s -= 1; if (keys.has('r')) s += 1;
@@ -986,9 +991,8 @@
         if (lookIn.x || lookIn.y) { const k = 2.6 * LOOKS[lookPick][1] * dt; me.yaw -= lookIn.x * k; me.pitch -= lookIn.y * k * 0.8; moved = true; }
         let len = Math.hypot(f, s);
         if (len > 1) { f /= len; s /= len; len = 1; }
-        const jog = running || Math.hypot(stickIn.x, stickIn.y) > 0.93;
         if (me.step && len > 0.3) toggleStep(); // walking steps you down
-        const top = me.step ? 0 : me.squat ? 0.85 : jog ? 3.1 : 1.75;
+        const top = me.step ? 0 : me.squat ? 0.85 : walkSpeed(playerSpeedTier);
         const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);
         const tx = (-sy * f + cy * s) * top, ty = (-cy * f - sy * s) * top;
         const k = Math.min(1, dt * (len ? 9 : 12));
@@ -2014,7 +2018,7 @@
         if (!pc.el) pcBuild();
         pc.el.querySelector('output').textContent = '';
         if (P === kbPlayer() && locked()) document.exitPointerLock();
-        keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; me.vx = me.vy = 0;
+        keys.clear(); stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; me.vx = me.vy = 0;
         recordPlaytest('manager-pc.open', { who: P.id });
         pc.open = true; pc.sel = 0; pc.el.hidden = false; SFX.key(); pcTab(!!guest());
         D.tillBtn.hidden = true;
@@ -2064,7 +2068,7 @@
           nearTill = target;
         }
         if (P === kbPlayer() && locked()) document.exitPointerLock();
-        keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0;
+        keys.clear(); stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0;
         if (P.onTill) P.onTill();
         me.vx = me.vy = me.speed = 0;
         SFX.key();
@@ -2324,14 +2328,14 @@
       D.scScreen.addEventListener('scroll', (e) => { e.target.scrollTop = 0; e.target.scrollLeft = 0; }); // never scrolled (older browsers without overflow: clip)
 
       /* ---------- a controller (game.js gives each player theirs: padIndex) ---------- */
-      // Left stick walks (right out to jog), right stick looks, RT scans, A is Enter (detailedfoil), B is Back, X squats, Y is
-      // Hint, the d-pad goes up and down the pick list (and the lines of a pick), RB enlarges the blue buttons, Start opens the menu,
-      // and LT held jogs. At the till the d-pad (or stick) moves a highlight and tillui.js does the rest.
+      // Left stick walks, right stick looks, RT scans, A is Enter (detailedfoil), B is Back, X squats, Y is
+      // Hint, the d-pad goes up and down the pick list (and the lines of a pick), RB enlarges the blue buttons, Start opens the menu.
+      // At the till the d-pad (or stick) moves a highlight and tillui.js does the rest.
       P.padIndex = null;
       P.padDisconnected = false;
-      let padPrev = [], padWalk = false, padRun = false;
+      let padPrev = [], padWalk = false;
       const rep = { dir: null, t: 0 };
-      P.dropPad = () => { padPrev = []; rep.dir = null; if (padWalk) { stickIn.x = stickIn.y = 0; } lookIn.x = lookIn.y = 0; if (padRun) running = false; padWalk = padRun = false; till.usePad(false); };
+      P.dropPad = () => { padPrev = []; rep.dir = null; if (padWalk) { stickIn.x = stickIn.y = 0; } lookIn.x = lookIn.y = 0; padWalk = false; till.usePad(false); };
       P.readPad = function (gp, dt) {
         const now = gp.buttons.map((b) => !!(b && (b.pressed || b.value > 0.5)));
         const prev = padPrev, hit = (i) => now[i] && !prev[i];
@@ -2365,14 +2369,15 @@
           const panel = !$('lessonCover').hidden ? $('lessonCover') : $('startCover');
           const buttons = [...panel.querySelectorAll('button:not([hidden]):enabled')];
           const i = buttons.indexOf(document.activeElement), dir = steer(true);
-          if (dir) buttons[(i + (dir === 'down' || dir === 'right' ? 1 : buttons.length - 1) + buttons.length) % buttons.length]?.focus();
+          if (isPaused() && (hit(9) || hit(1))) setPaused(false);
+          else if (dir) buttons[(i + (dir === 'down' || dir === 'right' ? 1 : buttons.length - 1) + buttons.length) % buttons.length]?.focus();
           else if (hit(0) || hit(9)) (buttons[i] || panel.querySelector('.ws-go')).click();
           else if (hit(1) && panel === $('lessonCover')) $('lessonBack').click();
           return;
         }
         if (tutorial && now[8] && hit(9)) { $('lessonExit').click(); return; }
-        // A goes on, B closes the pause menu.
-        const cover = ['pauseCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
+        // A advances the shift results.
+        const cover = ['endCover', 'dayCover'].map($).find((c) => !c.hidden);
         if (cover) {
           still();
           if (cover.id === 'dayCover' && !$('dayUpgrades').hidden) {
@@ -2382,7 +2387,7 @@
             if (hit(0)) (buttons[i] || buttons[0])?.click();
             return;
           }
-          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); } else if (hit(1) && cover.id === 'pauseCover') setPaused(false);
+          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); }
           return;
         }
         if (hit(9)) { useMenu(P); return; }
@@ -2414,7 +2419,6 @@
         if (lx || ly || padWalk) { stickIn.x = lx; stickIn.y = ly; padWalk = !!(lx || ly); }
         const curve = (v) => Math.sign(v) * Math.pow(Math.abs(v), 1.6);
         lookIn.x = curve(rx); lookIn.y = curve(ry);
-        if (now[6] !== padRun) { padRun = now[6]; running = padRun; }
         if (hit(7)) { initAudio(); const c = centreNdc(); scanAt(c[0], c[1], true); }
         if (hit(1)) back();
         if (hit(2)) toggleSquat();
@@ -2459,7 +2463,7 @@
       P.show = () => { syncScannerRecovery(); D.scanner.hidden = P.scannerMissing && !P.scannerFault; D.cross.hidden = false; D.chips.hidden = false; D.squatBtn.hidden = !touch && idx > 0; D.tag.hidden = !split; stepBtnSync(); };
       // things the controls and the tests use
       Object.assign(P, { banner, scanAt, enter, back, page, digit, useHint, toggleSquat, openTill, closeTill, countOne, confirmQty, handOver, hitAt, holdHit, scanHold, scanPut, tapRow,
-        scannerPage: () => homeSel, activeLine: () => order?.lines[cur], state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); running = false; stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
+        scannerPage: () => homeSel, activeLine: () => order?.lines[cur], state: () => state, order: () => order, full: () => full, sel: () => sel, nearTill: () => nearTill, keysClear: () => { keys.clear(); stickIn.x = stickIn.y = 0; lookIn.x = lookIn.y = 0; } });
       renderScanner();
       return P;
     }
@@ -2683,7 +2687,7 @@
     window.addEventListener('keydown', (e) => {
       if (!$('lessonCover').hidden && e.key === 'Escape') { $('lessonBack').click(); return; }
       if (e.target === $('lessonExit') && ['Enter', ' '].includes(e.key)) return;
-      if (e.altKey || e.ctrlKey || e.metaKey || online?.panel()) return;
+      if (e.altKey || e.ctrlKey || e.metaKey || online?.panel() || isPaused()) return;
       if (joining && e.target && e.target.tagName === 'INPUT') { if (e.key === 'Enter') e.target.blur(); return; } // typing a name
       if (joining) { if (e.key === 'Escape') { leaveJoin(); return; } if (joined.length >= 2 && e.key === 'Enter') { startSplit(); e.preventDefault(); return; } join({ kind: 'kb' }); e.preventDefault(); return; }
       const p = kbPlayer();
@@ -2700,7 +2704,6 @@
       // on the pick list the arrow keys choose an order
       if ((p.state() === 'list' || p.state() === 'home') && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) { if (!e.repeat) p.page(e.code === 'ArrowUp' ? -1 : 1); e.preventDefault(); return; }
       if (KEYMAP[e.code]) { p.input.keys.add(KEYMAP[e.code]); e.preventDefault(); return; }
-      if (e.key === 'Shift') { p.input.run(true); return; }
       if (e.repeat) return;
       if (/^[0-9]$/.test(e.key)) {
         if (/^[1-4]$/.test(e.key)) p.blueKey(Number(e.key));
@@ -2723,25 +2726,29 @@
         default:
       }
     });
-    window.addEventListener('keyup', (e) => { const p = kbPlayer(); if (!p) return; if (KEYMAP[e.code]) p.input.keys.delete(KEYMAP[e.code]); if (e.key === 'Shift') p.input.run(false); });
+    window.addEventListener('keyup', (e) => { const p = kbPlayer(); if (!p) return; if (KEYMAP[e.code]) p.input.keys.delete(KEYMAP[e.code]); });
     window.addEventListener('blur', () => { for (const p of players) p.keysClear(); stickId = null; stickHome(); });
 
     /* ---------- screens: start, help, end of shift, end of the day ---------- */
-    const pauseCover = $('pauseCover');
-    const isPaused = () => !pauseCover.hidden;
+    const isPaused = () => active && !$('startCover').hidden;
     let focusBeforePause;
     function setPaused(on) {
       if (isPaused() === on) return;
-      pauseCover.hidden = !on;
+      $('startCover').hidden = !on;
+      $('menuStatus').hidden = !on;
       if (on) {
         $('menuStatus').textContent = online?.room() ? 'The online shift is still running.' : 'Shift paused.';
         focusBeforePause = document.activeElement;
-        for (const p of players) p.keysClear();
+        for (const p of players) {
+          p.keysClear();
+          p.me.vx = p.me.vy = p.me.speed = 0;
+        }
         stickId = null;
         stickHome();
         looks.clear();
         if (locked()) document.exitPointerLock();
-        $('resumeShift').focus({ preventScroll: true });
+        renderStartCareer();
+        $('startBtn').focus({ preventScroll: true });
       } else {
         const p = kbPlayer();
         if (p?.playing()) restoreMouse(p);
@@ -2755,17 +2762,22 @@
     }
     function useMenu(p) {
       if (!canUseMenu()) return;
-      if (p?.tillOpen()) p.closeTill();
+      if (isPaused()) setPaused(false);
+      else if (p?.tillOpen()) p.closeTill();
       else if (p?.pcOpen()) p.closePc();
-      else setPaused(!isPaused());
+      else setPaused(true);
     }
+    $('startCover').addEventListener('keydown', e => {
+      if (!isPaused() || e.key !== 'Tab') return;
+      const controls = $('startCover').querySelectorAll('button:not([hidden]):enabled, input:enabled');
+      const first = controls[0], last = controls[controls.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
     $('menuBtn').addEventListener('click', () => useMenu(kbPlayer() || players[0]));
-    $('resumeShift').addEventListener('click', () => setPaused(false));
     window.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
-        if (!canUseMenu()) return;
-        if (!e.repeat) useMenu(kbPlayer());
-      } else if (!isPaused() || (e.target === $('resumeShift') && ['Enter', ' '].includes(e.key))) return;
+      if (e.key !== 'Escape' || $('newGameDialog').open || !canUseMenu()) return;
+      if (!e.repeat) useMenu(kbPlayer());
       e.preventDefault();
       e.stopPropagation();
     }, true);
@@ -2788,20 +2800,20 @@
     const kitSpend = () => Object.values(kit).reduce((sum, item) => sum + (item.owned ? item.price : 0), 0);
     const spentOnReliability = () => reliabilityPrices.slice(0, scannerTier - 1).reduce((sum, cost) => sum + cost, 0);
     const spentOnDigital = () => digitalTiers.slice(0, digitalTier).reduce((sum, tier) => sum + tier.cost, 0);
-    const spentOnSamSpeed = () => samSpeedPrices.slice(0, samSpeedTier - 1).reduce((sum, cost) => sum + cost, 0);
-    const availableXP = () => careerXP() - spentOnDigital() - spentOnReliability() - kitSpend() - spentOnSamSpeed();
+    const spentOnSpeed = tier => speedPrices.slice(0, tier - 1).reduce((sum, cost) => sum + cost, 0);
+    const availableXP = () => careerXP() - spentOnDigital() - spentOnReliability() - kitSpend() - spentOnSpeed(samSpeedTier) - spentOnSpeed(playerSpeedTier);
     const samSpeedStatus = () => 'Sam speed · Tier ' + samSpeedTier + '/' + samSpeeds.length;
     function buyFromShop(button) {
       if (button.disabled) return false;
       if (button.hasAttribute('data-kit')) { purchase(button.dataset.kit); return true; }
-      for (const id of ['samSpeed', 'digital', 'reliability']) {
+      for (const id of ['samSpeed', 'playerSpeed', 'digital', 'reliability']) {
         if (id in button.dataset) { purchase(id, Number(button.dataset[id])); return true; }
       }
       return false;
     }
     function renderShop(root) {
       for (const btn of root.querySelectorAll('[data-sam-speed]')) {
-        const cost = samSpeedPrices[samSpeedTier - 1];
+        const cost = speedPrices[samSpeedTier - 1];
         const bonus = tier => '+' + (samSpeeds[tier - 1] - samSpeeds[0]) + '%';
         btn.dataset.samSpeed = samSpeedTier;
         btn.disabled = !!guest() || !cost || availableXP() < cost;
@@ -2810,6 +2822,13 @@
           : 'Fully upgraded';
         root.querySelector('[data-status="sam-speed"]').textContent = guest() ? '' :
           samSpeedStatus() + ' · ' + (samSpeedTier === 1 ? '100%' : bonus(samSpeedTier)) + ' speed';
+      }
+      for (const btn of root.querySelectorAll('[data-player-speed]')) {
+        const cost = speedPrices[playerSpeedTier - 1];
+        btn.dataset.playerSpeed = playerSpeedTier;
+        btn.disabled = !!tutorial || !cost || availableXP() < cost;
+        btn.textContent = cost ? 'Tier ' + (playerSpeedTier + 1) + ' · ' + playerPaces[playerSpeedTier] + '% pace · ' + cost + ' XP' : 'Fully upgraded';
+        root.querySelector('[data-status="player-speed"]').textContent = 'Tier ' + playerSpeedTier + '/5 · ' + playerPaces[playerSpeedTier - 1] + '% pace';
       }
       for (const btn of root.querySelectorAll('[data-reliability]')) {
         const cost = reliabilityPrices[scannerTier - 1];
@@ -2853,9 +2872,11 @@
         readUpgrades();
         const previousXP = playtest ? availableXP() : 0;
         let key, value;
-        const speedCost = samSpeedPrices[samSpeedTier - 1];
+        const speedCost = speedPrices[samSpeedTier - 1];
         if (id === 'samSpeed' && !guest() && expected === samSpeedTier && speedCost && availableXP() >= speedCost) {
           key = samSpeedKey; value = String(++samSpeedTier);
+        } else if (id === 'playerSpeed' && !tutorial && expected === playerSpeedTier && availableXP() >= speedPrices[playerSpeedTier - 1]) {
+          key = playerSpeedKey; value = String(++playerSpeedTier);
         } else if (id === 'reliability' && expected === scannerTier && scannerTier < 5 && availableXP() >= reliabilityPrices[scannerTier - 1]) {
           key = reliabilityKey; value = String(++scannerTier);
         } else if (id === 'digital' && expected === digitalTier && digitalTiers[digitalTier] && availableXP() >= digitalTiers[digitalTier].cost) {
@@ -2868,7 +2889,7 @@
             try { localStorage.setItem(key, value); } catch (e) { /* keep session progress */ }
           }
           if (playtest) {
-            const tier = id === 'reliability' ? scannerTier : id === 'digital' ? digitalTier : id === 'samSpeed' ? samSpeedTier : undefined;
+            const tier = kit[id] ? undefined : Number(value);
             recordPlaytest('upgrade.bought', { upgrade: id, tier, cost: previousXP - availableXP(), xpAvailable: availableXP() });
           }
         }
@@ -2881,7 +2902,7 @@
       if (recordSolo) return;
       if (e.key === careerRevisionKey && !active && !day && e.newValue !== careerRevision) { location.reload(); return; }
       if (!canSaveCareer()) return;
-      if (e.key === samSpeedKey || e.key === reliabilityKey || e.key === digitalKey || e.key?.startsWith('ws-kit-')) readUpgrades();
+      if (e.key === playerSpeedKey || e.key === samSpeedKey || e.key === reliabilityKey || e.key === digitalKey || e.key?.startsWith('ws-kit-')) readUpgrades();
       else if (e.key?.startsWith(receiptPrefix) && e.newValue) {
         const known = career.get(e.key) || 0, incoming = Number(e.newValue);
         if (!Number.isSafeInteger(incoming) || incoming <= 0) return;
@@ -2935,7 +2956,7 @@
     function playtestProgress() {
       return {
         xpAvailable: availableXP(), xpCareer: careerXP(),
-        scannerTier, digitalTier, equipment: Object.keys(kit).filter(id => kit[id].owned),
+        scannerTier, digitalTier, playerSpeedTier, equipment: Object.keys(kit).filter(id => kit[id].owned),
         sam: { enabled: !!crew.length, skills: PRIO_DEFAULT.slice(), speedTier: samSpeedTier, jobs: samJobs() }
       };
     }
@@ -2986,6 +3007,7 @@
       for (const p of players) p.dayOver();
       later(1.2, () => {
         $('dayCover').hidden = false;
+        if (isPaused()) setPaused(false);
         for (const p of players) { p.closePc(); p.closeTill(); }
         if (locked()) document.exitPointerLock();
         const box = $('dayStats');
@@ -3053,14 +3075,28 @@
       const testing = !active && $('recordPlaytest').checked;
       $('careerXP').textContent = testing
         ? 'Day 1 · 0 XP · Fresh solo career for this playtest'
-        : careerXP() + ' career XP · ' + samSpeedStatus() + ' · ' + availableXP() + ' XP available at the Manager PC';
-      if (active) return;
+        : careerXP() + ' career XP · Player walk speed · Tier ' + playerSpeedTier + '/' + playerPaces.length + ' · ' + samSpeedStatus() + ' · ' + availableXP() + ' XP available at the Manager PC';
+      if (active && !isPaused()) return;
+      $('recordPlaytest').disabled = active;
       $('startBtn').textContent = testing ? 'Start playtest' : 'Continue';
       statsHtml($('startStats'), [[testing ? 0 : me1.life.orders, 'orders done'],
         [testing ? 0 : me1.life.lines, 'lines picked'], [world.items.length.toLocaleString('en-GB'), 'products']]);
     }
+    // A different mode needs a clean world. Carry its entry button through one reload.
+    function restartAt(buttonId) {
+      history.replaceState({ ...history.state, shiftEntry: buttonId }, '');
+      online?.room()?.leave();
+      location.reload();
+    }
+    function switchMode(buttonId) {
+      if (!active) return false;
+      const warning = online?.room()?.host ? 'End this hosted shift for everyone?' : 'Leave your current shift?';
+      if (window.confirm(warning)) restartAt(buttonId);
+      return true;
+    }
     const lessonCover = $('lessonCover');
     $('tutorialBtn').addEventListener('click', () => {
+      if (switchMode('tutorialBtn')) return;
       $('startCover').hidden = true; lessonCover.hidden = false;
       lessonCover.querySelector('[data-lesson]').focus();
     });
@@ -3083,7 +3119,7 @@
           }
         });
         resetCareer();
-        career.set('practice-allowance', samSpeedPrices[0]);
+        career.set('practice-allowance', speedPrices[0]);
         careerView();
         lessonCover.hidden = true; $('shiftGuide').hidden = false;
         newDay(); beginShift();
@@ -3096,7 +3132,7 @@
     $('recordPlaytest').addEventListener('change', renderStartCareer);
     function resetCareer() {
       career.clear();
-      scannerTier = digitalTier = samSpeedTier = 1;
+      scannerTier = digitalTier = samSpeedTier = playerSpeedTier = 1;
       for (const item of Object.values(kit)) item.owned = false;
       samPrio = defaultPriority(PRIO_DEFAULT);
       PRESET_DEFAULTS.forEach((order, i) => { presets[i] = defaultPriority(order); });
@@ -3127,19 +3163,23 @@
       beginShift();
     }
     $('startBtn').addEventListener('click', () => {
+      if (isPaused()) { setPaused(false); return; }
       recordSolo = $('recordPlaytest').checked && !!window.ShiftPlaytest;
       if (recordSolo) resetCareer();
       startSolo();
     });
     const newGameDialog = $('newGameDialog');
     $('newGameBtn').addEventListener('click', () => {
+      $('newGameWarning').textContent = online?.room()?.host
+        ? 'This will end the hosted shift for everyone and delete your career progress.'
+        : 'This will delete all progress and start completely fresh.';
       $('newGameError').hidden = true;
       newGameDialog.showModal();
     });
     $('backNewGame').addEventListener('click', () => newGameDialog.close());
     $('confirmNewGame').addEventListener('click', () => withCareerStatsLock(() => {
       if (!newGameDialog.open) return;
-      const savedProgress = new Set([samSpeedKey, samJobsKey, reliabilityKey, digitalKey,
+      const savedProgress = new Set([playerSpeedKey, samSpeedKey, samJobsKey, reliabilityKey, digitalKey,
         'ws-sam', 'ws-sam-prio', 'ws-sam-training', 'ws-sam-job-slots', 'ws-stats-v1', 'ws-helped']);
       try {
         const revision = globalThis.crypto?.randomUUID?.() || Date.now().toString(36);
@@ -3158,6 +3198,7 @@
         return;
       }
       newGameDialog.close();
+      if (active) { restartAt('startBtn'); return; }
       $('recordPlaytest').checked = false;
       resetCareer();
       startSolo();
@@ -3186,7 +3227,13 @@
       renderJoin();
     }
     function leaveJoin() { joining = false; joined.length = 0; $('joinCover').hidden = true; $('startCover').hidden = false; }
-    $('twoBtn').addEventListener('click', (e) => { e.stopPropagation(); joining = true; joined.length = 0; joinPrev.clear(); for (const gp of padList()) if (gp) joinPrev.set(gp.index, gp.buttons.map((b) => !!(b && (b.pressed || b.value > 0.5)))); renderJoin(); $('startCover').hidden = true; $('joinCover').hidden = false; });
+    $('twoBtn').addEventListener('click', e => {
+      e.stopPropagation();
+      if (switchMode('twoBtn')) return;
+      joining = true; joined.length = 0; joinPrev.clear();
+      for (const gp of padList()) if (gp) joinPrev.set(gp.index, gp.buttons.map(b => !!(b && (b.pressed || b.value > 0.5))));
+      renderJoin(); $('startCover').hidden = true; $('joinCover').hidden = false;
+    });
     $('joinBack').addEventListener('click', (e) => { e.stopPropagation(); leaveJoin(); });
     $('joinGo').addEventListener('click', (e) => { e.stopPropagation(); if (joined.length >= 2) startSplit(); });
     $('joinCover').addEventListener('pointerdown', (e) => { if (!e.target.closest('button, input')) join({ kind: 'kb' }); });
@@ -3390,7 +3437,7 @@
     /* ---------- warm up behind the loading bar, then show the start screen ---------- */
     if (window.ShiftOnlineGame && window.ShiftOnline && window.ShiftOnlineDay) {
       online = window.ShiftOnlineGame.attach({
-        $, world, World, Day, S, p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
+        $, world, World, Day, S, switchMode, maxWalkSpeed: walkSpeed(playerPaces.length), p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
         kit, missingScanners, canGreetAt, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
@@ -3411,6 +3458,12 @@
     await breathe();
     $('loading').hidden = true;
     $('startCover').hidden = false;
+    const entry = history.state?.shiftEntry;
+    if (entry) {
+      const { shiftEntry, ...rest } = history.state;
+      history.replaceState(rest, '');
+      if (['startBtn', 'tutorialBtn', 'twoBtn', 'onlineBtn'].includes(entry) && !$(entry).hidden) $(entry).click();
+    }
     me1.render();
     requestAnimationFrame(frame);
     window.__shift = { prio: () => samPrio, bell: () => bellCust, world, S, me, cam: me1.cam, renderer, players, crew, figs, tills, ALEX_TILL, WAIT, SPOTS, QUEUE,
