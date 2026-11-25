@@ -233,7 +233,6 @@
       return walk('Face the glowing till and use it to open Fusion for this customer.', target, tillAt(t), 'Use till');
     }
     function nextCue() {
-      if (!$('helpCover').hidden) return cue('Close How to play to return to the tutorial.', '#helpX');
       if (!$('endCover').hidden) return cue('Choose Keep playing to return to the tutorial.', '#keepBtn');
       if (p.tillOpen()) return fusionCue(p.till, Till, lesson, p.padIndex !== null ? 'press LB' : 'press Enter');
       if (!D.scConfirm.hidden) return cue('The blue choices expand together. Press Back to return to your task.', '#scBack');

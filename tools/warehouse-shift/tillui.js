@@ -235,11 +235,12 @@
         .catch((e) => { console.error(e); P.failed = true; P.loading = null; V.status.textContent = "Couldn't load the product list. Check your signal; it tries again when you come back to the till."; });
       return P.loading;
     }
+    const availableToday = item => item?.loc ? Math.max(0, window.ShiftWorld.room(item)) : 0;
     function product(code) { // what Fusion knows about a part number
       const it = stocked.get(code), ps = P.by.get(code);
       if (!it && !ps) return null;
       const base = it || { code, name: ps.name, size: 'S', group: '' };
-      return { code, name: (ps && ps.name) || it.name, item: it || null, price: Till.price(base), avail: it ? Till.avail(it) : 0 };
+      return { code, name: (ps && ps.name) || it.name, item: it || null, price: Till.price(base), avail: availableToday(it) };
     }
 
     /* ---------- the customer talking ---------- */
@@ -298,7 +299,7 @@
           if (S.session !== s) return;
           const code = line.item.code, item = product(code);
           s.basket.push({ code, item: line.item, name: item?.name || line.item.name, qty: line.qty,
-            price: item?.price ?? Till.price(line.item), avail: Till.avail(line.item), status: 'ok', line: s.lines.indexOf(line) });
+            price: item?.price ?? Till.price(line.item), avail: line.qty, status: 'ok', line: s.lines.indexOf(line) });
           line.done = true;
           renderBasket();
           advanceRequest(s, 0);
@@ -424,7 +425,7 @@
       if (!k.mine) { s.slips++; if (o.onSlip) o.onSlip(); sfx('bad'); say("That's not mine. " + s.kiosk.sayName); return; }
       s.lines = k.lines.map((l) => ({ floor: l.floor, shortage: l.shortage, reply: l.reply, kind: 'code', item: l.item, qty: l.qty, accept: [l.item.code], done: !l.floor, clue: "It's " + l.item.code.split('').join(' ') + '.',
         say: l.floor ? l.say : 'I had ' + l.item.code + ' on my kiosk order.', qtySay: l.qty > 1 ? l.qty + ' of them.' : '', next: '' }));
-      s.basket = k.lines.map((l, i) => { const p = product(l.item.code); return { code: l.item.code, name: p ? p.name : l.item.name, qty: l.qty, price: p ? p.price : Till.price(l.item), avail: l.shortage ? 0 : Till.avail(l.item), item: l.item, status: 'ok', line: i }; });
+      s.basket = k.lines.map((l, i) => { const p = product(l.item.code); return { code: l.item.code, name: p ? p.name : l.item.name, qty: l.qty, price: p ? p.price : Till.price(l.item), avail: l.shortage ? 0 : l.floor ? l.qty : availableToday(l.item), item: l.item, status: 'ok', line: i }; });
       s.cur = s.lines.length; s.ready = true; s.stage = 'ordering';
       renderBasket(); show('order'); sfx('good');
       const shortage = k.lines.find(l => l.shortage);
@@ -448,7 +449,9 @@
         if (!line) continue;
         if (line.shortage === 'decline') return { text: line.reply + ' Remove ' + row.code + ' from the basket.', sku: row.code };
         if (line.shortage === 'tcnd' && !row.tcnd) return { text: line.reply + ' Select TCND for ' + row.code + '.', sku: row.code };
-        if (!line.shortage && row.tcnd) return { text: 'I want ' + row.code + ' today. Set that one to Today, please.', sku: row.code };
+        if (!line.shortage && !line.floor && !row.tcnd && row.qty > row.avail) {
+          return { text: 'Only ' + row.avail + ' of ' + row.code + ' available today. Select TCND to order it for tomorrow.', sku: row.code };
+        }
       }
       return '';
     }
@@ -460,8 +463,8 @@
       try { drawBasket(); } finally { drawing = false; }
     }
     function showAvailability(tr, row) {
-      const count = row.tcnd && row.avail === 0 ? (row.nextDayStock ??= 50 + Math.floor(Math.random() * 951)) : row.avail;
-      const out = count === 0;
+      const count = row.tcnd && row.avail < row.qty ? (row.nextDayStock ??= 50 + Math.floor(Math.random() * 951)) : row.avail;
+      const out = !row.tcnd && count < row.qty;
       tr.classList.toggle('out-of-stock', out);
       tr.cells[2].classList.toggle('out', out);
       tr.cells[2].textContent = count;
@@ -630,8 +633,12 @@
       if (s.basket.some((r) => r.status === 'pending')) return;
       if (!s.ready) { say(pick(["Hang on, I've not finished yet.", "Wait, there's more."])); return; }
       if (s.basket.some(r => r.status !== 'ok')) { fuMsg('Correct the basket before payment.'); return; }
+      for (const row of s.basket) {
+        const line = s.lines[row.line];
+        if (line && !line.shortage && !line.floor) row.avail = availableToday(row.item);
+      }
       const problem = deliveryProblem(s);
-      if (problem) { show('order'); say(problem); return; }
+      if (problem) { renderBasket(); show('order'); say(problem); return; }
       sayReadyToPay(s);
       const t = Till.vat(basketTotal());
       V.payname.textContent = s.cust.first + ' ' + s.cust.surname + ' (' + (s.cust.org || 'Private') + ')';
@@ -656,7 +663,6 @@
       const amt = Till.money(basketTotal());
       pdq('<h2>Card machine</h2><div class="fx-screen"><b>' + esc(amt) + '</b><span>Insert, tap or swipe card</span></div><p class="fx-wait">Waiting for the customer<i>.</i><i>.</i><i>.</i></p>');
       later(500, () => say(pick(['Tapping now.', "There's my card.", 'Contactless OK?'])));
-      later(1900, () => { sfx('approved'); pdq('<h2>Card machine</h2><div class="fx-screen ok"><b>APPROVED</b><span>' + esc(amt) + '</span></div><p class="fx-wait">Remove card</p>'); });
       later(3000, () => complete('card'));
     }
     // cash: the drawer opens and you count the change out of it, note by note and coin by coin; the order can't
@@ -729,7 +735,6 @@
       }
       c.done = true;
       sfx('coin');
-      say(pick(['Cheers.', 'Lovely, thanks.', 'Spot on, ta.', 'Thanks, mate.']));
       later(500, () => {
         V.drawer.classList.remove('open'); V.drawer.classList.add('shut');
         sfx('drawer');
@@ -740,20 +745,34 @@
       const s = S.session; if (!s || s.stage !== 'paying') return;
       s.stage = 'submitting';
       const lines = s.basket.filter((r) => r.status === 'ok').map((r) => ({ item: r.item, qty: r.qty, tcnd: !!r.tcnd }));
-      const result = o.onComplete && o.onComplete({ lines, slips: s.slips, how, change: s.cash ? handSum() : 0 });
-      if (result && typeof result.then === 'function') {
-        s.orderNo = await result;
-        if (S.session !== s) return;
-        if (!s.orderNo) { s.stage = 'ordering'; s.cash = null; V.modal.hidden = true; show('order'); fuMsg('Payment could not be confirmed. Try Pay & Go again.'); return; }
-      } else s.orderNo = result || Till.orderNumber(Math.random);
+      const result = o.onComplete
+        ? await o.onComplete({ lines, slips: s.slips, how, change: s.cash ? handSum() : 0 })
+        : { number: Till.orderNumber(Math.random), hasPick: true };
+      if (S.session !== s) return;
+      if (!result?.number) {
+        s.stage = 'ordering'; s.cash = null; V.modal.hidden = true; show('order');
+        if (result?.shortage) {
+          const row = s.basket.find(r => r.code === result.shortage.code);
+          if (row) row.avail = result.shortage.available;
+          renderBasket();
+          const problem = deliveryProblem(s);
+          if (problem) { say(problem); return; }
+        }
+        fuMsg('Payment could not be confirmed. Try Pay & Go again.');
+        return;
+      }
+      s.orderNo = result.number;
+      if (how === 'card') sfx('approved');
       s.stage = 'done';
       V.orderno.textContent = s.orderNo;
-      V.donetext.textContent = "It's on the pick list for whoever gets to it first. The customer waits by the counter.";
+      V.donetext.textContent = result.hasPick
+        ? "It's on the pick list for whoever gets to it first. The customer waits by the counter."
+        : 'Sale complete.';
       V.modal.hidden = true;
       show('done');
       sfx('done');
       renderSay();
-      later(400, () => say(pick(["Cheers. I'll wait here.", "Lovely, I'll wait over here.", 'Thanks, I\'ll be by the counter.'])));
+      if (result.hasPick) later(400, () => say(pick(["Cheers. I'll wait here.", "Lovely, I'll wait over here.", 'Thanks, I\'ll be by the counter.'])));
     }
 
     /* ---------- CrashFix: the search, the same as the Product Search page's ---------- */

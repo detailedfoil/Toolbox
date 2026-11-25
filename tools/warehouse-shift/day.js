@@ -362,8 +362,10 @@
       status: 'listed', by: null, cust: cust || null, counts: counts !== false, t: this.t, surname: cust ? cust.surname : null, code: null, hold: null };
     if (extra) for (var k in extra) if (k !== 'no') o[k] = extra[k];
     this.orders.push(o);
-    this.emit('playtest', 'pick.listed', { order: o.id, kind: o.kind, customer: cust?.id });
-    this.emit('listed', o);
+    if (o.status === 'listed') {
+      this.emit('playtest', 'pick.listed', { order: o.id, kind: o.kind, customer: cust?.id });
+      this.emit('listed', o);
+    }
     return o;
   };
 
@@ -509,21 +511,42 @@
     c.state = 'counter'; c.by = null; c.ready = false;
     this.emit('step', c);
   };
+  Day.prototype.checkout = function (c, lines, extra) {
+    if (c.order) return { order: c.order };
+    var ordered = new Map();
+    for (var line of lines) {
+      if (line.tcnd || line.shortage || line.item === c.floorOffer?.item) continue;
+      var item = line.item, available = item.loc ? Math.max(0, this.World.room(item)) : 0;
+      var qty = (ordered.get(item) || 0) + line.qty;
+      if (qty > available) return { shortage: { code: item.code, available: available } };
+      ordered.set(item, qty);
+    }
+    return { order: this.tillDone(c, lines, extra) };
+  };
   // paid for: the order goes on the list and the customer stands to one side
   Day.prototype.tillDone = function (c, lines, extra) {
     if (c.order) return c.order;
     this.emit('playtest', 'sale.paid', { who: c.by, customer: c.id, kind: c.kind });
     this.credit(c.by, 'sale-' + c.id, 15);
     var pickLines = lines.filter(function (line) { return !line.tcnd && !line.shortage && line.item !== c.floorOffer?.item; });
-    var o = this.makeOrder('till', pickLines, c, true, extra);
+    var hasPick = pickLines.some(line => line.item?.loc && this.World.room(line.item) >= 1);
+    var o = this.makeOrder('till', pickLines, c, true, hasPick ? extra : { ...extra, status: 'done' });
     if (c.floorOffer) {
       var floor = c.floorOffer;
       floor.item.reserved -= floor.qty;
       this.makeOrder('replen', [floor], null, false);
     }
     this.emit('salePaid', c, c.by);
-    c.order = o; c.state = 'waiting'; c.by = null; c.ready = false;
-    this.emit('step', c);
+    c.order = o; c.by = null; c.ready = false;
+    if (!o.lines.length) {
+      c.handedAt = this.t;
+      c.state = 'leaving';
+      this.emit('step', c);
+      this.finish(o);
+    } else {
+      c.state = 'waiting';
+      this.emit('step', c);
+    }
     return o;
   };
   // a customer going without what they came for: their pick comes later instead

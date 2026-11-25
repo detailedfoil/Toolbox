@@ -105,15 +105,11 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-card h2{margin:16px 0 6px;font-size:1rem;color:#ffd34d}
 .ws-card p,.ws-card li{color:#c3cede;font-size:.92rem;line-height:1.45}
 .ws-card ul{margin:6px 0;padding-left:18px}
-.ws-card kbd{display:inline-block;min-width:1.4em;padding:1px 6px;border:1px solid #4a5568;border-bottom-width:2px;border-radius:5px;background:#1f2633;color:#fff;font:600 .8rem ui-monospace,monospace;text-align:center}
 .ws-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .ws-go{flex:1 1 180px;min-height:52px;border:0;border-radius:14px;background:#ffd34d;color:#1a1d22;font:800 1.05rem system-ui,sans-serif;cursor:pointer}
 .ws-alt{flex:1 1 140px;min-height:52px;border:1px solid #3a4558;border-radius:14px;background:#1f2633;color:#fff;font:700 .95rem system-ui,sans-serif;cursor:pointer}
 .ws-go:active,.ws-alt:active{transform:scale(.98)}
 .ws-cols{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
-#helpCover .ws-card{width:min(860px,100%)}
-.ws-x{position:sticky;top:0;float:right;margin:-8px -8px 0 8px;width:40px;height:40px;border:1px solid #3a4558;border-radius:12px;background:#1f2633;color:#fff;font:700 20px/1 system-ui,sans-serif;cursor:pointer;z-index:2}
-@media (min-width:700px){#helpCover .ws-cols2{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}}
 @media (max-height:480px){.ws-card{padding:14px 16px 12px}.ws-card h1{font-size:1.3rem}.ws-card h2{margin:10px 0 4px}.ws-card p,.ws-card li{font-size:.84rem;line-height:1.35}.ws-row{margin-top:10px}.ws-go,.ws-alt{min-height:44px}}
 @media (max-width:520px){.ws-cols{grid-template-columns:1fr}}
 .ws-small{font-size:.8rem !important;color:#8b97aa !important}
@@ -121,7 +117,7 @@ html,body.ws{height:100%;margin:0;overflow:hidden;background:#0d1117;color:#f2f4
 .ws-meter div{width:0;height:100%;background:#ffd34d;border-radius:inherit;transition:width .25s}
 .ws-load{text-align:center;color:#c3cede}
 .ws-load b{display:block;margin-bottom:6px;font-size:1.3rem;color:#fff}
-#helpCover,#endCover{background:#0d1117c4;backdrop-filter:blur(3px)}
+#endCover{background:#0d1117c4;backdrop-filter:blur(3px)}
 #startCover{background:linear-gradient(180deg,#0d1117aa 0%,#0d111766 45%,#0d1117cc 100%);backdrop-filter:blur(2px)}
 #startCover .ws-card{background:#151b26ee}
 .ws-reset-dialog{width:min(420px,calc(100% - 32px));color:#fff}

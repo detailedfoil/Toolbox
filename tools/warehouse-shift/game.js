@@ -86,6 +86,10 @@
     try { lookPick = Math.max(0, LOOKS.findIndex((l) => l[0] === localStorage.getItem('ws-look'))); } catch (e) { /* fine */ }
     const players = [];
     let active = false, online = null, recordSolo = false, tutorial = null;
+    function withCareerStatsLock(action) {
+      if (navigator.locks) return navigator.locks.request('ws-career-stats', action);
+      return action();
+    }
     const careerRevisionKey = 'ws-career-reset';
     let careerRevision;
     try { careerRevision = localStorage.getItem(careerRevisionKey); } catch (e) { /* fine */ }
@@ -594,7 +598,7 @@
     function recordPlaytest(kind, detail) { playtest?.record(kind, detail, day.t); }
     function playtestActivity() {
       if (!playtest) return;
-      const overlay = isPaused() || !$('helpCover').hidden || !$('endCover').hidden;
+      const overlay = isPaused() || !$('endCover').hidden;
       playtest.setActivity(document.hidden ? 'background' : overlay ? 'overlay' : 'playing', day.t);
     }
     function samJobs() { return samPrio.filter(job => job.on).map(job => job.id); }
@@ -723,7 +727,17 @@
         dirty = true;
       },
       close(b, loc) { b.openSku = null; const tr = S.trayOf(loc); if (tr) tr.target = 0; else if (loc.item) loc.item.pullTarget = 0; dirty = true; },
-      tillDone(b, c, lines) { const o = day.tillDone(c, lines, { till: b.till }); showScreen(b.till, o); },
+      tillDone(b, c, lines) {
+        let result = day.checkout(c, lines, { till: b.till });
+        while (result.shortage) {
+          const code = result.shortage.code;
+          lines = lines.map(line => line.item.code === code ? { ...line, tcnd: true } : line);
+          result = day.checkout(c, lines, { till: b.till });
+        }
+        const order = result.order;
+        showScreen(b.till, order.lines.length ? order : null);
+        return order;
+      },
       // the top tote off the trolley (or the bag in their hands) goes on the counter; the customer comes for it
       handOver(b, o) {
         const c = o.cust;
@@ -1025,7 +1039,21 @@
       try { life = Object.assign(life, JSON.parse(localStorage.getItem('ws-stats-v1') || '{}')); } catch (e) { /* fine */ }
       P.stats = stats; P.life = life;
       P.resetLife = () => { P.life = life = freshStats(); };
-      function saveLife() { if (idx || !canSaveCareer()) return; try { localStorage.setItem('ws-stats-v1', JSON.stringify(life)); } catch (e) { /* fine */ } } // player 1's, kept on the device
+      function addLife(increments) {
+        const add = totals => {
+          for (const [key, count] of Object.entries(increments)) totals[key] = (totals[key] || 0) + count;
+          return totals;
+        };
+        add(life);
+        if (idx || !canSaveCareer()) return;
+        withCareerStatsLock(() => {
+          if (!canSaveCareer()) return;
+          try {
+            const saved = JSON.parse(localStorage.getItem('ws-stats-v1')) || {};
+            localStorage.setItem('ws-stats-v1', JSON.stringify(add(saved)));
+          } catch (e) { /* keep the session counters */ }
+        });
+      }
       function lineHtml(text, cls) { const s = document.createElement('span'); s.className = 'sc-line' + (cls ? ' ' + cls : ''); s.textContent = text; return s; }
       function say(text, cls, ms) { msg = { text, cls }; msgUntil = performance.now() + (ms || 1700); renderScanner(); }
       function renderTote() {
@@ -1342,7 +1370,7 @@
         if (guest()) { if (!await remote(() => day.paPut(d))) { say('Confirm at the delivery location', 'warn'); return; } }
         else day.paPut(d, P.id);
         SFX.pick(); flash(false); shut();
-        stats.putaway++; life.putaway = (life.putaway || 0) + 1; saveLife();
+        stats.putaway++; addLife({ putaway: 1 });
         carton = null; hint.until = 0;
         state = day.over ? 'end' : 'pa';
         banner('Put away', d.qty + ' x ' + d.item.code + ' in ' + d.loc.code, 1800);
@@ -1452,7 +1480,7 @@
         SFX.pick(); flash(false);
         if (!guest()) day.confirmLine(order, cur, P.id);
         recordPlaytest('pick.line-confirmed', { who: P.id, order: order.id, line: cur + 1, units: ln.qty });
-        stats.lines++; stats.units += ln.qty; life.lines++; life.units += ln.qty; saveLife();
+        stats.lines++; stats.units += ln.qty; addLife({ lines: 1, units: ln.qty });
         flyToTote(ln);
         setTimeout(() => { D.toteChip.classList.remove('bump'); void D.toteChip.offsetWidth; D.toteChip.classList.add('bump'); }, 480);
         shut();
@@ -1696,10 +1724,10 @@
       function finish(title, text) {
         SFX.done(); flash(false);
         const perfect = !slips;
-        stats.orders++; life.orders++;
+        stats.orders++;
         if (order.counts) stats.picks++;
-        if (perfect) { stats.perfect++; life.perfect = (life.perfect || 0) + 1; }
-        saveLife();
+        if (perfect) stats.perfect++;
+        addLife(perfect ? { orders: 1, perfect: 1 } : { orders: 1 });
         D.doneCount.textContent = String(stats.orders);
         banner(title, (perfect ? 'Perfect pick! ' : '') + text, 2400);
         order = null; state = day && day.over ? 'end' : 'list'; atCounter = false; hint.until = 0; carry = null;
@@ -2099,20 +2127,23 @@
         sayShown = performance.now() - 9000; dirty = true; // their last words stay up a few seconds
         renderScanner();
       }
-      function tillComplete(info) {
+      async function tillComplete(info) {
         const c = P.tillCust;
         if (!c || !day) return null;
-        if (guest()) return remote(() => day.tillDone(c, info)).then(o => o ? paid(c, o) : null);
-        return paid(c, day.tillDone(c, info.lines, { till: c.at || nearTill }));
+        const result = guest()
+          ? await remote(() => day.tillDone(c, info))
+          : day.checkout(c, info.lines, { till: c.at || nearTill });
+        if (!result?.order) return result || null;
+        return paid(c, result.order);
       }
       function paid(c, o) {
-        showScreen(c.at || nearTill, o);
+        showScreen(c.at || nearTill, o.lines.length ? o : null);
         P.tillCust = null; stats.tills++;
         if (online?.room() && !till.isOpen()) online.close();
-        toast('Order ' + o.no + ' is on the pick list', 'good');
+        toast('Order ' + o.no + (o.lines.length ? ' is on the pick list' : ' complete'), 'good');
         later(2.2, () => { if (till.isOpen() && (!till.session() || till.stage() === 'done')) callOver(); });
         renderScanner();
-        return o.no;
+        return { number: o.no, hasPick: o.lines.length > 0 };
       }
       P.tillOpen = () => !!(till && till.isOpen());
       P.tillAt = () => (till && till.isOpen() ? nearTill : null);
@@ -2294,12 +2325,13 @@
 
       /* ---------- a controller (game.js gives each player theirs: padIndex) ---------- */
       // Left stick walks (right out to jog), right stick looks, RT scans, A is Enter (detailedfoil), B is Back, X squats, Y is
-      // Hint, the d-pad goes up and down the pick list (and the lines of a pick), Start enlarges the blue buttons, View is
-      // help, LT held jogs. At the till the d-pad (or stick) moves a highlight and tillui.js does the rest.
+      // Hint, the d-pad goes up and down the pick list (and the lines of a pick), RB enlarges the blue buttons, Start opens the menu,
+      // and LT held jogs. At the till the d-pad (or stick) moves a highlight and tillui.js does the rest.
       P.padIndex = null;
+      P.padDisconnected = false;
       let padPrev = [], padWalk = false, padRun = false;
       const rep = { dir: null, t: 0 };
-      P.dropPad = () => { if (padWalk) { stickIn.x = stickIn.y = 0; } lookIn.x = lookIn.y = 0; if (padRun) running = false; padWalk = padRun = false; till.usePad(false); };
+      P.dropPad = () => { padPrev = []; rep.dir = null; if (padWalk) { stickIn.x = stickIn.y = 0; } lookIn.x = lookIn.y = 0; if (padRun) running = false; padWalk = padRun = false; till.usePad(false); };
       P.readPad = function (gp, dt) {
         const now = gp.buttons.map((b) => !!(b && (b.pressed || b.value > 0.5)));
         const prev = padPrev, hit = (i) => now[i] && !prev[i];
@@ -2339,8 +2371,8 @@
           return;
         }
         if (tutorial && now[8] && hit(9)) { $('lessonExit').click(); return; }
-        // A goes on, B closes help.
-        const cover = ['pauseCover', 'helpCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
+        // A goes on, B closes the pause menu.
+        const cover = ['pauseCover', 'endCover', 'dayCover'].map($).find((c) => !c.hidden);
         if (cover) {
           still();
           if (cover.id === 'dayCover' && !$('dayUpgrades').hidden) {
@@ -2350,7 +2382,7 @@
             if (hit(0)) (buttons[i] || buttons[0])?.click();
             return;
           }
-          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); } else if (hit(1) && cover.id === 'helpCover') showHelp(false); else if (hit(1) && cover.id === 'pauseCover') setPaused(false);
+          if (hit(0) || hit(9)) { const go = cover.querySelector('.ws-go:not([hidden])'); if (go) go.click(); } else if (hit(1) && cover.id === 'pauseCover') setPaused(false);
           return;
         }
         if (hit(9)) { useMenu(P); return; }
@@ -2390,13 +2422,12 @@
         if (hit(3)) { cancelBlueAction(); useHint(); }
         if (hit(0)) { if (!D.scConfirm.hidden && !D.scConfirmQuickPick.hidden) D.scConfirmQuickPick.click(); else { SFX.key(); enter(); } }
         if (hit(5)) toggleBlue(P);
-        if (hit(8)) showHelp(true);
         const d = steer(false);
         if (d === 'up' || d === 'left') page(-1); else if (d === 'down' || d === 'right') page(1);
       };
 
       /* ---------- each frame ---------- */
-      P.playing = () => active && !isPaused() && !online?.frozen() && !online?.panel() && $('helpCover').hidden && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen()) && !pc.open;
+      P.playing = () => active && !isPaused() && !online?.frozen() && !online?.panel() && $('endCover').hidden && $('dayCover').hidden && !(till && till.isOpen()) && !pc.open;
       P.update = function (dt, now) {
         let changed = false;
         if (players.length > 1) { P.poseFig(dt); changed = changed || me.speed > 0.01; }
@@ -2451,7 +2482,6 @@
     const joinPrev = new Map(); // controller -> buttons down last time, on the join screen
     function pollPads(dt) {
       const list = padList();
-      if (!list.some(Boolean)) return;
       if (joining) {
         for (const gp of list) {
           if (!gp || !gp.connected) continue;
@@ -2469,7 +2499,15 @@
       for (const p of players) {
         if (p.padIndex === null) continue;
         const gp = list[p.padIndex];
-        if (gp && gp.connected) p.readPad(gp, dt); else { p.padIndex = null; p.dropPad(); p.toast('Controller disconnected'); }
+        if (gp?.connected) {
+          p.padDisconnected = false;
+          p.readPad(gp, dt);
+        } else if (!p.padDisconnected) {
+          if (split) p.padDisconnected = true;
+          else p.padIndex = null;
+          p.dropPad();
+          p.toast('Controller disconnected');
+        }
       }
     }
 
@@ -2725,23 +2763,12 @@
     $('resumeShift').addEventListener('click', () => setPaused(false));
     window.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
-        if (!$('helpCover').hidden) { if (!e.repeat) showHelp(false); }
-        else if (canUseMenu()) { if (!e.repeat) useMenu(kbPlayer()); }
-        else return;
+        if (!canUseMenu()) return;
+        if (!e.repeat) useMenu(kbPlayer());
       } else if (!isPaused() || (e.target === $('resumeShift') && ['Enter', ' '].includes(e.key))) return;
       e.preventDefault();
       e.stopPropagation();
     }, true);
-    function showHelp(on) {
-      $('helpCover').hidden = !on;
-      playtestActivity();
-      if (on && locked()) document.exitPointerLock();
-      else if (!on) restoreMouse(kbPlayer());
-    }
-    $('helpBtn').addEventListener('click', () => showHelp(true));
-    $('howBtn').addEventListener('click', () => showHelp(true));
-    $('helpClose').addEventListener('click', () => showHelp(false));
-    $('helpX').addEventListener('click', () => showHelp(false));
     function statsHtml(el, rows) {
       el.replaceChildren();
       const box = document.createElement('div'); box.className = 'ws-stats';
@@ -3110,7 +3137,8 @@
       newGameDialog.showModal();
     });
     $('backNewGame').addEventListener('click', () => newGameDialog.close());
-    $('confirmNewGame').addEventListener('click', () => {
+    $('confirmNewGame').addEventListener('click', () => withCareerStatsLock(() => {
+      if (!newGameDialog.open) return;
       const savedProgress = new Set([samSpeedKey, samJobsKey, reliabilityKey, digitalKey,
         'ws-sam', 'ws-sam-prio', 'ws-sam-training', 'ws-sam-job-slots', 'ws-stats-v1', 'ws-helped']);
       try {
@@ -3133,7 +3161,7 @@
       $('recordPlaytest').checked = false;
       resetCareer();
       startSolo();
-    });
+    }));
 
     /* ---------- two players (computers only): split screen, side by side ---------- */
     // Each joins with a press: A on a controller, or any key or a click for the keyboard and mouse. The first to join

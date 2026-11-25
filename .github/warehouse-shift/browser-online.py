@@ -10,7 +10,7 @@ ORIGIN = "http://127.0.0.1:8000"
 GAME = ORIGIN + "/tools/warehouse-shift.html"
 RELAY = "http://127.0.0.1:" + os.environ.get("RELAY_PORT", "8787")
 LOGIN = """localStorage.setItem('toolbox.signedIn.area20','STEPHEN');
-localStorage.setItem('ws-helped','1'); localStorage.setItem('ws-sound','off');"""
+localStorage.setItem('ws-sound','off');"""
 PADS = """window.testPads = [0,1].map(index => ({index, connected:true, mapping:'standard',
   axes:[0,0,0,0], buttons:Array.from({length:17}, () => ({pressed:false,value:0}))}));
 Object.defineProperty(navigator,'getGamepads',{value:() => testPads});"""
@@ -196,9 +196,9 @@ def recorded_solo_shift(browser, errors):
     page.locator("#recordPlaytest").tap()
     assert "Day 1 · 0 XP" in page.locator("#careerXP").inner_text()
     page.locator("#startBtn").tap()
-    page.locator("#helpBtn").tap()
+    page.locator("#menuBtn").tap()
     page.wait_for_timeout(200)
-    page.locator("#helpClose").tap()
+    page.locator("#resumeShift").tap()
     page.evaluate("""() => {
       const s = __shift, day = s.day(), carton = day.paTake(undefined, 'p1');
       day.faultSchedule = [0.1]; s.tick(0.2);
@@ -276,7 +276,7 @@ def recorded_solo_shift(browser, errors):
     assert page.evaluate("localStorage.getItem('ws-shift-xp/regular')") == "442"
     page.get_by_role("button", name="New game", exact=True).tap()
     dialog.get_by_role("button", name="Continue", exact=True).tap()
-    assert not dialog.is_visible()
+    dialog.wait_for(state="hidden")
     assert page.evaluate("""keys => {
       const s = __shift, d = s.day();
       return d.firstDay && s.crew.length === 1 &&
