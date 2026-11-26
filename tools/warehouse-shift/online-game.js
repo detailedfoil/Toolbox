@@ -41,8 +41,8 @@
       }
       const name = typeof data.name === 'string' && g.cleanName(data.name.slice(0, 32)) || 'Player ' + slot;
       const who = 'p' + slot, stool = world.stools.find(s => s.by === who);
-      peers.set(slot, { name, shoes: data.shoes === true, label: data.label === true,
-        step: (!!stool || data.shoes === true) && !!data.step,
+      peers.set(slot, { name, shoes: g.kit.shoes.owned, label: g.kit.label.owned,
+        step: (!!stool || g.kit.shoes.owned) && !!data.step,
         atTill: locks.has(who) && !!data.atTill, x: data.x, y: data.y, yaw: data.yaw % (2 * Math.PI), speed: Math.max(0, Math.min(g.maxWalkSpeed, data.speed)), squat: !!data.squat, shelf: items.has(data.shelf) ? data.shelf : null });
       return true;
     }
@@ -80,7 +80,7 @@
       };
     }
     function snapshot() {
-      return { epoch: g.epoch(), offlineScanners: [...g.day().offlineScanners], missingScanners: [...g.missingScanners], bell: g.bellCount(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
+      return { upgrades: g.branchUpgrades(), epoch: g.epoch(), offlineScanners: [...g.day().offlineScanners], missingScanners: [...g.missingScanners], bell: g.bellCount(), day: wire.snapshot(g.day(), tills, stockItems), locks: [...locks], stools: world.stools.map(s => s.by), screens: tills.map(t => g.screenOf(t)?.id || null) };
     }
     function apply(s, reset) {
       const newDay = epoch !== s.epoch;
@@ -91,7 +91,7 @@
         replica = new wire.DayProxy(world, Day.Day, tills, (op, args) => net.request(op, args), g.World, S.stockChange);
         if (newDay && started) g.resetStats();
       }
-      epoch = s.epoch; replica.apply(s.day); g.setDay(replica, epoch);
+      epoch = s.epoch; replica.apply(s.day); g.setDay(replica, epoch); g.applyBranchUpgrades(s.upgrades);
       locks.clear(); for (const [who, index] of s.locks) locks.set(who, index);
       world.stools.forEach((stool, i) => {
         const by = s.stools[i];
@@ -224,6 +224,7 @@
     }
     function action(slot, op, args) {
       const who = 'p' + slot, pos = peers.get(slot), day = g.day(), till = () => tills[locks.get(who)];
+      if (op === 'purchase') return g.purchase(args.id, args.expected);
       if (op === 'swapScanner') return day.swapScanner(who, pos);
       if ((day.offlineScanners.has(who) || g.missingScanners.has(who)) && ['take', 'line', 'restock', 'fetch', 'putAway', 'handOver', 'paTake', 'paPut', 'paReturn'].includes(op)) return false;
       if (op === 'takeStool' || op === 'dropStool') {
@@ -283,7 +284,7 @@
           if (slot === 1) { g.ensureLocal(); start(); }
           else if (!started) { p.me.x += (slot - 1) * 0.52; if (g.blocked(p.me.x, p.me.y)) p.me.x = world.start.x; p.applyCam(); }
         },
-        roster(slots) { roomSize = slots.length; roomBtn.textContent = net.room + ' · ' + roomSize + '/4'; },
+        roster(slots) { roomSize = slots.length; if (net.host) g.day()?.scaleCrew(roomSize); roomBtn.textContent = net.room + ' · ' + roomSize + '/4'; },
         status, started: start, epoch: g.epoch, snapshot, apply, draw, frame, pose, peerPose, action, release,
         ended(reason) {
           status(reason); $('leaveRoom').hidden = true; controls.hidden = started; $('roomBack').hidden = false;
@@ -323,6 +324,7 @@
       frozen: () => !!net && (!net.ready || net.paused), panel: () => !panel.hidden,
       open: t => guest() ? net.request('tillOpen', { till: tills.indexOf(t) }) : open(p.id, tills.indexOf(t), p.me),
       close: () => guest() ? net.request('tillClose', {}) : locks.delete(p.id),
+      purchase: (id, expected) => net.request('purchase', { id, expected }),
       swapScanner: () => net.request('swapScanner', {}),
       stool: (op, id) => net.request(op, { id }),
       call: () => net.request('call', {}), bell: () => net.request('bell', {}), tick: now => net?.tick(now)

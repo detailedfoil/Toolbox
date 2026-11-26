@@ -112,6 +112,10 @@
     for (var i = 0; i < this.total; i++) this.plan.push(i < this.first ? 'c' : null);
     this.fillPlan(true);
     this.makeDelivery(this.event === 'failedDelivery' ? 0 : o.delivery);
+    this.crewSize = 1;
+    this.soloPlan = this.plan.slice();
+    this.soloDelivery = this.delivery.length;
+    this.soloFloor = this.floorTarget;
     this.wait = 1.0;                       // seconds to the next pick
     if (this.first === 0) { this.phase = 'open'; this.wait = 3 + 3 * this.r(); }
   }
@@ -121,14 +125,30 @@
   Day.prototype.samCanPick = function (o) { return this.event !== 'lightDuties' || o.kind === 'hold'; };
   Day.prototype.clockMinute = function () {
     if (this.over) return 20 * 60;
-    var progress;
-    if (this.event === 'failedDelivery') {
-      progress = this.done / this.total;
-    } else {
-      var delivery = this.delivery;
-      progress = delivery.length ? delivery.reduce(function (done, d) { return done + Number(d.done); }, 0) / delivery.length : 0;
+    const [done, total] = this.clockWork();
+    const start = this.clockStart || { minute: 420, done: 0 };
+    const progress = (done - start.done) / Math.max(1, total - start.done);
+    return start.minute + Math.floor(Math.max(0, Math.min(1, progress)) * (1200 - start.minute));
+  };
+  Day.prototype.clockWork = function () {
+    return this.event === 'failedDelivery' ? [this.done, this.total] :
+      [this.delivery.filter(d => d.done).length, this.delivery.length];
+  };
+  Day.prototype.scaleCrew = function (size) {
+    if (!Number.isInteger(size) || size <= this.crewSize || size > 4 || this.phase !== 'open') return false;
+    this.clockStart = { minute: this.clockMinute(), done: this.clockWork()[0] };
+    const extra = size - this.crewSize;
+    for (let i = 0; i < extra; i++) {
+      const jobs = this.soloPlan.slice();
+      shuffle(jobs, this.r);
+      this.plan.push(...jobs);
+      this.total += jobs.length;
     }
-    return 7 * 60 + Math.floor(Math.min(1, progress) * 13 * 60);
+    this.floorTarget += extra * this.soloFloor;
+    this.addCartons(extra * this.soloDelivery);
+    this.wait *= this.crewSize / size;
+    this.crewSize = size;
+    return true;
   };
 
   Day.prototype.checkScannerFault = function (dt) {
@@ -252,8 +272,40 @@
       self.delivery.push({ id: i + 1, item: it, loc: to, qty: q, src: slots[i].src, slot: slots[i].slot, by: null, done: false });
     });
   };
+  // Extra stock arrives at its own shelf location. Leave live customer baskets and picks intact.
+  Day.prototype.addCartons = function (count) {
+    if (!count) return;
+    const protectedItems = new Set(this.delivery.map(d => d.item));
+    for (const owner of [...this.customers, ...this.orders]) {
+      for (const line of owner.lines || []) protectedItems.add(line.item);
+      for (const basket of owner.kiosk?.list || []) for (const line of basket.lines) protectedItems.add(line.item);
+    }
+    const candidates = this.world.items.filter(it => it.loc && !it.reserved && !protectedItems.has(it));
+    shuffle(candidates, this.r);
+    for (const item of candidates.slice(0, count)) {
+      const loc = item.loc;
+      this.World.vacate(this.world, item);
+      this.emit('stock', item);
+      const qty = (2 + Math.floor(this.r() * 5)) * (item.size === 'T' ? 2 : 1);
+      this.delivery.push({ id: this.delivery.length + 1, item, loc, qty, src: -1, slot: -1, by: null, done: false });
+    }
+    this.fillDeliverySlots();
+  };
+  Day.prototype.fillDeliverySlots = function (emptyOnly) {
+    const waiting = this.delivery.filter(d => d.src < 0);
+    const queued = waiting.length;
+    if (!queued) return;
+    for (const g of this.world.goodsin) {
+      const occupied = new Set(this.delivery.filter(d => !d.done && d.src === g.i).map(d => d.slot));
+      if (emptyOnly && occupied.size) continue;
+      for (let slot = 0; slot < g.slots.length && waiting.length; slot++) {
+        if (!occupied.has(slot)) Object.assign(waiting.shift(), { src: g.i, slot });
+      }
+    }
+    if (waiting.length < queued) this.emit('deliveryLayout', this.delivery);
+  };
   // cartons nobody has taken yet (from one cage or pallet, or anywhere)
-  Day.prototype.deliveryLeft = function (src) { return this.delivery.filter(function (d) { return !d.by && !d.done && (src === undefined || src === null || d.src === src); }); };
+  Day.prototype.deliveryLeft = function (src) { return this.delivery.filter(function (d) { return d.src >= 0 && !d.by && !d.done && (src === undefined || src === null || d.src === src); }); };
   // take the top carton off a cage or pallet: it's yours to put away
   Day.prototype.paTake = function (src, who) {
     if (who === 'Sam' && this.event === 'lightDuties') return null;
@@ -288,6 +340,7 @@
     this.World.place(this.world, d.item, d.loc, d.qty); this.emit('stock', d.item);
     this.log.push({ t: this.t, kind: 'putaway', by: who, took: this.t - d.takenAt });
     this.emit('delivery', d);
+    this.fillDeliverySlots(true);
     this.check();
     return true;
   };
@@ -714,7 +767,7 @@
     if (this.phase === 'closed') return 0.4 + 0.8 * this.r();
     var L = Math.min(4, this.projected()), r = (this.r() + this.r()) / 2;
     var lo = [4, 12, 20, 30, 40][L], hi = [9, 26, 40, 55, 70][L];
-    return (lo + (hi - lo) * r) * (this.event === 'sale' ? 0.75 : 1);
+    return (lo + (hi - lo) * r) * (this.event === 'sale' ? 0.75 : 1) / Math.max(1, Math.min(this.crewSize, this.emit('playerCount') || 1));
   };
   // the c picks are all in the holding area: the shop opens by itself (detailedfoil: no unlocking, only locking up at the end)
   Day.prototype.open = function () {

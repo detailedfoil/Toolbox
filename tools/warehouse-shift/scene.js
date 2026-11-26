@@ -1254,13 +1254,15 @@
       for (let i = 0; i < dSlots; i++) dMesh.setMatrixAt(i, HIDE);
       dIndex.clear();
       list.forEach((d) => {
+        if (d.done || d.src < 0) return;
         const i = dOff[d.src] + d.slot, b = slotBox(d);
         dIndex.set(d, i);
         _dm.makeScale(b.w, b.z1 - b.z0, b.d).setPosition(b.x, (b.z0 + b.z1) / 2, b.y);
         dMesh.setMatrixAt(i, d.by || d.done ? HIDE : _dm);
         _dc.setHex(h01(d.item.code, 'c') < 0.5 ? 0xc49a64 : 0xb88d58); dMesh.setColorAt(i, _dc);
       });
-      dMesh.instanceMatrix.needsUpdate = true; dMesh.instanceColor.needsUpdate = true;
+      dMesh.instanceMatrix.needsUpdate = true;
+      if (dMesh.instanceColor) dMesh.instanceColor.needsUpdate = true;
     }
     function deliveryShow(d) {
       const i = dIndex.get(d); if (i === undefined) return;

@@ -34,7 +34,7 @@ Exit tutorial (controller: hold View and press Menu), completion, or reloading r
 
 ## A shift from opening to lock-up
 
-1. The shop opens automatically. Day 1 brings about a third of the usual delivery and customers. A standard later day has 15–25 planned picks, including holding-area work, and normally 11–16 delivery cartons.
+1. The shop opens automatically. Day 1 brings about a third of the usual delivery and customers. A standard later day has 15–25 planned picks, including holding-area work, and normally 11–16 delivery cartons per player. Each new peak crew size while the shop is open adds a full solo share of planned jobs, replenishment and delivery. Reconnecting or filling a vacated seat adds work only if the crew reaches a new peak. The next shift uses the current crew. Excess cartons arrive when a cage or pallet empties. The clock carries on from its displayed time.
 2. Greet customers, handle till sales and collections, pick orders from the shared list, and work the delivery between orders. One customer can arrive at opening. Shelving half the cartons releases roughly half the day’s customers. The last customers can arrive with one carton left, as queue capacity and outstanding work allow. Holding-area picks do not use customer slots. Cancelled-delivery days use normal queue pacing throughout.
 3. Complete every outstanding order, put the delivery away, and clear the waiting customers and restock any outstanding shop-floor replen. **All done** directs you to lock the front door. Face it and use **Lock door**.
 4. The lock-up screen shows the team score, XP, and individual shift stats. Choose **Next** to spend available XP on upgrades. **Start Next Day** opens the next shift with the players in the office. In online co-op the host advances the day.
@@ -128,7 +128,7 @@ Upgrades are available mid-shift at **Manager PC → Upgrades**. The prices belo
 
 | Upgrade | XP | Effect |
 | --- | --- | --- |
-| Player walk speed tiers 2–5 | 100, 150, 225, 350 | Tier 1 starts at the former sprint pace. Tiers 2–5 walk at 107.5%, 115%, 122.5% and 130% of that pace. Purchases apply immediately to both split-screen players and to your own player in online co-op. Crouched movement keeps its usual pace. |
+| Player walk speed tiers 2–5 | 100, 150, 225, 350 | Tier 1 starts at the former sprint pace. Tiers 2–5 walk at 107.5%, 115%, 122.5% and 130% of that pace. Purchases apply immediately to everyone in split-screen and online co-op. Crouched movement keeps its usual pace. |
 | Sam speed tiers 2–5 | 100, 150, 225, 350 | The shop displays 100% speed at Tier 1 and bonuses of +10%, +20%, +30% and +40% for Tiers 2–5. The labels leave the actual movement and job speeds at 80%, 90%, 100%, 110% and 120% of the original pace. Online co-op uses the host's tier. |
 | Scanner name label | 150 | Adds your badge name to your scanner and caps future Sam mix-ups at one per shift. |
 | Kickstool shoes | 350 | Lets you use Step without carrying a stool. |
@@ -137,7 +137,7 @@ Upgrades are available mid-shift at **Manager PC → Upgrades**. The prices belo
 
 At 350 lifetime earned XP, **Cover tills** and **Clear delivery** job presets unlock on the Manager PC. The unlock uses lifetime XP. Purchases use available XP after deducting previous spend.
 
-Regular career data is per browser profile and site origin. In [game.js](game.js), XP receipts are stored under `ws-shift-xp/`, with separate keys for purchases, Sam jobs, presets and lifetime stats. Previous Sam training and job slot costs are returned to available XP by removing those deductions. Existing saves start at Tier 1 with all four jobs enabled in the new default order. Saved presets stay available. Preserve the XP receipts and other purchases when updating saves or prices. The new-game reset marks older tabs so their stale career writes cannot restore cleared progress. A guest can spend their own XP on personal kit. Branch-wide effects come from the host.
+Regular career data is per browser profile and site origin. In [game.js](game.js), XP receipts are stored under `ws-shift-xp/`, with separate keys for purchases, Sam jobs, presets and lifetime stats. Previous Sam training and job slot costs are returned to available XP by removing those deductions. Existing saves start at Tier 1 with all four jobs enabled in the new default order. Saved presets stay available. Preserve the XP receipts and other purchases when updating saves or prices. The new-game reset marks older tabs so their stale career writes cannot restore cleared progress. Anyone can buy upgrades with the host’s shared balance, at the Manager PC or after lock-up. Walk speed, Sam, kit, reliability and Digital First apply to everyone, including players who join later. The host saves purchases. Guests retain their own career for future solo shifts.
 
 ## Playtest recording and balance
 

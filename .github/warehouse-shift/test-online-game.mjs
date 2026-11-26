@@ -709,11 +709,11 @@ test('an installed phone with the ordinary launch URL can host or join from its 
 });
 
 test('a phone and two other guests share the host game, pick, reconnect and follow the host into the next day', async t => {
-  const host = await game(t, { storage: { 'ws-digital-first': '4' } }), guests = [];
+  const host = await game(t, { storage: { 'ws-digital-first': '4', 'ws-shift-xp/prior': '2500', 'ws-kit-label': '1' } }), guests = [];
   host.$('onlineBtn').click(); host.$('hostRoom').click();
   await until(() => !host.$('roomBtn').hidden, 'host admission');
   // Schedule just the jobs this test exercises while Sam continues to run in the host.
-  const day = host.s.day(); day.plan.length = 0;
+  const day = host.s.day(); day.wait = 1e6;
   assert.equal(day.walkinTill, 0.35, "the host sets the mix for the entire room");
   for (const job of host.s.prio()) job.on = false;
   const room = host.$('roomBtn').textContent.slice(0, 6);
@@ -930,8 +930,15 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   await until(() => Number(picker.w.localStorage.getItem(liveCredit)) === day.baseXP + Math.round(day.coveredXP * 0.05), 'guest to bank live team XP');
   const guestShop = openShop(picker);
   assert.equal(guestShop.querySelector('[data-pc="jobs"]').disabled, true);
-  assert.equal(guestShop.querySelector('[data-sam-speed]').disabled, true);
-  assert.equal(guestShop.querySelector('[data-sam-speed]').textContent, 'Host manages Sam');
+  assert.equal(guestShop.querySelector('[data-sam-speed]').disabled, false);
+  const peerShop = openShop(guests.find(g => g !== picker));
+  for (const shop of [guestShop, peerShop]) shop.querySelector('[data-player-speed]').click();
+  await until(() => [host, ...guests].every(g => g.$('careerXP').textContent.includes('Player walk speed · Tier 2/5')), 'shared walk speed');
+  assert.equal(host.w.localStorage.getItem('ws-player-speed'), '2');
+  assert.equal(picker.w.localStorage.getItem('ws-player-speed'), null);
+  guestShop.querySelector('[data-kit="shoes"]').click();
+  await until(() => host.w.localStorage.getItem('ws-kit-shoes') === '1', 'shared shoes');
+  guests.find(g => g !== picker).s.players[0].closePc();
   picker.s.players[0].closePc();
   for (const batch of day.orders.filter(o => o.kind === 'replen' && o.status === 'listed')) {
     day.take(batch, 'p1'); day.picked(batch);
@@ -943,7 +950,7 @@ test('a phone and two other guests share the host game, pick, reconnect and foll
   const receipt = 'ws-shift-xp/' + day.shiftId;
   for (const device of [host, ...guests]) {
     const active = day.contributors.has(device.s.players[0].id);
-    assert.equal(device.w.localStorage.getItem(receipt), active ? String(day.report.xp) : null);
+    assert.equal(device.w.localStorage.getItem(receipt), (active || device === host) ? String(day.report.xp) : null);
     assert.equal(device.$('shiftScore').textContent, host.$('shiftScore').textContent);
   }
   const beforeReconnect = picker.$('careerXP').textContent;
@@ -1004,7 +1011,7 @@ test('split-screen banks till-cover XP and buys Sam speed tiers mid-shift', asyn
   assert.ok(p.D.scConfirm.hidden && worker.D.scConfirm.hidden);
   const d = s.day(), counter = s.world.counter, till = s.tills[0];
   assert.ok(d.firstDay);
-  assert.ok(d.delivery.length >= 4 && d.delivery.length <= 5);
+  assert.ok(d.delivery.length >= 8 && d.delivery.length <= 10);
   const jobsOn = () => Array.from(s.prio().filter(j => j.on), j => j.id);
   assert.deepEqual(jobsOn(), ['queue', 'cust', 'hold', 'delivery']);
 
@@ -1040,7 +1047,9 @@ test('split-screen banks till-cover XP and buys Sam speed tiers mid-shift', asyn
   assert.equal(d.coveredXP, 900);
   const key = 'ws-shift-xp/' + d.shiftId;
   assert.equal(Number(w.localStorage.getItem(key)), 955);
-  const pc = openShop({ s });
+  worker.openPc();
+  const pc = worker.D.root.querySelector('.ws-pc');
+  pc.querySelector('[data-pc="shop"]').click();
   const speedUpgrade = pc.querySelector('[data-sam-speed]');
   const speedStatus = pc.querySelector('[data-status="sam-speed"]');
   assert.match(speedStatus.textContent, /100% speed/);
@@ -1059,7 +1068,7 @@ test('split-screen banks till-cover XP and buys Sam speed tiers mid-shift', asyn
   assert.ok(speedUpgrade.disabled);
   assert.equal(w.localStorage.getItem('ws-sam-speed'), '5');
   assert.deepEqual(jobsOn(), ['queue', 'cust', 'hold', 'delivery']);
-  p.closePc();
+  worker.closePc();
 
   d.phase = 'lock'; d.lock();
   const total = d.report.xp;

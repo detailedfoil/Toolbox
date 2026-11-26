@@ -272,7 +272,7 @@
     const digitalKey = 'ws-digital-first';
     let scannerTier = 1, digitalTier = 1;
     function readUpgrades() {
-      if (!canSaveCareer()) return;
+      if (guest() || !canSaveCareer()) return;
       try {
         for (const [id, item] of Object.entries(kit)) {
           if (localStorage.getItem('ws-kit-' + id) === '1') item.owned = true;
@@ -641,6 +641,7 @@
       locked: () => { SFX.key(); },
       stock: (it) => { if (online?.room()) online.trackStock(it); if (S.stockChange && it.mesh) S.stockChange(it); dirty = true; },
       holdSet: (code, parcel) => { if (S.hold) S.hold.set(code, parcel); dirty = true; },
+      deliveryLayout: list => { S.delivery.set(list); dirty = true; },
       delivery: (d) => { S.delivery.show(d); for (const p of players) p.deliveryChanged(); dirty = true; },
       over: () => dayOver()
     };
@@ -651,6 +652,7 @@
       const shiftId = globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
       day = Day.create({ world, World, Till, requests, shiftId, scannerTier, digitalTier, firstDay: dayNo === 0, mode: 'mixed', event, env: dayEnv, hold: old ? old.hold : null, ...(tutorial ? tutorial.dayOptions : {}) });
       if (tutorial) tutorial.prepare(day);
+      else day.scaleCrew(dayEnv.playerCount());
       if (old?.offlineScanners) day.offlineScanners = new Set(old.offlineScanners);
       dayNo++; bellCust = null; bellCount = 0; nextBellCheck = 0;
       if (!old && S.hold) for (const code in day.hold) S.hold.set(code, day.hold[code]);
@@ -1116,9 +1118,9 @@
           L.push([ln.loc.code, 'big'], [ln.item.code, 'gap'], [short(ln.item.name)], ['Qty: ' + ln.qty, 'gap']);
           if (full && viewLine < 0) L.push(['Press Enter', 'gap ok']);
         } else if (state === 'pa') {
-          const n = day ? day.deliveryLeft().length : 0;
+          const n = day ? day.delivery.filter(d => !d.done).length : 0;
           if (day?.event === 'failedDelivery') L.push(['Putaway'], ['Delivery cancelled', 'warn']);
-          else L.push(['Putaway'], ['Goods In', 'warn'], [n ? 'Scan a carton' : 'All put away', 'big'], [n ? plural(n, 'carton', 'cartons') + ' left' : 'Nothing left', 'gap dim'], ['on the cages', 'dim'], ['and pallets', 'dim']);
+          else L.push(['Putaway'], ['Goods In', 'warn'], [n ? 'Scan a carton' : 'All put away', 'big'], [n ? plural(n, 'carton', 'cartons') + ' left' : 'Nothing left', 'gap dim'], [day?.delivery.some(d => d.src < 0) ? 'More at shutter' : 'At Goods In', 'dim']);
         } else if (state === 'pareturn') {
           const source = world.goodsin[carton.src].kind;
           L.push(['Putaway'], ['Return carton', 'warn'], ['Goods In', 'big'], ['Scan the original', 'gap dim'], [source, 'dim'], ['Back to resume', 'gap']);
@@ -2828,7 +2830,8 @@
         if (key?.startsWith(receiptPrefix)) career.set(key, Number(localStorage.getItem(key)) || 0);
       }
     } catch (e) { /* still playable without storage */ }
-    const careerXP = () => Array.from(career.values()).reduce((a, b) => a + b, 0);
+    let sharedCareerXP = null;
+    const careerXP = () => (guest() ? sharedCareerXP : null) ?? Array.from(career.values()).reduce((a, b) => a + b, 0);
     const presetXP = 350;
     const kitSpend = () => Object.values(kit).reduce((sum, item) => sum + (item.owned ? item.price : 0), 0);
     const spentOnReliability = () => reliabilityPrices.slice(0, scannerTier - 1).reduce((sum, cost) => sum + cost, 0);
@@ -2849,12 +2852,11 @@
         const cost = speedPrices[samSpeedTier - 1];
         const bonus = tier => '+' + (samSpeeds[tier - 1] - samSpeeds[0]) + '%';
         btn.dataset.samSpeed = samSpeedTier;
-        btn.disabled = !!guest() || !cost || availableXP() < cost;
-        btn.textContent = guest() ? 'Host manages Sam' : cost
+        btn.disabled = !cost || availableXP() < cost;
+        btn.textContent = cost
           ? 'Tier ' + (samSpeedTier + 1) + ' · ' + bonus(samSpeedTier + 1) + ' speed · ' + cost + ' XP'
           : 'Fully upgraded';
-        root.querySelector('[data-status="sam-speed"]').textContent = guest() ? '' :
-          samSpeedStatus() + ' · ' + (samSpeedTier === 1 ? '100%' : bonus(samSpeedTier)) + ' speed';
+        root.querySelector('[data-status="sam-speed"]').textContent = samSpeedStatus() + ' · ' + (samSpeedTier === 1 ? '100%' : bonus(samSpeedTier)) + ' speed';
       }
       for (const btn of root.querySelectorAll('[data-player-speed]')) {
         const cost = speedPrices[playerSpeedTier - 1];
@@ -2900,7 +2902,21 @@
         if (p.pcOpen()) p.refreshPc();
       }
     }
+    function branchUpgrades() {
+      return { xp: careerXP(), samSpeedTier, playerSpeedTier, scannerTier, digitalTier,
+        kit: Object.keys(kit).filter(id => kit[id].owned) };
+    }
+    function applyBranchUpgrades(state) {
+      if (sharedCareerXP === state.xp && samSpeedTier === state.samSpeedTier && playerSpeedTier === state.playerSpeedTier &&
+          scannerTier === state.scannerTier && digitalTier === state.digitalTier &&
+          Object.keys(kit).every(id => kit[id].owned === state.kit.includes(id))) return;
+      sharedCareerXP = state.xp;
+      ({ samSpeedTier, playerSpeedTier, scannerTier, digitalTier } = state);
+      for (const id of Object.keys(kit)) kit[id].owned = state.kit.includes(id);
+      careerView();
+    }
     function purchase(id, expected) {
+      if (guest()) return online.purchase(id, expected);
       function applyPurchase() {
         readUpgrades();
         const previousXP = playtest ? availableXP() : 0;
@@ -2914,7 +2930,7 @@
           key = reliabilityKey; value = String(++scannerTier);
         } else if (id === 'digital' && expected === digitalTier && digitalTiers[digitalTier] && availableXP() >= digitalTiers[digitalTier].cost) {
           key = digitalKey; value = String(++digitalTier);
-        } else if (kit[id] && !kit[id].owned && availableXP() >= kit[id].price) {
+        } else if (Object.hasOwn(kit, id) && !kit[id].owned && availableXP() >= kit[id].price) {
           kit[id].owned = true; key = 'ws-kit-' + id; value = '1';
         }
         if (key) {
@@ -2927,9 +2943,10 @@
           }
         }
         careerView();
+        return !!key;
       }
       if (!tutorial && !recordSolo && navigator.locks) return navigator.locks.request('ws-career-purchase', applyPurchase);
-      applyPurchase();
+      return applyPurchase();
     }
     window.addEventListener('storage', e => {
       if (recordSolo) return;
@@ -2964,7 +2981,7 @@
     }
     function syncShiftXP() {
       const eligible = day?.eligible || Array.from(day?.contributors || []);
-      if (!players.some(p => eligible.includes(p.id))) return;
+      if (!(online?.room()?.host && eligible.length) && !players.some(p => eligible.includes(p.id))) return;
       bankXP(day.shiftId, day.baseXP + Math.round(day.coveredXP * 0.05));
     }
     function showShiftScore(r, eligible) {
@@ -3025,7 +3042,7 @@
       const report = day.report;
       if (report) {
         const eligible = day.eligible || Array.from(day.contributors);
-        const credited = players.some(p => eligible.includes(p.id));
+        const credited = !!(online?.room()?.host && eligible.length) || players.some(p => eligible.includes(p.id));
         showShiftScore(report, credited);
         if (playtest) {
           playtestSummary = playtest.finish({
@@ -3285,6 +3302,7 @@
       ensureLocal(); joining = false; split = true;
       stage.classList.add('split');
       addPlayer2();
+      day.scaleCrew(players.length);
       players.forEach((p, i) => { const j = joined[i]; p.padIndex = j.kind === 'pad' ? j.pad : null; p.kb = j.kind === 'kb'; });
       dpr = Math.min(dpr, 1.25); renderer.setPixelRatio(dpr);
       layout();
@@ -3473,7 +3491,7 @@
         $, world, World, Day, S, switchMode, releaseMouse, maxWalkSpeed: walkSpeed(playerPaces.length), p: me1, tills, crew, figs, blocked, sam: SAM, hash: World.hash,
         catalogue: World.hash(JSON.stringify(cat.items)), day: () => day, epoch: () => dayNo,
         makeCarton: () => new T.Mesh(cartonGeo, cartonMat), cleanName, poseStool, stepHeight: STEP, needsStep, begin: beginShift, ensureLocal, figFor, freeFig, callTo, give: giveTote, handX, doorX: entX,
-        kit, missingScanners, canGreetAt, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
+        branchUpgrades, applyBranchUpgrades, purchase, kit, missingScanners, canGreetAt, aisleAt: (x, y) => Crew.aisleAt(world, x, y), ringBell, showBell, bellCount: () => bellCount, claimAtTill, screen: showScreen, screenOf, speeches, speakCrew, speakFig, pulling, dayOver, announceDayEvent, dirty: () => { dirty = true; },
         setDay(d, n) { day = d; dayNo = n; syncShiftXP(); },
         resetStats() { const st = me1.stats; st.tillsAtStart = st.tills; st.linesAtStart = st.lines; st.perfectAtStart = st.perfect; },
         clearDayView() {

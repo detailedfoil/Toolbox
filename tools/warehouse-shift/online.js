@@ -20,10 +20,10 @@
       const ws = mode === 'resume' ? new WebSocket(url, this.token) : new WebSocket(url);
       this.ws = ws;
       const deadline = setTimeout(() => ws.close(), 8000);
-      ws.onmessage = e => {
+      ws.onmessage = async e => {
         if (ws !== this.ws || this.ended) return;
         let m;
-        try { m = JSON.parse(e.data); this.receive(m); } catch (err) {
+        try { m = JSON.parse(e.data); await this.receive(m); } catch (err) {
           console.error('Warehouse room message', err);
           this.stop('The room could not be synchronised. Rejoin the shift.');
         }
@@ -79,7 +79,7 @@
         this.visibility();
       } else if (!this.paused) this.send({ type: 'pose', pose: this.hooks.pose() });
     }
-    receive(m) {
+    async receive(m) {
       if (m.type === 'ended') return this.stop(m.reason);
       if (m.type === 'welcome') {
         this.slot = m.slot; this.host = m.slot === 1; this.token = m.token; this.retryUntil = 0;
@@ -112,6 +112,7 @@
           let result = false;
           if (!this.hostPaused() && m.epoch === this.hooks.epoch() && m.args && this.hooks.peerPose(m.from, m.pose)) {
             result = this.hooks.action(m.from, m.op, m.args);
+            if (m.op === 'purchase') result = await result;
           }
           // Deliver the authoritative objects before resolving the scanner/till callback.
           this.state();

@@ -152,3 +152,34 @@ test('repeated Fusion identities get distinct emails across accounts and custome
     if (cust.third.kind === 'email') assert.ok(cust.third.say.includes(cust.email));
   }
 });
+
+test('one share per new crew peak, including a second wave and returned cartons', () => {
+  const d = fresh(null, { delivery: 16 });
+  const jobs = d.total, replen = d.floorTarget;
+  const carry = d.paTake(d.delivery[0].src, 'p1');
+  const other = d.paTake(d.delivery[1].src, 'p2');
+  d.paPut(other, 'p2');
+  const time = d.clockMinute();
+  for (const size of [2, 3, 4]) {
+    assert.ok(d.scaleCrew(size));
+    assert.equal(d.clockMinute(), time);
+    assert.equal(d.delivery.length, size * 16);
+    assert.equal(d.total, size * jobs);
+    assert.equal(d.floorTarget, size * replen);
+    assert.equal(d.scaleCrew(size), false);
+  }
+  assert.equal(d.scaleCrew(2), false);
+  assert.ok(d.delivery.some(row => row.src < 0));
+  const source = d.world.goodsin[carry.src].obj;
+  assert.ok(d.paReturn(carry, 'p1', carry.src, { x: source.x0, y: source.y0 }));
+  const destinations = new Set(d.delivery.filter(row => !row.done).map(row => row.loc.code));
+  assert.equal(destinations.size, 63);
+  for (let i = 0; i < 63; i++) {
+    const cartons = d.deliveryLeft();
+    assert.ok(cartons.length);
+    const box = d.paTake(cartons[0].src, 'p1');
+    assert.ok(d.paPut(box, 'p1'));
+  }
+  assert.equal(d.clockMinute(), 1200);
+  assert.ok(d.delivery.every(row => row.done));
+});
