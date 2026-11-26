@@ -229,6 +229,13 @@
 .cf-more{width:100%;margin-top:10px;height:42px;border:2px solid #0a3a8f;background:#fff;color:#0a3a8f;font-weight:700;font-size:14px}
 .cf-more[hidden]{display:none}
 
+/* Fit Fusion above the controller keyboard within one player's half. */
+.split .tl.kbup .fu-app{zoom:0.9}
+.split .tl.kbup .fu-form{flex:none}
+@media (max-width:1500px){
+  .split .tl.kbup .fu-app{zoom:0.8}
+}
+
 /* ---------- the on-screen keyboard (phones) ---------- */
 .tl-kb{display:flex;flex-direction:column;gap:4px;padding:4px 5px max(5px,env(safe-area-inset-bottom));background:#1b2130;border-top:1px solid #39445c}
 .tl-kb[hidden]{display:none}

@@ -77,6 +77,8 @@ Fusion shows how many units are available today after other orders’ reservatio
 5. Choose **Pay & Go**, followed by card or cash as requested. For cash, select the notes and coins to make the correct change and press **Give change**. Exact cash completes automatically.
 6. Only warehouse items for collection today go on the customer pick list. A TCND line ends at payment and creates no next-day task. The sale creates a pick order and the customer waits near the counter gap. Anyone on the shift can pick and hand it over.
 
+In split screen, Fusion zooms out while the on-screen keyboard is open. The keys stay at their usual size.
+
 ### Sam, service bells, and scanner problems
 
 Sam waits near holding and goods in when idle. When assigned to tills and the tills are open, he waits behind the counter when there are no other jobs.
