@@ -1,7 +1,7 @@
 {
   "trial": "A25 Behind counter trial",
   "checked": "2026-11-27",
-  "run": {"date":"2026-11-27","started":"2026-11-27T08:15:11.262Z","finished":"2026-11-27T08:43:24.914Z","trigger":"schedule","complete":false,"total":69,"checked":68,"not_found":0,"unchecked":1,"moved":4,"off_printed":19,"stopped":"1 line could not be checked","fails":{"806CA":"jina: Screwfix's human verification page (405), try again later"}},
+  "run": {"date":"2026-11-27","started":"2026-11-27T08:15:11.262Z","finished":"2026-11-27T13:00:42.305Z","trigger":"schedule","complete":true,"total":69,"checked":69,"not_found":0,"unchecked":0,"moved":0,"off_printed":19},
   "products": {
     "10171": {"name":"Essentials Pop-Up Garden Bag 690 x 560mm 170Ltr","price":12.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-11-27","moves":[]},
     "44241": {"name":"Masterplug TCM24-XD Mechanical Plug-In & Plug-Through Compact Timer","price":4.99,"since":"2026-10-13","status":"ok","was":5.99,"on":"2026-11-27","moves":[]},
@@ -49,7 +49,7 @@
     "107AF": {"name":"Erbauer ECCD18-Li 18V 1 x 2.0Ah Li-Ion EXT Brushless Cordless Combi Drill","price":44.99,"since":"2026-11-16","status":"ok","was":79.99,"on":"2026-11-27","moves":[{"on":"2026-11-16","from":79.99,"to":44.99}]},
     "318FX": {"name":"Erbauer EPR710 710W 1/4\" Electric Palm Router 220-240V","price":53.99,"since":"2026-10-17","status":"ok","was":59.99,"on":"2026-11-27","moves":[]},
     "920AY": {"name":"Titan Multi-Material Multi-Tool Accessory Kit 116 Pieces","price":24.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-11-27","moves":[]},
-    "806CA": {"name":"Erbauer Multi-Material Drill & Screwdriver Bit Set 69 Pieces","price":14.99,"since":"2026-11-16","status":"unchecked","was":29.99,"on":"2026-11-26","moves":[{"on":"2026-11-16","from":29.99,"to":14.99}]},
+    "806CA": {"name":"Erbauer Multi-Material Drill & Screwdriver Bit Set 69 Pieces","price":14.99,"since":"2026-11-16","status":"ok","was":29.99,"on":"2026-11-27","moves":[{"on":"2026-11-16","from":29.99,"to":14.99}]},
     "480PG": {"name":"Erbauer Metal Power Tool Accessories Set 120 Pieces","price":24.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-11-27","moves":[]},
     "509PT": {"name":"Titan 1/4\" Shank Router Bits 13 Piece Set","price":26.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-11-27","moves":[]},
     "487EH": {"name":"Titan TTB1347SDM 6.6kg Electric SDS Max Hammer Drill 220-240V","price":109.99,"since":"2026-10-17","status":"ok","was":null,"on":"2026-11-27","moves":[]},
